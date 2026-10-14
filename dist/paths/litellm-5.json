@@ -1,0 +1,213 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "litellm",
+      "name": "LiteLLM",
+      "scope_notes": "Covers LiteLLM Proxy (AI Gateway). Self-hosted open-source proxy (MIT) with an Enterprise license gating JWT auth, IP filtering, audit logs and key rotation; all controls are operator config on your own deployment.",
+      "controls": [],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether /key/delete and /key/block take effect instantly or after an auth-cache TTL (only SCIM deprovisioning is documented as clearing the cache).",
+        "Master key expiry and SCIM token expiry, rotation and revocation steps.",
+        "Whether management GET calls (/key/info, /key/list, /spend/logs) are logged anywhere besides server logs.",
+        "Whether allowed_ips applies to /scim routes."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "litellm-5",
+      "provider_id": "litellm",
+      "name": "SCIM token",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Bearer token created under Settings > Admin Settings > SCIM, used by the IdP to call /scim endpoints.",
+        "evidence_refs": [
+          "fc-b1f46815"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static token held by the IdP.",
+        "evidence_refs": [
+          "fc-b1f46815"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "allowed_ips applies to proxy endpoints; /scim/v2 routes use the same user_api_key_auth path that runs the IP check (from source). Docs do not name /scim routes explicitly. Enterprise.",
+        "evidence_refs": [
+          "fc-3e5f4bbf",
+          "fc-1370f127",
+          "fc-40f68606"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Not documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "unknown",
+        "summary": "Create a new token in the UI; rotation/revocation steps not documented.",
+        "evidence_refs": [
+          "fc-b1f46815"
+        ]
+      },
+      "administration": {
+        "summary": "Created by admins in the Admin UI; can deprovision users, which blocks their keys.",
+        "conditions": "SCIM setup.",
+        "evidence_refs": [
+          "fc-b1f46815"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Token is created for the IdP provisioning connection, not a person.",
+          "evidence_refs": [
+            "fc-b1f46815"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "config.yaml general_settings: allowed_ips: [\"<ip>\"] (Enterprise)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-3e5f4bbf"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented"
+        },
+        "log_sources": [
+          {
+            "name": "Audit Logs (LiteLLM_AuditLog)",
+            "notes": "Enterprise; on by default with license, else store_audit_logs: true. UI Logs -> Audit Logs; export via audit_log_callbacks (e.g. S3). Retention is your DB."
+          },
+          {
+            "name": "Spend logs (LiteLLM_SpendLogs)",
+            "notes": "Per-request rows with key hash; no prompt content by default; can be disabled; retention via maximum_spend_logs_retention_period."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [],
+        "anomaly_cues": [
+          "Unexpected SCIM user/team changes"
+        ],
+        "containment": {
+          "steps": "Not documented; manage in Settings > Admin Settings > SCIM.",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "Revocation steps",
+          "Logging of SCIM calls"
+        ],
+        "evidence_refs": [
+          "fc-b1f46815"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /scim/v2/Users",
+            "reveals": "Proxy users and emails",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Audit logs track only Create, Update, Delete and Regenerate on keys, teams, users and models; reads are outside that scope. Enterprise."
+          }
+        ],
+        "unknown": [
+          "SCIM endpoints a holder could read (e.g. user lists) not documented in fetched pages"
+        ],
+        "evidence_refs": [
+          "fc-b1f46815",
+          "fc-34776e02"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1370f127",
+      "title": "LiteLLM source: SCIM v2 routes",
+      "url": "https://github.com/BerriAI/litellm/blob/main/litellm/proxy/management_endpoints/scim/scim_v2.py",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-34776e02",
+      "title": "Audit Logs",
+      "url": "https://docs.litellm.ai/docs/proxy/multiple_admins",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3e5f4bbf",
+      "title": "IP Address Filtering",
+      "url": "https://docs.litellm.ai/docs/proxy/ip_address",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-40f68606",
+      "title": "LiteLLM source: pre_db_read_auth_checks",
+      "url": "https://github.com/BerriAI/litellm/blob/main/litellm/proxy/auth/auth_utils.py",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b1f46815",
+      "title": "SCIM with LiteLLM",
+      "url": "https://docs.litellm.ai/docs/tutorials/scim_litellm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

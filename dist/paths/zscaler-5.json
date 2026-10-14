@@ -1,0 +1,314 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "zscaler",
+      "name": "Zscaler",
+      "scope_notes": "Covers Zscaler (ZIA, ZPA, OneAPI via Authentication Service / ZIdentity). SaaS; OneAPI needs services linked to Authentication Service; legacy ZIA API needs an API subscription; Workflow Automation, Client Connector and ZDX API keys not covered.",
+      "controls": [
+        {
+          "name": "ZPA API key Status",
+          "effect": "disable",
+          "applies_to": [
+            "zscaler-5"
+          ],
+          "what": "Disabled keys cannot be used.",
+          "setting": "Administration > API > Private Access API > Edit",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-1027e5e4",
+            "fc-53381e39"
+          ]
+        },
+        {
+          "name": "Delete ZPA API key",
+          "effect": "revoke",
+          "applies_to": [
+            "zscaler-5"
+          ],
+          "what": "Remove a key.",
+          "setting": "Administration > API > Private Access API",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-1027e5e4"
+          ]
+        },
+        {
+          "name": "ZPA API key Role",
+          "effect": "limit_scope",
+          "applies_to": [
+            "zscaler-5"
+          ],
+          "what": "Predefined or custom role (e.g. API Read Only) enforces RBAC on ZPA API operations.",
+          "setting": "Add API Keys > Role",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-53381e39"
+          ]
+        },
+        {
+          "name": "Session Validity Interval",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "zscaler-5"
+          ],
+          "what": "Token lifetime up to 3,600 s.",
+          "setting": "Add API Keys > Session Validity Interval",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-53381e39"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Source-IP restriction for OneAPI clients, ZPA keys or legacy ZIA sessions (Admin Sign-On Policy and ZIA restricted admin access pages do not state API coverage)",
+        "Whether the Authentication Service Admin Sign-On Policy or MFA applies to legacy ZIA API password logins",
+        "Whether deleting/disabling a ZPA API key or ZIA authorization server ends already-issued bearer tokens",
+        "Whether API client create/delete and token revoke appear as named actions in Authentication Service audit logs (documented actions are generic Create/Update/Delete)",
+        "Whether read-only (GET) API calls are recorded in any audit log",
+        "Expiry of JWT key pairs (zscaler-2) and Sandbox tokens",
+        "OneAPI rate limits (only legacy limits fetched)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "zscaler-5",
+      "provider_id": "zscaler",
+      "name": "ZPA API key (client ID and client secret, legacy ZPA API)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "ZPA API key = client ID + secret, posted to https://config.private.zscaler.com/signin to get a bearer token for /mgmtconfig endpoints.",
+        "evidence_refs": [
+          "fc-1027e5e4",
+          "fc-7b0fe8f3"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Not documented.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented for ZPA API keys.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 3600,
+        "configurable": "yes",
+        "summary": "Key itself has no documented expiry; session validity up to 3,600 s",
+        "evidence_refs": [
+          "fc-53381e39",
+          "fc-7b0fe8f3"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Session Validity Interval",
+        "summary": "Call /signin again with the same client ID and secret.",
+        "evidence_refs": [
+          "fc-7b0fe8f3"
+        ]
+      },
+      "administration": {
+        "summary": "Admins with full API Key Management access create keys with a status and RBAC role (e.g. API Read Only); keys can be edited, disabled or deleted. Authentication Service keys show read-only here.",
+        "conditions": "Keys created via Zscaler Deception cannot be edited or deleted here.",
+        "evidence_refs": [
+          "fc-1027e5e4",
+          "fc-53381e39",
+          "fc-7b0fe8f3"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The key carries its own API role and is not tied to an admin user.",
+          "evidence_refs": [
+            "fc-1027e5e4"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "API Keys page (Administration > API > Private Access API) lists all keys with status, role and validity.",
+          "evidence_refs": [
+            "fc-1027e5e4"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Zscaler Admin Console > Data Explorer > Audit Logs > Private Access; filter Client ID; Download for CSV",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-2dd48d6f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Bearer token from /signin."
+        },
+        "log_sources": [
+          {
+            "name": "ZPA audit logs",
+            "notes": "Records admin and API actions; Client ID column; 6-month retention."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Client ID",
+            "log": "ZPA audit logs",
+            "notes": "API key's client ID that made changes"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Sign In",
+            "stage": "use",
+            "notes": "ZPA audit action"
+          },
+          {
+            "event": "Sign In Failure",
+            "stage": "use",
+            "notes": "ZPA audit action"
+          },
+          {
+            "event": "Delete",
+            "stage": "revoke",
+            "notes": "Generic action"
+          }
+        ],
+        "correlation_keys": [
+          "Client ID",
+          "Request ID",
+          "Transaction ID"
+        ],
+        "anomaly_cues": [
+          "Changes by an unfamiliar Client ID",
+          "Sign In Failure bursts"
+        ],
+        "containment": {
+          "steps": "Disable or delete the ZPA API key.",
+          "kills_existing": "unknown",
+          "notes": "Docs do not say whether issued tokens end before their validity interval (max 3,600 s)."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether data reads are audited"
+        ],
+        "evidence_refs": [
+          "fc-1027e5e4",
+          "fc-53381e39",
+          "fc-2dd48d6f"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST https://config.private.zscaler.com/signin",
+            "reveals": "Bearer token",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "Sign In",
+            "log_notes": "ZPA audit action list includes Sign In"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /mgmtconfig/v1/admin/customers/{customerId}/application",
+            "reveals": "All application segments",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "Light (GET): 2 req/s, 1000 req/hr typical",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "ZPA audit log documents changes and sign-ins, not reads"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-7b0fe8f3",
+          "fc-2dd48d6f",
+          "fc-566a8d2a"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1027e5e4",
+      "title": "About API Key Management",
+      "url": "https://help.zscaler.com/zpa/about-api-key-management",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2dd48d6f",
+      "title": "About Audit Logs (Private Access)",
+      "url": "https://help.zscaler.com/zpa/about-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-53381e39",
+      "title": "Adding API Keys",
+      "url": "https://help.zscaler.com/zpa/adding-api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-566a8d2a",
+      "title": "Understanding Rate Limiting",
+      "url": "https://help.zscaler.com/legacy-apis/understanding-rate-limiting",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7b0fe8f3",
+      "title": "Getting Started (ZPA API)",
+      "url": "https://help.zscaler.com/legacy-apis/getting-started-zpa-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

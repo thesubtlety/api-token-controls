@@ -1,0 +1,396 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "datadog",
+      "name": "Datadog",
+      "scope_notes": "IP documentation differs on entitlement (Pro+ via support vs Enterprise). Confirm contract. AWS WIF requires supported integration/configuration.",
+      "controls": [
+        {
+          "name": "IP Allowlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "datadog-1",
+            "datadog-2"
+          ],
+          "what": "Blocks UI, public API and OAuth app access from IPs outside the list; Agent intake and some endpoints are exempt.",
+          "setting": "Organization Settings > Security > IP Allowlist; IP Allowlist API; Terraform ip_allowlist (Org Management permission)",
+          "plan": "Pro+ or Enterprise, enabled via support (API reference says Enterprise)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn5search4"
+          ],
+          "quote": "When the IP allowlist is enabled, only IP addresses or CIDR ranges in the allowlist can access the Datadog API and UI."
+        },
+        {
+          "name": "Disable OAuth access for an application",
+          "effect": "disable",
+          "applies_to": [
+            "datadog-2"
+          ],
+          "what": "Turns off an OAuth app and revokes it for all users in the org.",
+          "setting": "Organization Settings > OAuth Apps (Admin role or org_authorized_apps_read/write)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-2e8c2579"
+          ],
+          "quote": "Disabling OAuth access for an application revokes access to this application for all users in your organization."
+        },
+        {
+          "name": "Revoke a user's OAuth access",
+          "effect": "revoke",
+          "applies_to": [
+            "datadog-2"
+          ],
+          "what": "Removes one user's authorization for an OAuth app; the user can re-authorize.",
+          "setting": "Organization Settings > OAuth Apps",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-2e8c2579"
+          ],
+          "quote": "Revoking a user's OAuth access to an application removes all access to that application."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No org setting found that blocks personal application keys or forces service-account-only keys.",
+        "Whether the IP allowlist applies to API-key and client-token requests outside telemetry intake is not stated; entitlement differs between account docs (Pro+/Enterprise) and API reference (Enterprise).",
+        "Plan requirement for Agent-based WIF: current WIF page lists no tier; earlier material says Enterprise-only and preview.",
+        "How to delete or disable an identity mapping is not documented on the WIF page; intake mappings are deleted via API.",
+        "Whether custom roles (needed to narrow these permissions) require a specific plan was not confirmed."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "datadog-2",
+      "provider_id": "datadog",
+      "name": "OAuth app",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Organization API key, often combined with a user/service-account application key; OAuth for supported apps; workload federation for supported scenarios.",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "OAuth authorization-code grant with PKCE and user consent. No external identity/assertion exchange is documented for this path; AWS workload federation is a separate path (datadog-3).",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23",
+          "fc-44d9ffd5"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Org IP allowlist explicitly covers third-party apps accessing Datadog through OAuth. Org-wide only; cannot be scoped to a token, key, user or endpoint.",
+        "evidence_refs": [
+          "turn5search4",
+          "turn5search8",
+          "turn19search19"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Access token TTL 1 hour",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23",
+          "fc-44d9ffd5"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "none",
+        "summary": "Refresh token obtains a new 1-hour access token. Marketplace OAuth client refresh tokens have no expiration until the user revokes authorization; other client types not stated.",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23",
+          "fc-44d9ffd5"
+        ]
+      },
+      "administration": {
+        "summary": "Application-key scopes, service accounts, role permissions, OAuth grants, IP allowlist and key revocation.",
+        "conditions": "IP documentation differs on entitlement (Pro+ via support vs Enterprise). Confirm contract. AWS WIF requires supported integration/configuration.",
+        "evidence_refs": [
+          "turn5search4",
+          "turn5search8",
+          "turn19search19"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Organization Settings > Mobile and Third-Party Access lists OAuth apps and the users who authorized each one.",
+          "evidence_refs": [
+            "fc-2e8c2579"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "Fixed 1-hour access token TTL, returned by POST /api/v2/oauth2/token; not configurable",
+          "cli": null,
+          "evidence_refs": [
+            "fc-37d3997e"
+          ]
+        },
+        "usage": {
+          "ui": "Audit Trail explorer; filter by Authentication Attributes facets",
+          "api": "POST /api/v2/audit/events/search",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2ab91e19",
+            "fc-e14d7c2a"
+          ]
+        },
+        "reads": {
+          "ui": "Audit Trail explorer; query @evt.name:\"Log Management\" @asset.type:logs_query",
+          "api": "POST /api/v2/audit/events/search with that query",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2ab91e19",
+            "fc-29c5614b",
+            "fc-e14d7c2a"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "No documented access/refresh token format."
+        },
+        "log_sources": [
+          {
+            "name": "Datadog Audit Trail",
+            "notes": "Request events for API calls plus product events; records @auth_method and key IDs. Default 90-day retention when enabled (3-90 days); 7 days when disabled."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "@metadata.oauth_client.name",
+            "log": "Audit Trail",
+            "notes": "OAuth client used when @auth_method is oauth_token"
+          },
+          {
+            "field": "@asset.id",
+            "log": "Audit Trail",
+            "notes": "OAuth client asset on oauth_client events"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "@evt.name:OAuth @asset.type:oauth_client",
+            "stage": "change",
+            "notes": "OAuth client created, modified or deleted, with previous/new values"
+          },
+          {
+            "event": "@auth_method:oauth_token",
+            "stage": "use",
+            "notes": "API call made with OAuth access token"
+          }
+        ],
+        "correlation_keys": [
+          "@usr.email",
+          "@usr.id",
+          "@metadata.oauth_client.name",
+          "@network.client.ip",
+          "@http.useragent",
+          "@http.url_details.path"
+        ],
+        "anomaly_cues": [
+          "OAuth client name not on the approved app list",
+          "OAuth token use by a user who was deactivated or lost the role",
+          "New OAuth client created or redirect URIs changed",
+          "API_KEYS_WRITE-scoped app creating keys"
+        ],
+        "containment": {
+          "steps": "Revoke tokens via POST /oauth2/v1/revoke or user revokes app authorization; delete the OAuth client.",
+          "kills_existing": "partial",
+          "notes": "Refresh tokens never expire until revoked; access tokens last 1 hour. Not documented whether revoking a refresh token kills issued access tokens."
+        },
+        "sample_query": {
+          "language": "Datadog Audit Trail search",
+          "query": "@auth_method:oauth_token @http.method:(POST OR PATCH OR DELETE)",
+          "purpose": "Write actions performed through OAuth apps"
+        },
+        "unknown": [
+          "token format",
+          "OAuth client ID field in audit events",
+          "authorization/consent grant event name",
+          "refresh token rotation"
+        ],
+        "evidence_refs": [
+          "fc-346bcc6d",
+          "fc-29c5614b",
+          "fc-37d3997e",
+          "fc-2ab91e19"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /api/v2/logs/events/search",
+            "reveals": "Log events (OAuth scope logs_read_data)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "@evt.name:\"Log Management\" @asset.type:logs_query",
+            "log_notes": "Audit Trail event 'Query (Public Beta)'; Audit Trail must be enabled."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-1bb0d6f3",
+          "fc-29c5614b"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1bb0d6f3",
+      "title": "Logs API: Search logs",
+      "url": "https://docs.datadoghq.com/api/latest/logs/search-logs-post/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-29c5614b",
+      "title": "Audit Trail Events",
+      "url": "https://docs.datadoghq.com/account_management/audit_trail/events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2ab91e19",
+      "title": "Datadog Audit Trail",
+      "url": "https://docs.datadoghq.com/account_management/audit_trail/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2e8c2579",
+      "title": "OAuth Apps",
+      "url": "https://docs.datadoghq.com/account_management/org_settings/oauth_apps/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-346bcc6d",
+      "title": "dd.audit dataset (DDSQL)",
+      "url": "https://docs.datadoghq.com/ddsql_reference/data_directory/dd/dd.audit.dataset/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-37d3997e",
+      "title": "OAuth2 Authorization Endpoints Reference",
+      "url": "https://docs.datadoghq.com/developers/authorization/oauth2_endpoints/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-44d9ffd5",
+      "title": "OAuth2 Authorization Endpoints Reference - Datadog",
+      "url": "https://docs.datadoghq.com/extend/authorization/oauth2_endpoints/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e14d7c2a",
+      "title": "Audit API reference",
+      "url": "https://docs.datadoghq.com/api/latest/audit/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn19search19",
+      "title": "API and Application Keys",
+      "url": "https://docs.datadoghq.com/account_management/api-app-keys/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn19search23",
+      "title": "OAuth2 in Datadog",
+      "url": "https://docs.datadoghq.com/extend/authorization/oauth2_in_datadog/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn23search0",
+      "title": "Workload Identity Federation",
+      "url": "https://docs.datadoghq.com/account_management/workload_identity_federation/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search0",
+      "title": "API and Application Keys",
+      "url": "https://docs.datadoghq.com/account_management/api-app-keys/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search4",
+      "title": "IP Allowlist - Datadog Infrastructure and Application Monitoring",
+      "url": "https://docs.datadoghq.com/account_management/org_settings/ip_allowlist/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search8",
+      "title": "IP Allowlist - Datadog Infrastructure and Application Monitoring",
+      "url": "https://docs.datadoghq.com/api/latest/ip-allowlist/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

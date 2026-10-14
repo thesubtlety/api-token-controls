@@ -1,0 +1,368 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "crowdstrike",
+      "name": "CrowdStrike Falcon",
+      "scope_notes": "Public developer docs only; Falcon console documentation (IP allowlisting, audit event names, roles) requires login and is marked unknown. Next-Gen SIEM HEC needs a Next-Gen SIEM subscription; member_cid needs Flight Control.",
+      "controls": [
+        {
+          "name": "API scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "crowdstrike-1",
+            "crowdstrike-2"
+          ],
+          "what": "Each API client gets only the scopes selected for it; scopes can be changed later.",
+          "setting": "Support and resources > API Clients & Keys; PATCH /api-clients/entities/api-clients/v1",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-5b6dde7f",
+            "fc-ffb769b7"
+          ]
+        },
+        {
+          "name": "DeleteAPIClients",
+          "effect": "revoke",
+          "applies_to": [
+            "crowdstrike-1",
+            "crowdstrike-2"
+          ],
+          "what": "Deletes API clients by ID.",
+          "setting": "Console or DELETE /api-clients/entities/api-clients/v1",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-ffb769b7"
+          ]
+        },
+        {
+          "name": "ResetAPIClientSecret",
+          "effect": "require_rotation",
+          "applies_to": [
+            "crowdstrike-1",
+            "crowdstrike-2"
+          ],
+          "what": "Issues a new secret for the client.",
+          "setting": "POST /api-clients/entities/api-clients-actions/v1?action_name=reset_secret",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-ffb769b7"
+          ]
+        },
+        {
+          "name": "oauth2RevokeToken",
+          "effect": "revoke",
+          "applies_to": [
+            "crowdstrike-1",
+            "crowdstrike-2"
+          ],
+          "what": "Revokes a specific access token before its 30-minute expiry; needs the client's ID and secret.",
+          "setting": "POST /oauth2/revoke",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-f4a4089a"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for API clients: whether it exists, whether it applies to /oauth2/token or every API request (Falcon docs require login).",
+        "Whether deleting an API client or resetting its secret invalidates already-issued 30-minute tokens.",
+        "Audit event names for API client create/update/delete/secret reset and token issuance, and which field carries the client ID.",
+        "Whether ordinary API read calls are written to the audit log, and audit log retention.",
+        "Which Falcon roles can create API clients, and whether creation can require approval.",
+        "Whether a parent CID can be prevented from issuing member_cid tokens for specific child CIDs.",
+        "HEC ingest key expiry, IP restriction, and whether regeneration invalidates the old key immediately.",
+        "API rate limits (documented only inside Falcon)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "crowdstrike-1",
+      "provider_id": "crowdstrike",
+      "name": "OAuth2 API client (client ID and secret)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An API client created in Support and resources > API Clients & Keys has a client ID, secret and selected API scopes. The pair is exchanged at POST /oauth2/token (regional base URL) for a 30-minute bearer token.",
+        "evidence_refs": [
+          "fc-b89c7d20",
+          "fc-5b6dde7f"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "No workload identity federation for API clients found in public docs.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Falcon IP allowlisting docs are behind the Falcon console login; not verified.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 1800,
+        "maximum_seconds": 1800,
+        "configurable": "not_verified",
+        "summary": "Access token 30 min; client secret has no documented expiry",
+        "evidence_refs": [
+          "fc-b89c7d20",
+          "fc-f4a4089a"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "30 minutes from issue",
+        "summary": "Client requests a new token with the same ID and secret.",
+        "evidence_refs": [
+          "fc-b89c7d20"
+        ]
+      },
+      "administration": {
+        "summary": "Create, update scopes, reset secret, or delete clients in the console or via /api-clients/entities/api-clients/v1 (Api Client Mgmt scope).",
+        "conditions": "Console role needed to manage API clients is documented only inside Falcon.",
+        "evidence_refs": [
+          "fc-ffb769b7",
+          "fc-5b6dde7f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "API clients are customer (CID)-level credentials created under API Clients & Keys, not user logins; docs do not say what happens if the creating user is removed.",
+          "evidence_refs": [
+            "fc-b89c7d20",
+            "fc-ffb769b7"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /api-clients/queries/api-clients/v1 (GetAllAPIClientIdsForCustomer) plus GetAPIClients; also the console's API Clients & Keys page.",
+          "evidence_refs": [
+            "fc-ffb769b7",
+            "fc-b89c7d20"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented publicly."
+        },
+        "log_sources": [
+          {
+            "name": "Falcon audit logs (Audit API)",
+            "notes": "Query via POST /audit-logs/queries/queryjobs/v1 (scope Audit: READ); filters include actor_id, actor_ip, actor_type, user_agent, action. Retention not public."
+          },
+          {
+            "name": "Event Streams",
+            "notes": "Streaming API (scope Event streams: READ); audit event types not verified from public docs."
+          },
+          {
+            "name": "Real Time Response audit",
+            "notes": "GET /real-time-response-audit/combined/sessions/v1 lists RTR sessions."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor_id",
+            "log": "Audit API",
+            "notes": "Whether this holds the API client ID for API actions is not documented."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "actor_id",
+          "actor_ip",
+          "user_agent"
+        ],
+        "anomaly_cues": [
+          "New API client with write scopes (Real time response (admin), Hosts, API Client Mgmt)",
+          "Secret reset on an existing client",
+          "API calls from unfamiliar actor_ip or user_agent"
+        ],
+        "containment": {
+          "steps": "Delete the API client or reset its secret; revoke known tokens with POST /oauth2/revoke.",
+          "kills_existing": "unknown",
+          "notes": "Tokens last up to 30 min if not revoked."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact audit action names"
+        ],
+        "evidence_refs": [
+          "fc-6e85a8a6",
+          "fc-7d876b95",
+          "fc-bf6410f1",
+          "fc-f4a4089a",
+          "fc-ffb769b7"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /sensors/queries/installers/ccid/v1",
+            "reveals": "Tenant CID with checksum",
+            "bulk": false,
+            "scope": "Sensor Download: READ",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api-clients/queries/api-clients/v1",
+            "reveals": "All API client IDs",
+            "bulk": true,
+            "scope": "Api Client Mgmt: READ",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /devices/combined/devices/v1",
+            "reveals": "Host inventory",
+            "bulk": true,
+            "scope": "Hosts: READ",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /alerts/combined/alerts/v1",
+            "reveals": "Alerts matching an FQL filter",
+            "bulk": true,
+            "scope": "Alerts: READ",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /sensors/entities/datafeed/v2",
+            "reveals": "Event stream URLs for continuous data",
+            "bulk": true,
+            "scope": "Event streams: READ",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "No documented whoami for the API client itself"
+        ],
+        "evidence_refs": [
+          "fc-bf6410f1",
+          "fc-ffb769b7",
+          "fc-7d876b95"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Crowdstrike API Key Created",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/crowdstrike_rules/event_stream_rules/crowdstrike_api_key_created.yml",
+          "detects": "A Falcon API client (client ID and secret) was created."
+        },
+        {
+          "source": "Panther",
+          "title": "Crowdstrike API Key Deleted",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/crowdstrike_rules/event_stream_rules/crowdstrike_api_key_deleted.yml",
+          "detects": "Falcon API clients were deleted."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-5b6dde7f",
+      "title": "API Credentials (Falcon MCP)",
+      "url": "https://developer.crowdstrike.com/falcon-mcp/getting-started/credentials/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6e85a8a6",
+      "title": "Audit service collection",
+      "url": "https://developer.crowdstrike.com/api-reference/collections/audit/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7d876b95",
+      "title": "Event Streams service collection",
+      "url": "https://developer.crowdstrike.com/api-reference/collections/event-streams/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b89c7d20",
+      "title": "CrowdStrike Developer Center (Authentication)",
+      "url": "https://developer.crowdstrike.com/llms.txt",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf6410f1",
+      "title": "CrowdStrike Developer Center (full operation index)",
+      "url": "https://developer.crowdstrike.com/llms-full.txt",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f4a4089a",
+      "title": "OAuth2 service collection",
+      "url": "https://developer.crowdstrike.com/api-reference/collections/oauth2/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ffb769b7",
+      "title": "API Clients service collection",
+      "url": "https://developer.crowdstrike.com/api-reference/collections/api-clients/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

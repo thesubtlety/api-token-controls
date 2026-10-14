@@ -1,0 +1,651 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "google",
+      "name": "Google Workspace",
+      "scope_notes": "Context-Aware Access requires eligible Workspace/Cloud Identity editions. User policy coverage does not establish protection of DWD service accounts.",
+      "controls": [
+        {
+          "name": "Manage Domain Wide Delegation",
+          "effect": "limit_scope",
+          "applies_to": [
+            "google-2"
+          ],
+          "what": "Super admins authorize each service account or OAuth client ID with an explicit scope list; editing scopes or deleting the client stops access.",
+          "setting": "Admin console > Security > Access and data control > API controls > Manage Domain Wide Delegation",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8a55d3ca"
+          ],
+          "quote": "add each scope that the application can access (should be appropriately narrow)."
+        },
+        {
+          "name": "Multi-party approval for domain-wide delegation",
+          "effect": "require_approval",
+          "applies_to": [
+            "google-2"
+          ],
+          "what": "When enabled, adding, editing or deleting a DWD client needs a second super admin's approval.",
+          "setting": "Admin console multi-party approval settings",
+          "plan": "Not established",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8a55d3ca"
+          ],
+          "quote": "requires approval from another super admin."
+        },
+        {
+          "name": "iam.disableServiceAccountKeyCreation / iam.managed.disableServiceAccountKeyCreation",
+          "effect": "disable",
+          "applies_to": [
+            "google-2"
+          ],
+          "what": "Org policy that blocks creation of user-managed service account keys used to sign DWD JWTs.",
+          "setting": "Google Cloud Organization Policy (constraints/iam.disableServiceAccountKeyCreation)",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f34cc49b"
+          ],
+          "quote": "If your organization was created on or after May 3, 2024, this constraint is enforced by default."
+        },
+        {
+          "name": "iam.disableServiceAccountKeyUpload",
+          "effect": "disable",
+          "applies_to": [
+            "google-2"
+          ],
+          "what": "Org policy that blocks uploading external public keys to service accounts.",
+          "setting": "Google Cloud Organization Policy (constraints/iam.disableServiceAccountKeyUpload)",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f34cc49b"
+          ],
+          "quote": "When this constraint is set, users cannot upload public keys to service accounts in projects affected by the constraint."
+        },
+        {
+          "name": "iam.serviceAccountKeyExpiryHours",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "google-2"
+          ],
+          "what": "Org policy that sets a maximum lifetime for new service account keys, which otherwise never expire.",
+          "setting": "Google Cloud Organization Policy (constraints/iam.serviceAccountKeyExpiryHours)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f34cc49b"
+          ],
+          "quote": "A service account key lets you authenticate a request as a service account. By default, service account keys never expire."
+        },
+        {
+          "name": "iam.disableServiceAccountCreation",
+          "effect": "disable",
+          "applies_to": [
+            "google-2"
+          ],
+          "what": "Org policy that blocks creating new service accounts.",
+          "setting": "Google Cloud Organization Policy (constraints/iam.disableServiceAccountCreation or managed variant)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f34cc49b"
+          ],
+          "quote": "disable the creation of new service accounts"
+        },
+        {
+          "name": "Service account impersonation IAM (Service Account Token Creator)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "google-2"
+          ],
+          "what": "Only principals granted impersonation roles on the service account can mint tokens or sign JWTs as it.",
+          "setting": "Google Cloud IAM on the service account",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-0fa7ab16"
+          ],
+          "quote": "Only authenticated principals with the appropriate permissions can impersonate service accounts."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether Workspace Context-Aware Access or third-party app access settings apply to domain-wide delegation service account calls; the DWD page does not say.",
+        "Edition requirement for multi-party approval on DWD changes.",
+        "No per-DWD-client IP restriction found in Workspace docs; absence not stated by Google.",
+        "Default of 'Trust internal apps' not stated on the fetched page.",
+        "Exact UI path for applying CAA to Workspace APIs; the 2023 update links to help articles without naming the setting."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "google-2",
+      "provider_id": "google",
+      "name": "Service account / domain-wide delegation",
+      "family": "jwt",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth 2.0 user bearer tokens; service-account signed JWT exchange. Domain-wide delegation (DWD) enables approved user impersonation.",
+        "evidence_refs": [
+          "turn1search5",
+          "turn29search1"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "Google documents WIF → service account → IAM signJwt → OAuth token for DWD. Workspace scopes/admin delegation remain separate requirements.",
+        "evidence_refs": [
+          "turn1search5",
+          "turn29search1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "excluded",
+        "enforcement_stage": "unknown",
+        "boundary": "Context-Aware Access offers user IP/device/location conditions. Its documentation explicitly excludes service-account API access.",
+        "evidence_refs": [
+          "turn10search1",
+          "turn25search20"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 3600,
+        "configurable": "no",
+        "summary": "1-hour access token",
+        "evidence_refs": [
+          "turn1search5",
+          "turn29search1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "policy",
+        "summary": "No refresh token; the app signs a new JWT (with a key, or keyless via IAM signJwt) and requests a new token. Key expiry depends on the org's key-expiry setting.",
+        "evidence_refs": [
+          "turn1search5",
+          "turn29search1"
+        ]
+      },
+      "administration": {
+        "summary": "Approve/block third-party OAuth apps and scopes; restrict DWD scopes; control service-account IAM and key creation.",
+        "conditions": "Context-Aware Access requires eligible Workspace/Cloud Identity editions. User policy coverage does not establish protection of DWD service accounts.",
+        "evidence_refs": [
+          "turn10search1",
+          "turn25search20"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Context-Aware Access does not restrict Google API access from service accounts in general, but Drive policies do block automated tools from unauthorized IPs or devices.",
+          "evidence_refs": [
+            "turn10search1"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "A service account belongs to the application, not to an individual user.",
+          "evidence_refs": [
+            "turn1search5"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Security > Access and data control > API controls > Manage Domain Wide Delegation lists every DWD client with its scopes.",
+          "evidence_refs": [
+            "fc-a1b82660"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Admin console > Security > Access and data control > Context-Aware Access > Assign access levels to apps > Drive (applies to automated tools; does not cover other Google APIs from service accounts)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-a593cfb4",
+            "fc-c5713178"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "POST https://oauth2.googleapis.com/token response field expires_in (3600)",
+          "cli": null,
+          "evidence_refs": [
+            "turn1search5"
+          ]
+        },
+        "reads": {
+          "ui": "Gmail log events (mail_event_type 33); Drive: Reporting > Audit and investigation > Drive log events, Event = Download, filter App ID = service account client ID",
+          "api": "GET .../applications/gmail?eventName=delivery; GET .../applications/drive?eventName=download; GET .../applications/token?eventName=activity",
+          "cli": null,
+          "evidence_refs": [
+            "fc-8663dd6b",
+            "fc-c47f47ca",
+            "fc-509db048",
+            "fc-5dca3264",
+            "fc-1241d741"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Service account key is a JSON key file; GitHub scans google_cloud_service_account_credentials. Access tokens are opaque bearer tokens."
+        },
+        "log_sources": [
+          {
+            "name": "Cloud Audit Logs (Admin Activity)",
+            "notes": "Key create/delete/disable/upload; always on."
+          },
+          {
+            "name": "Cloud Audit Logs (Data Access)",
+            "notes": "Service API use with serviceAccountKeyName; GenerateAccessToken impersonation logs need IAM Data Access logs enabled."
+          },
+          {
+            "name": "Workspace OAuth Token audit log",
+            "notes": "DWD calls into Workspace APIs; actor.applicationInfo.impersonation shows impersonation. 6 months."
+          },
+          {
+            "name": "Workspace Admin audit log (domain settings)",
+            "notes": "DWD grants/removals: AUTHORIZE_API_CLIENT_ACCESS / REMOVE_API_CLIENT_ACCESS."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "protoPayload.authenticationInfo.serviceAccountKeyName",
+            "log": "Cloud Audit Logs",
+            "notes": "Full resource name of the key used; not logged by App Engine/Compute Engine"
+          },
+          {
+            "field": "protoPayload.authenticationInfo.principalEmail",
+            "log": "Cloud Audit Logs",
+            "notes": "Service account email"
+          },
+          {
+            "field": "protoPayload.authenticationInfo.serviceAccountDelegationInfo",
+            "log": "Cloud Audit Logs",
+            "notes": "Who impersonated the SA"
+          },
+          {
+            "field": "actor.applicationInfo.oauthClientId",
+            "log": "Workspace Reports Activity",
+            "notes": "SA client ID for DWD calls"
+          },
+          {
+            "field": "API_CLIENT_NAME",
+            "log": "Workspace Admin audit log",
+            "notes": "Client granted DWD"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "google.iam.admin.v1.CreateServiceAccountKey",
+            "stage": "create",
+            "notes": "Admin Activity"
+          },
+          {
+            "event": "google.iam.admin.v1.UploadServiceAccountKey",
+            "stage": "create",
+            "notes": "Attacker-supplied public key"
+          },
+          {
+            "event": "AUTHORIZE_API_CLIENT_ACCESS",
+            "stage": "change",
+            "notes": "DWD granted with API_SCOPES"
+          },
+          {
+            "event": "GenerateAccessToken",
+            "stage": "use",
+            "notes": "Short-lived token via impersonation (Data Access logs)"
+          },
+          {
+            "event": "google.iam.admin.v1.DisableServiceAccountKey",
+            "stage": "revoke",
+            "notes": "Does not revoke issued tokens"
+          },
+          {
+            "event": "google.iam.admin.v1.DeleteServiceAccountKey",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "REMOVE_API_CLIENT_ACCESS",
+            "stage": "revoke",
+            "notes": "DWD removed"
+          }
+        ],
+        "correlation_keys": [
+          "protoPayload.authenticationInfo.principalEmail",
+          "protoPayload.authenticationInfo.serviceAccountKeyName",
+          "protoPayload.requestMetadata.callerIp",
+          "protoPayload.requestMetadata.callerSuppliedUserAgent",
+          "actor.applicationInfo.oauthClientId",
+          "actor.email",
+          "ipAddress"
+        ],
+        "anomaly_cues": [
+          "serviceAccountKeyName that does not match any key your deployment owns",
+          "UploadServiceAccountKey on any production SA",
+          "AUTHORIZE_API_CLIENT_ACCESS adding Gmail/Drive scopes to a client ID",
+          "DWD token activity impersonating executives or admins",
+          "SA key used from callerIp outside known CI/workload ranges"
+        ],
+        "containment": {
+          "steps": "Delete or disable the key; remove the client ID from domain-wide delegation; disable the service account to stop issued short-lived credentials; review and remove IAM bindings.",
+          "kills_existing": "partial",
+          "notes": "Disabling a key does not revoke short-lived credentials already issued from it; disabling or deleting the service account does."
+        },
+        "sample_query": {
+          "language": "Cloud Logging query language",
+          "query": "protoPayload.authenticationInfo.serviceAccountKeyName=\"//iam.googleapis.com/projects/my-project/serviceAccounts/my-service-account@my-project.iam.gserviceaccount.com/keys/KEY_ID\"",
+          "purpose": "Find every audited call made with one leaked key"
+        },
+        "unknown": [
+          "Full methodName for GenerateAccessToken (page shows only GenerateAccessToken)",
+          "How DWD-impersonated calls appear in Workspace logs beyond actor.applicationInfo.impersonation",
+          "Regex for SA key file"
+        ],
+        "evidence_refs": [
+          "fc-8acf9efe",
+          "fc-18de683d",
+          "fc-b60d843b",
+          "fc-daba4b08",
+          "fc-34049685",
+          "fc-6081d8c5",
+          "fc-1241d741",
+          "fc-866b7d88",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST https://oauth2.googleapis.com/token (grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer, signed JWT with sub=user)",
+            "reveals": "Exchanges service-account JWT (with sub impersonation) for an access token scoped to the impersonated user",
+            "bulk": false,
+            "scope": "scopes pre-authorized for the client ID in Workspace domain-wide delegation",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Token minting at Google's token endpoint; not established to appear in Workspace admin audit logs as a distinct event"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET https://admin.googleapis.com/admin/directory/v1/users?customer=my_customer",
+            "reveals": "All users in the domain (requires impersonating an admin); full directory roster",
+            "bulk": true,
+            "scope": "https://www.googleapis.com/auth/admin.directory.user.readonly",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "OAuth Token audit log: activity event",
+            "log_notes": "API calls via the delegated token surface in token 'activity' events (client_id, api_name, method_name); Admin Console Admin audit may record directory reads separately"
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://gmail.googleapis.com/gmail/v1/users/{user}/messages (impersonated user)",
+            "reveals": "Any impersonated user's mailbox messages; mass mailbox export across the domain",
+            "bulk": true,
+            "scope": "https://www.googleapis.com/auth/gmail.readonly (pre-authorized for the client ID)",
+            "rate_limit": "messages.list=5, messages.get=20 units; 6,000 units/min/user, 1,200,000/min/project",
+            "logged": "plan",
+            "log_event": "Gmail audit mail_event_type 33; Token activity event",
+            "log_notes": "Gmail delivery event 33 'An application accessed a message on behalf of a user'; token 'activity' event logs the API call. Both via Admin SDK Reports."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://www.googleapis.com/drive/v3/files?corpora=user (impersonated user)",
+            "reveals": "Impersonated user's Drive file list/metadata; precursor to bulk download",
+            "bulk": true,
+            "scope": "https://www.googleapis.com/auth/drive.readonly",
+            "rate_limit": "pageSize max 1000",
+            "logged": "plan",
+            "log_event": "Drive audit event: download",
+            "log_notes": "Drive audit 'download' event = 'Document download'; file metadata list itself may not fire a view/download event. Reports API / Workspace edition dependent."
+          }
+        ],
+        "unknown": [
+          "Whether the JWT-bearer token exchange is logged anywhere in Workspace",
+          "Whether Drive files.list (metadata only) produces any audit event vs. only view/download",
+          "Workspace edition gating of Drive/Gmail audit events"
+        ],
+        "evidence_refs": [
+          "turn1search5",
+          "fc-ba16ccfe",
+          "fc-31711932",
+          "fc-5dca3264",
+          "fc-8663dd6b",
+          "fc-1241d741"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "GCP.Iam.ServiceAccountKeys.Create",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_iam_service_account_key_create.yml",
+          "detects": "A granted iam.serviceAccountKeys.create permission check (service account key creation)."
+        },
+        {
+          "source": "Panther",
+          "title": "GCP Service Account or Keys Created",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_service_account_or_keys_created.yml",
+          "detects": "A user (not an automated workflow) created a service account or service account key."
+        },
+        {
+          "source": "Sigma",
+          "title": "Google Workspace Granted Domain API Access",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/gcp/gworkspace/admin/gcp_gworkspace_granted_domain_api_access.yml",
+          "detects": "An admin granted domain-wide delegation API access to a client."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0fa7ab16",
+      "title": "Service accounts overview",
+      "url": "https://docs.cloud.google.com/iam/docs/service-account-overview",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1241d741",
+      "title": "Reports API: OAuth Token audit activity events",
+      "url": "https://developers.google.com/workspace/admin/reports/v1/appendix/activity/token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-18de683d",
+      "title": "Example logs for service accounts",
+      "url": "https://docs.cloud.google.com/iam/docs/audit-logging/examples-service-accounts",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-31711932",
+      "title": "Files.list | Drive API",
+      "url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-34049685",
+      "title": "Reports API: Admin domain settings events",
+      "url": "https://developers.google.com/workspace/admin/reports/v1/appendix/activity/admin-domain-settings",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-509db048",
+      "title": "Drive log events",
+      "url": "https://support.google.com/a/answer/4579696?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5dca3264",
+      "title": "Drive activity events | Admin SDK Reports API",
+      "url": "https://developers.google.com/workspace/admin/reports/v1/appendix/activity/drive",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6081d8c5",
+      "title": "Method: activities.list",
+      "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8663dd6b",
+      "title": "Gmail activity events | Admin SDK Reports API",
+      "url": "https://developers.google.com/workspace/admin/reports/v1/appendix/activity/gmail",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-866b7d88",
+      "title": "Data retention and lag times",
+      "url": "https://knowledge.workspace.google.com/admin/reports/data-retention-and-lag-times",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8a55d3ca",
+      "title": "Control API access with domain-wide delegation (Google Workspace Admin Help)",
+      "url": "https://knowledge.workspace.google.com/admin/apps/control-api-access-with-domain-wide-delegation",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8acf9efe",
+      "title": "AuditLog type",
+      "url": "https://docs.cloud.google.com/logging/docs/reference/audit/auditlog/rest/Shared.Types/AuditLog",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a1b82660",
+      "title": "Control API access with domain-wide delegation",
+      "url": "https://support.google.com/a/answer/162106?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a593cfb4",
+      "title": "Assign Context-Aware Access levels to apps",
+      "url": "https://knowledge.workspace.google.com/admin/security/assign-context-aware-access-levels-to-apps?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b60d843b",
+      "title": "IAM audit logging",
+      "url": "https://docs.cloud.google.com/iam/docs/audit-logging",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ba16ccfe",
+      "title": "Users.list | Directory API",
+      "url": "https://developers.google.com/workspace/admin/directory/reference/rest/v1/users/list",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c47f47ca",
+      "title": "Gmail log events",
+      "url": "https://knowledge.workspace.google.com/admin/reports/gmail-log-events?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c5713178",
+      "title": "Protect your business with Context-Aware Access",
+      "url": "https://knowledge.workspace.google.com/admin/security/protect-your-business-with-context-aware-access?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-daba4b08",
+      "title": "Disable and enable service account keys",
+      "url": "https://docs.cloud.google.com/iam/docs/keys-disable-enable",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f34cc49b",
+      "title": "Restricting service account usage",
+      "url": "https://docs.cloud.google.com/resource-manager/docs/organization-policy/restricting-service-accounts",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search1",
+      "title": "Protect your business with Context-Aware Access - Google",
+      "url": "https://knowledge.workspace.google.com/admin/security/protect-your-business-with-context-aware-access",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn1search5",
+      "title": "Using OAuth 2.0 for Server to Server Applications  |  Authorization  |  Google for Developers",
+      "url": "https://developers.google.com/identity/protocols/oauth2/service-account",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn25search20",
+      "title": "Perform Google Workspace domain-wide delegation of authority",
+      "url": "https://developers.google.com/workspace/cloud-search/docs/guides/delegation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn29search1",
+      "title": "Best practices for managing service account keys  |  Identity and Access Management (IAM)  |  Google Cloud Documentation",
+      "url": "https://docs.cloud.google.com/iam/docs/best-practices-for-managing-service-account-keys?hl=en",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,387 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "pagerduty",
+      "name": "PagerDuty",
+      "scope_notes": "SaaS; REST API on current plans, user token keys need Advanced Permissions, Audit Trail on Business/Enterprise for Incident Management/Digital Operations (legacy); SCIM uses general access keys or app OAuth tokens.",
+      "controls": [
+        {
+          "name": "Delete another user's API user token",
+          "effect": "revoke",
+          "applies_to": [
+            "pagerduty-2"
+          ],
+          "what": "Admins/Account Owner can delete other users' personal keys, except keys of Account Owner, Admins or Global Admins.",
+          "setting": "User Settings > API Access > Remove",
+          "plan": "Advanced Permissions accounts",
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        },
+        {
+          "name": "User permissions bound user tokens",
+          "effect": "limit_scope",
+          "applies_to": [
+            "pagerduty-2"
+          ],
+          "what": "User token requests are limited to the user's own permissions.",
+          "setting": "User role / Advanced Permissions",
+          "plan": "Advanced Permissions accounts",
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        },
+        {
+          "name": "Base role: personal REST API key permission",
+          "effect": "disable",
+          "applies_to": [
+            "pagerduty-2"
+          ],
+          "what": "Under Advanced Permissions, every base role except Limited Stakeholder can create personal REST API keys; assigning Limited Stakeholder removes the ability.",
+          "setting": "People > Users > user base role",
+          "plan": "Plans with Advanced Permissions (Professional, Business, Enterprise for Incident Management, Digital Operations legacy, PD Reliability Platform)",
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-0c0dbee0"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "pagerduty-2",
+          "what": "No IP/network restriction for user token keys.",
+          "kind": "network",
+          "evidence_refs": [
+            "fc-67bc3044"
+          ]
+        },
+        {
+          "path_id": "pagerduty-2",
+          "what": "Admins cannot delete user token keys belonging to the Account Owner, Admins or Global Admins.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether general access or user token keys can be given an expiry, or ever expire.",
+        "Whether SSO enforcement or deprovisioning in the IdP affects existing API keys (only \"user leaves the account\" disables user keys).",
+        "Any admin setting to block users from creating user token keys or to block Classic User OAuth app authorization.",
+        "Whether API key create/disable/delete events appear in the Audit Trail (the tracked resource list does not include API keys).",
+        "Whether disabling/deleting a key or Revoke All User Tokens ends in-flight access immediately (Revoke All runs in the background).",
+        "Whether private app (client credentials) tokens can be revoked by admins other than the app owner; client secret expiry/rotation.",
+        "Whether read (GET) API calls are logged anywhere customer-visible.",
+        "Whether integration key creation/rotation appears in audit records (support page says integration add/remove is not captured; Audit API lists Integrations as an associated resource of Services)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "pagerduty-2",
+      "provider_id": "pagerduty",
+      "name": "User Token REST API Key (personal REST API key)",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "20-character key created by a user in My Profile > User Settings > API Access; requests run with that user's permissions. Same Token header format as account keys.",
+        "evidence_refs": [
+          "fc-d45e559a",
+          "fc-7b9b83d0"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static secret; none documented.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "excluded",
+        "enforcement_stage": "login_only",
+        "boundary": "IP allow list does not restrict REST API calls.",
+        "evidence_refs": [
+          "fc-67bc3044"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented; disabled if user leaves",
+        "evidence_refs": [
+          "fc-583edb81"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "No documented expiry.",
+        "summary": "Lost or rotated keys are deleted and recreated.",
+        "evidence_refs": [
+          "fc-d45e559a"
+        ]
+      },
+      "administration": {
+        "summary": "Requires Advanced Permissions. Any base role from Restricted Access up can create their own keys. Admins can delete other users' keys except those of Account Owner, Admins or Global Admins. Table shows last used date.",
+        "conditions": "Advanced Permissions accounts only. No admin setting to disable user key creation is documented.",
+        "evidence_refs": [
+          "fc-d45e559a",
+          "fc-f97376ea"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Docs say a user API key is disabled when the user leaves the account.",
+          "evidence_refs": [
+            "fc-583edb81"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "offboard": {
+          "ui": "People > Users > user name > Delete User (Advanced Permissions accounts go through the Offboarding flow)",
+          "api": "DELETE /users/{id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ac94729d",
+            "fc-079a8df5"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "20-character string; no documented prefix."
+        },
+        "log_sources": [
+          {
+            "name": "Audit Trail (UI + GET /audit/records)",
+            "notes": "Business, Enterprise for Incident Management, Digital Operations (legacy); 12-month retention; config changes on users, teams, schedules, escalation policies, services, IP allow lists only. Admin / global API token, scope audit_records.read."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "method.truncated_token",
+            "log": "Audit record",
+            "notes": "Last 4 chars."
+          },
+          {
+            "field": "actors[] (user_reference)",
+            "log": "Audit record",
+            "notes": "Presumed acting user; not explicitly documented for user keys."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "action=create|update|delete with method.type=api_token",
+            "stage": "use",
+            "notes": "Config changes only."
+          }
+        ],
+        "correlation_keys": [
+          "method.type",
+          "method.truncated_token",
+          "actors[].type/id",
+          "execution_context.request_id",
+          "execution_context.remote_address"
+        ],
+        "anomaly_cues": [
+          "Check last used date in User Settings API Access table",
+          "Admin-user tokens used for config changes"
+        ],
+        "containment": {
+          "steps": "User or Admin: User Settings > API Access > Remove. Removing the user from the account disables their keys.",
+          "kills_existing": "unknown",
+          "notes": "Admins cannot remove keys of Admins/Global Admins/Account Owner; those users must remove their own."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Key create/delete audit events"
+        ],
+        "evidence_refs": [
+          "fc-62771079",
+          "fc-f760aba4",
+          "fc-47e47aba",
+          "fc-d45e559a",
+          "fc-583edb81"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /users/me",
+            "reveals": "Owning user and role",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "960 req/min per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /users",
+            "reveals": "Users visible to the owner",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "960 req/min per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /incidents",
+            "reveals": "Incidents the user can see",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "960 req/min per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /users",
+            "reveals": "Users the key owner can see",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Audit records cover configuration changes only."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-47e47aba",
+          "fc-27211ae1",
+          "fc-d45e559a",
+          "fc-079a8df5",
+          "fc-f760aba4"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-079a8df5",
+      "title": "PagerDuty REST API OpenAPI v3 spec - List users",
+      "url": "https://github.com/PagerDuty/api-schema/blob/main/reference/REST/openapiv3.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0c0dbee0",
+      "title": "Advanced Permissions",
+      "url": "https://docs.pagerduty.com/account-admin/advanced-permissions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-27211ae1",
+      "title": "REST API Rate Limits",
+      "url": "https://docs.pagerduty.com/developer/rest-api-rate-limits",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-47e47aba",
+      "title": "REST API OpenAPI spec — List audit records",
+      "url": "https://docs.pagerduty.com/api-specs/rest.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-583edb81",
+      "title": "OAuth Functionality",
+      "url": "https://docs.pagerduty.com/developer/oauth-functionality",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62771079",
+      "title": "Audit Trail Reporting",
+      "url": "https://support.pagerduty.com/main/docs/audit-trail-reporting",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-67bc3044",
+      "title": "IP Allow List for User Sessions",
+      "url": "https://support.pagerduty.com/main/docs/ip-allow-list-for-user-sessions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7b9b83d0",
+      "title": "Authentication",
+      "url": "https://docs.pagerduty.com/developer/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac94729d",
+      "title": "Manage Users",
+      "url": "https://support.pagerduty.com/main/docs/manage-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d45e559a",
+      "title": "API Access Keys",
+      "url": "https://support.pagerduty.com/main/docs/api-access-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f760aba4",
+      "title": "Audit Records API",
+      "url": "https://docs.pagerduty.com/developer/audit-records-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f97376ea",
+      "title": "Advanced Permissions",
+      "url": "https://support.pagerduty.com/main/docs/advanced-permissions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

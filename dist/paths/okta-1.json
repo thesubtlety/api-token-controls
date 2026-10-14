@@ -1,0 +1,569 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "okta",
+      "name": "Okta (management API)",
+      "scope_notes": "Org authorization-server rules govern Okta APIs. Custom authorization-server lifetime policies do not govern these tokens.",
+      "controls": [
+        {
+          "name": "Token network restriction (API calls made with this token must originate from)",
+          "effect": "limit_network",
+          "applies_to": [
+            "okta-1"
+          ],
+          "what": "Restricts where an SSWS token can be used from: any IP, or in/not in specific IP-based network zones.",
+          "setting": "Admin Console > Security > API > Tokens > Create token, or token > Security > Edit ('Token can be used from')",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6151399c"
+          ],
+          "quote": "From the API calls made with this token must originate from dropdown list, select an option to specify where you allow connections to come from"
+        },
+        {
+          "name": "Admin role assignment (token inherits creator permissions)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "okta-1"
+          ],
+          "what": "An SSWS token acts with the creating admin's current permissions, so limiting that admin's roles limits the token; only certain admin roles can create tokens.",
+          "setting": "Admin Console > Security > Administrators (roles of the creating user)",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6151399c"
+          ],
+          "quote": "API tokens are generated with the permissions of the user that created the token. If a user's permissions change, then so do the token's. Super admins, org admins, group admins, group membership admins, and read-only admins may create tokens."
+        },
+        {
+          "name": "Revoke token",
+          "effect": "revoke",
+          "applies_to": [
+            "okta-1"
+          ],
+          "what": "Admins can revoke any SSWS API token.",
+          "setting": "Admin Console > Security > API > Tokens > trash icon, or token page > Revoke token",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6151399c"
+          ],
+          "quote": "On the API page Tokens tab, click the name of the token you want to revoke. On the token's page, click Revoke token ."
+        },
+        {
+          "name": "Deactivate token owner",
+          "effect": "revoke",
+          "applies_to": [
+            "okta-1"
+          ],
+          "what": "Deactivating the user who created a token makes Okta reject the token.",
+          "setting": "Admin Console > Directory > People > deactivate user",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6151399c"
+          ],
+          "quote": "Tokens are valid only if the user who created them is active. Tokens issued by deactivated users are rejected."
+        },
+        {
+          "name": "Token rate limits",
+          "effect": "other",
+          "applies_to": [
+            "okta-1"
+          ],
+          "what": "Caps the share of each API rate limit a single SSWS token can consume (default 50%).",
+          "setting": "Admin Console > Security > API > Tokens > token > Token rate limits > Edit",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6151399c"
+          ],
+          "quote": "rate limits for token interactions are set automatically to 50 percent of each API maximum limit. See API rate limits . You can adjust this percentage for each token."
+        },
+        {
+          "name": "Admin roles that can create API tokens (custom role needs Manage Users permission)",
+          "effect": "disable",
+          "applies_to": [
+            "okta-1"
+          ],
+          "what": "Only super, org, group, group membership and read-only admins, or custom admin roles that include the Manage Users permission, can create SSWS tokens; other users cannot.",
+          "setting": "Admin role assignment / custom admin role permissions",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-6151399c",
+            "fc-2af14486"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "okta-1",
+          "what": "Cannot change the 30-day idle expiry of SSWS tokens (no shorter or absolute lifetime).",
+          "evidence_refs": [
+            "turn2search16"
+          ],
+          "quote": "The 30-day period is fixed and can't be changed for your org.",
+          "kind": "expiry"
+        },
+        {
+          "path_id": "okta-1",
+          "what": "Cannot use blocklist zones or non-IP zones to restrict SSWS tokens.",
+          "evidence_refs": [
+            "fc-6151399c"
+          ],
+          "quote": "You can only use IP-based zones with SSWS tokens. Ensure that you add them to the Gateway IP addresses field on the Add IP Zone page. See IP zones . You can't use blocklist zones with SSWS tokens.",
+          "kind": "network"
+        }
+      ],
+      "controls_unknown": [
+        "Whether any org-wide switch exists to disable SSWS token creation entirely (docs only show role-based limits on who can create tokens).",
+        "Whether network zones can restrict where OAuth service apps call Okta APIs from (org authorization server policies were not confirmed).",
+        "Default state of the Public client app admins setting."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "okta-1",
+      "provider_id": "okta",
+      "name": "SSWS API token",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "SSWS API tokens; scoped OAuth bearer. Service apps use client credentials authenticated with private_key_jwt.",
+        "evidence_refs": [
+          "turn2search4",
+          "turn2search16"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "turn2search4",
+          "turn2search16"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Per-token IP/network-zone restrictions apply to SSWS API calls. Do not automatically extend that control to OAuth tokens.",
+        "evidence_refs": [
+          "turn2search16",
+          "turn2search4"
+        ]
+      },
+      "lifetime": {
+        "basis": "inactivity",
+        "default_seconds": 2592000,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "30 days unused; use resets clock; period fixed per org",
+        "evidence_refs": [
+          "turn2search4",
+          "turn2search16"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "inactivity",
+        "summary": "Each use extends the 30-day inactivity window. No refresh token is involved.",
+        "evidence_refs": [
+          "turn2search4",
+          "turn2search16"
+        ]
+      },
+      "administration": {
+        "summary": "OAuth scopes plus assigned admin roles; SSWS inherits creator privileges. Revoke token or deactivate owner; token rate-limit allocation.",
+        "conditions": "Org authorization-server rules govern Okta APIs. Custom authorization-server lifetime policies do not govern these tokens.",
+        "evidence_refs": [
+          "turn2search16",
+          "turn2search4"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Deactivating the creating user deprovisions all API tokens that user created.",
+          "evidence_refs": [
+            "turn2search16"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admin Console Security > API > Tokens tab lists tokens; GET /api/v1/api-tokens lists metadata of all active API tokens.",
+          "evidence_refs": [
+            "fc-4ae74dff",
+            "fc-6151399c"
+          ]
+        }
+      },
+      "how": {
+        "disable": {
+          "ui": "Security > Administrators: assign only roles that may create tokens (super/org/group/group membership/read-only admin); for custom roles, grant or withhold Manage API tokens",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-6151399c",
+            "fc-68611c8b"
+          ]
+        },
+        "offboard": {
+          "ui": "Directory > People > More Actions > Deactivate > select creator > Deactivate Selected",
+          "api": "POST /api/v1/users/{id}/lifecycle/deactivate",
+          "cli": null,
+          "evidence_refs": [
+            "fc-7ae9f772",
+            "fc-4ae74dff",
+            "turn2search16"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Sent as 'Authorization: SSWS <token>'. Doc example value starts with '00' but no format is documented. Token ID (not secret) looks like 00T... . Not in GitHub secret-scanning list."
+        },
+        "log_sources": [
+          {
+            "name": "Okta System Log (Admin Console / GET /api/v1/logs)",
+            "notes": "Records admin/API actions with token or client context; 90-day retention; export to SIEM or Log Streaming for longer."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "transaction.detail.requestApiTokenId",
+            "log": "Okta System Log",
+            "notes": "Token ID of the SSWS token that caused the event; matches id in Security > API and /api/v1/api-tokens."
+          },
+          {
+            "field": "actor.id",
+            "log": "Okta System Log",
+            "notes": "Admin user who owns the token; token inherits that user's privileges."
+          },
+          {
+            "field": "client.id",
+            "log": "Okta System Log",
+            "notes": "For SSWS requests, the ID of the agent making the request."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "system.api_token.create",
+            "stage": "create",
+            "notes": "New unscoped API token generated."
+          },
+          {
+            "event": "system.api_token.enable",
+            "stage": "change",
+            "notes": "Enable API token."
+          },
+          {
+            "event": "system.api_token.update",
+            "stage": "change",
+            "notes": "Token changed (e.g. network condition); validity unchanged."
+          },
+          {
+            "event": "system.api_token.revoke",
+            "stage": "revoke",
+            "notes": "Revoke API token."
+          },
+          {
+            "event": "system.api_token.request_outside_allowed_range",
+            "stage": "auth_fail",
+            "notes": "Request from outside the token's allowed network zone."
+          }
+        ],
+        "correlation_keys": [
+          "transaction.detail.requestApiTokenId",
+          "actor.id",
+          "actor.alternateId",
+          "client.ipAddress",
+          "client.userAgent.rawUserAgent",
+          "client.id",
+          "client.zone",
+          "securityContext.asNumber",
+          "securityContext.asOrg",
+          "request.ipChain",
+          "transaction.id",
+          "uuid"
+        ],
+        "anomaly_cues": [
+          "Token ID seen from an IP/ASN outside the integration's usual hosts",
+          "system.api_token.request_outside_allowed_range spikes (stolen token tried from attacker infra)",
+          "Browser user agent on events carrying requestApiTokenId",
+          "Token used for admin changes (role grants, MFA reset, new tokens) it never made before",
+          "system.api_token.create by an admin right after an unusual sign-in",
+          "Activity under a token whose owning admin was recently deactivated or had role removed"
+        ],
+        "containment": {
+          "steps": "Revoke by ID: Security > API > Tokens, or DELETE /api/v1/api-tokens/{apiTokenId}. Deactivating the owning user deprovisions all their tokens. Add a network condition (PUT /api/v1/api-tokens/{apiTokenId}) to restrict use while investigating.",
+          "kills_existing": "yes",
+          "notes": "SSWS tokens are validated per request, so revocation stops use. Unused tokens expire after 30 days. Review what the token created (other tokens, OAuth apps, admin roles)."
+        },
+        "sample_query": {
+          "language": "Okta System Log filter (/api/v1/logs filter)",
+          "query": "transaction.detail.requestApiTokenId eq \"00T94e3cn9kSEO3c51s5\" and client.ipAddress ne \"203.0.113.10\"",
+          "purpose": "All actions by one SSWS token from any IP other than the known integration host."
+        },
+        "unknown": [
+          "Documented token secret format/regex",
+          "Dedicated event for invalid/failed SSWS token use (only outside-zone event found)",
+          "Whether every API-token event carries requestApiTokenId (read-only GETs may not be logged)"
+        ],
+        "evidence_refs": [
+          "fc-3a9b3217",
+          "fc-8196268d",
+          "fc-b2f789cd",
+          "fc-6aca2bd9",
+          "turn2search16"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/v1/users/me",
+            "reveals": "Profile of the admin user who created the SSWS token (token owner, not a session user)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "System Log does not record GET calls; token 'last used' in Admin Console still updates."
+          },
+          {
+            "stage": "recon",
+            "call": "GET /api/v1/users/{userId}/roles",
+            "reveals": "Admin role assignments held by the token owner",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "GET not in System Log."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/users",
+            "reveals": "All users and their profiles (listUsers)",
+            "bulk": true,
+            "scope": "okta.users.read (OAuth); SSWS inherits the owner's admin role",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "GET not in System Log; rate-limit dashboard can show top-consuming tokens."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/v1/apps",
+            "reveals": "All app integrations (listApplications)",
+            "bulk": true,
+            "scope": "okta.apps.read",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "GET not in System Log."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/v1/logs",
+            "reveals": "System Log events; lets the holder read the same telemetry defenders use (listLogEvents)",
+            "bulk": true,
+            "scope": "okta.logs.read",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "GET not in System Log."
+          }
+        ],
+        "unknown": [
+          "Per-endpoint rate limits for /users, /apps, /logs (bucket table not retrieved)",
+          "Whether any Okta add-on logs management-API reads"
+        ],
+        "evidence_refs": [
+          "fc-d20a0ce3",
+          "fc-4fc2e01e",
+          "fc-d82324c3",
+          "fc-0253b9e2",
+          "fc-89f3d074"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Okta API Key Created",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/okta_rules/okta_api_key_created.yml",
+          "detects": "Successful creation of an Okta API (SSWS) token."
+        },
+        {
+          "source": "Panther",
+          "title": "Okta API Key Revoked",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/okta_rules/okta_api_key_revoked.yml",
+          "detects": "Successful revocation of an Okta API (SSWS) token."
+        },
+        {
+          "source": "Sigma",
+          "title": "Okta API Token Created",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/identity/okta/okta_api_token_created.yml",
+          "detects": "Any Okta API token creation event."
+        },
+        {
+          "source": "Sigma",
+          "title": "Okta API Token Revoked",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/identity/okta/okta_api_token_revoked.yml",
+          "detects": "Any Okta API token revocation event."
+        },
+        {
+          "source": "Panther",
+          "title": "Okta Rate Limits",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/okta_rules/okta_rate_limits.yml",
+          "detects": "Okta rate-limit violation events, which API tokens and OAuth clients trigger when they make unusually many requests."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0253b9e2",
+      "title": "Okta OAuth 2.0 scopes",
+      "url": "https://developer.okta.com/docs/api/oauth2/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2af14486",
+      "title": "Minimum Permissions for Custom Administrator Roles to Create Okta API Tokens",
+      "url": "https://support.okta.com/help/s/article/minimum-rights-for-custom-admin-roles-to-create-api-tokens?language=en_US",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3a9b3217",
+      "title": "Okta Management API OpenAPI spec (vendor-owned okta-sdk-java repo)",
+      "url": "https://raw.githubusercontent.com/okta/okta-sdk-java/master/src/swagger/api.yaml",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4ae74dff",
+      "title": "Okta Management API OpenAPI spec (official, GitHub) - List all API token metadata",
+      "url": "https://raw.githubusercontent.com/okta/okta-management-openapi-spec/master/dist/current/management-minimal.yaml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4fc2e01e",
+      "title": "Do API calls generate events in system logs",
+      "url": "https://support.okta.com/help/s/article/Do-API-calls-generate-events-in-system-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6151399c",
+      "title": "Manage Okta API tokens",
+      "url": "https://help.okta.com/en-us/content/topics/security/api.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-68611c8b",
+      "title": "Role permissions",
+      "url": "https://help.okta.com/oie/en-us/content/topics/security/custom-admin-role/about-role-permissions.htm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6aca2bd9",
+      "title": "Okta Event Types",
+      "url": "https://developer.okta.com/docs/reference/api/event-types/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7ae9f772",
+      "title": "Deactivate and delete user accounts",
+      "url": "https://help.okta.com/oie/en-us/content/topics/users-groups-profiles/usgp-deactivate-user-account.htm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8196268d",
+      "title": "System Log query",
+      "url": "https://developer.okta.com/docs/reference/system-log-query/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-89f3d074",
+      "title": "Okta rate limit best practices",
+      "url": "https://developer.okta.com/docs/reference/rl-best-practices/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b2f789cd",
+      "title": "Okta Data Retention Policy",
+      "url": "https://support.okta.com/help/s/article/Okta-Data-Retention-Policy",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d20a0ce3",
+      "title": "Okta Management API - Users",
+      "url": "https://developer.okta.com/docs/api/openapi/okta-management/management/tag/User/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d82324c3",
+      "title": "Admin dashboard shows recent activity for an API token but no logs",
+      "url": "https://support.okta.com/help/s/article/okta-admin-dashboard-shows-recent-activity-for-an-api-token-but-there-are-no-corresponding-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search16",
+      "title": "Create an API token - Okta Developer",
+      "url": "https://developer.okta.com/docs/guides/create-an-api-token/main/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search4",
+      "title": "Implement OAuth for Okta with a service app",
+      "url": "https://developer.okta.com/docs/guides/implement-oauth-for-okta-serviceapp/main/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

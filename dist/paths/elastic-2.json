@@ -1,0 +1,446 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "elastic",
+      "name": "Elastic Cloud",
+      "scope_notes": "Covers Elastic Cloud (Elastic Cloud Hosted / Serverless, Elasticsearch). Covers Elastic Cloud org API keys and Elasticsearch-level credentials on ECH, Serverless and self-managed; Elasticsearch audit logging needs a qualifying subscription, and the org-level Cloud audit trail exists only on FedRAMP Moderate.",
+      "controls": [
+        {
+          "name": "xpack.security.authc.api_key.enabled",
+          "effect": "disable",
+          "applies_to": [
+            "elastic-2"
+          ],
+          "what": "Turns off the built-in API key service for the cluster.",
+          "setting": "elasticsearch.yml (static)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-e2859ba7"
+          ]
+        },
+        {
+          "name": "Role descriptors / access on API key",
+          "effect": "limit_scope",
+          "applies_to": [
+            "elastic-2",
+            "elastic-3"
+          ],
+          "what": "Restricts the key to given privileges and indices.",
+          "setting": "POST /_security/api_key role_descriptors; POST /_security/cross_cluster/api_key access",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-b9e9826b",
+            "fc-2c4ceef9"
+          ]
+        },
+        {
+          "name": "API key expiration (Elasticsearch)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "elastic-2",
+            "elastic-3"
+          ],
+          "what": "Optional expiry; none by default.",
+          "setting": "Kibana API keys > Create API key; expiration field",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-e084e481",
+            "fc-2c4ceef9"
+          ]
+        },
+        {
+          "name": "Invalidate API keys",
+          "effect": "revoke",
+          "applies_to": [
+            "elastic-2",
+            "elastic-3"
+          ],
+          "what": "Invalidated keys fail authentication; can target by owner, user or realm.",
+          "setting": "DELETE /_security/api_key; Kibana API keys > Delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-68c78025"
+          ]
+        },
+        {
+          "name": "IP filters (network security policies)",
+          "effect": "limit_network",
+          "applies_to": [
+            "elastic-2",
+            "elastic-3",
+            "elastic-4"
+          ],
+          "what": "Rejects deployment/project traffic from non-allowed IPs with 403.",
+          "setting": "Organization > Network security > IP filter; apply to deployments",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-c2207027"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP restriction for the Elastic Cloud API (api.elastic-cloud.com) used with Cloud API keys.",
+        "Whether an org can block creation of Cloud API keys with no expiry (Never).",
+        "Org-level audit log of Cloud API key creation/use outside FedRAMP Moderate.",
+        "Whether ES API keys owned by a SAML user stop working when the user is removed in the IdP.",
+        "Whether xpack.security.authc.api_key.enabled can be set in ECH user settings.",
+        "Whether Cloud API key revocation affects in-flight requests."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "elastic-2",
+      "provider_id": "elastic",
+      "name": "Elasticsearch API key (personal/user API key, incl. Serverless project API keys)",
+      "family": "api_key",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Base64 id:api_key sent as 'Authorization: ApiKey' to Elasticsearch/Kibana. Holds a snapshot of the creator's privileges, or the intersection with given role descriptors.",
+        "evidence_refs": [
+          "fc-e084e481",
+          "fc-b9e9826b",
+          "fc-21daec03"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Key is owned by a user in a realm (e.g. SAML) but works independently of IdP sessions; docs do not state behavior when the IdP user is removed.",
+        "evidence_refs": [
+          "fc-e084e481",
+          "fc-b9e9826b"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "ECH/Serverless IP filters gate all deployment traffic (403); self-managed uses xpack.security.http.filter.*. Not per key.",
+        "evidence_refs": [
+          "fc-c2207027"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "No expiry by default (Kibana quick-create: 90 days)",
+        "evidence_refs": [
+          "fc-e084e481"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Optional expiration",
+        "summary": "Reused until expiry or invalidation.",
+        "evidence_refs": [
+          "fc-e084e481"
+        ]
+      },
+      "administration": {
+        "summary": "Needs manage_api_key or manage_own_api_key; admins with manage_api_key see all keys and owners. Service can be turned off cluster-wide with xpack.security.authc.api_key.enabled: false.",
+        "conditions": "Static setting; availability on ECH user settings not verified.",
+        "evidence_refs": [
+          "fc-e084e481",
+          "fc-e2859ba7"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Kibana API Keys management page shows all users' keys to manage_api_key holders; GET /_security/api_key returns all keys.",
+          "evidence_refs": [
+            "fc-e084e481",
+            "fc-38430e33"
+          ]
+        }
+      },
+      "how": {
+        "disable": {
+          "ui": "Self-managed: elasticsearch.yml xpack.security.authc.api_key.enabled: false (static, restart). ECH: Edit > Elasticsearch > Manage user settings and extensions",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-e2859ba7",
+            "fc-33c04691"
+          ]
+        },
+        "usage": {
+          "ui": "ECH: deployment Edit > Elasticsearch > Manage user settings and extensions > add xpack.security.audit.enabled: true; view in monitoring deployment Discover (elastic-cloud-logs-*), filter apikey.id / authentication.type: API_KEY",
+          "api": "PUT _cluster/settings {\"persistent\":{\"xpack.security.audit.enabled\":true}} (9.5+)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-33c04691",
+            "fc-309fcee8",
+            "fc-2f88b4d7"
+          ]
+        },
+        "reads": {
+          "ui": "Same audit log; filter event.action access_granted and apikey.id (access_granted is in the default include list)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-2f88b4d7",
+            "fc-c307f244",
+            "fc-309fcee8"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Encoded value is base64 of id:api_key."
+        },
+        "log_sources": [
+          {
+            "name": "Elasticsearch audit log",
+            "notes": "Disabled by default; subscription-gated; on ECH requires logging and monitoring to a monitoring deployment."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "apikey.id",
+            "log": "Elasticsearch audit log",
+            "notes": "Present for API key authentication"
+          },
+          {
+            "field": "apikey.name",
+            "log": "Elasticsearch audit log",
+            "notes": null
+          },
+          {
+            "field": "authentication.type",
+            "log": "Elasticsearch audit log",
+            "notes": "API_KEY"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "create_apikey",
+            "stage": "create",
+            "notes": "Needs security_config_change event type"
+          },
+          {
+            "event": "change_apikey",
+            "stage": "modify",
+            "notes": "Needs security_config_change"
+          },
+          {
+            "event": "authentication_success",
+            "stage": "use",
+            "notes": null
+          },
+          {
+            "event": "access_granted",
+            "stage": "use",
+            "notes": "Per-action authorization"
+          },
+          {
+            "event": "invalidate_apikeys",
+            "stage": "revoke",
+            "notes": "Needs security_config_change"
+          }
+        ],
+        "correlation_keys": [
+          "apikey.id",
+          "user.name",
+          "user.realm",
+          "origin.address",
+          "request.id"
+        ],
+        "anomaly_cues": [
+          "Keys without expiry created by admins",
+          "authentication.type API_KEY from new origin.address",
+          "Bulk _search or scroll by API key"
+        ],
+        "containment": {
+          "steps": "DELETE /_security/api_key with ids, or by username/realm_name to kill all of a user's keys.",
+          "kills_existing": "yes",
+          "notes": "Invalidated keys fail authentication."
+        },
+        "sample_query": "event.action:authentication_success and authentication.type:API_KEY and apikey.id:<id>",
+        "unknown": [],
+        "evidence_refs": [
+          "fc-68c78025",
+          "fc-2f88b4d7",
+          "fc-985046f7"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /_security/_authenticate",
+            "reveals": "Identity, roles, api_key info",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "authentication_success",
+            "log_notes": "If audit logging enabled"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /_security/api_key",
+            "reveals": "Own keys, or all keys with read_security/manage_api_key",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "access_granted",
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "GET /_search",
+            "reveals": "Documents",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "access_granted",
+            "log_notes": "Audit log, subscription-gated"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-2f88b4d7",
+          "fc-985046f7",
+          "fc-2c4ceef9"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-21daec03",
+      "title": "Serverless project API keys",
+      "url": "https://www.elastic.co/docs/deploy-manage/api-keys/serverless-project-api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2c4ceef9",
+      "title": "Elasticsearch API (OpenAPI) - Create a cross-cluster API key",
+      "url": "https://www.elastic.co/docs/api/doc/elasticsearch.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2f88b4d7",
+      "title": "Elasticsearch audit events",
+      "url": "https://www.elastic.co/docs/reference/elasticsearch/elasticsearch-audit-events",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-309fcee8",
+      "title": "Stack monitoring on ECH and ECE",
+      "url": "https://www.elastic.co/docs/deploy-manage/monitor/stack-monitoring/ece-ech-stack-monitoring",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-33c04691",
+      "title": "Enable audit logging",
+      "url": "https://www.elastic.co/docs/deploy-manage/security/logging-configuration/enabling-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-38430e33",
+      "title": "Get API key information",
+      "url": "https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-security-get-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-68c78025",
+      "title": "Invalidate API keys",
+      "url": "https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-security-invalidate-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-985046f7",
+      "title": "Enable audit logging",
+      "url": "https://www.elastic.co/docs/deploy-manage/monitor/stack-audit-logging/enabling-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9e9826b",
+      "title": "Create an API key",
+      "url": "https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-security-create-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c2207027",
+      "title": "Manage IP filters in ECH or Serverless",
+      "url": "https://www.elastic.co/docs/deploy-manage/security/ip-filtering-cloud",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c307f244",
+      "title": "Auditing security settings",
+      "url": "https://www.elastic.co/docs/reference/elasticsearch/configuration-reference/auding-settings",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e084e481",
+      "title": "Elasticsearch API keys",
+      "url": "https://www.elastic.co/docs/deploy-manage/api-keys/elasticsearch-api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e2859ba7",
+      "title": "Security settings in Elasticsearch",
+      "url": "https://www.elastic.co/docs/reference/elasticsearch/configuration-reference/security-settings",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

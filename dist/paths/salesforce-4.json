@@ -1,0 +1,769 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "salesforce",
+      "name": "Salesforce (core platform)",
+      "scope_notes": "API availability depends on edition. Creation of Connected Apps is restricted from Spring ’26; assess External Client Apps for new integrations.",
+      "controls": [
+        {
+          "name": "Permitted Users: Admin approved users are pre-authorized",
+          "effect": "require_approval",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Only users whose profile or permission set is assigned to the connected app can use it; others are refused.",
+          "setting": "Setup > Connected Apps > Manage > Edit Policies > Permitted Users; Metadata ConnectedAppOauthPolicy isAdminApproved (ECA: permittedUsersPolicyType=AdminApprovedPreAuthorized)",
+          "plan": "Not available in Group Edition",
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "If set to true , only users with the appropriate profile or permission set can access the app. These users don’t have to approve the app before they can access it."
+        },
+        {
+          "name": "API Access Control (Allow only admin-approved apps)",
+          "effect": "disable",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Org-wide: only connected apps installed or approved by an admin can call the Salesforce API; a separate switch covers customer/partner users.",
+          "setting": "Metadata ConnectedAppSettings enableAdminApprovedAppsOnly / enableAdminApprovedAppsOnlyForExternalUser; Setup > Connected Apps OAuth Usage (install/unblock)",
+          "plan": "Must be enabled by Salesforce Customer Support",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7432d011"
+          ],
+          "quote": "If true , only apps that have been approved or installed by the admin can call the Salesforce API. To access this field, you must contact Salesforce Customer Support to enable API Access Control."
+        },
+        {
+          "name": "IP Relaxation",
+          "effect": "limit_network",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Enforce (default) applies org and profile IP restrictions to the app; Bypass options relax them, and Enforce_RelaxRefresh skips them for refresh-token exchanges.",
+          "setting": "Connected app / external client app OAuth policies > IP Relaxation; Metadata ipRelaxation (ECA ipRelaxationPolicyType)",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "ENFORCE (default)—Enforces the IP restrictions configured for the org, such as the IP ranges assigned to a user profile."
+        },
+        {
+          "name": "Profile Login IP Ranges",
+          "effect": "limit_network",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Restricts the IP ranges from which users of a profile, including API integration users, can log in.",
+          "setting": "Setup > Profiles > [profile] > Login IP Ranges; Metadata Profile.loginIpRanges",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f9aef927"
+          ],
+          "quote": "The list of IP address ranges from which users with a particular profile can log in."
+        },
+        {
+          "name": "Enforce login IP ranges on every request",
+          "effect": "limit_network",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Checks profile Login IP Ranges on every request, including from client apps, not only at login.",
+          "setting": "Setup > Session Settings; Metadata SecuritySettings/SessionSettings enforceIpRangesEveryRequest",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4f3984ca"
+          ],
+          "quote": "If true , the IP addresses in Login IP Ranges are enforced when a user accesses Salesforce (on every page request), including access from a client app."
+        },
+        {
+          "name": "Lock sessions to the IP address from which they originated",
+          "effect": "limit_network",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Binds a session to the IP it was created from.",
+          "setting": "Setup > Session Settings; Metadata SessionSettings lockSessionsToIp",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4f3984ca"
+          ],
+          "quote": "Indicates whether user sessions are locked to the IP address from which the user logged in ( true ) or not ( false )."
+        },
+        {
+          "name": "Refresh Token Policy",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Sets refresh tokens to valid until revoked (default), immediately expire, expire after a fixed time, or expire after inactivity.",
+          "setting": "Connected app / ECA OAuth policies > Refresh Token Policy; Metadata refreshTokenPolicy (ECA refreshTokenPolicyType)",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "infinite —The refresh token is used indefinitely, unless revoked by the user or Salesforce admin. Default setting."
+        },
+        {
+          "name": "Connected app session timeout",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Sets how long an access token session from the app lasts; falls back to profile then org session timeout.",
+          "setting": "Connected app policies > Session Policies > Timeout Value; Metadata ConnectedAppSessionPolicy sessionTimeout",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "If you don’t set a value, Salesforce uses the timeout value in the connected app user’s profile."
+        },
+        {
+          "name": "Enable Token Exchange Flow",
+          "effect": "disable",
+          "applies_to": [
+            "salesforce-4"
+          ],
+          "what": "Token exchange is off unless enabled on the connected app or external client app.",
+          "setting": "Connected app / ECA OAuth settings > Enable Token Exchange Flow; Metadata isTokenExchangeEnabled (ECA isTokenExchangeFlowEnabled)",
+          "plan": "Enterprise, Performance, Unlimited, Developer (per input)",
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "If set to true , the connected app can use the OAuth 2.0 token exchange flow to exchange tokens from an external identity provider for Salesforce tokens."
+        },
+        {
+          "name": "Require secret for token exchange",
+          "effect": "other",
+          "applies_to": [
+            "salesforce-4"
+          ],
+          "what": "Requires the app's consumer secret on token exchange requests.",
+          "setting": "Connected app / ECA OAuth settings; Metadata isSecretRequiredForTokenExchange",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "If set to true , the connected app must include its consumer secret ( client_secret ) in the token request during the OAuth 2.0 token exchange flow."
+        },
+        {
+          "name": "Token exchange handler enablement",
+          "effect": "limit_scope",
+          "applies_to": [
+            "salesforce-4"
+          ],
+          "what": "The handler must be enabled and bound to specific apps with an execution user; it validates external tokens and maps users.",
+          "setting": "Setup > Token Exchange Handlers; Metadata OauthTokenExchangeHandler isEnabled + enablements",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-2c8d22ae"
+          ],
+          "quote": "The enablement settings for the token exchange handler, including the execution user who runs the Apex class, the connected apps or external client apps for which it’s enabled"
+        },
+        {
+          "name": "Connected app creation restricted (Spring '26)",
+          "effect": "disable",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "New connected apps cannot be created without contacting Support; existing apps keep working and external client apps are recommended.",
+          "setting": "Platform default; contact Salesforce Support to re-enable",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "Connected apps creation is restricted as of Spring ‘26. You can use existing connected apps during and after Spring ‘26."
+        },
+        {
+          "name": "External client app JWT access token timeout",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-4"
+          ],
+          "what": "For ECAs issuing JWT-based access tokens, sets a custom expiry (1 minute to 12 hours) instead of the session timeout.",
+          "setting": "ECA OAuth policies; Metadata ExtlClntAppOauthConfigurablePolicies namedUserJwtSessionTimeoutType/namedUserJwtTimeout",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-f709bafd"
+          ],
+          "quote": "the amount of time before a JWT-based access token issued to a named user expires. Values are in minutes."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "help.salesforce.com articles (connected app OAuth policies, JWT/SAML bearer flow pre-authorization, Use Any API Client, uninstalled connected app restrictions, OAuth token revocation) could not be fetched; controls are sourced from the Winter '27 Metadata API reference only.",
+        "Whether JWT bearer and SAML bearer flows always enforce IP restrictions regardless of IP Relaxation (stated in older packaging guides; not verified in current docs).",
+        "Behavior and timeline of the 'Use Any API Client' permission, which bypasses admin pre-approval; vendor deprecation page not fetched.",
+        "Whether a per-flow switch exists to disable JWT bearer or SAML bearer flows org-wide; none found in OauthOidcSettings.",
+        "Default of isSecretRequiredForTokenExchange and enableClientSecretInRestApiAccess."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "salesforce-4",
+      "provider_id": "salesforce",
+      "name": "OAuth token exchange",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "The client POSTs a token from an external identity provider (access, refresh or ID token, SAML assertion or JWT) to the Salesforce token endpoint. An Apex token exchange handler validates it and maps it to a Salesforce user, and Salesforce returns its own access token.",
+        "evidence_refs": [
+          "fc-abd0a360"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "This path exists to exchange an external IdP token for Salesforce tokens. Trust is defined in customer-written Apex: the handler decides what counts as a valid token and which user it maps to, and it can create users.",
+        "evidence_refs": [
+          "fc-abd0a360"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "mixed",
+        "boundary": "General Salesforce controls apply to OAuth apps: profile login IP ranges, the app's IP relaxation policy, and optional 'Enforce login IP ranges on every request'. The IP relaxation and continuous-enforcement pages do not name the token exchange flow, so how its initial exchange is treated was not established.",
+        "evidence_refs": [
+          "fc-1a057043"
+        ]
+      },
+      "lifetime": {
+        "basis": "inactivity",
+        "default_seconds": 7200,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Salesforce access token follows session timeout (inactivity); default 2 h",
+        "evidence_refs": [
+          "fc-c9fd7845",
+          "fc-2b286075",
+          "fc-6f0312fe"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "policy",
+        "summary": "If the app requests one, Salesforce returns a refresh token governed by the app's refresh token policy (valid until revoked, immediate, idle or fixed expiry); otherwise the client exchanges a fresh external token.",
+        "evidence_refs": [
+          "fc-abd0a360",
+          "fc-c9fd7845"
+        ]
+      },
+      "administration": {
+        "summary": "Admins create a token exchange handler (Apex class plus OauthTokenExchangeHandler metadata), enable it for specific connected apps or external client apps, and pick a Run As execution user. Requested scopes must be a subset of the app's scopes; external client apps can require a client secret for the exchange.",
+        "conditions": "Available in Enterprise, Performance, Unlimited and Developer Editions. Validation and user mapping are customer code, so security depends on the handler implementation.",
+        "evidence_refs": [
+          "fc-ecd4f324",
+          "fc-5ab59da2"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Issuance requires a token from the external identity provider; no Salesforce UI login or MFA step is described.",
+          "evidence_refs": [
+            "fc-abd0a360"
+          ]
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Opaque tokens stop on deactivation of the mapped user; JWT-based access tokens stay valid until timeout.",
+          "evidence_refs": [
+            "fc-9a2a3683"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Token exchange uses external client apps, whose tokens per user are listed through the Connect REST API usage resources.",
+          "evidence_refs": [
+            "fc-c60e725e"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Setup > Quick Find 'External Client Apps' > OAuth Usage > [app] > user count",
+          "api": "GET /apps/oauth/usage/{ecaId}/users; GET /apps/oauth/usage/{ecaId}/{userId}/tokens",
+          "cli": null,
+          "evidence_refs": [
+            "fc-0a1b3de8",
+            "fc-e84cef78",
+            "fc-e70499d7"
+          ]
+        },
+        "sso": {
+          "ui": "Setup > Quick Find 'Token' > Token Exchange Handlers (handler Apex class validates the IdP token)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-75d4ce1c"
+          ]
+        },
+        "usage": {
+          "ui": "Setup > Quick Find 'Login History' > Login History (filter/download; Application column)",
+          "api": "SOQL: SELECT ... FROM LoginHistory WHERE LoginSubType = 'OauthTokenExchange'; ApiEvent WHERE ConnectedAppId = '<id>' (Shield/Event Monitoring)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ceadd812",
+            "fc-4b9059be",
+            "fc-750b32b7"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "SOQL: SELECT Query, QueriedEntities, RowsProcessed FROM ApiEvent WHERE ConnectedAppId = '<id>' (needs Shield or Event Monitoring + View Real-Time Event Monitoring Data)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-750b32b7"
+          ]
+        },
+        "offboard": {
+          "ui": "Setup > Quick Find 'Users' > Users > Edit > deselect Active > Save",
+          "api": "SCIM: PATCH /services/scim/v2/Users/{userId} (replace active=false)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-324d6e2b",
+            "fc-8d31d836"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Incoming external IdP token (access, refresh, ID token, SAML or JWT); Salesforce issues its own token."
+        },
+        "log_sources": [
+          {
+            "name": "LoginHistory",
+            "notes": "Every OAuth token grant shows as a login with LoginType/LoginSubType, SourceIp, Application. 6 months; no add-on needed."
+          },
+          {
+            "name": "LoginEvent / ApiEvent (Real-Time Event Monitoring)",
+            "notes": "Needs Shield or Event Monitoring add-on. LoginKey ties a session's events; ApiEvent has ConnectedAppId."
+          },
+          {
+            "name": "OauthToken object",
+            "notes": "Current tokens per user+app with UseCount and LastUsedDate."
+          },
+          {
+            "name": "SetupAuditTrail",
+            "notes": "Connected app / external client app config changes; at least 180 days."
+          },
+          {
+            "name": "OauthTokenExchangeHandler object",
+            "notes": "Handler config: IsEnabled, IsUserCreationAllowed."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Application",
+            "log": "LoginHistory / LoginEvent",
+            "notes": "Connected app name used to log in"
+          },
+          {
+            "field": "LoginSubType",
+            "log": "LoginHistory / LoginEvent",
+            "notes": "OAuth flow (e.g. OauthWebServer, OauthClientCredentials, OauthRefreshToken)"
+          },
+          {
+            "field": "ConnectedAppId",
+            "log": "ApiEvent",
+            "notes": "External client app ID; null if session already active"
+          },
+          {
+            "field": "LoginKey",
+            "log": "LoginEvent / ApiEvent",
+            "notes": "Ties all events in one session"
+          },
+          {
+            "field": "AppName",
+            "log": "OauthToken",
+            "notes": "App holding the token"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "OauthTokenExchange",
+            "stage": "use",
+            "notes": "LoginSubType for token exchange"
+          },
+          {
+            "event": "OauthHybridTokenExchange",
+            "stage": "use",
+            "notes": "LoginSubType for hybrid apps"
+          }
+        ],
+        "correlation_keys": [
+          "UserId",
+          "Username",
+          "SourceIp",
+          "Application",
+          "LoginKey",
+          "SessionKey",
+          "LoginHistoryId",
+          "ConnectedAppId",
+          "UserAgent",
+          "CountryIso"
+        ],
+        "anomaly_cues": [
+          "OauthTokenExchange logins mapped to users who never log in via the external IdP",
+          "New users created right after token exchange (IsUserCreationAllowed true)",
+          "Token exchange from SourceIp not matching the app backend",
+          "Handler Apex class modified (SetupAuditTrail) before unusual mappings"
+        ],
+        "containment": {
+          "steps": "Set handler IsEnabled to false; revoke issued tokens via /services/oauth2/revoke; delete AuthSession rows; fix handler Apex validation; revoke the upstream IdP token.",
+          "kills_existing": "partial",
+          "notes": "Disabling the handler stops new exchanges only."
+        },
+        "sample_query": {
+          "language": "SOQL",
+          "query": "SELECT UserId, LoginTime, SourceIp, Application, LoginSubType, Status FROM LoginHistory WHERE LoginTime = LAST_N_DAYS:7 AND LoginType = 'Remote Access 2.0'",
+          "purpose": "Pull OAuth logins and review rows with LoginSubType OAuth Token Exchange"
+        },
+        "unknown": [
+          "Exact LoginType API value usable in SOQL filter (label shown)",
+          "Logging of handler validation failures"
+        ],
+        "evidence_refs": [
+          "fc-3fc0d26a",
+          "fc-dcaa218f"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST /services/oauth2/token (grant_type=...token-exchange, external IdP token/JWT/SAML/ID token)",
+            "reveals": "Apex Oauth2TokenExchangeHandler validates the external token and maps it to a Salesforce user; returns a Salesforce access token",
+            "bulk": false,
+            "scope": "connected/external client app; token exchange flow, mapped user's permissions",
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "LoginHistory (LoginSubType 'OAuth Token Exchange')",
+            "log_notes": "LoginHistory LoginSubType includes 'OAuth Token Exchange'; token issuance is a login event"
+          },
+          {
+            "stage": "recon",
+            "call": "GET /services/oauth2/userinfo",
+            "reveals": "Mapped Salesforce user_id, organization_id, username; confirms the mapped identity",
+            "bulk": false,
+            "scope": "openid; current user only",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not established that userinfo reads are logged"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /services/data/vXX.X/sobjects/ (Describe Global)",
+            "reveals": "Objects visible to the mapped user; schema reconnaissance",
+            "bulk": false,
+            "scope": "api",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Metadata read; not confirmed logged"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /services/data/vXX.X/query/?q={SOQL}",
+            "reveals": "Bulk record data via SOQL as the mapped user",
+            "bulk": true,
+            "scope": "api + object/field read",
+            "rate_limit": "org daily API allocation; 2,000 records/page",
+            "logged": "plan",
+            "log_event": "ApiEvent (QueriedEntities, Query)",
+            "log_notes": "Read logged only with Shield/Event Monitoring add-on + View Real-Time Event Monitoring Data permission"
+          }
+        ],
+        "unknown": [
+          "Whether userinfo/Describe Global reads are logged",
+          "Read-query audit trail absent Event Monitoring"
+        ],
+        "evidence_refs": [
+          "fc-318a7f60",
+          "fc-4b9059be",
+          "fc-47c4b843",
+          "fc-e83afbe3",
+          "fc-750b32b7"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0a1b3de8",
+      "title": "Manage External Client App OAuth Usage",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.manage_external_client_app_usage.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1a057043",
+      "title": "Connected App IP Relaxation and Continuous IP Enforcement | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.connected_app_continuous_ip.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2b286075",
+      "title": "Session Security | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.security_overview_sessions.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2c8d22ae",
+      "title": "OauthTokenExchangeHandler | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_oauthtokenexchangehandler.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-318a7f60",
+      "title": "Oauth2TokenExchangeHandler Class | Apex Reference",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.apexref.meta/apexref/apex_class_Auth_Oauth2TokenExchangeHandler.htm",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-324d6e2b",
+      "title": "Deactivate Users",
+      "url": "https://help.salesforce.com/s/articleView?id=platform.how_to_deactivate_users.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3fc0d26a",
+      "title": "Object Reference: LoginHistory",
+      "url": "https://resources.docs.salesforce.com/latest/latest/en-us/sfdc/pdf/object_reference.pdf",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-47c4b843",
+      "title": "Describe Global | REST API Developer Guide",
+      "url": "https://developer.salesforce.com/docs/platform/api-rest/guide/resources-describeglobal.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4b9059be",
+      "title": "LoginHistory | Object Reference",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.object_reference.meta/object_reference/sforce_api_objects_loginhistory.htm",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4f3984ca",
+      "title": "SecuritySettings | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_securitysettings.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5ab59da2",
+      "title": "Enable Apps for a Token Exchange Handler | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_token_exchange_enable.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6f0312fe",
+      "title": "Modify Session Security Settings | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.admin_sessions.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7432d011",
+      "title": "ConnectedAppSettings | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_connectedappsettings.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-750b32b7",
+      "title": "ApiEvent | Platform Events",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.platform_events.meta/platform_events/sforce_api_objects_apievent.htm",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-75d4ce1c",
+      "title": "Define a Token Exchange Handler",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_token_exchange_handler_define.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8d31d836",
+      "title": "Examples: Deactivate and Reactivate Users with SCIM",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.identity_scim_deactivate_reactivate_user.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9a2a3683",
+      "title": "Access Tokens",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_access_tokens.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-abd0a360",
+      "title": "Token Exchange Flow Diagram and Process | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_token_exchange_diagram.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c60e725e",
+      "title": "External Client App OAuth Usage",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.meta_external_client_app_oauth_usage.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c9fd7845",
+      "title": "Manage OAuth Access Policies for a Connected App | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.connected_app_manage_oauth.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ceadd812",
+      "title": "Monitor Login History",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.users_login_history.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d2265723",
+      "title": "ConnectedApp | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_connectedapp.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dcaa218f",
+      "title": "Revoke OAuth Tokens",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_revoke_token.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e70499d7",
+      "title": "Refresh Token by User and App (Connect REST API)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/connect_resources_usage_app_id_user_id_tokens.htm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e83afbe3",
+      "title": "Query resource | REST API Developer Guide",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api/resources_query.htm",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e84cef78",
+      "title": "OAuth Users by App ID (Connect REST API)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/connect_resources_usage_app_id_users.htm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ecd4f324",
+      "title": "Set Up the Token Exchange Flow | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_token_exchange_configure.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f709bafd",
+      "title": "ExtlClntAppOauthConfigurablePolicies | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_extlclntappoauthconfigurablepolicies.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f9aef927",
+      "title": "Profile | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_profile.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    }
+  ]
+}

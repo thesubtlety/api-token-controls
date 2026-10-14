@@ -1,0 +1,214 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "jfrog",
+      "name": "JFrog",
+      "scope_notes": "Covers JFrog Platform (Cloud/SaaS). JFrog Cloud SaaS; IP allowlist, OIDC integration and MyJFrog API tokens need Enterprise X or Enterprise+, log streaming needs Enterprise+, Cloud Log Collection is on all SaaS licenses; several token thresholds are documented only as self-hosted YAML settings.",
+      "controls": [
+        {
+          "name": "Regenerate MyJFrog API token",
+          "effect": "revoke",
+          "applies_to": [
+            "jfrog-5"
+          ],
+          "what": "Regenerating invalidates the previous token.",
+          "setting": "MyJFrog > profile > API Token > Regenerate Token",
+          "plan": "Enterprise X or Enterprise+",
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-2319f16f"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether SaaS customers can change token.max-expiry, token.allow-refreshable or revocable-expiry-threshold (documented only as Access YAML settings).",
+        "A setting to stop non-admin users creating identity tokens.",
+        "Default and maximum lifetime of UI-generated identity tokens.",
+        "Whether the IP allowlist covers the MyJFrog portal API.",
+        "Whether MyJFrog audit logs record API token generation (event names not listed).",
+        "Reference token length: Access Tokens page says 128 characters, Identity Tokens page says 64."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "jfrog-5",
+      "provider_id": "jfrog",
+      "name": "MyJFrog API token",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Account-level token for the MyJFrog portal API (manage IP allowlist, PrivateLink, custom domains, servers). Only Primary Admins can generate it.",
+        "evidence_refs": [
+          "fc-2319f16f"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Not documented.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Docs do not say whether the JPD allowlist applies to the MyJFrog API.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 31536000,
+        "maximum_seconds": 31536000,
+        "configurable": "no",
+        "summary": "1 year",
+        "evidence_refs": [
+          "fc-2319f16f"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "1 year from generation",
+        "summary": "Regenerate; old token stops working.",
+        "evidence_refs": [
+          "fc-2319f16f"
+        ]
+      },
+      "administration": {
+        "summary": "Primary Admin generates/regenerates; Admins and Technical Members can view it.",
+        "conditions": "Enterprise X or Enterprise+.",
+        "evidence_refs": [
+          "fc-2319f16f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "MyJFrog API Token page; all Admins and Technical Members can view API tokens.",
+          "evidence_refs": [
+            "fc-2319f16f"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "MyJFrog > profile icon > API Token (fixed one-year expiry; expiry notifications in Notification Center)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-2319f16f"
+          ]
+        },
+        "usage": {
+          "ui": "MyJFrog > Audit Logs; filter by Events/date range and search, check Triggered by",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-c227e74c"
+          ]
+        },
+        "kill": {
+          "ui": "MyJFrog > profile icon > API Token > Regenerate Token",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-2319f16f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "MyJFrog Audit Logs",
+            "notes": "Primary Admins/Admins; 1 year retention; records attempted actions."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Triggered by",
+            "log": "MyJFrog Audit Logs",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "Triggered by",
+          "Event Time"
+        ],
+        "anomaly_cues": [
+          "IP/CIDR Allowlist changes via API"
+        ],
+        "containment": {
+          "steps": "Regenerate the token.",
+          "kills_existing": "yes",
+          "notes": "Old token expires on regeneration."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Token generation event name"
+        ],
+        "evidence_refs": [
+          "fc-2319f16f",
+          "fc-c227e74c"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "MyJFrog API endpoints and logging of reads"
+        ],
+        "evidence_refs": [
+          "fc-2319f16f"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-2319f16f",
+      "title": "Generate a Token in MyJFrog",
+      "url": "https://docs.jfrog.com/administration/docs/generate-a-token-in-myjfrog",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c227e74c",
+      "title": "Manage Audit Logs (MyJFrog)",
+      "url": "https://docs.jfrog.com/administration/docs/manage-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

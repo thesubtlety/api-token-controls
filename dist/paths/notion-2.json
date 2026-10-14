@@ -1,0 +1,479 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "notion",
+      "name": "Notion",
+      "scope_notes": "Enterprise for IP restrictions; Business/Enterprise for SAML SSO. Confirm API enforcement and token-expiry requirements with Notion.",
+      "controls": [
+        {
+          "name": "PAT creation policy (who can create PATs with Notion API access)",
+          "effect": "disable",
+          "applies_to": [
+            "notion-2"
+          ],
+          "what": "Limits PAT creation to owners, owners plus selected groups, or all members; removing a member's permission stops their existing PATs.",
+          "setting": "Settings > Connections (PAT creator settings)",
+          "plan": "Business or Enterprise (not configurable on Free/Plus)",
+          "default": "varies",
+          "level": "workspace",
+          "evidence_refs": [
+            "fc-fe318bcc"
+          ],
+          "quote": "If an admin changes the workspace policy so a member is no longer allowed to create PATs with Notion API access, that member's existing PATs stop working for Notion API requests."
+        },
+        {
+          "name": "Revoke personal access tokens",
+          "effect": "other",
+          "applies_to": [
+            "notion-2"
+          ],
+          "what": "Workspace admins revoke any PAT; org owners can list/revoke via the Admin API.",
+          "setting": "Settings > Connections > All personal access tokens; Admin API",
+          "plan": null,
+          "default": "unknown",
+          "level": "workspace",
+          "evidence_refs": [
+            "fc-fe318bcc"
+          ],
+          "quote": "Workspace admins can revoke any PAT in their workspace from Settings → Connections → All personal access tokens."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "notion-2",
+          "what": "PAT creation policy is not configurable on Free and Plus plans.",
+          "evidence_refs": [
+            "fc-fe318bcc"
+          ],
+          "quote": "| Plus | All workspace members. | Not configurable. |",
+          "kind": "disable"
+        }
+      ],
+      "controls_unknown": [
+        "Whether Notion IP address restrictions apply to internal connection tokens, PATs or public OAuth tokens (help page only describes user sign-in; admin tokens are excluded).",
+        "Whether SAML SSO enforcement affects API tokens (not stated).",
+        "Whether admins can set a maximum PAT lifetime (creators choose 7 days to 1 year; default 1 year).",
+        "Whether internal connection tokens or OAuth tokens expire or can be force-rotated by admins."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "notion-2",
+      "provider_id": "notion",
+      "name": "Personal access token",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Internal connection tokens, personal access tokens and public-connection OAuth bearer tokens.",
+        "evidence_refs": [
+          "turn3search6",
+          "turn3search26",
+          "turn3search30"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "turn3search6",
+          "turn3search26",
+          "turn3search30"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "login_only",
+        "boundary": "Enterprise IP allowlist restricts managed-user sign-in and explicitly does not apply to admin tokens on the admin APIs. Coverage of connection, PAT and OAuth API calls is not documented.",
+        "evidence_refs": [
+          "turn3search10",
+          "turn3search22"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 31536000,
+        "maximum_seconds": 31536000,
+        "configurable": "yes",
+        "summary": "Expiry chosen at creation: 7, 30, 90, 180 days or 1 year (default 1 year)",
+        "evidence_refs": [
+          "turn3search6",
+          "turn3search26",
+          "turn3search30",
+          "fc-fe318bcc",
+          "turn3search22"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not_applicable",
+        "summary": "No refresh. Create a new PAT before expiry; expired tokens return an unauthorized error.",
+        "evidence_refs": [
+          "turn3search6",
+          "turn3search26",
+          "turn3search30",
+          "turn3search22",
+          "fc-fe318bcc"
+        ]
+      },
+      "administration": {
+        "summary": "PATs inherit user access. Admins set who may create PATs (plan-dependent), view and revoke workspace PATs; org owners can list/revoke via the Admin API. Removing a member's PAT permission stops their existing PATs.",
+        "conditions": "Enterprise for IP restrictions; Business/Enterprise for SAML SSO. Confirm API enforcement and token-expiry requirements with Notion.",
+        "evidence_refs": [
+          "turn3search10",
+          "turn3search22",
+          "fc-fe318bcc"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "A PAT acts as its creator and loses access when the creator leaves the workspace.",
+          "evidence_refs": [
+            "fc-fe318bcc"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admins see all PATs in Settings → Connections; org owners can use the Admin API 'List personal access tokens in a workspace' endpoint.",
+          "evidence_refs": [
+            "fc-fe318bcc",
+            "fc-710b4de5"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Set at creation: Developer portal > Personal access tokens > New token > Expiration. Admin view: Settings → Connections (all PATs)",
+          "api": "GET /v1/spaces/{space_id}/personal_access_tokens (Admin API; expires_at field)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-fe318bcc",
+            "fc-710b4de5"
+          ]
+        },
+        "offboard": {
+          "ui": "Settings → People (or Members) > Members tab > role dropdown > Remove from workspace",
+          "api": "DELETE https://api.notion.com/scim/v2/Users/{id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-fe318bcc",
+            "fc-e0927747",
+            "fc-6e0f47f7"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "PAT format not documented; Notion treats tokens as opaque. Sent as Authorization: Bearer."
+        },
+        "log_sources": [
+          {
+            "name": "Settings → Connections → All personal access tokens",
+            "notes": "Admin view of active, expired, revoked PATs; shows creator and revoker."
+          },
+          {
+            "name": "Notion Admin API: List personal access tokens",
+            "notes": "Enterprise org bot token with personal-access-token:read; returns created/last-used/revoked metadata."
+          },
+          {
+            "name": "Notion workspace audit log",
+            "notes": "Enterprise only; 365-day retention; UI filter by user/integration/agent; IP included where available. API data-access calls are not listed as events."
+          },
+          {
+            "name": "Notion SIEM connection (webhook)",
+            "notes": "Enterprise; real-time JSON webhook of every audit log event; payload field names not documented publicly."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "id",
+            "log": "Admin API list PATs",
+            "notes": "PAT id; pass as bot_id to revoke"
+          },
+          {
+            "field": "creator",
+            "log": "Admin API list PATs",
+            "notes": "user who created (and acts as) the token"
+          },
+          {
+            "field": "last_used_at",
+            "log": "Admin API list PATs",
+            "notes": "epoch ms of last use"
+          },
+          {
+            "field": "status",
+            "log": "Admin API list PATs",
+            "notes": "active|expired|revoked"
+          },
+          {
+            "field": "revoked_by",
+            "log": "Admin API list PATs",
+            "notes": "type bot|organization_bot|user"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "workspace.settings.personal_access_token_creation_policy_updated",
+            "stage": "change",
+            "notes": "who may create PATs changed; disallowed members' PATs stop working for API"
+          },
+          {
+            "event": "workspace.group.personal_access_token_creation_updated",
+            "stage": "change",
+            "notes": "group PAT creation right changed"
+          },
+          {
+            "event": "workspace.settings.notion_mcp_personal_access_token_policy_updated",
+            "stage": "change",
+            "notes": "PAT use with Notion MCP policy"
+          }
+        ],
+        "correlation_keys": [
+          "id",
+          "creator",
+          "created_at",
+          "last_used_at",
+          "expires_at",
+          "revoked_at",
+          "revoked_by"
+        ],
+        "anomaly_cues": [
+          "last_used_at recent for a PAT whose creator was deprovisioned or changed role",
+          "New PAT created shortly before bulk exports or edits by the creator",
+          "PAT with 1-year expiry created by a member who normally has none",
+          "Many PATs by one creator (one per tool is advised; sudden growth is odd)",
+          "Edits attributed to the creator at times they were not working (PAT acts as the user)"
+        ],
+        "containment": {
+          "steps": "Creator revokes in Developer portal, or admin revokes in Settings → Connections → All personal access tokens, or Admin API DELETE /v1/spaces/{space_id}/personal_access_tokens/{bot_id}. Optionally tighten PAT creation policy.",
+          "kills_existing": "yes",
+          "notes": "Revocation is immediate and permanent; token stops working for API and Workers."
+        },
+        "sample_query": {
+          "language": "Notion Admin API (HTTP)",
+          "query": "GET https://api.notion.com/admin/v1/spaces/{space_id}/personal_access_tokens  (then filter results where status='active' and last_used_at > incident_start)",
+          "purpose": "List PATs used during the incident window and their creators."
+        },
+        "unknown": [
+          "PAT token prefix/format",
+          "audit log event for PAT create or revoke (none listed)",
+          "IP/user agent of PAT use",
+          "PAT API calls in audit log"
+        ],
+        "evidence_refs": [
+          "fc-fe318bcc",
+          "fc-710b4de5",
+          "fc-e1187274",
+          "fc-401258f9",
+          "fc-9412eb43",
+          "fc-4890a8d2",
+          "fc-0de83dd6",
+          "turn3search22",
+          "fc-5cd2b23a"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/users/me",
+            "reveals": "for a PAT, the user who created the token (acts with that user's membership and page permissions)",
+            "bulk": false,
+            "scope": "Notion API capability",
+            "rate_limit": "~3 requests/second",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit log is Enterprise-only; specific logging of /users/me not stated"
+          },
+          {
+            "stage": "discovery",
+            "call": "POST /v1/search",
+            "reveals": "pages and data sources the PAT's user can reach",
+            "bulk": true,
+            "scope": "Notion API capability",
+            "rate_limit": "~3 requests/second",
+            "logged": "yes",
+            "log_event": "Content search queried",
+            "log_notes": "Enterprise audit log, 365-day retention; attributed to the PAT's user"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v1/blocks/{block_id}/children",
+            "reveals": "full page/block content",
+            "bulk": true,
+            "scope": "read content capability",
+            "rate_limit": "~3 requests/second",
+            "logged": "yes",
+            "log_event": "Page viewed",
+            "log_notes": "Enterprise plan; Page viewed covers reading page data"
+          }
+        ],
+        "unknown": [
+          "Whether PAT reads are logged on non-Enterprise plans (audit log Enterprise-only)",
+          "Documented PAT expiry (not found in Notion's own docs)"
+        ],
+        "evidence_refs": [
+          "fc-fe318bcc",
+          "fc-0de83dd6",
+          "fc-ba492238",
+          "fc-136cd874",
+          "fc-5cd2b23a",
+          "fc-d7cebd77"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0de83dd6",
+      "title": "Retrieve your token's bot user - Notion Docs",
+      "url": "https://developers.notion.com/reference/get-self",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-136cd874",
+      "title": "Retrieve block children",
+      "url": "https://developers.notion.com/reference/get-block-children",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-401258f9",
+      "title": "SIEM events - Notion Docs",
+      "url": "https://developers.notion.com/compliance/siem-events",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4890a8d2",
+      "title": "Authentication - Notion Docs",
+      "url": "https://developers.notion.com/reference/authentication",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5cd2b23a",
+      "title": "Workspace audit log in Notion",
+      "url": "https://www.notion.com/help/audit-log",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6e0f47f7",
+      "title": "Provision users and groups with SCIM",
+      "url": "https://www.notion.com/help/provision-users-and-groups-with-scim",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-710b4de5",
+      "title": "List personal access tokens in a workspace - Notion Docs",
+      "url": "https://developers.notion.com/reference/admin/list-personal-access-tokens",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9412eb43",
+      "title": "Audit log events - Notion Docs",
+      "url": "https://developers.notion.com/compliance/audit-log-events",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ba492238",
+      "title": "Search by title",
+      "url": "https://developers.notion.com/reference/post-search",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7cebd77",
+      "title": "Request limits",
+      "url": "https://developers.notion.com/reference/request-limits",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e0927747",
+      "title": "Add members, admins, guests, and groups",
+      "url": "https://www.notion.com/help/add-members-admins-guests-and-groups",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e1187274",
+      "title": "Revoke a personal access token in a workspace",
+      "url": "https://developers.notion.com/reference/admin/revoke-personal-access-token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fe318bcc",
+      "title": "Personal access tokens - Notion Docs",
+      "url": "https://developers.notion.com/guides/get-started/personal-access-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search10",
+      "title": "IP address restrictions in Notion | Notion Help – Notion Help Center",
+      "url": "https://www.notion.com/help/ip-address-restrictions",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search22",
+      "title": "Secure API credentials - Notion Docs",
+      "url": "https://developers.notion.com/guides/get-started/handling-api-keys",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search26",
+      "title": "Create a token - Notion Docs",
+      "url": "https://developers.notion.com/reference/create-a-token",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search30",
+      "title": "Refresh a token - Notion Docs",
+      "url": "https://developers.notion.com/reference/refresh-a-token",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search6",
+      "title": "Authorization - Notion Docs",
+      "url": "https://developers.notion.com/guides/get-started/authorization",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

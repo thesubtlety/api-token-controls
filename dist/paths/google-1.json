@@ -1,0 +1,720 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "google",
+      "name": "Google Workspace",
+      "scope_notes": "Context-Aware Access requires eligible Workspace/Cloud Identity editions. User policy coverage does not establish protection of DWD service accounts.",
+      "controls": [
+        {
+          "name": "App access control: Blocked / Limited / Specific Google data / Trusted",
+          "effect": "limit_scope",
+          "applies_to": [
+            "google-1"
+          ],
+          "what": "Per OAuth app, blocks it, limits it to unrestricted services, or limits it to admin-chosen scopes.",
+          "setting": "Admin console > Security > Access and data control > API controls > Manage Third-Party App Access",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d8b73198"
+          ],
+          "quote": "Can request data access only to scopes that you specify when configuring the app."
+        },
+        {
+          "name": "Unconfigured third-party apps",
+          "effect": "disable",
+          "applies_to": [
+            "google-1"
+          ],
+          "what": "Blocks Sign in with Google to apps the admin has not configured, or allows only basic-profile requests.",
+          "setting": "Admin console > Security > Access and data control > API controls > Settings > Unconfigured third-party apps",
+          "plan": "Options depend on Workspace edition",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d8b73198"
+          ],
+          "quote": "Users can't sign in with Google to any third-party apps and websites until you configure those apps and sites"
+        },
+        {
+          "name": "Allow users to request access to unconfigured third-party apps",
+          "effect": "require_approval",
+          "applies_to": [
+            "google-1"
+          ],
+          "what": "Users blocked from an unconfigured app can request it; admins review the request.",
+          "setting": "Admin console > Security > Access and data control > API controls > Settings",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d8b73198"
+          ],
+          "quote": "check the Allow users to request access to unconfigured third-party apps box."
+        },
+        {
+          "name": "Google services: Restricted",
+          "effect": "limit_scope",
+          "applies_to": [
+            "google-1"
+          ],
+          "what": "Marks a Workspace service so only Trusted or Specific-data apps can reach its data.",
+          "setting": "Admin console > Security > Access and data control > API controls > Manage Google Services",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d8b73198"
+          ],
+          "quote": "Only internal and third-party apps configured with a Trusted or Specific Google data access setting can access data."
+        },
+        {
+          "name": "Restrict high-risk OAuth scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "google-1"
+          ],
+          "what": "For Gmail, Drive, Docs and Chat, blocks a predefined list of high-risk scopes for non-trusted apps.",
+          "setting": "Admin console > Security > Access and data control > API controls > Manage Google Services",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d8b73198"
+          ],
+          "quote": "Gmail, Google Drive, Docs, and Chat can also restrict access to a predefined list of high-risk OAuth scopes."
+        },
+        {
+          "name": "Trust internal apps",
+          "effect": "other",
+          "applies_to": [
+            "google-1"
+          ],
+          "what": "When checked, all internal apps can reach restricted APIs; leaving it off keeps internal apps under the same restrictions.",
+          "setting": "Admin console > Security > Access and data control > API controls > Settings",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d8b73198"
+          ],
+          "quote": "To allow API access for all internal apps, check the Trust internal apps box."
+        },
+        {
+          "name": "Access levels for OAuth apps (Context-Aware Access)",
+          "effect": "limit_network",
+          "applies_to": [
+            "google-1"
+          ],
+          "what": "Requires IP, location, device or identity conditions when users sign in to OAuth apps with Google; checked at sign-in only.",
+          "setting": "Admin console > Security > Access and data control > Context-Aware Access > General Settings > Access levels for OAuth apps",
+          "plan": "Frontline, Enterprise, Education, Enterprise Essentials Plus, Cloud Identity Premium",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-a0750fc7"
+          ],
+          "quote": "Context-Aware Access rules are applied only when a user signs in through Google."
+        },
+        {
+          "name": "Context-Aware Access for Workspace APIs",
+          "effect": "limit_network",
+          "applies_to": [
+            "google-1"
+          ],
+          "what": "Applies CAA access levels to first- and third-party apps reaching Workspace core data through APIs.",
+          "setting": "Admin console > Security > Access and data control > Context-Aware Access",
+          "plan": "Enterprise Standard/Plus, Education Standard/Plus, Cloud Identity Premium",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-dbc1646f"
+          ],
+          "quote": "Admins can now use context-aware access to block users' access to Workspace Applications"
+        },
+        {
+          "name": "Google Cloud session control",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "google-1"
+          ],
+          "what": "Forces reauthentication every 1-24 hours for apps holding user grants to Google Cloud scopes, similar to revoking their refresh tokens.",
+          "setting": "Admin console > Security > Access and data control > Google Cloud session control",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-aebcd35d"
+          ],
+          "quote": "analogous to what would happen if an admin revoked the refresh tokens for that application."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether Workspace Context-Aware Access or third-party app access settings apply to domain-wide delegation service account calls; the DWD page does not say.",
+        "Edition requirement for multi-party approval on DWD changes.",
+        "No per-DWD-client IP restriction found in Workspace docs; absence not stated by Google.",
+        "Default of 'Trust internal apps' not stated on the fetched page.",
+        "Exact UI path for applying CAA to Workspace APIs; the 2023 update links to help articles without naming the setting."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "google-1",
+      "provider_id": "google",
+      "name": "User OAuth",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth 2.0 user bearer tokens; service-account signed JWT exchange. Domain-wide delegation (DWD) enables approved user impersonation.",
+        "evidence_refs": [
+          "turn1search5",
+          "turn29search1"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Google documents WIF → service account → IAM signJwt → OAuth token for DWD. Workspace scopes/admin delegation remain separate requirements.",
+        "evidence_refs": [
+          "turn1search5",
+          "turn29search1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "mixed",
+        "boundary": "Context-Aware Access (eligible editions) can apply IP/device/location access levels to internal and third-party OAuth apps, checked when the user signs in through Google; active sessions are not re-evaluated. Its documentation excludes service-account API access.",
+        "evidence_refs": [
+          "turn10search1",
+          "turn25search20",
+          "fc-a0750fc7"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "1-hour user access token",
+        "evidence_refs": [
+          "turn1search5",
+          "turn29search1",
+          "fc-2d757a60"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "inactivity",
+        "summary": "Refresh tokens stay valid until revoked, but expire after six months unused, after 7 days for external apps in Testing status, on Google Cloud session-length limits, or when the 100-per-client limit is exceeded.",
+        "evidence_refs": [
+          "turn1search5",
+          "turn29search1",
+          "fc-a4f4db58"
+        ]
+      },
+      "administration": {
+        "summary": "Approve/block third-party OAuth apps and scopes; restrict DWD scopes; control service-account IAM and key creation.",
+        "conditions": "Context-Aware Access requires eligible Workspace/Cloud Identity editions. User policy coverage does not establish protection of DWD service accounts.",
+        "evidence_refs": [
+          "turn10search1",
+          "turn25search20"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "yes",
+          "details": "OAuth apps can be held to Context-Aware Access levels at Google sign-in, and Workspace services can apply Context-Aware Access to API access (Enterprise, Education Standard/Plus, Frontline, Cloud Identity Premium).",
+          "evidence_refs": [
+            "fc-bc6630cc",
+            "fc-d9294a96"
+          ]
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Suspending a user resets their sign-in cookies and OAuth tokens.",
+          "evidence_refs": [
+            "fc-67a7074a"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Admin console App access control shows an Accessed apps list with user counts; active tokens are listed only per user per app on the user's Security page.",
+          "evidence_refs": [
+            "fc-d9294a96",
+            "fc-ddaaab2e"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Admin console > Security > Access and data control > Context-Aware Access > Assign access levels to apps > (app) Assign; Policy settings: check \"Block other apps from accessing the selected apps via APIs, if access levels aren't met\"",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-a593cfb4"
+          ]
+        },
+        "usage": {
+          "ui": "Admin console > Reporting > Audit and investigation > OAuth log events; filter by app / client ID",
+          "api": "GET https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/token?filters=client_id==CLIENT_ID",
+          "cli": null,
+          "evidence_refs": [
+            "fc-0758d0d5",
+            "fc-1241d741",
+            "fc-6081d8c5"
+          ]
+        },
+        "reads": {
+          "ui": "OAuth log events (Event = activity, API method / Number of response bytes); Gmail: Reporting > Audit and investigation > Gmail log events",
+          "api": "GET .../applications/token?eventName=activity; GET .../applications/gmail?eventName=delivery filtered on event_info.mail_event_type==33",
+          "cli": null,
+          "evidence_refs": [
+            "fc-0758d0d5",
+            "fc-1241d741",
+            "fc-8663dd6b",
+            "fc-c47f47ca"
+          ]
+        },
+        "offboard": {
+          "ui": "Admin console > Directory > Users > (user) > More options > Suspend user",
+          "api": "PUT https://admin.googleapis.com/admin/directory/v1/users/{userKey} with {\"suspended\": true}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-6f0c0457",
+            "fc-73a5ea2c"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Opaque bearer tokens. GitHub scans google_oauth_access_token, google_oauth_refresh_token, google_oauth_client_secret; Google docs fetched give no prefix/regex."
+        },
+        "log_sources": [
+          {
+            "name": "Workspace OAuth Token audit log (Reports API applicationName=token)",
+            "notes": "authorize/revoke/deny/request plus per-API activity by client_id. 6-month retention; lag up to a few hours."
+          },
+          {
+            "name": "Workspace Admin audit log",
+            "notes": "App access control changes (blocked/trusted apps). 6 months."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "client_id",
+            "log": "Token audit log",
+            "notes": "OAuth client the grant belongs to"
+          },
+          {
+            "field": "app_name",
+            "log": "Token audit log",
+            "notes": "App display name"
+          },
+          {
+            "field": "scope",
+            "log": "Token audit log",
+            "notes": "Scopes granted/revoked"
+          },
+          {
+            "field": "actor.applicationInfo.oauthClientId",
+            "log": "Reports API Activity",
+            "notes": "App acting in other apps' logs"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "authorize",
+            "stage": "create",
+            "notes": "User granted scopes to client_id"
+          },
+          {
+            "event": "activity",
+            "stage": "use",
+            "notes": "API call: api_name, method_name, num_response_bytes"
+          },
+          {
+            "event": "deny",
+            "stage": "auth_fail",
+            "notes": "Blocked by admin policy; rejection_type"
+          },
+          {
+            "event": "revoke",
+            "stage": "revoke",
+            "notes": "Grant removed"
+          }
+        ],
+        "correlation_keys": [
+          "actor.email",
+          "actor.profileId",
+          "ipAddress",
+          "networkInfo",
+          "client_id",
+          "app_name",
+          "scope",
+          "id.time",
+          "id.uniqueQualifier"
+        ],
+        "anomaly_cues": [
+          "authorize for a client_id never seen in the domain with Gmail/Drive scopes",
+          "activity events with high num_response_bytes from GMAIL or DRIVE product_bucket right after authorize",
+          "Token activity from ipAddress/ASN not used by the user's interactive logins",
+          "Use continuing after revoke (lag aside) suggests a second grant or other client",
+          "deny events with SCOPE_BLOCK showing an attacker probing scopes"
+        ],
+        "containment": {
+          "steps": "Admin: Directory API tokens.delete for user+clientId; add the app to the blocked list (ADD_TO_BLOCKED_OAUTH2_APPS); user/app: POST token to https://oauth2.googleapis.com/revoke; reset user if account compromised.",
+          "kills_existing": "yes",
+          "notes": "Revoking an access token also revokes its refresh token; tokens.delete removes all access tokens for that user+app."
+        },
+        "sample_query": {
+          "language": "Google Workspace Reports API (activities.list)",
+          "query": "GET https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/token?eventName=activity&filters=client_id==1234567890-abc.apps.googleusercontent.com",
+          "purpose": "List every API call made with one OAuth client across all users"
+        },
+        "unknown": [
+          "Documented token prefix/regex",
+          "Exact parameter value formats for scope in activity events"
+        ],
+        "evidence_refs": [
+          "fc-1241d741",
+          "fc-6081d8c5",
+          "fc-866b7d88",
+          "fc-ab4160fe",
+          "fc-f81e85aa",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET https://oauth2.googleapis.com/tokeninfo?access_token={token}",
+            "reveals": "Token metadata: scope (space-separated granted scopes), aud/issued_to, expires_in, email/user_id",
+            "bulk": false,
+            "scope": "none (any valid token)",
+            "rate_limit": "debugging endpoint; requests may be throttled",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Google documents tokeninfo as a debugging endpoint; no statement that calls appear in Workspace admin audit logs"
+          },
+          {
+            "stage": "recon",
+            "call": "GET https://openidconnect.googleapis.com/v1/userinfo",
+            "reveals": "Authenticated user's profile (sub, email, name); confirms identity behind token",
+            "bulk": false,
+            "scope": "openid / email / profile",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not established that userinfo calls are written to Workspace audit logs"
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://gmail.googleapis.com/gmail/v1/users/me/profile",
+            "reveals": "emailAddress, messagesTotal, threadsTotal, historyId; mailbox size before bulk pull",
+            "bulk": false,
+            "scope": "https://www.googleapis.com/auth/gmail.readonly (or metadata/modify/compose/mail.google.com)",
+            "rate_limit": "getProfile = 1 quota unit; 6,000 units/min/user, 1,200,000 units/min/project",
+            "logged": "plan",
+            "log_event": "OAuth Token audit log: activity event",
+            "log_notes": "Admin SDK Reports token audit 'activity' event logs API calls (api_name, method_name, num_response_bytes, client_id) for third-party apps; Gmail API access by user via OAuth token surfaced there"
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://gmail.googleapis.com/gmail/v1/users/me/messages (then messages/{id})",
+            "reveals": "Message IDs then full message content; bulk mailbox export",
+            "bulk": true,
+            "scope": "https://www.googleapis.com/auth/gmail.readonly (or mail.google.com/modify/metadata)",
+            "rate_limit": "messages.list = 5 units, messages.get = 20 units; maxResults default 100, max 500; 6,000 units/min/user",
+            "logged": "plan",
+            "log_event": "OAuth Token audit log: activity event; Gmail audit mail_event_type 33",
+            "log_notes": "Token 'activity' event records the API calls (requires the app/token to be third-party). Gmail audit log delivery event mail_event_type 33 = 'An application accessed a message on behalf of a user'"
+          }
+        ],
+        "unknown": [
+          "Whether tokeninfo and userinfo calls are written to any Workspace audit log",
+          "Whether the token 'activity' event fires for first-party vs. all OAuth clients, and its latency/completeness",
+          "Edition requirement for Gmail delivery audit events (page did not state one)"
+        ],
+        "evidence_refs": [
+          "fc-d6764b38",
+          "fc-9ee671dc",
+          "fc-644bdc5b",
+          "fc-a371a58d",
+          "fc-1241d741",
+          "fc-8663dd6b"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Google Workspace OAuth Application Authorized with Privileged Scopes",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gsuite_activityevent_rules/gsuite_oauth_privileged_scopes.yml",
+          "detects": "A user authorized an OAuth app with privileged scopes (directory, eDiscovery, Vault, Cloud Search)."
+        },
+        {
+          "source": "Panther",
+          "title": "Google Workspace OAuth Token Requests from New IP",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/gsuite_queries/gsuite_oauth_token_new_ip_rule.yml",
+          "detects": "Scheduled rule: a user made 3+ OAuth token authorizations from an IPv4 address not seen in the prior 30 days."
+        },
+        {
+          "source": "Panther",
+          "title": "Google Workspace OAuthLogin Scope Anomalous Application Access",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/gsuite_queries/GSuite_OAuth_Login_Scope_Anomalous_Access_Query.yml",
+          "detects": "Saved query: an app newly requested tokens with the accounts/OAuthLogin scope."
+        },
+        {
+          "source": "Panther",
+          "title": "Google Workspace OAuth Anomalous Privileged Request",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/gsuite_queries/GSuite_OAuth_Anomalous_Scope_Patterns_Query.yml",
+          "detects": "Saved query: a user authorized a new OAuth client with privileged scopes."
+        },
+        {
+          "source": "Panther",
+          "title": "Google Workspace Apps Marketplace New Domain Application",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gsuite_activityevent_rules/google_workspace_apps_marketplace_new_domain_application.yml",
+          "detects": "An admin added and enabled a Marketplace app for the domain."
+        },
+        {
+          "source": "Sigma",
+          "title": "Google Workspace Application Removed",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/gcp/gworkspace/admin/gcp_gworkspace_application_removed.yml",
+          "detects": "A Marketplace application was removed or taken off the allowlist."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0758d0d5",
+      "title": "OAuth log events",
+      "url": "https://support.google.com/a/answer/6124308?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1241d741",
+      "title": "Reports API: OAuth Token audit activity events",
+      "url": "https://developers.google.com/workspace/admin/reports/v1/appendix/activity/token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2d757a60",
+      "title": "Token types | Google Cloud Authentication",
+      "url": "https://docs.cloud.google.com/docs/authentication/token-types",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6081d8c5",
+      "title": "Method: activities.list",
+      "url": "https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-644bdc5b",
+      "title": "Users.messages.list | Gmail API",
+      "url": "https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/list",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-67a7074a",
+      "title": "Identify and secure compromised accounts",
+      "url": "https://knowledge.workspace.google.com/admin/support/troubleshooting/identify-and-secure-compromised-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6f0c0457",
+      "title": "Suspend a user temporarily",
+      "url": "https://support.google.com/a/answer/33312?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-73a5ea2c",
+      "title": "Directory API: User Accounts",
+      "url": "https://developers.google.com/workspace/admin/directory/v1/guides/manage-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8663dd6b",
+      "title": "Gmail activity events | Admin SDK Reports API",
+      "url": "https://developers.google.com/workspace/admin/reports/v1/appendix/activity/gmail",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-866b7d88",
+      "title": "Data retention and lag times",
+      "url": "https://knowledge.workspace.google.com/admin/reports/data-retention-and-lag-times",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9ee671dc",
+      "title": "Users.getProfile | Gmail API",
+      "url": "https://developers.google.com/workspace/gmail/api/reference/rest/v1/users/getProfile",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a0750fc7",
+      "title": "Assign access levels to third-party apps | Google Workspace Admin Help",
+      "url": "https://knowledge.workspace.google.com/admin/security/assign-access-levels-to-third-party-apps",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a371a58d",
+      "title": "Usage limits | Gmail API",
+      "url": "https://developers.google.com/workspace/gmail/api/reference/quota",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a4f4db58",
+      "title": "Using OAuth 2.0 to Access Google APIs",
+      "url": "https://developers.google.com/identity/protocols/oauth2",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a593cfb4",
+      "title": "Assign Context-Aware Access levels to apps",
+      "url": "https://knowledge.workspace.google.com/admin/security/assign-context-aware-access-levels-to-apps?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ab4160fe",
+      "title": "Method: tokens.delete",
+      "url": "https://developers.google.com/workspace/admin/directory/reference/rest/v1/tokens/delete",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aebcd35d",
+      "title": "Set session length for Google Cloud services",
+      "url": "https://knowledge.workspace.google.com/admin/security/set-session-length-for-google-cloud-services",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bc6630cc",
+      "title": "Assign access levels to third-party apps",
+      "url": "https://support.google.com/a/answer/16215019?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c47f47ca",
+      "title": "Gmail log events",
+      "url": "https://knowledge.workspace.google.com/admin/reports/gmail-log-events?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d6764b38",
+      "title": "OpenID Connect | Google Identity",
+      "url": "https://developers.google.com/identity/openid-connect/openid-connect",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d8b73198",
+      "title": "Control which apps access Google Workspace data",
+      "url": "https://knowledge.workspace.google.com/admin/apps/control-which-apps-access-google-workspace-data",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d9294a96",
+      "title": "Control which apps access Google Workspace data",
+      "url": "https://support.google.com/a/answer/7281227?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dbc1646f",
+      "title": "Context-aware access policies for first and third party applications (Workspace APIs)",
+      "url": "https://workspaceupdates.googleblog.com/2023/08/context-aware-access-policies-for-first-and-third-party-applications-workspace-apis.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ddaaab2e",
+      "title": "How authorized access works",
+      "url": "https://support.google.com/a/answer/2538798?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f81e85aa",
+      "title": "Using OAuth 2.0 for Web Server Applications",
+      "url": "https://developers.google.com/identity/protocols/oauth2/web-server",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search1",
+      "title": "Protect your business with Context-Aware Access - Google",
+      "url": "https://knowledge.workspace.google.com/admin/security/protect-your-business-with-context-aware-access",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn1search5",
+      "title": "Using OAuth 2.0 for Server to Server Applications  |  Authorization  |  Google for Developers",
+      "url": "https://developers.google.com/identity/protocols/oauth2/service-account",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn25search20",
+      "title": "Perform Google Workspace domain-wide delegation of authority",
+      "url": "https://developers.google.com/workspace/cloud-search/docs/guides/delegation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn29search1",
+      "title": "Best practices for managing service account keys  |  Identity and Access Management (IAM)  |  Google Cloud Documentation",
+      "url": "https://docs.cloud.google.com/iam/docs/best-practices-for-managing-service-account-keys?hl=en",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

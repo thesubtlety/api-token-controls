@@ -1,0 +1,397 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "pagerduty",
+      "name": "PagerDuty",
+      "scope_notes": "SaaS; REST API on current plans, user token keys need Advanced Permissions, Audit Trail on Business/Enterprise for Incident Management/Digital Operations (legacy); SCIM uses general access keys or app OAuth tokens.",
+      "controls": [
+        {
+          "name": "Disable general access REST API key",
+          "effect": "disable",
+          "applies_to": [
+            "pagerduty-1"
+          ],
+          "what": "Stops the key working with the REST API without deleting it; can be re-enabled.",
+          "setting": "Integrations > Developer Tools > API Access Keys > Disable",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        },
+        {
+          "name": "Delete (Remove) general access REST API key",
+          "effect": "revoke",
+          "applies_to": [
+            "pagerduty-1"
+          ],
+          "what": "Permanently removes the key.",
+          "setting": "Integrations > Developer Tools > API Access Keys > Remove",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        },
+        {
+          "name": "Read-only API Key",
+          "effect": "limit_scope",
+          "applies_to": [
+            "pagerduty-1"
+          ],
+          "what": "Restricts a general access key to GET calls.",
+          "setting": "Create New API Key > Read-only API Key checkbox",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "pagerduty-1",
+          "what": "No IP/network restriction for REST API keys; the IP allow list explicitly excludes REST API calls.",
+          "kind": "network",
+          "evidence_refs": [
+            "fc-67bc3044"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether general access or user token keys can be given an expiry, or ever expire.",
+        "Whether SSO enforcement or deprovisioning in the IdP affects existing API keys (only \"user leaves the account\" disables user keys).",
+        "Any admin setting to block users from creating user token keys or to block Classic User OAuth app authorization.",
+        "Whether API key create/disable/delete events appear in the Audit Trail (the tracked resource list does not include API keys).",
+        "Whether disabling/deleting a key or Revoke All User Tokens ends in-flight access immediately (Revoke All runs in the background).",
+        "Whether private app (client credentials) tokens can be revoked by admins other than the app owner; client secret expiry/rotation.",
+        "Whether read (GET) API calls are logged anywhere customer-visible.",
+        "Whether integration key creation/rotation appears in audit records (support page says integration add/remove is not captured; Audit API lists Integrations as an associated resource of Services)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "pagerduty-1",
+      "provider_id": "pagerduty",
+      "name": "General Access REST API Key (account API key)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "20-character account-level key created by an Admin or Account Owner, sent as 'Authorization: Token token=<key>'. Not tied to the creating user; full or read-only access to all account data.",
+        "evidence_refs": [
+          "fc-7b9b83d0",
+          "fc-d45e559a"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static shared secret; no workload/OIDC federation documented.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "excluded",
+        "enforcement_stage": "login_only",
+        "boundary": "IP Allow List for User Sessions covers web/mobile logins only; REST API calls are explicitly excluded.",
+        "evidence_refs": [
+          "fc-67bc3044"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented",
+        "evidence_refs": [
+          "fc-583edb81"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "No documented expiry; key works until disabled or deleted.",
+        "summary": "Rotate manually: create new key, update clients, delete old.",
+        "evidence_refs": [
+          "fc-a75d8495",
+          "fc-583edb81"
+        ]
+      },
+      "administration": {
+        "summary": "Admins/Account Owner create, disable, re-enable and delete under Integrations > Developer Tools > API Access Keys. Table shows description, creation date, access level, disabled status; no last-used date documented.",
+        "conditions": "REST API available on current pricing plans; also used for SCIM provisioning.",
+        "evidence_refs": [
+          "fc-d45e559a",
+          "fc-fa96a78a",
+          "fc-7546e794"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Account API keys are tied to the account, not to the user who created them.",
+          "evidence_refs": [
+            "fc-7b9b83d0"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Integrations > Developer Tools > API Access Keys table lists every general access key with status.",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "20-character string; no documented prefix."
+        },
+        "log_sources": [
+          {
+            "name": "Audit Trail (UI + GET /audit/records)",
+            "notes": "Business, Enterprise for Incident Management, Digital Operations (legacy); 12-month retention; config changes on users, teams, schedules, escalation policies, services, IP allow lists only. Admin / global API token, scope audit_records.read."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "method.truncated_token",
+            "log": "Audit record",
+            "notes": "Last 4 chars of the token when method.type=api_token."
+          },
+          {
+            "field": "actors[] (api_key_reference)",
+            "log": "Audit record",
+            "notes": "Actor type for API-key actions."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "action=create|update|delete with method.type=api_token",
+            "stage": "use",
+            "notes": "Config changes made with the key; reads not documented as logged."
+          }
+        ],
+        "correlation_keys": [
+          "method.type",
+          "method.truncated_token",
+          "actors[].type/id",
+          "execution_context.request_id",
+          "execution_context.remote_address"
+        ],
+        "anomaly_cues": [
+          "Config changes with method.type=api_token from unexpected remote_address",
+          "Changes to IP allow lists, users or roles via api_token",
+          "Bulk incident or user reads (not visible in audit)"
+        ],
+        "containment": {
+          "steps": "Integrations > Developer Tools > API Access Keys: Disable (reversible) or Remove (permanent). Issue a replacement key first if SCIM or recovery depends on it.",
+          "kills_existing": "unknown",
+          "notes": "Docs say a disabled key stops working with the REST API; timing not stated. Keep one key for IP-allow-list lockout recovery."
+        },
+        "sample_query": null,
+        "unknown": [
+          "API key create/disable/delete audit events",
+          "Last-used timestamp for account keys"
+        ],
+        "evidence_refs": [
+          "fc-62771079",
+          "fc-f760aba4",
+          "fc-47e47aba",
+          "fc-d45e559a"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /abilities",
+            "reveals": "Account features/plan capabilities",
+            "bulk": false,
+            "scope": "abilities.read",
+            "rate_limit": "960 req/min per account key",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit records cover config changes only."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /users",
+            "reveals": "All users, emails, roles",
+            "bulk": true,
+            "scope": "users.read",
+            "rate_limit": "960 req/min per account key",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Reads not documented as audited."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /incidents",
+            "reveals": "All incidents",
+            "bulk": true,
+            "scope": "incidents.read",
+            "rate_limit": "960 req/min per account key",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /log_entries",
+            "reveals": "Incident log entries across the account",
+            "bulk": true,
+            "scope": "incidents.read",
+            "rate_limit": "960 req/min per account key",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /analytics/raw/incidents",
+            "reveals": "Enriched incident data; account keys need no team/service filter",
+            "bulk": true,
+            "scope": "analytics.write",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /users",
+            "reveals": "All users on the account (names, emails, roles)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Audit records cover configuration changes only; reads are not listed as audited."
+          }
+        ],
+        "unknown": [
+          "GET /users/me does not work with account keys, so no whoami for this credential."
+        ],
+        "evidence_refs": [
+          "fc-47e47aba",
+          "fc-27211ae1",
+          "fc-f760aba4",
+          "fc-079a8df5"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-079a8df5",
+      "title": "PagerDuty REST API OpenAPI v3 spec - List users",
+      "url": "https://github.com/PagerDuty/api-schema/blob/main/reference/REST/openapiv3.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-27211ae1",
+      "title": "REST API Rate Limits",
+      "url": "https://docs.pagerduty.com/developer/rest-api-rate-limits",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-47e47aba",
+      "title": "REST API OpenAPI spec — List audit records",
+      "url": "https://docs.pagerduty.com/api-specs/rest.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-583edb81",
+      "title": "OAuth Functionality",
+      "url": "https://docs.pagerduty.com/developer/oauth-functionality",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62771079",
+      "title": "Audit Trail Reporting",
+      "url": "https://support.pagerduty.com/main/docs/audit-trail-reporting",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-67bc3044",
+      "title": "IP Allow List for User Sessions",
+      "url": "https://support.pagerduty.com/main/docs/ip-allow-list-for-user-sessions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7546e794",
+      "title": "SCIM User Provisioning",
+      "url": "https://support.pagerduty.com/main/docs/scim-user-provisioning",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7b9b83d0",
+      "title": "Authentication",
+      "url": "https://docs.pagerduty.com/developer/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a75d8495",
+      "title": "Security Hygiene for the Current Cyber Threat Landscape",
+      "url": "https://support.pagerduty.com/main/docs/security-hygiene-for-the-current-cyber-threat-landscape",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d45e559a",
+      "title": "API Access Keys",
+      "url": "https://support.pagerduty.com/main/docs/api-access-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f760aba4",
+      "title": "Audit Records API",
+      "url": "https://docs.pagerduty.com/developer/audit-records-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fa96a78a",
+      "title": "SCIM API OpenAPI spec",
+      "url": "https://docs.pagerduty.com/api-specs/scim.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

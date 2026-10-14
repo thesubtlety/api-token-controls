@@ -1,0 +1,287 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "scope_notes": "Separate Dashboard SSO/session controls from key access policies. OAuth Connect and Apps are different authorization surfaces.",
+      "controls": [
+        {
+          "name": "Organization API key permissions",
+          "effect": "limit_scope",
+          "applies_to": [
+            "stripe-3"
+          ],
+          "what": "Org keys can be restricted to read or write specific resources.",
+          "setting": "Organization Dashboard > API keys tab",
+          "plan": "Requires a Stripe organization",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8205e55f"
+          ],
+          "quote": "Restrict organization API keys to grant read or write permission to only specific resources."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No account setting found to forbid creating unrestricted secret keys or to require key expiry.",
+        "Whether access policies and approval rules can be attached to organization API keys.",
+        "Whether uninstalling a Stripe App immediately revokes its OAuth refresh tokens is not stated.",
+        "Which organization roles can create org API keys or service principals, and how to disable a service principal.",
+        "Approval rules' actor condition for service principals is mentioned on the service principals page but not described on the approvals page."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "stripe-3",
+      "provider_id": "stripe",
+      "name": "Organization API key",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A secret key (prefix sk_org) created at the Stripe organization level and sent as a bearer token. Requests must include Stripe-Version, and Stripe-Context to name the target account; one key can reach any account in the organization.",
+        "evidence_refs": [
+          "fc-8205e55f"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static secret key; no external identity exchange is involved.",
+        "evidence_refs": [
+          "fc-8205e55f"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Access policies (IPv4/CIDR, ASN, country, proxy/Tor blocking) are documented for account-level standard and restricted keys. The docs reviewed do not say whether they can be attached to organization keys.",
+        "evidence_refs": [
+          "turn5search3"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No default expiration (stated for Stripe API keys generally)",
+        "evidence_refs": [
+          "fc-e56c55ba"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "unknown",
+        "summary": "The same static key is reused on every request until it is expired or replaced; rotation and expiry steps are documented only for account-level keys.",
+        "evidence_refs": [
+          "fc-8205e55f"
+        ]
+      },
+      "administration": {
+        "summary": "Created and managed on the organization Dashboard's API keys tab; permissions can be restricted to read or write on specific resources. Organization-level roles apply to every account in the organization. Security history includes an API action category.",
+        "conditions": "Requires a Stripe organization with multiple accounts. Stripe advises using an organization key only for cross-account or organization operations. Which organization roles can create keys was not found.",
+        "evidence_refs": [
+          "fc-8205e55f",
+          "fc-b0c32d27"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Organization keys work at the organization level and are not tied to a user.",
+          "evidence_refs": [
+            "turn5search3"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "API keys tab of the organization Dashboard.",
+          "evidence_refs": [
+            "fc-8205e55f"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Organization Dashboard > API keys tab (dashboard.stripe.com/org/api-keys/secret)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-8205e55f"
+          ]
+        },
+        "reads": {
+          "ui": "Workbench > Logs (organization); filter API endpoint /v1/balance, Method GET, Account",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-a3c07fae"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "sk_org",
+          "notes": "All org keys use sk_org regardless of permissions (no rk_org). Body format not documented; regex is loose. No GitHub secret scanning pattern listed for sk_org."
+        },
+        "log_sources": [
+          {
+            "name": "Workbench request logs (organization view)",
+            "notes": "Org-level logs identify which account in the organization each request/error applies to; filter by account, IP, endpoint, source."
+          },
+          {
+            "name": "Activity Logs API",
+            "notes": "API key actions are per account (context); whether org-key lifecycle appears is not documented."
+          },
+          {
+            "name": "Events (/v1/events)",
+            "notes": "Object changes in the targeted account; context field carries authentication context."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "details.api_key.id",
+            "log": "Activity Logs API",
+            "notes": "If org keys are logged (not confirmed)"
+          },
+          {
+            "field": "context",
+            "log": "Activity Logs API / Event object",
+            "notes": "Target account; matches Stripe-Context value"
+          },
+          {
+            "field": "request.id",
+            "log": "Event object",
+            "notes": "Pivot to request logs"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "Stripe-Context",
+          "context",
+          "request.id",
+          "account"
+        ],
+        "anomaly_cues": [
+          "One sk_org key touching many accounts (Stripe-Context values) it normally never reaches",
+          "Stripe-Context using platform/connected path format (acct_x/acct_y) not seen before",
+          "Org key requests from IPs outside known servers",
+          "Org key used where only one account is needed (violates documented guidance) - review scope",
+          "Write calls (refunds, payouts) from an org key normally used for reporting"
+        ],
+        "containment": {
+          "steps": "Organization Dashboard > API keys tab (org/api-keys/secret): rotate or expire the sk_org key; then review org-level Workbench logs per account.",
+          "kills_existing": "unknown",
+          "notes": "Org-key rotate/expire semantics are not separately documented; assume same as account keys (7-day grace unless expired now)."
+        },
+        "sample_query": {
+          "language": "Stripe Events API (HTTP GET, org key)",
+          "query": "curl -G https://api.stripe.com/v1/events -u \"$SK_ORG:\" -H \"Stripe-Version: 2026-09-30\" -H \"Stripe-Context: acct_EXAMPLE0001\" -d \"type=refund.*\" -d \"created[gte]=1788998400\"",
+          "purpose": "Per-account sweep of recent refunds to check for org-key misuse; repeat per Stripe-Context."
+        },
+        "unknown": [
+          "Org-key lifecycle events (Activity Logs coverage for sk_org)",
+          "Org-key rotation/expire grace behavior",
+          "Whether access policies apply to org keys",
+          "Request log field naming the org key used",
+          "sk_org token length/format",
+          "Secret scanning partner coverage for sk_org"
+        ],
+        "evidence_refs": [
+          "fc-8205e55f",
+          "fc-a3c07fae",
+          "fc-239f2700",
+          "turn5search3"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /v1/balance (with Stripe-Context header)",
+            "reveals": "Balance of any account in the organization",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Workbench request log (Dashboard > Workbench > Logs), not Security history; retention not stated. Organization view identifies the target account."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-8205e55f",
+          "fc-a3c07fae"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-239f2700",
+      "title": "The Event object",
+      "url": "https://docs.stripe.com/api/events/object",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8205e55f",
+      "title": "Organization API keys | Stripe Documentation",
+      "url": "https://docs.stripe.com/keys/organization-api-keys",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a3c07fae",
+      "title": "How Workbench works",
+      "url": "https://docs.stripe.com/workbench/overview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b0c32d27",
+      "title": "Manage access to your organization | Stripe Documentation",
+      "url": "https://docs.stripe.com/get-started/account/orgs/team",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e56c55ba",
+      "title": "Workload Identity Federation | Stripe Documentation",
+      "url": "https://docs.stripe.com/workload-identity-federation",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search3",
+      "title": "API keys | Stripe Documentation",
+      "url": "https://docs.stripe.com/keys",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

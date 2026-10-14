@@ -1,0 +1,1206 @@
+{
+ "id": "notion",
+ "name": "Notion",
+ "scope_notes": "Enterprise for IP restrictions; Business/Enterprise for SAML SSO. Confirm API enforcement and token-expiry requirements with Notion.",
+ "controls": [
+  {
+   "name": "PAT creation policy (who can create PATs with Notion API access)",
+   "effect": "disable",
+   "applies_to": [
+    "notion-2"
+   ],
+   "what": "Limits PAT creation to owners, owners plus selected groups, or all members; removing a member's permission stops their existing PATs.",
+   "setting": "Settings > Connections (PAT creator settings)",
+   "plan": "Business or Enterprise (not configurable on Free/Plus)",
+   "default": "varies",
+   "level": "workspace",
+   "evidence_refs": [
+    "fc-fe318bcc"
+   ],
+   "quote": "If an admin changes the workspace policy so a member is no longer allowed to create PATs with Notion API access, that member's existing PATs stop working for Notion API requests."
+  },
+  {
+   "name": "Revoke personal access tokens",
+   "effect": "other",
+   "applies_to": [
+    "notion-2"
+   ],
+   "what": "Workspace admins revoke any PAT; org owners can list/revoke via the Admin API.",
+   "setting": "Settings > Connections > All personal access tokens; Admin API",
+   "plan": null,
+   "default": "unknown",
+   "level": "workspace",
+   "evidence_refs": [
+    "fc-fe318bcc"
+   ],
+   "quote": "Workspace admins can revoke any PAT in their workspace from Settings → Connections → All personal access tokens."
+  },
+  {
+   "name": "Limit which connections members can install",
+   "effect": "require_approval",
+   "applies_to": [
+    "notion-1",
+    "notion-3"
+   ],
+   "what": "Restricts members to no restriction, approved & recommended, or approved-only connections.",
+   "setting": "Settings > Connections > Manage tab",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "workspace",
+   "evidence_refs": [
+    "fc-84f64cdd"
+   ],
+   "quote": "Approved only: Workspace members can only install connections pre-approved by a workspace owner."
+  },
+  {
+   "name": "Approved connections list (revoke / disconnect)",
+   "effect": "other",
+   "applies_to": [
+    "notion-1",
+    "notion-3"
+   ],
+   "what": "Owners revoke specific users' access to a connection or disconnect all users.",
+   "setting": "Settings > Connections > Manage tab > ••• menu",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "workspace",
+   "evidence_refs": [
+    "fc-84f64cdd"
+   ],
+   "quote": "Click the ••• menu to: Filter by user. Revoke specific users' access to a connection. Disconnect all users. Remove the connection from the approved list."
+  },
+  {
+   "name": "Manage page access (connection)",
+   "effect": "limit_resources",
+   "applies_to": [
+    "notion-1",
+    "notion-3"
+   ],
+   "what": "Owners choose which pages a connection can access and whether only owners can connect/disconnect it from pages.",
+   "setting": "Settings > Connections > Manage tab > ••• > Manage page access",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "workspace",
+   "evidence_refs": [
+    "fc-bb7342aa"
+   ],
+   "quote": "Workspace owners on the Enterprise Plan can decide what pages a connection can access, as well as who can connect or disconnect them from pages."
+  },
+  {
+   "name": "Who can add integrations (organization security setting)",
+   "effect": "disable",
+   "applies_to": [
+    "notion-1",
+    "notion-3"
+   ],
+   "what": "Org owners enable or disable adding integrations for every workspace, or leave it workspace-managed.",
+   "setting": "Admin console (Manage organization) > Security",
+   "plan": "Enterprise",
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6d6ae280"
+   ],
+   "quote": "These settings can be Workspace managed so that they can be different for every workspace, Enabled for everyone in your organization, or Disabled for everyone in your organization."
+  },
+  {
+   "name": "Admin bot token scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "notion-4"
+   ],
+   "what": "Org owners pick which admin actions each admin token may perform.",
+   "setting": "Manage organization > General > Manage organization-level admin API tokens",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-81707e22"
+   ],
+   "quote": "Give the connection a name that your team will recognize, like “Compliance automation,” and pick only the access it needs."
+  },
+  {
+   "name": "Rotate or delete admin token",
+   "effect": "require_rotation",
+   "applies_to": [
+    "notion-4"
+   ],
+   "what": "Owners rotate or delete admin tokens; scripts using a revoked token stop immediately.",
+   "setting": "Manage organization > General > admin API tokens",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6d6ae280"
+   ],
+   "quote": "Rotate or delete a token at any time. Any script using a revoked token stops working right away."
+  },
+  {
+   "name": "Admin APIs (organization owners only)",
+   "effect": "other",
+   "applies_to": [
+    "notion-4"
+   ],
+   "what": "Only organization owners on Enterprise can create admin connections and tokens; no other role can.",
+   "setting": "Manage organization → General → Manage organization-level admin API tokens",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-81707e22"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "notion-4",
+   "what": "Admin tokens cannot be restricted to IP addresses or networks.",
+   "evidence_refs": [
+    "fc-81707e22"
+   ],
+   "quote": "You can't limit an admin token to specific IP addresses or networks.",
+   "kind": "network"
+  },
+  {
+   "path_id": "notion-2",
+   "what": "PAT creation policy is not configurable on Free and Plus plans.",
+   "evidence_refs": [
+    "fc-fe318bcc"
+   ],
+   "quote": "| Plus | All workspace members. | Not configurable. |",
+   "kind": "disable"
+  }
+ ],
+ "controls_unknown": [
+  "Whether Notion IP address restrictions apply to internal connection tokens, PATs or public OAuth tokens (help page only describes user sign-in; admin tokens are excluded).",
+  "Whether SAML SSO enforcement affects API tokens (not stated).",
+  "Whether admins can set a maximum PAT lifetime (creators choose 7 days to 1 year; default 1 year).",
+  "Whether internal connection tokens or OAuth tokens expire or can be force-rotated by admins."
+ ],
+ "credentials": [
+  {
+   "id": "notion-1",
+   "name": "Internal connection token",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Internal connection tokens, personal access tokens and public-connection OAuth bearer tokens.",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "login_only",
+    "boundary": "Enterprise IP allowlist restricts managed-user sign-in and explicitly does not apply to admin tokens on the admin APIs. Coverage of connection, PAT and OAuth API calls is not documented.",
+    "evidence_refs": [
+     "turn3search10",
+     "turn3search22"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Static credential; fixed expiry not verified",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "unknown",
+    "summary": "Static token reused for API calls. The Refresh action on the internal connection issues a replacement; no documented expiry.",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30",
+     "turn3search22"
+    ]
+   },
+   "administration": {
+    "summary": "Connection capabilities plus explicit content access; PATs inherit user access. Admin connection controls and token revocation.",
+    "conditions": "Enterprise for IP restrictions; Business/Enterprise for SAML SSO. Confirm API enforcement and token-expiry requirements with Notion.",
+    "evidence_refs": [
+     "turn3search10",
+     "turn3search22"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Internal connections run as their own bot user, not tied to a member.",
+     "evidence_refs": [
+      "fc-18cd16e0"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Every Workspace Owner sees all internal connections in the Developer portal; Settings → Connections lists all workspace connections.",
+     "evidence_refs": [
+      "fc-18cd16e0",
+      "fc-bb7342aa"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": "ntn_",
+     "notes": "ntn_ for tokens generated since 2024-09-25; older secret_ tokens still valid. Notion says not to regex-validate. GitHub secret types: notion_api_token, notion_integration_token."
+    },
+    "log_sources": [
+     {
+      "name": "Notion workspace audit log",
+      "notes": "Enterprise only; 365-day retention; UI filter by user/integration/agent; IP included where available. API data-access calls are not listed as events."
+     },
+     {
+      "name": "Notion SIEM connection (webhook)",
+      "notes": "Enterprise; real-time JSON webhook of every audit log event; payload field names not documented publicly."
+     },
+     {
+      "name": "Developer portal / Settings → Connections",
+      "notes": "Lists internal connections, owners, capabilities and content access; visible to all Workspace Owners."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "bot.owner.type",
+      "log": "GET /v1/users/me response",
+      "notes": "'workspace' means internal connection bot"
+     },
+     {
+      "field": "workspace_id",
+      "log": "GET /v1/users/me response (bot object)",
+      "notes": "workspace the token belongs to"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "integration.created",
+      "stage": "create",
+      "notes": "SIEM; audit log 'Integration created'"
+     },
+     {
+      "event": "integration.secret_reset",
+      "stage": "revoke",
+      "notes": "token refreshed; audit log 'Integration secret reset'"
+     },
+     {
+      "event": "integration.permission.updated",
+      "stage": "change",
+      "notes": "capabilities changed"
+     },
+     {
+      "event": "integration.owner_added",
+      "stage": "change",
+      "notes": "new explicit owner can see/refresh token"
+     },
+     {
+      "event": "integration.owner_break_glass_added",
+      "stage": "change",
+      "notes": "admin break-glass ownership"
+     },
+     {
+      "event": "page.permissions.integration_role_added",
+      "stage": "change",
+      "notes": "page shared with the connection"
+     },
+     {
+      "event": "integration.deleted",
+      "stage": "revoke",
+      "notes": "connection deleted"
+     }
+    ],
+    "correlation_keys": [
+     "workspace_id",
+     "bot.owner.type"
+    ],
+    "anomaly_cues": [
+     "integration.secret_reset or integration.owner_break_glass_added outside a change window",
+     "Burst of page.permissions.integration_role_added for one connection, especially on sensitive teamspaces",
+     "Connection still active after its creator/owner left the workspace (access persists)",
+     "Edits attributed to the connection's bot identity at odd hours or on pages unrelated to its purpose",
+     "Token with legacy secret_ prefix still in use (old, never rotated)"
+    ],
+    "containment": {
+     "steps": "Settings → Connections → Develop or manage connections → Refresh the internal connection token (or delete the connection); remove page access; update apps with new token.",
+     "kills_existing": "unknown",
+     "notes": "Docs say to replace the old token everywhere after Refresh but do not state explicitly that the old token is invalidated immediately. Deleting the connection removes it."
+    },
+    "sample_query": {
+     "language": "Notion audit log UI filters",
+     "query": "Event type = 'Integration secret reset' OR 'Integration owner added' OR 'Admin added themselves as integration owner'; Date range = last 90 days",
+     "purpose": "Find who refreshed or took ownership of an internal connection token."
+    },
+    "unknown": [
+     "audit log / SIEM payload field names (actor, IP, user agent)",
+     "whether Refresh immediately invalidates the old token",
+     "per-request API usage logging",
+     "last-used timestamp for internal connection tokens"
+    ],
+    "evidence_refs": [
+     "fc-b7178bb2",
+     "fc-846e1fd4",
+     "fc-5cd2b23a",
+     "fc-9412eb43",
+     "fc-401258f9",
+     "fc-18cd16e0",
+     "fc-4890a8d2",
+     "fc-0de83dd6",
+     "turn3search22"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/users/me",
+      "reveals": "the bot user; owner (workspace vs user) and workspace_name",
+      "bulk": false,
+      "scope": "read content capability (any valid token)",
+      "rate_limit": "~3 requests/second (180/min per connection)",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Enterprise audit log records integration reads, but whether /users/me specifically logs is not stated"
+     },
+     {
+      "stage": "discovery",
+      "call": "POST /v1/search",
+      "reveals": "all pages and data sources shared with the connection",
+      "bulk": true,
+      "scope": "read content capability",
+      "rate_limit": "~3 requests/second",
+      "logged": "yes",
+      "log_event": "Content search queried",
+      "log_notes": "Enterprise audit log, 365-day retention; event attributed to the integration/agent actor"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /v1/data_sources/{data_source_id}/query",
+      "reveals": "pages in a data source/database, filtered and paginated",
+      "bulk": true,
+      "scope": "read content capability",
+      "rate_limit": "~3 requests/second",
+      "logged": "yes",
+      "log_event": "Page viewed",
+      "log_notes": "Page viewed covers an integration/AI tool reading page data; Enterprise audit log, 365-day retention"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/blocks/{block_id}/children",
+      "reveals": "full block content of a page (paginated)",
+      "bulk": true,
+      "scope": "read content capability",
+      "rate_limit": "~3 requests/second",
+      "logged": "yes",
+      "log_event": "Page viewed",
+      "log_notes": "Reading page data by an integration is captured as Page viewed; Enterprise plan only"
+     }
+    ],
+    "unknown": [
+     "Whether non-Enterprise workspaces log any integration reads (audit log is Enterprise-only)",
+     "Exact audit event for GET /v1/users/me"
+    ],
+    "evidence_refs": [
+     "fc-0de83dd6",
+     "fc-ba492238",
+     "fc-47ed5f7a",
+     "fc-136cd874",
+     "fc-d7cebd77",
+     "fc-5cd2b23a"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Notion Page API Permissions Changed",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/notion_rules/notion_page_accessible_to_api.yml",
+     "detects": "An integration was given access to a Notion page or its page role changed."
+    }
+   ]
+  },
+  {
+   "id": "notion-2",
+   "name": "Personal access token",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Internal connection tokens, personal access tokens and public-connection OAuth bearer tokens.",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "login_only",
+    "boundary": "Enterprise IP allowlist restricts managed-user sign-in and explicitly does not apply to admin tokens on the admin APIs. Coverage of connection, PAT and OAuth API calls is not documented.",
+    "evidence_refs": [
+     "turn3search10",
+     "turn3search22"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 31536000,
+    "maximum_seconds": 31536000,
+    "configurable": "yes",
+    "summary": "Expiry chosen at creation: 7, 30, 90, 180 days or 1 year (default 1 year)",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30",
+     "fc-fe318bcc",
+     "turn3search22"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "No refresh. Create a new PAT before expiry; expired tokens return an unauthorized error.",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30",
+     "turn3search22",
+     "fc-fe318bcc"
+    ]
+   },
+   "administration": {
+    "summary": "PATs inherit user access. Admins set who may create PATs (plan-dependent), view and revoke workspace PATs; org owners can list/revoke via the Admin API. Removing a member's PAT permission stops their existing PATs.",
+    "conditions": "Enterprise for IP restrictions; Business/Enterprise for SAML SSO. Confirm API enforcement and token-expiry requirements with Notion.",
+    "evidence_refs": [
+     "turn3search10",
+     "turn3search22",
+     "fc-fe318bcc"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "A PAT acts as its creator and loses access when the creator leaves the workspace.",
+     "evidence_refs": [
+      "fc-fe318bcc"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admins see all PATs in Settings → Connections; org owners can use the Admin API 'List personal access tokens in a workspace' endpoint.",
+     "evidence_refs": [
+      "fc-fe318bcc",
+      "fc-710b4de5"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Set at creation: Developer portal > Personal access tokens > New token > Expiration. Admin view: Settings → Connections (all PATs)",
+     "api": "GET /v1/spaces/{space_id}/personal_access_tokens (Admin API; expires_at field)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-fe318bcc",
+      "fc-710b4de5"
+     ]
+    },
+    "offboard": {
+     "ui": "Settings → People (or Members) > Members tab > role dropdown > Remove from workspace",
+     "api": "DELETE https://api.notion.com/scim/v2/Users/{id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-fe318bcc",
+      "fc-e0927747",
+      "fc-6e0f47f7"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "PAT format not documented; Notion treats tokens as opaque. Sent as Authorization: Bearer."
+    },
+    "log_sources": [
+     {
+      "name": "Settings → Connections → All personal access tokens",
+      "notes": "Admin view of active, expired, revoked PATs; shows creator and revoker."
+     },
+     {
+      "name": "Notion Admin API: List personal access tokens",
+      "notes": "Enterprise org bot token with personal-access-token:read; returns created/last-used/revoked metadata."
+     },
+     {
+      "name": "Notion workspace audit log",
+      "notes": "Enterprise only; 365-day retention; UI filter by user/integration/agent; IP included where available. API data-access calls are not listed as events."
+     },
+     {
+      "name": "Notion SIEM connection (webhook)",
+      "notes": "Enterprise; real-time JSON webhook of every audit log event; payload field names not documented publicly."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "id",
+      "log": "Admin API list PATs",
+      "notes": "PAT id; pass as bot_id to revoke"
+     },
+     {
+      "field": "creator",
+      "log": "Admin API list PATs",
+      "notes": "user who created (and acts as) the token"
+     },
+     {
+      "field": "last_used_at",
+      "log": "Admin API list PATs",
+      "notes": "epoch ms of last use"
+     },
+     {
+      "field": "status",
+      "log": "Admin API list PATs",
+      "notes": "active|expired|revoked"
+     },
+     {
+      "field": "revoked_by",
+      "log": "Admin API list PATs",
+      "notes": "type bot|organization_bot|user"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "workspace.settings.personal_access_token_creation_policy_updated",
+      "stage": "change",
+      "notes": "who may create PATs changed; disallowed members' PATs stop working for API"
+     },
+     {
+      "event": "workspace.group.personal_access_token_creation_updated",
+      "stage": "change",
+      "notes": "group PAT creation right changed"
+     },
+     {
+      "event": "workspace.settings.notion_mcp_personal_access_token_policy_updated",
+      "stage": "change",
+      "notes": "PAT use with Notion MCP policy"
+     }
+    ],
+    "correlation_keys": [
+     "id",
+     "creator",
+     "created_at",
+     "last_used_at",
+     "expires_at",
+     "revoked_at",
+     "revoked_by"
+    ],
+    "anomaly_cues": [
+     "last_used_at recent for a PAT whose creator was deprovisioned or changed role",
+     "New PAT created shortly before bulk exports or edits by the creator",
+     "PAT with 1-year expiry created by a member who normally has none",
+     "Many PATs by one creator (one per tool is advised; sudden growth is odd)",
+     "Edits attributed to the creator at times they were not working (PAT acts as the user)"
+    ],
+    "containment": {
+     "steps": "Creator revokes in Developer portal, or admin revokes in Settings → Connections → All personal access tokens, or Admin API DELETE /v1/spaces/{space_id}/personal_access_tokens/{bot_id}. Optionally tighten PAT creation policy.",
+     "kills_existing": "yes",
+     "notes": "Revocation is immediate and permanent; token stops working for API and Workers."
+    },
+    "sample_query": {
+     "language": "Notion Admin API (HTTP)",
+     "query": "GET https://api.notion.com/admin/v1/spaces/{space_id}/personal_access_tokens  (then filter results where status='active' and last_used_at > incident_start)",
+     "purpose": "List PATs used during the incident window and their creators."
+    },
+    "unknown": [
+     "PAT token prefix/format",
+     "audit log event for PAT create or revoke (none listed)",
+     "IP/user agent of PAT use",
+     "PAT API calls in audit log"
+    ],
+    "evidence_refs": [
+     "fc-fe318bcc",
+     "fc-710b4de5",
+     "fc-e1187274",
+     "fc-401258f9",
+     "fc-9412eb43",
+     "fc-4890a8d2",
+     "fc-0de83dd6",
+     "turn3search22",
+     "fc-5cd2b23a"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/users/me",
+      "reveals": "for a PAT, the user who created the token (acts with that user's membership and page permissions)",
+      "bulk": false,
+      "scope": "Notion API capability",
+      "rate_limit": "~3 requests/second",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit log is Enterprise-only; specific logging of /users/me not stated"
+     },
+     {
+      "stage": "discovery",
+      "call": "POST /v1/search",
+      "reveals": "pages and data sources the PAT's user can reach",
+      "bulk": true,
+      "scope": "Notion API capability",
+      "rate_limit": "~3 requests/second",
+      "logged": "yes",
+      "log_event": "Content search queried",
+      "log_notes": "Enterprise audit log, 365-day retention; attributed to the PAT's user"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/blocks/{block_id}/children",
+      "reveals": "full page/block content",
+      "bulk": true,
+      "scope": "read content capability",
+      "rate_limit": "~3 requests/second",
+      "logged": "yes",
+      "log_event": "Page viewed",
+      "log_notes": "Enterprise plan; Page viewed covers reading page data"
+     }
+    ],
+    "unknown": [
+     "Whether PAT reads are logged on non-Enterprise plans (audit log Enterprise-only)",
+     "Documented PAT expiry (not found in Notion's own docs)"
+    ],
+    "evidence_refs": [
+     "fc-fe318bcc",
+     "fc-0de83dd6",
+     "fc-ba492238",
+     "fc-136cd874",
+     "fc-5cd2b23a",
+     "fc-d7cebd77"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "notion-3",
+   "name": "Public connection OAuth",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Internal connection tokens, personal access tokens and public-connection OAuth bearer tokens.",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "OAuth/connection authorization is documented; no general external workload identity exchange established.",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "login_only",
+    "boundary": "Enterprise IP allowlist restricts managed-user sign-in and explicitly does not apply to admin tokens on the admin APIs. Coverage of connection, PAT and OAuth API calls is not documented.",
+    "evidence_refs": [
+     "turn3search10",
+     "turn3search22"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Refresh/revoke exists; default TTL not verified",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "unknown",
+    "summary": "Refresh returns a new access token and a new refresh token. Access- and refresh-token lifetimes are not documented.",
+    "evidence_refs": [
+     "turn3search6",
+     "turn3search26",
+     "turn3search30"
+    ]
+   },
+   "administration": {
+    "summary": "Connection capabilities plus explicit content access; PATs inherit user access. Admin connection controls and token revocation.",
+    "conditions": "Enterprise for IP restrictions; Business/Enterprise for SAML SSO. Confirm API enforcement and token-expiry requirements with Notion.",
+    "evidence_refs": [
+     "turn3search10",
+     "turn3search22"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Enterprise only: Settings → Connections → Manage tab shows which members have each connection installed; no token-level list.",
+     "evidence_refs": [
+      "fc-84f64cdd"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Changelog says new 'Public API tokens' use ntn_; whether that covers OAuth access tokens is not stated. GitHub detects notion_oauth_client_secret (client secret, not access token)."
+    },
+    "log_sources": [
+     {
+      "name": "Notion workspace audit log",
+      "notes": "Enterprise only; 365-day retention; UI filter by user/integration/agent; IP included where available. API data-access calls are not listed as events."
+     },
+     {
+      "name": "Notion SIEM connection (webhook)",
+      "notes": "Enterprise; real-time JSON webhook of every audit log event; payload field names not documented publicly."
+     },
+     {
+      "name": "Settings → Connections (workspace owner)",
+      "notes": "Connection catalog, connected members, disconnect."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "bot_id",
+      "log": "OAuth token response",
+      "notes": "identifier for this authorization"
+     },
+     {
+      "field": "owner",
+      "log": "OAuth token response",
+      "notes": "user who authorized"
+     },
+     {
+      "field": "workspace_id",
+      "log": "OAuth token response",
+      "notes": "workspace of the authorization"
+     },
+     {
+      "field": "active",
+      "log": "POST /v1/oauth/introspect",
+      "notes": "token still valid"
+     },
+     {
+      "field": "iat",
+      "log": "POST /v1/oauth/introspect",
+      "notes": "issued time"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "workspace.integration_added",
+      "stage": "create",
+      "notes": "first time an integration is added to the workspace"
+     },
+     {
+      "event": "workspace.external_account_connected",
+      "stage": "create",
+      "notes": "public integration connected"
+     },
+     {
+      "event": "page.permissions.integration_role_added",
+      "stage": "change",
+      "notes": "page shared with connection"
+     },
+     {
+      "event": "workspace.external_account_disconnected",
+      "stage": "revoke",
+      "notes": "disconnected or owner removed for all users"
+     },
+     {
+      "event": "workspace.integration_removed",
+      "stage": "revoke",
+      "notes": "all bots for a public integration removed"
+     }
+    ],
+    "correlation_keys": [
+     "bot_id",
+     "owner",
+     "workspace_id"
+    ],
+    "anomaly_cues": [
+     "workspace.external_account_connected for an app not on approved connections",
+     "Same public integration connected by many members in a short window (consent phishing)",
+     "Connection kept after authorizing user offboarded",
+     "Rapid page.permissions.integration_role_added followed by exports",
+     "Re-authorizations minting new token pairs repeatedly (each auth now issues a fresh pair)"
+    ],
+    "containment": {
+     "steps": "App operator: POST /v1/oauth/revoke with the token (Basic auth with client id/secret). Workspace owner: Settings → Connections → disconnect the connection or disconnect members. Remove from approved connections.",
+     "kills_existing": "partial",
+     "notes": "Revoke endpoint revokes the given access token; docs do not say if sibling refresh/access tokens or other authorizations are revoked. Since 2026-06-08 each authorization mints a fresh pair, so one user may hold several."
+    },
+    "sample_query": {
+     "language": "Notion audit log UI filters",
+     "query": "Event type = 'External/Public integration connected'; Date range = incident window; review actor per row",
+     "purpose": "Find members who authorized a suspicious public connection."
+    },
+    "unknown": [
+     "OAuth access token prefix",
+     "access token lifetime",
+     "whether disconnect in UI revokes tokens immediately",
+     "audit/SIEM payload field names",
+     "API usage logging per token"
+    ],
+    "evidence_refs": [
+     "turn3search6",
+     "fc-611bff12",
+     "fc-bae14e39",
+     "fc-401258f9",
+     "fc-9412eb43",
+     "fc-bb7342aa",
+     "fc-4890a8d2",
+     "fc-b7178bb2",
+     "fc-846e1fd4",
+     "fc-5cd2b23a"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST /v1/oauth/introspect",
+      "reveals": "token active status, scope, and issued time (iat)",
+      "bulk": false,
+      "scope": "OAuth client credentials",
+      "rate_limit": "~3 requests/second",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit event for introspection"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /v1/users/me",
+      "reveals": "the bot user; owner and workspace_name of the authorizing workspace",
+      "bulk": false,
+      "scope": "read content capability",
+      "rate_limit": "~3 requests/second",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Enterprise audit log records integration activity; /users/me specifics not stated"
+     },
+     {
+      "stage": "discovery",
+      "call": "POST /v1/search",
+      "reveals": "all pages/data sources shared with the public connection",
+      "bulk": true,
+      "scope": "read content capability",
+      "rate_limit": "~3 requests/second",
+      "logged": "yes",
+      "log_event": "Content search queried",
+      "log_notes": "Enterprise audit log, 365-day retention"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /v1/data_sources/{data_source_id}/query",
+      "reveals": "pages/rows in accessible databases",
+      "bulk": true,
+      "scope": "read content capability",
+      "rate_limit": "~3 requests/second",
+      "logged": "yes",
+      "log_event": "Page viewed",
+      "log_notes": "Reading page data logged as Page viewed; Enterprise only"
+     }
+    ],
+    "unknown": [
+     "Whether reads are logged on non-Enterprise workspaces"
+    ],
+    "evidence_refs": [
+     "fc-bae14e39",
+     "fc-0de83dd6",
+     "fc-ba492238",
+     "fc-47ed5f7a",
+     "fc-5cd2b23a",
+     "fc-d7cebd77"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Notion Page API Permissions Changed",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/notion_rules/notion_page_accessible_to_api.yml",
+     "detects": "An integration was given access to a Notion page or its page role changed."
+    }
+   ]
+  },
+  {
+   "id": "notion-4",
+   "name": "Admin API token",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Organization-level token issued to an admin bot and used for Enterprise admin actions such as workspace exports, legal holds and logging out managed users. It is separate from workspace connection tokens.",
+    "evidence_refs": [
+     "fc-81707e22"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static organization token created in Notion settings. No external identity exchange is documented for this path.",
+    "evidence_refs": [
+     "fc-81707e22"
+    ]
+   },
+   "ip_restriction": {
+    "status": "not_supported",
+    "enforcement_stage": "login_only",
+    "boundary": "Notion states admin tokens cannot be limited to specific IP addresses or networks; Enterprise IP restrictions apply only to people signing in. Restrict use at your own network or secrets layer.",
+    "evidence_refs": [
+     "fc-81707e22"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Static token; expiry not documented",
+    "evidence_refs": [
+     "fc-81707e22"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "unknown",
+    "summary": "The same token is reused until it is deleted; Notion recommends rotating on a schedule your security team sets.",
+    "evidence_refs": [
+     "fc-81707e22"
+    ]
+   },
+   "administration": {
+    "summary": "Only organization owners create admin bots and tokens, choosing which admin actions each token may perform. Deleting a token stops it immediately. Actions appear in the audit log with the admin bot as actor.",
+    "conditions": "Enterprise plan only. The help page names exports, legal holds and user logout; it does not list SCIM or audit-log API coverage.",
+    "evidence_refs": [
+     "fc-81707e22"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Admin tokens belong to the organization, not a user.",
+     "evidence_refs": [
+      "fc-81707e22"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin connections are listed in organization settings (General → Manage organization-level admin API tokens) with creator and date.",
+     "evidence_refs": [
+      "fc-81707e22"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Settings > Audit log; filter Event = Workspace content exported and Person or agent = the admin bot name; Export for CSV",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-5cd2b23a",
+      "fc-9412eb43"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Organization bot token format not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Notion organization audit log (organization events)",
+      "notes": "Enterprise; records organization token lifecycle; admin-token actions logged with the admin bot as actor."
+     },
+     {
+      "name": "Notion SIEM connection (webhook)",
+      "notes": "Enterprise; real-time JSON webhook of every audit log event; payload field names not documented publicly."
+     },
+     {
+      "name": "Organization console → Manage organization-level admin API tokens",
+      "notes": "Lists connections with creator and creation time."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "revoked_by",
+      "log": "Admin API list PATs",
+      "notes": "type organization_bot shows a PAT revoked by an admin token"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Organization token created",
+      "stage": "create",
+      "notes": "audit log display name"
+     },
+     {
+      "event": "Organization token updated",
+      "stage": "change",
+      "notes": "e.g. scopes changed"
+     },
+     {
+      "event": "Organization token deleted",
+      "stage": "revoke",
+      "notes": "listed in help-center audit log page under Bots"
+     },
+     {
+      "event": "Organization token access changed",
+      "stage": "change",
+      "notes": "listed in help-center audit log page under Bots"
+     },
+     {
+      "event": "Admin bot created or deleted",
+      "stage": "create",
+      "notes": "help-center audit log page"
+     }
+    ],
+    "correlation_keys": [
+     "revoked_by"
+    ],
+    "anomaly_cues": [
+     "Organization token created/updated by an owner outside change control",
+     "Scope widened to write-high-impact or export",
+     "Admin bot actor running workspace exports or legal-hold exports not on schedule",
+     "Admin bot revoking sessions or PATs en masse (possible attacker cover)",
+     "Use after the token creator changed roles"
+    ],
+    "containment": {
+     "steps": "Organization console → Manage organization-level admin API tokens → delete/revoke the token; review audit log for actions with that admin bot as actor.",
+     "kills_existing": "yes",
+     "notes": "Help doc: any script using the token stops immediately. Admin tokens cannot be IP-restricted."
+    },
+    "sample_query": {
+     "language": "Notion audit log UI filters",
+     "query": "Organization event log; Actor = <admin bot name>; Date range = incident window",
+     "purpose": "List every admin action taken with a suspect organization token."
+    },
+    "unknown": [
+     "token format/prefix",
+     "'Organization token deleted' appears on the help page but not in the developer audit-log glossary",
+     "log field names for actor/IP",
+     "token expiry"
+    ],
+    "evidence_refs": [
+     "fc-81707e22",
+     "fc-9412eb43",
+     "fc-01c2978f",
+     "fc-710b4de5",
+     "fc-5cd2b23a"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "GET /v1/legal_holds",
+      "reveals": "all legal holds for the organization, active and released",
+      "bulk": false,
+      "scope": "legal-hold:read",
+      "rate_limit": "429 with retry-after when limited",
+      "logged": "yes",
+      "log_event": "(admin token action)",
+      "log_notes": "Actions taken with an admin token show up in the audit log with the bot as actor; Enterprise, 365-day retention"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /v1/spaces/{space_id}/exports",
+      "reveals": "enqueues a full workspace export (html/markdown, with contents and comments)",
+      "bulk": true,
+      "scope": "workspace:export",
+      "rate_limit": "429 with retry-after when limited",
+      "logged": "yes",
+      "log_event": "Workspace content exported",
+      "log_notes": "Admin token action, appears in audit log; event 'Workspace content exported'"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/spaces/{space_id}/exports/{export_job_id}",
+      "reveals": "export status plus short-lived bot-scoped download_urls for the completed export",
+      "bulk": true,
+      "scope": "workspace:export",
+      "rate_limit": "429 with retry-after when limited",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Admin token actions are logged generally; specific status-poll event not named"
+     }
+    ],
+    "unknown": [
+     "No whoami endpoint documented for the admin token (base URL https://api.notion.com/admin)",
+     "Exact audit event names for legal-hold reads and export status polls"
+    ],
+    "evidence_refs": [
+     "fc-1dd3bbea",
+     "fc-bcc5e910",
+     "fc-581fc07d",
+     "fc-81707e22",
+     "fc-5cd2b23a"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

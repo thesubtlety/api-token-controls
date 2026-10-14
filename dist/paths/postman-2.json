@@ -1,0 +1,358 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "postman",
+      "name": "Postman",
+      "scope_notes": "Cloud SaaS; admin key management, service accounts, SCIM and audit logs need Enterprise (SSO also on Team with Simple Security add-on).",
+      "controls": [
+        {
+          "name": "Service account API key management",
+          "effect": "revoke",
+          "applies_to": [
+            "postman-2"
+          ],
+          "what": "Admins create, rotate, revoke or delete service account keys and set key expiry.",
+          "setting": "Team/Organization > Service Accounts",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8dd0705e"
+          ]
+        },
+        {
+          "name": "Service account roles",
+          "effect": "limit_resources",
+          "applies_to": [
+            "postman-2"
+          ],
+          "what": "Service account access follows the org, team and workspace roles assigned to it.",
+          "setting": "Service Accounts > Assigned teams / Assigned workspaces",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8dd0705e"
+          ]
+        },
+        {
+          "name": "Service account management restricted to Admin or Super Admin",
+          "effect": "other",
+          "applies_to": [
+            "postman-2"
+          ],
+          "what": "Only Admins and Super Admins can create service accounts and generate their API keys.",
+          "setting": "Team/organization > Service Accounts",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8dd0705e"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "postman-2",
+          "what": "Service account short-lived token expiration cannot be configured.",
+          "kind": "expiry",
+          "evidence_refs": [
+            "fc-8dd0705e"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Any IP allowlisting for Postman API keys or the Postman API (none found in docs).",
+        "Whether API keys or service account tokens are blocked by SSO-only enforcement or IdP conditional access; docs do not say.",
+        "Whether revoking a service account API key invalidates already-issued short-lived tokens.",
+        "Whether removing or SCIM-deactivating a user revokes their Postman API keys.",
+        "Default and allowed expiry values for user API keys and SCIM keys.",
+        "Exact audit action codes for service account key events and collection access key create/delete.",
+        "Whether Postman API read calls (GET /collections, /workspaces, etc.) appear in audit logs.",
+        "How OAuth client_credentials clients (installationAuthId) are registered and administered.",
+        "Documented prefix for user Postman API keys (OAuth token example shows PMAK-XXX; not stated for API keys)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "postman-2",
+      "provider_id": "postman",
+      "name": "System service account API key and access token",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Admin creates a system service account and an API key for it. The key is sent as x-api-key to get a short-lived token used for Postman API calls.",
+        "evidence_refs": [
+          "fc-8dd0705e"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "No workload identity federation documented for this credential.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No Postman doc found describing IP allowlisting for API keys or the Postman API.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "conditional",
+        "summary": "Token TTL fixed (value not stated); API key expiry configurable",
+        "evidence_refs": [
+          "fc-8dd0705e"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Long-lived key re-exchanged for new short-lived tokens",
+        "summary": "Rotate by creating a second key, then revoking the old one",
+        "evidence_refs": [
+          "fc-8dd0705e"
+        ]
+      },
+      "administration": {
+        "summary": "Admins create accounts, assign org/team/workspace roles, create, rotate, revoke or delete keys, and see last use.",
+        "conditions": "Enterprise plan; Admin or Super Admin",
+        "evidence_refs": [
+          "fc-8dd0705e"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "System service accounts are non-human identities, not tied to a user.",
+          "evidence_refs": [
+            "fc-8dd0705e"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admins see all system service accounts and their active credentials on the Service Accounts page.",
+          "evidence_refs": [
+            "fc-8dd0705e"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Profile > team/organization > Service Accounts > select account > view each API key's expiration (access token TTL is fixed, not configurable)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-8dd0705e"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs (dashboard and GET /audit/logs)",
+            "notes": "Enterprise; 180 days; CSV export or Postman API for SIEM; events carry actor, IP, userAgent, data.variables"
+          },
+          {
+            "name": "Service Accounts page",
+            "notes": "Last-used, creation and expiry per key"
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "unknown",
+            "log": "Audit logs",
+            "notes": "Field for service account key events not documented"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "API key created",
+            "stage": "create",
+            "notes": "Display text; action code not given"
+          },
+          {
+            "event": "API key regenerated",
+            "stage": "rotate",
+            "notes": ""
+          },
+          {
+            "event": "API key activated",
+            "stage": "other",
+            "notes": ""
+          },
+          {
+            "event": "API key deactivated",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "API key deleted",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "API key renamed",
+            "stage": "other",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "data.actor.id",
+          "ip",
+          "userAgent"
+        ],
+        "anomaly_cues": [
+          "Service account key used from unexpected IP",
+          "New key created outside change window",
+          "Service account given Super Admin"
+        ],
+        "containment": {
+          "steps": "Service Accounts > select account > revoke or delete key.",
+          "kills_existing": "unknown",
+          "notes": "Issued short-lived tokens may remain valid until expiry; not documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Token endpoint name",
+          "Effect of key revocation on live tokens"
+        ],
+        "evidence_refs": [
+          "fc-8dd0705e",
+          "fc-7e8e1dc5"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /me",
+            "reveals": "Authenticated user, team, usage",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "300/min",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit log docs do not list API read events"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /workspaces",
+            "reveals": "All accessible workspaces incl. visibility",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "10 calls in 10 seconds",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit log docs do not list API read events"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /collections",
+            "reveals": "All collections the user can see",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "10 calls in 10 seconds",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit log docs do not list API read events"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /users",
+            "reveals": "All team users",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "300/min",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit log docs do not list API read events"
+          }
+        ],
+        "unknown": [
+          "Token exchange endpoint"
+        ],
+        "evidence_refs": [
+          "fc-8dd0705e",
+          "fc-459d3892",
+          "fc-3870c972",
+          "fc-6b657ae5",
+          "fc-5374530b"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-3870c972",
+      "title": "Get all collections",
+      "url": "https://learning.postman.com/api-docs/api-reference/collections/get-collections",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-459d3892",
+      "title": "Get authenticated user",
+      "url": "https://learning.postman.com/api-docs/api-reference/users/get-authenticated-user",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5374530b",
+      "title": "Get all team users",
+      "url": "https://learning.postman.com/api-docs/api-reference/users/get-team-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6b657ae5",
+      "title": "Get all workspaces",
+      "url": "https://learning.postman.com/api-docs/api-reference/workspaces/get-workspaces",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7e8e1dc5",
+      "title": "Audit logs",
+      "url": "https://learning.postman.com/docs/administration/managing-your-team/audit-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8dd0705e",
+      "title": "Manage service account identities for automation and integrations",
+      "url": "https://learning.postman.com/docs/administration/service-accounts/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

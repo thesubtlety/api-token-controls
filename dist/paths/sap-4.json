@@ -1,0 +1,211 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "sap",
+      "name": "SAP BTP and S/4HANA Cloud",
+      "scope_notes": "Covers SAP Business Technology Platform (XSUAA, Cloud Management service, btp CLI), SAP Cloud Identity Services, and SAP S/4HANA Cloud Public Edition. Covers BTP Cloud Foundry/multi-environment subaccounts, Identity Authentication tenants, and S/4HANA Cloud Public Edition communication management; BTP docs cited from SAP's official SAP-docs GitHub source of help.sap.com.",
+      "controls": [],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP/network allowlist for XSUAA clients, btp API credentials, IAS API secrets or S/4HANA communication users.",
+        "Whether XSUAA password-grant tokens (cis service keys) honor IAS/corporate IdP MFA or conditional access.",
+        "Exact audit message for service key deletion and for API credential create/delete in XSUAA audit log.",
+        "Whether communication user passwords expire.",
+        "Org-wide switch to block creation of service keys or API credentials (none found).",
+        "IAS audit event emitted on client secret creation/deletion (change log covers admin CREATE/UPDATE/DELETE generally)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "sap-4",
+      "provider_id": "sap",
+      "name": "btp CLI session token",
+      "family": "jwt",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "`btp login` stores a session token in the local config file (e.g. ~/Library/Application Support/.btp/config.json on macOS). Login can be SSO via browser (`--sso`, `--idp`) or user/password.",
+        "evidence_refs": [
+          "fc-51d4161e"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "SSO login goes through the IdP; password login against SAP ID service is also documented. Once issued, the token is reused for 12h without re-checking the IdP (not stated explicitly).",
+        "evidence_refs": [
+          "fc-51d4161e"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No btp CLI IP restriction documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 43200,
+        "maximum_seconds": 43200,
+        "configurable": "no",
+        "summary": "12h max session",
+        "evidence_refs": [
+          "fc-51d4161e"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "12h session",
+        "summary": "User logs in again after 12h.",
+        "evidence_refs": [
+          "fc-51d4161e"
+        ]
+      },
+      "administration": {
+        "summary": "No admin control specific to CLI sessions found; access follows the user's role collections. `btp logout` ends the session locally.",
+        "conditions": "",
+        "evidence_refs": [
+          "fc-51d4161e"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Login can go through the IdP with --sso (recommended), but password login against SAP ID service is also allowed.",
+          "evidence_refs": [
+            "fc-51d4161e"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "BTP cockpit > global account > Security > Trust Configuration > Establish Trust (custom IdP for platform users)",
+          "api": null,
+          "cli": "btp login --sso [--idp <TENANT>]; make default: btp set config --login.sso browser",
+          "evidence_refs": [
+            "fc-9043a264",
+            "fc-99050aa5"
+          ]
+        },
+        "expiry": {
+          "ui": "Fixed: max session 12 hours, not configurable in docs",
+          "api": null,
+          "cli": "btp logout (ends session early)",
+          "evidence_refs": [
+            "fc-51d4161e"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Stored in local btp config.json"
+        },
+        "log_sources": [
+          {
+            "name": "SAP Audit Log service (BTP subaccount)",
+            "notes": "Audit Log Viewer or Retrieval API GET <url>/auditlog/v2/auditlogrecords; 90 days free, longer with Audit Log service premium edition (support ticket)."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "user name",
+          "origin key"
+        ],
+        "anomaly_cues": [
+          "Copied config.json reused from another host"
+        ],
+        "containment": {
+          "steps": "Remove the user's role collections or disable the user at the IdP; token expires within 12h.",
+          "kills_existing": "unknown",
+          "notes": "No server-side session revocation documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether btp CLI session use is audit logged"
+        ],
+        "evidence_refs": [
+          "fc-51d4161e"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "btp get accounts/global-account",
+            "reveals": "Global account details",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-51d4161e",
+          "fc-6bb5ba0d"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-51d4161e",
+      "title": "Log in (btp CLI)",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/log-in-e241b30.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6bb5ba0d",
+      "title": "Working with Global Accounts, Directories, and Subaccounts Using the btp CLI",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/working-with-global-accounts-directories-and-subaccounts-using-the-btp-cli-85a683e.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9043a264",
+      "title": "Log in with Single Sign-On",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/log-in-with-single-sign-on-b2a56a8.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-99050aa5",
+      "title": "Establish Trust and Federation of Custom Identity Providers for Platform Users",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/establish-trust-and-federation-of-custom-identity-providers-for-platform-users-c368984.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

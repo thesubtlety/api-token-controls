@@ -1,0 +1,1178 @@
+{
+ "id": "bitbucket",
+ "name": "Bitbucket Cloud",
+ "scope_notes": "Bitbucket Cloud SaaS; workspace/project access tokens and IP allowlisting need Premium, org-level audit log needs Atlassian Guard; API tokens are Atlassian-account tokens shared with Jira/Confluence.",
+ "controls": [
+  {
+   "name": "Revoke API token (user)",
+   "effect": "revoke",
+   "applies_to": [
+    "bitbucket-1"
+   ],
+   "what": "User revokes own token; it stops working immediately.",
+   "setting": "Atlassian account > Security > API tokens > Revoke",
+   "plan": null,
+   "default": "varies",
+   "level": "user",
+   "evidence_refs": [
+    "turn2search3"
+   ]
+  },
+  {
+   "name": "Revoke user API tokens (API token activity)",
+   "effect": "revoke",
+   "applies_to": [
+    "bitbucket-1"
+   ],
+   "what": "Org admin revokes one or many managed users' API tokens.",
+   "setting": "Atlassian Administration > Insights > API token activity > Revoke; or Delete API token API",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-e1dfb3f5"
+   ]
+  },
+  {
+   "name": "Require access token expiry",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "bitbucket-3"
+   ],
+   "what": "Sets the maximum expiry range for all access tokens in the workspace, its projects and repositories.",
+   "setting": "Workspace settings > Security > Access tokens > Access token expiry date range",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-738e409e"
+   ]
+  },
+  {
+   "name": "Revoke access token",
+   "effect": "revoke",
+   "applies_to": [
+    "bitbucket-3"
+   ],
+   "what": "Admin revokes a repository/project/workspace access token; apps using it lose access.",
+   "setting": "Repository/Project/Workspace settings > Access tokens > Revoke",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-9dcaf37e"
+   ]
+  },
+  {
+   "name": "Access token scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "bitbucket-1",
+    "bitbucket-3"
+   ],
+   "what": "Scopes and resource container are fixed at creation.",
+   "setting": "Token creation dialog",
+   "plan": null,
+   "default": "varies",
+   "level": "user",
+   "evidence_refs": [
+    "fc-4bf122a1",
+    "fc-02ac8d2f"
+   ]
+  },
+  {
+   "name": "Delete OAuth consumer",
+   "effect": "revoke",
+   "applies_to": [
+    "bitbucket-4"
+   ],
+   "what": "Deleting the consumer removes all tokens issued to it.",
+   "setting": "Workspace settings > OAuth consumers > Delete",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-f13daf16"
+   ]
+  },
+  {
+   "name": "Restrict access to certain IP addresses",
+   "effect": "limit_network",
+   "applies_to": [
+    "bitbucket-1",
+    "bitbucket-3",
+    "bitbucket-4",
+    "bitbucket-5"
+   ],
+   "what": "Only allowlisted IPs can view private content or clone/push/pull private repos.",
+   "setting": "Workspace settings > Access controls > Restrict access to certain IP addresses",
+   "plan": "Premium",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-b50f7c86"
+   ]
+  },
+  {
+   "name": "Delete deploy key / SSH key",
+   "effect": "revoke",
+   "applies_to": [
+    "bitbucket-5"
+   ],
+   "what": "Remove an SSH or deploy key via UI or API.",
+   "setting": "DELETE /repositories/{workspace}/{repo_slug}/deploy-keys/{key_id}; DELETE /users/{selected_user}/ssh-keys/{key_id}",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-10bbedb6",
+    "fc-1df51c71"
+   ]
+  },
+  {
+   "name": "Pipelines oidc option",
+   "effect": "disable",
+   "applies_to": [
+    "bitbucket-6"
+   ],
+   "what": "Set oidc to false in bitbucket-pipelines.yml to stop issuing the step OIDC token.",
+   "setting": "bitbucket-pipelines.yml step/global oidc",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-1982d1d7"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "bitbucket-1",
+   "what": "Org admins cannot block managed users from creating API tokens for Bitbucket.",
+   "kind": "disable",
+   "evidence_refs": [
+    "fc-4bf122a1"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether the workspace IP allowlist is enforced on REST API calls (docs only mention viewing content and Git clone/push/pull).",
+  "Whether API tokens or OAuth tokens are checked against IdP SSO or conditional access at use time.",
+  "Whether the workspace audit log records access token creation, rotation or revocation (no such events listed).",
+  "Lifetime of the Pipelines OIDC token.",
+  "OAuth access token lifetime: developer docs say 1 hour, support docs say 2 hours.",
+  "Any admin approval workflow for users authorizing third-party OAuth consumers."
+ ],
+ "credentials": [
+  {
+   "id": "bitbucket-1",
+   "name": "API tokens (Atlassian account API tokens with Bitbucket scopes)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "User creates a scoped token in Atlassian account security settings. Sent as Basic auth (Atlassian email + token) or Bearer to the REST API, or as the password for Git over HTTPS.",
+    "evidence_refs": [
+     "fc-4bf122a1",
+     "fc-ec207668"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Docs say API tokens do not require 2SV; they do not say whether IdP SSO or conditional access is checked on token use. The org-level 'limit API token creation' policy does not apply to Bitbucket.",
+    "evidence_refs": [
+     "fc-4bf122a1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "unknown",
+    "boundary": "Premium workspace IP allowlist covers private repos, wikis, issue trackers and snippets and blocks clone/push/pull; docs do not state whether REST API calls with tokens are checked, and metadata is not necessarily restricted.",
+    "evidence_refs": [
+     "fc-b50f7c86"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 31536000,
+    "maximum_seconds": 31536000,
+    "configurable": "yes",
+    "summary": "1 to 365 days, default 1 year",
+    "evidence_refs": [
+     "turn2search3"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "fixed expiry date set at creation",
+    "summary": "Create a new token; tokens cannot be edited or extended.",
+    "evidence_refs": [
+     "fc-4bf122a1",
+     "turn2search3"
+    ]
+   },
+   "administration": {
+    "summary": "User manages own tokens. Org admins can view and revoke managed accounts' API tokens from Insights > API token activity. Org admins cannot block Bitbucket API token creation.",
+    "conditions": "Admin view/revoke only for managed accounts (verified domain).",
+    "evidence_refs": [
+     "fc-4bf122a1",
+     "fc-e1dfb3f5"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Docs say API tokens don't require two-step verification, and org API token restrictions do not extend to Bitbucket.",
+     "evidence_refs": [
+      "fc-4bf122a1"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Atlassian Administration > Insights > API token activity lists API tokens of managed accounts only; not confirmed to include Bitbucket-scoped tokens.",
+     "evidence_refs": [
+      "fc-a0c70238"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Account settings > Security > Create and manage API tokens > Create API token with scopes > set expiry date",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-8b7e3ed0"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Variable-length Atlassian API token; no documented prefix."
+    },
+    "log_sources": [
+     {
+      "name": "Atlassian organization audit log",
+      "notes": "Insights > Audit log; up to 180 days; token events tied to managed accounts. Guard needed for Bitbucket enterprise-level events."
+     },
+     {
+      "name": "API token activity (Insights)",
+      "notes": "Lists managed users' tokens with created, expiry and last used; CSV export."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "token name / created date / last used",
+      "log": "API token activity",
+      "notes": "Export includes date last used."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Created API token",
+      "stage": "create",
+      "notes": "Org audit log."
+     },
+     {
+      "event": "Revoked API token",
+      "stage": "revoke",
+      "notes": "Org audit log."
+     },
+     {
+      "event": "Exported API tokens",
+      "stage": "other",
+      "notes": "Admin export of token inventory."
+     }
+    ],
+    "correlation_keys": [
+     "Atlassian account ID",
+     "token name",
+     "last used date"
+    ],
+    "anomaly_cues": [
+     "Token created then used from unfamiliar automation shortly after",
+     "Tokens near 1-year max on high-privilege accounts",
+     "Last-used dates on tokens of departed users"
+    ],
+    "containment": {
+     "steps": "Revoke in API token activity (org admin) or Atlassian account > Security (user); also deactivate the account if compromised.",
+     "kills_existing": "yes",
+     "notes": "Revoked tokens no longer work."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Per-request API call logging for Bitbucket REST use",
+     "Source IP of token use"
+    ],
+    "evidence_refs": [
+     "turn2search3",
+     "fc-e1dfb3f5",
+     "fc-4100e8ce",
+     "fc-4e80eaad"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /2.0/user",
+      "reveals": "current user identity",
+      "bulk": false,
+      "scope": "read:user:bitbucket",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented API request log."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /2.0/user/workspaces",
+      "reveals": "workspaces and admin flag",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /2.0/repositories/{workspace}",
+      "reveals": "all repositories in workspace",
+      "bulk": true,
+      "scope": "read:repository:bitbucket",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit log excludes repo/commit activity."
+     },
+     {
+      "stage": "collection",
+      "call": "git clone https://bitbucket.org/{workspace}/{repo}.git",
+      "reveals": "full source",
+      "bulk": true,
+      "scope": "read:repository:bitbucket",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "Whether any REST read is logged"
+    ],
+    "evidence_refs": [
+     "fc-6327d20e",
+     "fc-7034dcb2",
+     "fc-cb0c2b12",
+     "fc-4e80eaad"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "bitbucket-2",
+   "name": "App passwords (deprecated)",
+   "family": "basic",
+   "principal": "user",
+   "lifecycle": "legacy",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Per-user password used with the Bitbucket username for REST API and Git over HTTPS. Fully deprecated on 28 July 2026; app-password requests now fail with 401 (API) or 410 (Git).",
+    "evidence_refs": [
+     "fc-5adceb93"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Retired credential type; docs reviewed do not address SSO interaction.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "unknown",
+    "boundary": "Same Premium private-content allowlist as other credentials.",
+    "evidence_refs": [
+     "fc-b50f7c86"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Retired platform-wide 2026-07-28",
+    "evidence_refs": [
+     "fc-5adceb93"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "platform retirement",
+    "summary": "Replace with an API token.",
+    "evidence_refs": [
+     "fc-4bf122a1",
+     "fc-5adceb93"
+    ]
+   },
+   "administration": {
+    "summary": "No longer usable. Historic creation/removal is in the workspace audit log as 'App password added'/'App password removed'.",
+    "conditions": "Audit retention 30 days, so historic events are likely aged out.",
+    "evidence_refs": [
+     "fc-5adceb93",
+     "fc-4e80eaad"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "network": {
+     "ui": "Workspace settings > Access management > Access controls > Restrict access to certain IP addresses > Add or remove IP addresses > Update (Premium)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-bb730ff3"
+     ]
+    },
+    "kill": {
+     "ui": "None needed: app passwords fully deprecated on Jul 28, 2026",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-5adceb93"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Retired credential."
+    },
+    "log_sources": [
+     {
+      "name": "Bitbucket workspace audit log",
+      "notes": "Workspace settings > Security > Audit log; 30 days."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [
+     {
+      "event": "App password added",
+      "stage": "create",
+      "notes": "User category."
+     },
+     {
+      "event": "App password removed",
+      "stage": "revoke",
+      "notes": "User category."
+     }
+    ],
+    "correlation_keys": [
+     "Bitbucket username"
+    ],
+    "anomaly_cues": [
+     "Any 401 on API or 410 on Git from legacy integrations indicates leftover app-password use"
+    ],
+    "containment": {
+     "steps": "None needed; Bitbucket rejects app passwords since 2026-07-28.",
+     "kills_existing": "yes",
+     "notes": "Platform-wide removal."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-5adceb93",
+     "fc-4e80eaad"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Retired; calls fail with 401/410"
+    ],
+    "evidence_refs": [
+     "fc-5adceb93"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "bitbucket-3",
+   "name": "Access tokens (repository, project, workspace)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Admin-created bearer token tied to one repository, project or workspace rather than a user. Acts as its own 'user' identity named after the token in UI and logs.",
+    "evidence_refs": [
+     "fc-02ac8d2f",
+     "fc-a3d66d5b"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Not tied to a user, so IdP SSO does not apply; docs state they do not require 2SV.",
+    "evidence_refs": [
+     "fc-02ac8d2f"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "unknown",
+    "boundary": "Premium workspace IP allowlist covers private content and Git operations; API enforcement for access tokens is not documented.",
+    "evidence_refs": [
+     "fc-b50f7c86"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": 31536000,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Admin-set max (365 days default); 'No expiry' allowed if policy permits",
+    "evidence_refs": [
+     "fc-738e409e",
+     "fc-e281250d"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expiry date within workspace policy",
+    "summary": "Rotate to refresh secret and expiry without changing scopes.",
+    "evidence_refs": [
+     "fc-daaedd6a"
+    ]
+   },
+   "administration": {
+    "summary": "Created and revoked by repository/project/workspace admins. Workspace admins set maximum expiry. Max 25 per container. Workspace and project tokens need Premium.",
+    "conditions": "Premium for workspace/project tokens.",
+    "evidence_refs": [
+     "fc-02ac8d2f",
+     "fc-738e409e"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Access tokens don't require two-step verification and are not tied to a user.",
+     "evidence_refs": [
+      "fc-02ac8d2f",
+      "fc-a3d66d5b"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Linked to a repository, project or workspace, not a user account.",
+     "evidence_refs": [
+      "fc-a3d66d5b"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Each repository, project or workspace has its own Access tokens settings page; no org-wide list documented.",
+     "evidence_refs": [
+      "fc-a3d66d5b"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "No documented prefix."
+    },
+    "log_sources": [
+     {
+      "name": "Access tokens page",
+      "notes": "Shows name, created date, last accessed date and scopes."
+     },
+     {
+      "name": "Bitbucket UI/logs as token user",
+      "notes": "Actions appear under the token's name as a user."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Access token name (shown as user)",
+      "log": "Bitbucket UI / activity",
+      "notes": "Commits, PR comments and merges attributed to the token."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "access token name",
+     "repository/project/workspace"
+    ],
+    "anomaly_cues": [
+     "Last accessed date recent on a token believed unused",
+     "Tokens with No expiry",
+     "Workspace tokens with admin scopes"
+    ],
+    "containment": {
+     "steps": "Revoke on the container's Access tokens page.",
+     "kills_existing": "yes",
+     "notes": "Content the token created remains."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit events for create/revoke/rotate are not in the published event list"
+    ],
+    "evidence_refs": [
+     "fc-9dcaf37e",
+     "fc-a3d66d5b",
+     "fc-4e80eaad"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "GET /2.0/repositories/{workspace}",
+      "reveals": "repositories the token can see",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Last accessed date updates on the token page."
+     },
+     {
+      "stage": "collection",
+      "call": "git clone https://x-token-auth:{token}@bitbucket.org/{workspace}/{repo}.git",
+      "reveals": "source code",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "Whoami behavior for access tokens"
+    ],
+    "evidence_refs": [
+     "fc-cb0c2b12",
+     "fc-a3d66d5b"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "bitbucket-4",
+   "name": "OAuth consumers (OAuth 2.0)",
+   "family": "oauth",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Workspace-registered consumer (key + secret). Authorization code grant acts as the authorizing user; client credentials grant acts as the consumer owner. Access tokens are Bearer tokens to api.bitbucket.org and can clone via x-token-auth.",
+    "evidence_refs": [
+     "fc-a3d66d5b",
+     "fc-f13daf16"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Docs do not say whether IdP session policies are re-checked on refresh.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "unknown",
+    "boundary": "Premium private-content allowlist; API enforcement not documented.",
+    "evidence_refs": [
+     "fc-b50f7c86"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Access token 1h (support docs say 2h); refresh token expires after 3 months unused",
+    "evidence_refs": [
+     "fc-a3d66d5b",
+     "fc-f13daf16"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "refresh token rotates on use; 3-month inactivity expiry",
+    "summary": "Refresh without user interaction; client credentials can mint new tokens with the secret.",
+    "evidence_refs": [
+     "fc-a3d66d5b"
+    ]
+   },
+   "administration": {
+    "summary": "Workspace admins create and delete consumers in Workspace settings > OAuth consumers; deleting removes all its tokens. Scopes are fixed on the consumer.",
+    "conditions": "No documented admin approval flow for user authorizations of third-party consumers.",
+    "evidence_refs": [
+     "fc-f13daf16"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Workspace settings > OAuth consumers lists consumers created in that workspace; no list of issued tokens or user authorizations.",
+     "evidence_refs": [
+      "fc-f13daf16"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "Access token lifetime fixed at 1 hour; renew with POST https://bitbucket.org/site/oauth2/access_token grant_type=refresh_token",
+     "cli": null,
+     "evidence_refs": [
+      "fc-0c2d8aac"
+     ]
+    },
+    "usage": {
+     "ui": "Workspace settings > Security: Audit log; filter events 'User account access granted to an application' / 'revoked'",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-4e80eaad"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Bearer access token; refresh token."
+    },
+    "log_sources": [
+     {
+      "name": "Bitbucket workspace audit log",
+      "notes": "30 days; user authorization of applications."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "application (consumer) name",
+      "log": "workspace audit log",
+      "notes": "Field names not documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "User account access granted to an application",
+      "stage": "create",
+      "notes": "User category."
+     },
+     {
+      "event": "User account access to an application revoked",
+      "stage": "revoke",
+      "notes": "User category."
+     }
+    ],
+    "correlation_keys": [
+     "consumer key",
+     "user account"
+    ],
+    "anomaly_cues": [
+     "New consumer with broad scopes",
+     "Client credentials consumer owned by an admin"
+    ],
+    "containment": {
+     "steps": "Delete the consumer in Workspace settings > OAuth consumers (kills all its tokens); or rotate secret.",
+     "kills_existing": "yes",
+     "notes": "Deletion removes all existing tokens linked to the consumer."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether consumer creation/deletion is audited"
+    ],
+    "evidence_refs": [
+     "fc-4e80eaad",
+     "fc-f13daf16"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /2.0/user",
+      "reveals": "authorizing user or consumer owner",
+      "bulk": false,
+      "scope": "account",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /2.0/repositories/{workspace}",
+      "reveals": "repositories",
+      "bulk": true,
+      "scope": "repository",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-6327d20e",
+     "fc-cb0c2b12",
+     "fc-a3d66d5b"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "bitbucket-5",
+   "name": "SSH keys (personal SSH keys and repository/project access keys)",
+   "family": "api_key",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Public keys registered on a user account (Git access as that user) or as repository/project access keys (deploy keys) for Git over SSH.",
+    "evidence_refs": [
+     "fc-10bbedb6",
+     "fc-1df51c71",
+     "fc-38d52c30"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Docs reviewed do not state whether SSO applies to SSH Git access.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Premium allowlist blocks clone/push/pull of private repositories from non-allowlisted IPs.",
+    "evidence_refs": [
+     "fc-b50f7c86"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Personal SSH keys accept an optional expires_on date when added via API; default no expiry. Not documented for access keys.",
+    "evidence_refs": [
+     "fc-113b64f9"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none documented",
+    "summary": "Key stays valid until removed.",
+    "evidence_refs": []
+   },
+   "administration": {
+    "summary": "Users manage own keys; repo/project admins manage access keys; keys can be listed and deleted via API.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-10bbedb6",
+     "fc-1df51c71"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Per user via GET /users/{selected_user}/ssh-keys, or per repository/project settings; no org-wide list.",
+     "evidence_refs": [
+      "fc-113b64f9"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Personal Bitbucket settings > Security > SSH keys > Add key > Expiry: Expires on (date picker)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-67fe44a1"
+     ]
+    },
+    "usage": {
+     "ui": "Workspace settings > Security: Audit log; filter 'SSH key added/removed', 'Repository/Project Access key added/removed'",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-4e80eaad"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "OpenSSH public key formats Ed25519, ECDSA, RSA, DSA."
+    },
+    "log_sources": [
+     {
+      "name": "Bitbucket workspace audit log",
+      "notes": "30 days."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "key",
+      "log": "workspace audit log",
+      "notes": "Field names not documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "SSH key added",
+      "stage": "create",
+      "notes": "User key."
+     },
+     {
+      "event": "SSH key removed",
+      "stage": "revoke",
+      "notes": "User key."
+     },
+     {
+      "event": "Repository Access key added",
+      "stage": "create",
+      "notes": "Deploy key."
+     },
+     {
+      "event": "Repository Access key removed",
+      "stage": "revoke",
+      "notes": "Deploy key."
+     }
+    ],
+    "correlation_keys": [
+     "key fingerprint",
+     "user",
+     "repository"
+    ],
+    "anomaly_cues": [
+     "SSH or access key added outside change windows",
+     "Access keys added to many repositories"
+    ],
+    "containment": {
+     "steps": "Delete key via UI or DELETE API.",
+     "kills_existing": "unknown",
+     "notes": "In-flight SSH sessions not documented."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Git clone/pull activity logging"
+    ],
+    "evidence_refs": [
+     "fc-4e80eaad",
+     "fc-1df51c71",
+     "fc-38d52c30"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "git clone git@bitbucket.org:{workspace}/{repo}.git",
+      "reveals": "source code",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-38d52c30"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "bitbucket-6",
+   "name": "Bitbucket Pipelines OpenID Connect (OIDC) tokens",
+   "family": "federation",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A Pipelines step with oidc enabled gets a signed OIDC token in BITBUCKET_STEP_OIDC_TOKEN, which it exchanges with AWS, GCP or Vault for cloud credentials.",
+    "evidence_refs": [
+     "fc-1982d1d7",
+     "fc-c68673cc"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "Outbound federation; trust and claim conditions are enforced by the resource server.",
+    "evidence_refs": [
+     "fc-1982d1d7"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "token_issuance",
+    "boundary": "Restriction to Bitbucket Pipelines IP ranges is configured in the resource server's trust policy (AWS, GCP, Vault); Bitbucket itself has no setting.",
+    "evidence_refs": [
+     "fc-1982d1d7"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Per-step token; lifetime not documented",
+    "evidence_refs": [
+     "fc-c68673cc"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "issued per pipeline step",
+    "summary": "New token each step.",
+    "evidence_refs": [
+     "fc-c68673cc"
+    ]
+   },
+   "administration": {
+    "summary": "Control lives in the resource server trust policy (audience, repository/deployment claims). Anyone who can edit bitbucket-pipelines.yml can request the token.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-1982d1d7"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Issued by Bitbucket Pipelines to a pipeline step for use at a resource server, not tied to a user's account.",
+     "evidence_refs": [
+      "fc-1982d1d7"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "disable": {
+     "ui": null,
+     "api": null,
+     "cli": "bitbucket-pipelines.yml: set oidc: false on the step",
+     "evidence_refs": [
+      "fc-1982d1d7"
+     ]
+    },
+    "network": {
+     "ui": "AWS IAM > role > Trust relationships: add a source-IP condition listing Bitbucket Pipelines IP ranges",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-c68673cc"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "OIDC JWT in BITBUCKET_STEP_OIDC_TOKEN."
+    },
+    "log_sources": [
+     {
+      "name": "Cloud provider logs (e.g. AWS CloudTrail AssumeRoleWithWebIdentity)",
+      "notes": "Use is visible at the resource server, not Bitbucket."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "token claims (repository, deployment environment)",
+      "log": "resource server",
+      "notes": "Claims shown on the Pipelines OpenID Connect settings page."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "repository UUID claim",
+     "pipeline step"
+    ],
+    "anomaly_cues": [
+     "Role assumption from a branch or environment not in the trust policy",
+     "Pipeline YAML changes that add oidc: true"
+    ],
+    "containment": {
+     "steps": "Tighten or delete the trust policy at the resource server; set oidc false.",
+     "kills_existing": "partial",
+     "notes": "Already-issued cloud credentials last until their own expiry."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Token lifetime",
+     "Bitbucket-side logging of token issuance"
+    ],
+    "evidence_refs": [
+     "fc-1982d1d7",
+     "fc-c68673cc"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Holder calls the cloud provider, not Bitbucket"
+    ],
+    "evidence_refs": [
+     "fc-1982d1d7"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

@@ -1,0 +1,1148 @@
+{
+ "id": "strongdm",
+ "name": "StrongDM",
+ "scope_notes": "SaaS control plane (US/UK/EU); Log Stream and 13-month log viewing require the Enterprise plan, other plans see 30 days in the Admin UI.",
+ "controls": [
+  {
+   "name": "Delete token",
+   "effect": "revoke",
+   "applies_to": [
+    "strongdm-1"
+   ],
+   "what": "Deleting an admin token stops it authenticating immediately.",
+   "setting": "Principals > Tokens; sdm admin tokens delete",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-97954b59",
+    "fc-bbfe142e"
+   ]
+  },
+  {
+   "name": "Rotate",
+   "effect": "require_rotation",
+   "applies_to": [
+    "strongdm-1"
+   ],
+   "what": "Generates a new secret with the same permissions; existing authentications expire after 24 hours.",
+   "setting": "Principals > Tokens > Rotate",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-97954b59"
+   ]
+  },
+  {
+   "name": "Token permissions",
+   "effect": "limit_scope",
+   "applies_to": [
+    "strongdm-1",
+    "strongdm-2"
+   ],
+   "what": "Each admin token or API key gets only the admin permissions chosen at creation.",
+   "setting": "Create Admin Token / Create API Key page; --permissions",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-97954b59",
+    "fc-7f30f72d",
+    "fc-494307d6",
+    "fc-8ffe802d"
+   ]
+  },
+  {
+   "name": "Token expiry",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "strongdm-1",
+    "strongdm-2"
+   ],
+   "what": "Set an expiry at creation; 'never' is an allowed choice.",
+   "setting": "Create page expiry selector; --duration",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-97954b59",
+    "fc-7f30f72d",
+    "fc-8ffe802d"
+   ]
+  },
+  {
+   "name": "Delete API key",
+   "effect": "revoke",
+   "applies_to": [
+    "strongdm-2"
+   ],
+   "what": "Deleted API keys are invalidated instantly.",
+   "setting": "Principals > Tokens; sdm admin tokens delete",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7f30f72d"
+   ]
+  },
+  {
+   "name": "Delete tokens on user suspension",
+   "effect": "revoke",
+   "applies_to": [
+    "strongdm-1",
+    "strongdm-2"
+   ],
+   "what": "When suspending a user, the Admin UI lists their tokens and keys and asks whether to delete them.",
+   "setting": "Users > Suspend user",
+   "plan": null,
+   "default": "varies",
+   "level": "user",
+   "evidence_refs": [
+    "fc-97954b59",
+    "fc-7f30f72d"
+   ]
+  },
+  {
+   "name": "Role membership",
+   "effect": "limit_resources",
+   "applies_to": [
+    "strongdm-3"
+   ],
+   "what": "Service accounts only reach resources granted through their roles.",
+   "setting": "Principals > Users > service account > Roles",
+   "plan": null,
+   "default": "varies",
+   "level": "user",
+   "evidence_refs": [
+    "fc-eaf262e3"
+   ]
+  },
+  {
+   "name": "Suspend user",
+   "effect": "disable",
+   "applies_to": [
+    "strongdm-3"
+   ],
+   "what": "Suspending an account revokes its access to infrastructure.",
+   "setting": "Users > Actions > Suspend user",
+   "plan": null,
+   "default": "off",
+   "level": "user",
+   "evidence_refs": [
+    "fc-68698b81"
+   ]
+  },
+  {
+   "name": "Permission level: Manage service accounts, admin tokens, and API keys",
+   "effect": "other",
+   "applies_to": [
+    "strongdm-1",
+    "strongdm-2",
+    "strongdm-3"
+   ],
+   "what": "Only the Administrator permission level can create or manage admin tokens, API keys, and service accounts; other levels cannot.",
+   "setting": "Principals > Users > (user) > Settings > Permission Level",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-087adfd5"
+   ]
+  },
+  {
+   "name": "Permission level: Manage relays and gateways",
+   "effect": "other",
+   "applies_to": [
+    "strongdm-5"
+   ],
+   "what": "Only Administrators can create gateways/relays and so obtain node tokens.",
+   "setting": "Principals > Users > (user) > Settings > Permission Level",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-087adfd5"
+   ]
+  },
+  {
+   "name": "Permission level: Update account settings",
+   "effect": "other",
+   "applies_to": [
+    "strongdm-4"
+   ],
+   "what": "Only Administrators can change org settings, where SCIM is activated and its token generated.",
+   "setting": "Principals > Users > (user) > Settings > Permission Level",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-087adfd5"
+   ]
+  },
+  {
+   "name": "SCIM Provider: None - provisioning disabled",
+   "effect": "disable",
+   "applies_to": [
+    "strongdm-4"
+   ],
+   "what": "Turns off SCIM provisioning for the org.",
+   "setting": "Settings > User Management > Provisioning > SCIM Provider",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6208e27d"
+   ]
+  },
+  {
+   "name": "Policies (Location::IP context)",
+   "effect": "limit_network",
+   "applies_to": [
+    "strongdm-3"
+   ],
+   "what": "Cedar policy statements can permit or forbid a principal's resource actions based on the source IP or location.",
+   "setting": "Access > Policies",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-b2378380",
+    "fc-e8b1a2e9"
+   ]
+  },
+  {
+   "name": "sdm admin users suspend --cascade",
+   "effect": "revoke",
+   "applies_to": [
+    "strongdm-2"
+   ],
+   "what": "Suspending a user with --cascade also suspends that user's linked API keys.",
+   "setting": "CLI: sdm admin users suspend --cascade",
+   "plan": null,
+   "default": "off",
+   "level": "user",
+   "evidence_refs": [
+    "fc-85830931"
+   ]
+  },
+  {
+   "name": "sdm admin nodes delete",
+   "effect": "revoke",
+   "applies_to": [
+    "strongdm-5"
+   ],
+   "what": "Deletes a gateway or relay node.",
+   "setting": "CLI: sdm admin nodes delete",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6f78f84e"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "strongdm-2",
+   "what": "API keys cannot be rotated in place.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-7f30f72d"
+   ]
+  },
+  {
+   "path_id": "strongdm-1",
+   "what": "Suspending the creating user does not disable admin tokens.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-97954b59"
+   ]
+  },
+  {
+   "path_id": "strongdm-2",
+   "what": "Suspending the creating user does not disable API keys.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-7f30f72d"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Any IP allowlist for admin tokens, API keys, service accounts, or SCIM tokens (docs silent).",
+  "Any org-wide switch to block creation of admin tokens or API keys, or a maximum expiry policy.",
+  "Whether SSO-required or MFA settings apply to service account token logins.",
+  "SCIM token rotation, revocation, and lifetime.",
+  "Service account token lifetime and rekey procedure.",
+  "Whether read-only SDK/API calls (e.g. listing accounts or resources) are recorded as Activities.",
+  "Whether API key creation logs as 'Admin token created' or a separate event."
+ ],
+ "credentials": [
+  {
+   "id": "strongdm-1",
+   "name": "Admin token",
+   "family": "pat",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Single secret string used with the sdm CLI via SDM_ADMIN_TOKEN or sdm login --admin-token. It can only run the sdm admin commands granted to it, and use skips the interactive login.",
+    "evidence_refs": [
+     "fc-97954b59"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static secret; no documented workload identity federation.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Docs do not describe any IP allowlist for admin tokens.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "1 week, 1 month, 1 year, or never (CLI duration default 0)",
+    "evidence_refs": [
+     "fc-97954b59",
+     "fc-8ffe802d"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "absolute expiry set at creation",
+    "summary": "Rotate regenerates the secret with same name and permissions; old authentications expire after 24 hours.",
+    "evidence_refs": [
+     "fc-97954b59"
+    ]
+   },
+   "administration": {
+    "summary": "Admins create, list, rotate and delete in Principals > Tokens or sdm admin tokens. Tokens survive suspension of the creating user unless deleted.",
+    "conditions": "Administrator permission level needed to create via CLI.",
+    "evidence_refs": [
+     "fc-bbfe142e",
+     "fc-97954b59"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Docs say a CLI session using an admin token does not need a CLI or GUI login, so the SSO login flow is not involved.",
+     "evidence_refs": [
+      "fc-97954b59"
+     ]
+    },
+    "offboard": {
+     "status": "no",
+     "details": "Admin tokens keep working after the creating user is suspended unless the admin chooses to delete them in the suspension prompt.",
+     "evidence_refs": [
+      "fc-97954b59"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin UI Principals > Tokens and `sdm admin tokens list` list all tokens in the org; `sdm audit tokens` gives a point-in-time listing.",
+     "evidence_refs": [
+      "fc-7b0a83a8",
+      "fc-d1933dd7"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque string shown once; prefix not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Activities (Admin UI Logs > Activities, sdm audit activities, API Activities)",
+      "notes": "30 days in Admin UI without Enterprise, 13 months with Enterprise."
+     },
+     {
+      "name": "Log Stream - Activities",
+      "notes": "Enterprise; streams to customer object storage."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actorAccountID",
+      "log": "Activities",
+      "notes": "Account that performed the activity; whether token ID is separately recorded is not documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Admin token created",
+      "stage": "create",
+      "notes": null
+     },
+     {
+      "event": "Admin token cloned",
+      "stage": "create",
+      "notes": null
+     },
+     {
+      "event": "Admin token rekeyed",
+      "stage": "rotate",
+      "notes": null
+     },
+     {
+      "event": "Admin token suspended",
+      "stage": "disable",
+      "notes": null
+     },
+     {
+      "event": "Admin token reinstated",
+      "stage": "enable",
+      "notes": null
+     },
+     {
+      "event": "Admin token expired",
+      "stage": "expire",
+      "notes": null
+     },
+     {
+      "event": "Admin token deleted",
+      "stage": "revoke",
+      "notes": null
+     }
+    ],
+    "correlation_keys": [
+     "actorAccountID",
+     "ipAddress",
+     "userAgent",
+     "entities"
+    ],
+    "anomaly_cues": [
+     "Tokens with expiry 'never'",
+     "Tokens owned by suspended users",
+     "Admin activity from unfamiliar ipAddress or userAgent"
+    ],
+    "containment": {
+     "steps": "Delete the token in Principals > Tokens or with sdm admin tokens delete. Prefer delete over rotate: rotation lets existing authentications live up to 24 hours.",
+     "kills_existing": "partial",
+     "notes": "Docs say delete is immediate, but the rotate tooltip says existing authentications expire after 24 hours."
+    },
+    "sample_query": "sdm audit activities --from <start> --json",
+    "unknown": [
+     "Whether each admin command run with the token is an Activity"
+    ],
+    "evidence_refs": [
+     "fc-97954b59",
+     "fc-7b10eb9f",
+     "fc-e9949e2c",
+     "fc-88dfb281",
+     "fc-6a5304b4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "sdm admin users list",
+      "reveals": "Users and service accounts",
+      "bulk": true,
+      "scope": "token permission for user list",
+      "rate_limit": "5,000 reads/min per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Activities cover administrative changes; reads not stated."
+     },
+     {
+      "stage": "enumeration",
+      "call": "sdm admin datasources list / sdm admin servers list",
+      "reveals": "Resources, hosts, ports",
+      "bulk": true,
+      "scope": "token permission for datasource/server list",
+      "rate_limit": "5,000 reads/min per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": null
+     },
+     {
+      "stage": "collection",
+      "call": "sdm audit activities",
+      "reveals": "Organization activity history",
+      "bulk": true,
+      "scope": "token permission (auditing)",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": null
+     }
+    ],
+    "unknown": [
+     "No documented whoami for admin tokens"
+    ],
+    "evidence_refs": [
+     "fc-97954b59",
+     "fc-6a5304b4",
+     "fc-76b367b4"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "strongdm-2",
+   "name": "API key (access key + secret key)",
+   "family": "hmac",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Access key (auth-...) plus secret used by the SDKs and Terraform provider to sign each gRPC request, AWS SigV4 style; the secret is not sent.",
+    "evidence_refs": [
+     "fc-7f30f72d",
+     "fc-494307d6"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key pair; no documented federation.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Docs do not describe any IP allowlist for API keys.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Expiry chosen at creation",
+    "evidence_refs": [
+     "fc-7f30f72d"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "absolute expiry set at creation",
+    "summary": "No rotation; clone to create a new pair with the same permissions, then delete the old one.",
+    "evidence_refs": [
+     "fc-7f30f72d"
+    ]
+   },
+   "administration": {
+    "summary": "Admins view, add, clone and delete keys in Principals > Tokens; permissions are fixed at creation. Keys survive suspension of the creating user.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-7f30f72d",
+     "fc-494307d6"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "API keys survive suspension of the creating user by default; the UI prompt or `sdm admin users suspend --cascade` can suspend/delete them.",
+     "evidence_refs": [
+      "fc-7f30f72d",
+      "fc-85830931"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin UI Principals > Tokens lists API keys; `sdm admin tokens list` lists all tokens in the org.",
+     "evidence_refs": [
+      "fc-7f30f72d",
+      "fc-7b0a83a8"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Logs > Activities; filter Actor/Account = API key owner (activities such as 'Admin token ...')",
+     "api": null,
+     "cli": "sdm audit activities --from <date> --json, then filter on actorAccountID",
+     "evidence_refs": [
+      "fc-7b10eb9f",
+      "fc-6a5304b4",
+      "fc-88dfb281"
+     ]
+    },
+    "offboard": {
+     "ui": "Users > Actions > Suspend user > Confirm suspension; answer Yes when prompted to delete the user's API keys",
+     "api": null,
+     "cli": "sdm admin users suspend --cascade <email|id>",
+     "evidence_refs": [
+      "fc-68698b81",
+      "fc-7f30f72d",
+      "fc-85830931"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "auth-",
+     "notes": "Access key is a hex string auth-...; older keys used a long Base64 string."
+    },
+    "log_sources": [
+     {
+      "name": "Activities",
+      "notes": "30 days in Admin UI without Enterprise, 13 months with Enterprise; Log Stream is Enterprise."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actorAccountID",
+      "log": "Activities",
+      "notes": "Acting account."
+     },
+     {
+      "field": "userAgent",
+      "log": "Activities",
+      "notes": "SDK calls show e.g. strongdm-sdk-python/8.3.0."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "actorAccountID",
+     "ipAddress",
+     "userAgent"
+    ],
+    "anomaly_cues": [
+     "Unexpected SDK userAgent values",
+     "Keys owned by suspended users",
+     "Keys with no expiry"
+    ],
+    "containment": {
+     "steps": "Delete the key in Principals > Tokens; there is no rotate, so create a replacement first if automation needs it.",
+     "kills_existing": "yes",
+     "notes": "Signed requests are checked per call, so deletion blocks further requests."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact Activity names for API key create/delete"
+    ],
+    "evidence_refs": [
+     "fc-7f30f72d",
+     "fc-88dfb281",
+     "fc-e9949e2c"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "SDK Accounts list (gRPC, app.strongdm.com)",
+      "reveals": "User and service accounts",
+      "bulk": true,
+      "scope": "key permissions",
+      "rate_limit": "5,000 reads/min per user; 50,000 per org",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": null
+     },
+     {
+      "stage": "enumeration",
+      "call": "SDK Resources / Roles / AccountResources list",
+      "reveals": "Infrastructure inventory and who can reach it",
+      "bulk": true,
+      "scope": "key permissions",
+      "rate_limit": "5,000 reads/min per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": null
+     },
+     {
+      "stage": "collection",
+      "call": "SDK Queries / Replays / Activities list",
+      "reveals": "Query logs and session replays",
+      "bulk": true,
+      "scope": "key permissions",
+      "rate_limit": "5,000 reads/min per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Activities record userAgent and ipAddress when an activity is logged."
+     }
+    ],
+    "unknown": [
+     "No documented whoami call",
+     "Whether reads are logged"
+    ],
+    "evidence_refs": [
+     "fc-494307d6",
+     "fc-76b367b4",
+     "fc-88dfb281"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "strongdm-3",
+   "name": "Service account token",
+   "family": "pat",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A service account is a non-human user that logs in with its token (sdm login --admin-token or the desktop app) and then gets resource access through role membership.",
+    "evidence_refs": [
+     "fc-eaf262e3"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "No documented OIDC/workload federation for service accounts.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "mixed",
+    "boundary": "Enterprise Policies (Cedar) can permit/forbid resource actions by context.location IP for any principal, including service accounts. No documented IP restriction on the token login itself.",
+    "evidence_refs": [
+     "fc-b2378380",
+     "fc-e8b1a2e9"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional expiration set when creating the service account (CLI CSV name,expiration); 'Service account expired' activity is logged",
+    "evidence_refs": [
+     "fc-19267efe",
+     "fc-7b10eb9f"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "unknown",
+    "summary": "Activities include 'Service account rekeyed'; rekey procedure not documented on the service account page.",
+    "evidence_refs": [
+     "fc-7b10eb9f"
+    ]
+   },
+   "administration": {
+    "summary": "Admins create service accounts in Principals > Users > Add service; access is limited by role membership; accounts can be suspended.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-eaf262e3"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Service accounts authenticate with tokens instead of username/password, and session/idle timeouts apply only to human users.",
+     "evidence_refs": [
+      "fc-5eee6544",
+      "fc-859b5e24"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Service accounts are machine principals, not tied to a human user.",
+     "evidence_refs": [
+      "fc-5eee6544"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "`sdm admin services list` lists all service accounts; Principals > Users shows them with a Service Account label.",
+     "evidence_refs": [
+      "fc-13c44880"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": null,
+     "cli": "sdm admin services add --csv (CSV columns name,expiration); expiry is logged as activity 'Service account expired'",
+     "evidence_refs": [
+      "fc-19267efe",
+      "fc-7b10eb9f"
+     ]
+    },
+    "usage": {
+     "ui": "Logs > Activities (and Logs > Queries) filtered by Account = service account",
+     "api": null,
+     "cli": "sdm audit activities --json (filter actorAccountID); sdm audit queries --from <date>",
+     "evidence_refs": [
+      "fc-7b10eb9f",
+      "fc-88dfb281",
+      "fc-ed22169d"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Activities",
+      "notes": "Plus Queries and Replays for resource sessions when StrongDM log retention is enabled."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actorAccountID",
+      "log": "Activities",
+      "notes": "Service account ID."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Service account created",
+      "stage": "create",
+      "notes": null
+     },
+     {
+      "event": "Service account rekeyed",
+      "stage": "rotate",
+      "notes": null
+     },
+     {
+      "event": "Service account expired",
+      "stage": "expire",
+      "notes": null
+     },
+     {
+      "event": "Attempted to login by a suspended service account from the Admin UI",
+      "stage": "use",
+      "notes": "Failed use after suspension"
+     }
+    ],
+    "correlation_keys": [
+     "actorAccountID",
+     "ipAddress"
+    ],
+    "anomaly_cues": [
+     "Service account logins from new IPs",
+     "Resource queries outside normal job windows"
+    ],
+    "containment": {
+     "steps": "Suspend the service account in Users, or rekey it.",
+     "kills_existing": "unknown",
+     "notes": "Effect on open resource sessions not documented."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether suspension ends live client sessions"
+    ],
+    "evidence_refs": [
+     "fc-7b10eb9f",
+     "fc-68698b81"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "sdm status",
+      "reveals": "Resources the service account can reach",
+      "bulk": true,
+      "scope": "role membership",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Resource connections are logged as queries/replays, not Activities."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-eaf262e3",
+     "fc-7b10eb9f"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "strongdm-4",
+   "name": "SCIM token",
+   "family": "pat",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer token generated when an admin activates SCIM provisioning; the IdP uses it against /provisioning/<provider>/v2 endpoints on app.strongdm.com to manage users and roles.",
+    "evidence_refs": [
+     "fc-130177d8",
+     "fc-49927fe7"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static bearer token.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Not documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "unknown",
+    "summary": "Regeneration/rotation not documented.",
+    "evidence_refs": []
+   },
+   "administration": {
+    "summary": "Created at Settings > User Management > Provisioning by activating SCIM.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-130177d8",
+     "fc-49927fe7"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "SCIM token belongs to the org provisioning integration, not a user.",
+     "evidence_refs": [
+      "fc-6208e27d"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Logs > Activities (only 'SCIM token created' is listed; no per-call SCIM log)",
+     "api": null,
+     "cli": "sdm audit activities --from <date> --to <date>",
+     "evidence_refs": [
+      "fc-7b10eb9f",
+      "fc-ed22169d"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Activities",
+      "notes": "SCIM token creation logged."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [
+     {
+      "event": "SCIM token created",
+      "stage": "create",
+      "notes": null
+     }
+    ],
+    "correlation_keys": [
+     "ipAddress"
+    ],
+    "anomaly_cues": [
+     "User/role changes via SCIM not matching IdP changes"
+    ],
+    "containment": {
+     "steps": "Not documented; deactivating SCIM provisioning in Settings > User Management > Provisioning is the likely path.",
+     "kills_existing": "unknown",
+     "notes": null
+    },
+    "sample_query": null,
+    "unknown": [
+     "Revocation and rotation steps",
+     "Whether SCIM requests are logged as Activities"
+    ],
+    "evidence_refs": [
+     "fc-7b10eb9f",
+     "fc-130177d8"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "enumeration",
+      "call": "GET /provisioning/generic/v2/Users",
+      "reveals": "Users",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": null
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-130177d8"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "strongdm-5",
+   "name": "Gateway / relay token",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Token generated when creating a gateway or relay node; installed on the host (SDM_RELAY_TOKEN) so the node can join the organization's network.",
+    "evidence_refs": [
+     "fc-7ca83ac2"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static node token.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Docs say a node's IP cannot be changed after creation, but do not describe this as a token IP restriction.",
+    "evidence_refs": [
+     "fc-7ca83ac2"
+    ]
+   },
+   "lifetime": {
+    "basis": "inactivity",
+    "default_seconds": 2592000,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Node removed after 30 days with no heartbeat",
+    "evidence_refs": [
+     "fc-7ca83ac2"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "unknown",
+    "summary": "Replace by creating a new node and putting its token on the host.",
+    "evidence_refs": [
+     "fc-7ca83ac2"
+    ]
+   },
+   "administration": {
+    "summary": "Created and deleted under Networking > Gateways/Relays; Activities record Relay created/deleted.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-7ca83ac2",
+     "fc-7b10eb9f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Gateway/relay tokens belong to a node, not a user.",
+     "evidence_refs": [
+      "fc-7ca83ac2"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin UI Gateways and Relays pages and `sdm admin nodes list` list all nodes.",
+     "evidence_refs": [
+      "fc-7ca83ac2",
+      "fc-f0ec5231"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Logs > Activities (relay/gateway lifecycle events such as 'Relay created')",
+     "api": null,
+     "cli": "sdm audit activities --from <date> --to <date>",
+     "evidence_refs": [
+      "fc-7b10eb9f",
+      "fc-ed22169d"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Activities",
+      "notes": "Node lifecycle events."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [
+     {
+      "event": "Relay created",
+      "stage": "create",
+      "notes": null
+     },
+     {
+      "event": "Installation created for relay",
+      "stage": "use",
+      "notes": null
+     },
+     {
+      "event": "Relay deleted",
+      "stage": "revoke",
+      "notes": null
+     }
+    ],
+    "correlation_keys": [
+     "node name"
+    ],
+    "anomaly_cues": [
+     "New relays or gateways not created by infrastructure automation"
+    ],
+    "containment": {
+     "steps": "Delete the node in Networking and create a new one with a new token.",
+     "kills_existing": "unknown",
+     "notes": null
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether deleting a node disconnects it immediately"
+    ],
+    "evidence_refs": [
+     "fc-7b10eb9f",
+     "fc-7ca83ac2"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "What a stolen node token can do beyond registering a node is not documented"
+    ],
+    "evidence_refs": []
+   },
+   "detections": []
+  }
+ ]
+}

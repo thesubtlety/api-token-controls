@@ -1,0 +1,1462 @@
+{
+ "id": "snyk",
+ "name": "Snyk",
+ "scope_notes": "Snyk SaaS; API access, service accounts and audit logs require the Enterprise plan, while Free/Team personal tokens work only for CLI/IDE/CI.",
+ "controls": [
+  {
+   "name": "PAT expiry (max 90 days)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "snyk-1"
+   ],
+   "what": "Every PAT has an expiry no later than 90 days; users choose the date.",
+   "setting": "Account settings > Personal access tokens",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-85f6d010"
+   ]
+  },
+  {
+   "name": "Revoke PAT",
+   "effect": "revoke",
+   "applies_to": [
+    "snyk-1"
+   ],
+   "what": "The owner revokes a PAT in the UI or via DELETE /self/personal_access_tokens/{id}.",
+   "setting": "Account settings > Personal access tokens > Revoke; DELETE /rest/self/personal_access_tokens/{personal_access_token_id}",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-85f6d010"
+   ]
+  },
+  {
+   "name": "Revoke & Regenerate",
+   "effect": "revoke",
+   "applies_to": [
+    "snyk-2"
+   ],
+   "what": "The owner invalidates the legacy API token and gets a new one; integrations stop immediately.",
+   "setting": "app.snyk.io/account > General > Revoke & Regenerate",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-5d0d3c6a",
+    "fc-4e12293c"
+   ]
+  },
+  {
+   "name": "Service account role",
+   "effect": "limit_scope",
+   "applies_to": [
+    "snyk-3",
+    "snyk-4"
+   ],
+   "what": "The assigned Group or Org role (incl. custom roles) sets what the token can do; Group Viewer gives read-only.",
+   "setting": "Group/Org Settings > Service accounts > Role; role_id in POST /service_accounts",
+   "plan": "Enterprise",
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6826b729",
+    "fc-7feb6418"
+   ]
+  },
+  {
+   "name": "Service account creation restricted to admins",
+   "effect": "require_approval",
+   "applies_to": [
+    "snyk-3",
+    "snyk-4"
+   ],
+   "what": "Only Group admins (Group accounts) or Org Admins/Group admins (Org accounts) can create service accounts.",
+   "setting": "Role permissions group.service_account.create / org.service_account.create",
+   "plan": "Enterprise",
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7feb6418"
+   ]
+  },
+  {
+   "name": "access_token_expires_at",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "snyk-3"
+   ],
+   "what": "Expiry date for access_token service accounts, at most one year.",
+   "setting": "POST /rest/{groups|orgs}/{id}/service_accounts",
+   "plan": "Enterprise",
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-fe6423f4"
+   ]
+  },
+  {
+   "name": "Delete service account",
+   "effect": "revoke",
+   "applies_to": [
+    "snyk-3",
+    "snyk-4"
+   ],
+   "what": "Deletes the account and invalidates its token or credentials immediately.",
+   "setting": "Settings > Service accounts > Delete; DELETE /rest/{groups|orgs}/{id}/service_accounts/{serviceaccount_id}",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7feb6418",
+    "fc-43a1979c"
+   ]
+  },
+  {
+   "name": "access_token_ttl_seconds",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "snyk-4"
+   ],
+   "what": "Lifetime of OAuth access tokens issued to the service account (default 1h, 1h-24h).",
+   "setting": "Service account API (not UI)",
+   "plan": "Enterprise",
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-43a1979c",
+    "fc-6e08e2b2",
+    "fc-6100bdf1"
+   ]
+  },
+  {
+   "name": "Manage client secret (create/delete/replace)",
+   "effect": "require_rotation",
+   "applies_to": [
+    "snyk-4"
+   ],
+   "what": "Rotate or delete OAuth service account secrets; replace is the compromise response.",
+   "setting": "POST /rest/{groups|orgs}/{id}/service_accounts/{serviceaccount_id}/secrets",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-43a1979c"
+   ]
+  },
+  {
+   "name": "Snyk App scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "snyk-5"
+   ],
+   "what": "App permissions are fixed Org-level scopes, and an installer cannot grant scopes beyond their own permissions.",
+   "setting": "scopes on POST /rest/orgs/{org_id}/apps/creations",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-40d4c08e"
+   ]
+  },
+  {
+   "name": "Revoke authorized Snyk App",
+   "effect": "revoke",
+   "applies_to": [
+    "snyk-5"
+   ],
+   "what": "User revokes an app from Authorized Snyk Apps; admins can delete Group/Org installs by API.",
+   "setting": "Account Settings > Authorized Snyk Apps > Revoke; DELETE /rest/groups/{group_id}/apps/installs/{install_id}; DELETE /rest/self/apps/installs/{install_id}",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-a9da62db",
+    "fc-6e08e2b2"
+   ]
+  },
+  {
+   "name": "Delete App / replace clientSecret",
+   "effect": "revoke",
+   "applies_to": [
+    "snyk-5"
+   ],
+   "what": "Deleting an app revokes its credentials and all installs; replacing the secret invalidates the old one at once.",
+   "setting": "DELETE /rest/orgs/{orgId}/apps/creations/{app_id}; POST .../apps/creations/{app_id}/secrets",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-e89d54ca"
+   ]
+  },
+  {
+   "name": "OAuth2 revoke endpoint",
+   "effect": "revoke",
+   "applies_to": [
+    "snyk-5"
+   ],
+   "what": "Revokes a specific refresh token immediately.",
+   "setting": "POST https://api.snyk.io/oauth2/revoke",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-8633152f"
+   ]
+  },
+  {
+   "name": "Audit logs",
+   "effect": "other",
+   "applies_to": [
+    "snyk-1",
+    "snyk-2",
+    "snyk-3",
+    "snyk-4",
+    "snyk-5"
+   ],
+   "what": "Group and Org audit log search (90 days) incl. service account and app lifecycle and api.access events.",
+   "setting": "GET /rest/{groups|orgs}/{id}/audit_logs/search",
+   "plan": "Enterprise",
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-d03e3195",
+    "fc-6e08e2b2"
+   ]
+  },
+  {
+   "name": "Install Apps (Snyk Apps management permission)",
+   "effect": "disable",
+   "applies_to": [
+    "snyk-5"
+   ],
+   "what": "Role permission that allows installing Snyk Apps; the pre-defined Org Collaborator role does not have it, and custom roles can leave it off.",
+   "setting": "Group > Settings > Member roles > Snyk Apps management > Install Apps",
+   "plan": "Enterprise",
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ff59126b",
+    "fc-09e5d7bb"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "snyk-2",
+   "what": "Legacy personal API tokens cannot be given an expiry; they never expire.",
+   "kind": "expiry",
+   "evidence_refs": [
+    "fc-5d0d3c6a"
+   ]
+  },
+  {
+   "path_id": "snyk-3",
+   "what": "auth_type api_key service accounts never expire.",
+   "kind": "expiry",
+   "evidence_refs": [
+    "fc-fe6423f4",
+    "fc-43a1979c"
+   ]
+  },
+  {
+   "path_id": "snyk-1",
+   "what": "PATs cannot be created through the API (UI only), so no admin-driven issuance flow.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-85f6d010"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether PATs, legacy API tokens or service account tokens bypass SSO / IdP conditional access (not stated).",
+  "Any admin setting to disable PATs or legacy API tokens, or to revoke another user's personal token (none documented).",
+  "Whether removing a user from a Group/Org or the IdP invalidates their PAT/legacy token (not stated).",
+  "Any customer IP allowlist for API requests (none documented).",
+  "Audit event names for PAT and legacy token create/revoke (not in the documented event lists).",
+  "Contents of api.access events (which fields identify the token or service account).",
+  "Admin approval or allowlist for Snyk App installation.",
+  "Token string prefixes / formats.",
+  "Refresh token lifetime for Snyk Apps."
+ ],
+ "credentials": [
+  {
+   "id": "snyk-1",
+   "name": "Personal Access Token (PAT)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "User-created token sent as `Authorization: token <PAT>` or via SNYK_TOKEN for CLI/IDE. Acts as the user. API use needs Enterprise; Free/Team tokens work only for CLI/IDE/CI.",
+    "evidence_refs": [
+     "fc-5d9e987b",
+     "fc-c0598d0a"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static bearer token; no workload identity federation.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Snyk docs describe no customer-configurable IP allowlist for API callers; IP lists in docs cover Snyk scanners reaching your targets.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 7776000,
+    "configurable": "yes",
+    "summary": "User picks expiry, max 90 days",
+    "evidence_refs": [
+     "fc-85f6d010"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "fixed expiry date chosen at creation",
+    "summary": "Create a new PAT before the old one expires (up to 3 active).",
+    "evidence_refs": [
+     "fc-85f6d010"
+    ]
+   },
+   "administration": {
+    "summary": "Users create (UI only) and revoke their own PATs. No admin-side disable, policy or revoke for other users' PATs is documented. SSO/IdP bypass not documented (not_verified).",
+    "conditions": "API access Enterprise only.",
+    "evidence_refs": [
+     "fc-85f6d010"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Removing a user from a Group removes their access to its Organizations and Projects, but docs do not say the PAT itself is revoked.",
+     "evidence_refs": [
+      "fc-ed3b9edf"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Only the owning user can list their own PATs (Personal access tokens tab, GET /self/personal_access_tokens); no admin-wide listing documented.",
+     "evidence_refs": [
+      "fc-85f6d010",
+      "fc-9ff4c7bf"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": null,
+     "api": "GET https://api.snyk.io/rest/groups/{group_id}/audit_logs/search?version={version}&events=api.access&user_id={user_id} (or /rest/orgs/{org_id}/audit_logs/search)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d03e3195",
+      "fc-44be6988",
+      "fc-3bb65c22",
+      "fc-08d7923f"
+     ]
+    },
+    "offboard": {
+     "ui": "Group > Members > trash icon next to user > Delete member",
+     "api": "DELETE https://api.snyk.io/rest/groups/{group_id}/memberships/{membership_id}?version={version}&cascade=true; per Org: DELETE https://api.snyk.io/v1/org/{orgId}/members/update/{userId}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ed3b9edf",
+      "fc-08d7923f",
+      "fc-c380ac89"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Snyk audit logs (Group/Org search API)",
+      "notes": "Enterprise; past 90 days; GET /rest/groups/{group_id}/audit_logs/search and /rest/orgs/{org_id}/audit_logs/search; api.access hidden unless requested via events=api.access."
+     },
+     {
+      "name": "Event forwarding (Amazon EventBridge, AWS CloudTrail Lake)",
+      "notes": "Platform audit events, Enterprise; use for retention beyond 90 days."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userId / user_id",
+      "log": "audit logs",
+      "notes": "Identifies the acting user; whether a service account appears here is not documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "api.access",
+      "stage": "use",
+      "notes": "Exists in Group and Org event lists; excluded by default; described as high-volume low-information."
+     }
+    ],
+    "correlation_keys": [
+     "user_id",
+     "org_id",
+     "group_id",
+     "project_id",
+     "created"
+    ],
+    "anomaly_cues": [
+     "api.access from a user outside working pattern",
+     "Bulk reads of /orgs/{org_id}/issues or projects across many Orgs",
+     "New PAT appearing in GET /self/personal_access_tokens (owner only)"
+    ],
+    "containment": {
+     "steps": "Owner revokes in Account settings > Personal access tokens or DELETE /rest/self/personal_access_tokens/{id}. Admins can only remove the user from Group/Orgs.",
+     "kills_existing": "unknown",
+     "notes": "Docs say revocation cannot be reverted but do not say whether in-flight access ends instantly."
+    },
+    "sample_query": null,
+    "unknown": [
+     "PAT create/revoke audit event names",
+     "Whether admin removal of the user kills the PAT"
+    ],
+    "evidence_refs": [
+     "fc-85f6d010",
+     "fc-d03e3195",
+     "fc-6e08e2b2",
+     "fc-44be6988",
+     "fc-fc5cfbca"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /rest/self",
+      "reveals": "Identity of the token holder",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Enterprise; api.access hidden by default; per-call detail not documented."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /rest/orgs",
+      "reveals": "Organizations the token can access",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Same as above."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /rest/orgs/{org_id}/projects",
+      "reveals": "Projects / monitored repos and images",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /rest/orgs/{org_id}/issues",
+      "reveals": "All vulnerability findings for the Org",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     }
+    ],
+    "unknown": [
+     "Exact fields recorded in api.access"
+    ],
+    "evidence_refs": [
+     "fc-6e08e2b2",
+     "fc-d74cf79a",
+     "fc-44be6988"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "snyk-2",
+   "name": "Snyk API token (legacy personal API token)",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "One per-user key from General account settings, sent as `Authorization: token`. Snyk calls it legacy and not recommended.",
+    "evidence_refs": [
+     "fc-5d9e987b",
+     "fc-5d0d3c6a"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Snyk docs describe no customer-configurable IP allowlist for API callers; IP lists in docs cover Snyk scanners reaching your targets.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Never expires",
+    "evidence_refs": [
+     "fc-5d0d3c6a"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "none",
+    "summary": "Revoke & Regenerate replaces the key; old key stops working.",
+    "evidence_refs": [
+     "fc-5d0d3c6a"
+    ]
+   },
+   "administration": {
+    "summary": "Only the user can Revoke & Regenerate. No documented admin control to disable legacy tokens or revoke them for a user. SSO/IdP bypass not documented (not_verified).",
+    "conditions": "API use Enterprise only.",
+    "evidence_refs": [
+     "fc-5d0d3c6a",
+     "fc-4e12293c"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Removing a user from a Group removes their access to its Organizations and Projects, but docs do not say the token itself is revoked.",
+     "evidence_refs": [
+      "fc-ed3b9edf"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": null,
+     "api": "GET https://api.snyk.io/rest/groups/{group_id}/audit_logs/search?version={version}&events=api.access&user_id={user_id} (or /rest/orgs/{org_id}/audit_logs/search)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d03e3195",
+      "fc-44be6988",
+      "fc-3bb65c22",
+      "fc-08d7923f"
+     ]
+    },
+    "kill": {
+     "ui": "app.snyk.io/account > General Account Settings > Auth Token > Revoke & Regenerate (token owner only)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-4e12293c"
+     ]
+    },
+    "offboard": {
+     "ui": "Group > Members > trash icon next to user > Delete member",
+     "api": "DELETE https://api.snyk.io/rest/groups/{group_id}/memberships/{membership_id}?version={version}&cascade=true; per Org: DELETE https://api.snyk.io/v1/org/{orgId}/members/update/{userId}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ed3b9edf",
+      "fc-08d7923f",
+      "fc-c380ac89"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Snyk audit logs (Group/Org search API)",
+      "notes": "Enterprise; past 90 days; GET /rest/groups/{group_id}/audit_logs/search and /rest/orgs/{org_id}/audit_logs/search; api.access hidden unless requested via events=api.access."
+     },
+     {
+      "name": "Event forwarding (Amazon EventBridge, AWS CloudTrail Lake)",
+      "notes": "Platform audit events, Enterprise; use for retention beyond 90 days."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userId / user_id",
+      "log": "audit logs",
+      "notes": "Identifies the acting user; whether a service account appears here is not documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "api.access",
+      "stage": "use",
+      "notes": "Exists in Group and Org event lists; excluded by default; described as high-volume low-information."
+     }
+    ],
+    "correlation_keys": [
+     "user_id",
+     "org_id",
+     "group_id",
+     "project_id",
+     "created"
+    ],
+    "anomaly_cues": [
+     "Long-lived key used from new automation",
+     "api.access spikes for one user_id"
+    ],
+    "containment": {
+     "steps": "Owner clicks Revoke & Regenerate at app.snyk.io/account.",
+     "kills_existing": "yes",
+     "notes": "Integrations using the key stop immediately."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit event for Revoke & Regenerate",
+     "Admin ability to force revoke"
+    ],
+    "evidence_refs": [
+     "fc-5d0d3c6a",
+     "fc-4e12293c",
+     "fc-d03e3195",
+     "fc-6e08e2b2"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /rest/self",
+      "reveals": "Identity of the token holder",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Enterprise; api.access hidden by default; per-call detail not documented."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /rest/orgs",
+      "reveals": "Organizations the token can access",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Same as above."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /rest/orgs/{org_id}/projects",
+      "reveals": "Projects / monitored repos and images",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /rest/orgs/{org_id}/issues",
+      "reveals": "All vulnerability findings for the Org",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     }
+    ],
+    "unknown": [
+     "Exact fields recorded in api.access"
+    ],
+    "evidence_refs": [
+     "fc-6e08e2b2",
+     "fc-d74cf79a",
+     "fc-44be6988"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "snyk-3",
+   "name": "Service account token (auth_type access_token or legacy api_key)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Group- or Org-level system user whose token is shown once at creation and used like a user token. access_token type has an expiry; api_key type is a legacy key with no expiry.",
+    "evidence_refs": [
+     "fc-7feb6418",
+     "fc-43a1979c",
+     "fc-fe6423f4"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static token.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Snyk docs describe no customer-configurable IP allowlist for API callers; IP lists in docs cover Snyk scanners reaching your targets.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 31536000,
+    "configurable": "yes",
+    "summary": "access_token: up to 1 year; api_key: never expires",
+    "evidence_refs": [
+     "fc-fe6423f4"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "access_token_expires_at",
+    "summary": "On expiry you must create a new service account.",
+    "evidence_refs": [
+     "fc-fe6423f4"
+    ]
+   },
+   "administration": {
+    "summary": "Group admins create Group accounts; Org Admins (Group members) or Group admins create Org accounts. Role sets scope; Org accounts cannot exceed creator's privileges; read-only only via Group Viewer. Admins delete to revoke.",
+    "conditions": "Enterprise plan.",
+    "evidence_refs": [
+     "fc-7feb6418",
+     "fc-6826b729"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Service accounts are system users tied to the Group or Organization, not to a person.",
+     "evidence_refs": [
+      "fc-7feb6418"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Settings > Service accounts lists them; API GET /rest/groups/{groupId}/service_accounts and GET /rest/orgs/{orgId}/service_accounts.",
+     "evidence_refs": [
+      "fc-43a1979c",
+      "fc-7feb6418"
+     ]
+    }
+   },
+   "how": {
+    "disable": {
+     "ui": "Group > Settings > Member roles > open role > clear service account create permissions > Update Role Permissions",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b81b7d9a",
+      "fc-7feb6418"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "GET https://api.snyk.io/rest/groups/{group_id}/audit_logs/search?version={version}&events=api.access&user_id={user_id} (or /rest/orgs/{org_id}/audit_logs/search)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d03e3195",
+      "fc-44be6988",
+      "fc-3bb65c22",
+      "fc-08d7923f"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Snyk audit logs (Group/Org search API)",
+      "notes": "Enterprise; past 90 days; GET /rest/groups/{group_id}/audit_logs/search and /rest/orgs/{org_id}/audit_logs/search; api.access hidden unless requested via events=api.access."
+     },
+     {
+      "name": "Event forwarding (Amazon EventBridge, AWS CloudTrail Lake)",
+      "notes": "Platform audit events, Enterprise; use for retention beyond 90 days."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "service account id",
+      "log": "GET /service_accounts and content of *.service_account.* events",
+      "notes": "Event payload fields not documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "group.service_account.create",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "group.service_account.edit",
+      "stage": "modify",
+      "notes": ""
+     },
+     {
+      "event": "group.service_account.delete",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "org.service_account.create",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "org.service_account.edit",
+      "stage": "modify",
+      "notes": ""
+     },
+     {
+      "event": "org.service_account.delete",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "api.access",
+      "stage": "use",
+      "notes": "Exists in Group and Org event lists; excluded by default; described as high-volume low-information."
+     }
+    ],
+    "correlation_keys": [
+     "user_id",
+     "org_id",
+     "group_id",
+     "project_id",
+     "created"
+    ],
+    "anomaly_cues": [
+     "Service account with Group Admin role",
+     "auth_type api_key accounts (never expire)",
+     "Service account created outside change process"
+    ],
+    "containment": {
+     "steps": "Delete the service account in Settings > Service accounts or DELETE /rest/{groups|orgs}/{id}/service_accounts/{serviceaccount_id}.",
+     "kills_existing": "yes",
+     "notes": "Token invalidated immediately."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Which field in api.access identifies a service account"
+    ],
+    "evidence_refs": [
+     "fc-7feb6418",
+     "fc-43a1979c",
+     "fc-d03e3195",
+     "fc-6e08e2b2"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /rest/self",
+      "reveals": "Identity of the token holder",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Enterprise; api.access hidden by default; per-call detail not documented."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /rest/groups/{group_id}/service_accounts",
+      "reveals": "Other service accounts (needs group.service_account.read)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": ""
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /rest/orgs",
+      "reveals": "Organizations the token can access",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Same as above."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /rest/orgs/{org_id}/projects",
+      "reveals": "Projects / monitored repos and images",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /rest/orgs/{org_id}/issues",
+      "reveals": "All vulnerability findings for the Org",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     }
+    ],
+    "unknown": [
+     "Exact fields recorded in api.access"
+    ],
+    "evidence_refs": [
+     "fc-6e08e2b2",
+     "fc-d74cf79a",
+     "fc-44be6988"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Snyk Service Account Change",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/snyk_rules/snyk_svcacct_change.yml",
+     "detects": "A Snyk group or org service account was created, deleted, edited, or had its membership changed."
+    }
+   ]
+  },
+  {
+   "id": "snyk-4",
+   "name": "Service account using OAuth 2.0 (oauth_client_secret / oauth_private_key_jwt)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "client_credentials grant at POST /oauth2/token with a client secret or a private_key_jwt client assertion; returns a short-lived bearer token used like any Snyk token.",
+    "evidence_refs": [
+     "fc-6100bdf1"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "private_key_jwt: Snyk verifies JWTs signed with customer keys published at a customer-hosted HTTPS JWKS URL. Not cloud workload identity federation.",
+    "evidence_refs": [
+     "fc-6100bdf1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Snyk docs describe no customer-configurable IP allowlist for API callers; IP lists in docs cover Snyk scanners reaching your targets.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 86400,
+    "configurable": "yes",
+    "summary": "Access token 1h default, 1h-24h via API",
+    "evidence_refs": [
+     "fc-43a1979c",
+     "fc-6e08e2b2",
+     "fc-6100bdf1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "access_token_ttl_seconds",
+    "summary": "Client re-requests a token with its secret or a new signed JWT; secrets rotate via /secrets (max two active).",
+    "evidence_refs": [
+     "fc-6100bdf1",
+     "fc-43a1979c"
+    ]
+   },
+   "administration": {
+    "summary": "Same creation rights and roles as other service accounts. Secrets can be created, deleted or replaced; account deletion revokes credentials.",
+    "conditions": "Enterprise plan; created via API or Group UI.",
+    "evidence_refs": [
+     "fc-7feb6418",
+     "fc-43a1979c"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Service accounts are system users tied to the Group or Organization, not to a person.",
+     "evidence_refs": [
+      "fc-7feb6418"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Same service account list in Settings > Service accounts and GET /rest/groups/{groupId}/service_accounts (includes auth_type).",
+     "evidence_refs": [
+      "fc-43a1979c",
+      "fc-7feb6418"
+     ]
+    }
+   },
+   "how": {
+    "disable": {
+     "ui": "Group > Settings > Member roles > open role > clear service account create permissions > Update Role Permissions",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b81b7d9a",
+      "fc-7feb6418"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "GET https://api.snyk.io/rest/groups/{group_id}/audit_logs/search?version={version}&events=api.access&user_id={user_id} (or /rest/orgs/{org_id}/audit_logs/search)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d03e3195",
+      "fc-44be6988",
+      "fc-3bb65c22",
+      "fc-08d7923f"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Snyk audit logs (Group/Org search API)",
+      "notes": "Enterprise; past 90 days; GET /rest/groups/{group_id}/audit_logs/search and /rest/orgs/{org_id}/audit_logs/search; api.access hidden unless requested via events=api.access."
+     },
+     {
+      "name": "Event forwarding (Amazon EventBridge, AWS CloudTrail Lake)",
+      "notes": "Platform audit events, Enterprise; use for retention beyond 90 days."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "client_id / service account id",
+      "log": "service account API",
+      "notes": "Whether audit events carry client_id is not documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "group.service_account.create",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "org.service_account.create",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "group.service_account.delete",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "org.service_account.delete",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "api.access",
+      "stage": "use",
+      "notes": "Exists in Group and Org event lists; excluded by default; described as high-volume low-information."
+     }
+    ],
+    "correlation_keys": [
+     "user_id",
+     "org_id",
+     "group_id",
+     "project_id",
+     "created"
+    ],
+    "anomaly_cues": [
+     "Second client secret added unexpectedly",
+     "JWKS URL pointing to unfamiliar host",
+     "access_token_ttl_seconds raised to 24h"
+    ],
+    "containment": {
+     "steps": "Replace secret (POST .../secrets mode replace) or delete the service account.",
+     "kills_existing": "partial",
+     "notes": "Deleting revokes credentials; whether already-issued access tokens (up to TTL) stop working on secret replace is not stated."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit event for secret rotation",
+     "Whether issued access tokens are revoked on secret replace"
+    ],
+    "evidence_refs": [
+     "fc-43a1979c",
+     "fc-d03e3195",
+     "fc-6e08e2b2"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /rest/self",
+      "reveals": "Identity of the token holder",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Enterprise; api.access hidden by default; per-call detail not documented."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /rest/orgs",
+      "reveals": "Organizations the token can access",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Same as above."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /rest/orgs/{org_id}/projects",
+      "reveals": "Projects / monitored repos and images",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /rest/orgs/{org_id}/issues",
+      "reveals": "All vulnerability findings for the Org",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     }
+    ],
+    "unknown": [
+     "Exact fields recorded in api.access"
+    ],
+    "evidence_refs": [
+     "fc-6e08e2b2",
+     "fc-d74cf79a",
+     "fc-44be6988"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Snyk Service Account Change",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/snyk_rules/snyk_svcacct_change.yml",
+     "detects": "A Snyk group or org service account was created, deleted, edited, or had its membership changed."
+    }
+   ]
+  },
+  {
+   "id": "snyk-5",
+   "name": "Snyk Apps (OAuth 2.0 apps: user or tenant context)",
+   "family": "oauth",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "OAuth 2.0 apps created in an Org. Interactive installs use authorization code (PKCE) and get access + refresh tokens sent as `Authorization: bearer`; apps can also be installed for unattended client_credentials use.",
+    "evidence_refs": [
+     "fc-a9da62db",
+     "fc-5d9e987b",
+     "fc-2823c750",
+     "fc-6e08e2b2"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Snyk docs describe no customer-configurable IP allowlist for API callers; IP lists in docs cover Snyk scanners reaching your targets.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 86400,
+    "configurable": "yes",
+    "summary": "Access token TTL set per app (1h-24h); refresh token single-use",
+    "evidence_refs": [
+     "fc-6e08e2b2",
+     "fc-2823c750",
+     "fc-07aab60a"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "refresh token expiry; rotates on each use",
+    "summary": "Refresh token exchanged for new pair; old one invalid.",
+    "evidence_refs": [
+     "fc-07aab60a"
+    ]
+   },
+   "administration": {
+    "summary": "Scopes are Org-level and capped by the installer's permissions. user-context apps lose access when the installer is deactivated; tenant-context installs persist with the Org. Users revoke in Authorized Snyk Apps; admins revoke installs via API; deleting the app revokes all installs. No documented admin approval or allowlist for app installs.",
+    "conditions": "",
+    "evidence_refs": [
+     "fc-40d4c08e",
+     "fc-a9da62db",
+     "fc-6e08e2b2",
+     "fc-e89d54ca"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "User-context apps lose access when the installing user deactivates their account; tenant-context apps are not tied to the user.",
+     "evidence_refs": [
+      "fc-a9da62db"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Admins can list apps the Organization created (GET /rest/orgs/{orgId}/apps/creations); the Authorized Snyk Apps page shows only the viewing user's authorizations.",
+     "evidence_refs": [
+      "fc-e89d54ca",
+      "fc-a9da62db"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "Set access_token_ttl_seconds (3600-86400) in POST https://api.snyk.io/rest/orgs/{org_id}/apps/creations or PATCH /rest/orgs/{org_id}/apps/creations/{app_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-08d7923f",
+      "fc-d5b1299b"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "GET https://api.snyk.io/rest/groups/{group_id}/audit_logs/search?version={version}&events=api.access&user_id={user_id} (or /rest/orgs/{org_id}/audit_logs/search)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d03e3195",
+      "fc-44be6988",
+      "fc-3bb65c22",
+      "fc-08d7923f"
+     ]
+    },
+    "offboard": {
+     "ui": "Group > Members > Delete member (user-context apps lose access when the installing user deactivates); tenant-context: Authorized Snyk Apps page > Revoke",
+     "api": "DELETE https://api.snyk.io/rest/orgs/{org_id}/apps/installs/{install_id}?version={version}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ed3b9edf",
+      "fc-a9da62db",
+      "fc-08d7923f"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Snyk audit logs (Group/Org search API)",
+      "notes": "Enterprise; past 90 days; GET /rest/groups/{group_id}/audit_logs/search and /rest/orgs/{org_id}/audit_logs/search; api.access hidden unless requested via events=api.access."
+     },
+     {
+      "name": "Event forwarding (Amazon EventBridge, AWS CloudTrail Lake)",
+      "notes": "Platform audit events, Enterprise; use for retention beyond 90 days."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "client_id / install_id",
+      "log": "apps installs API",
+      "notes": "Audit payload fields not documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "org.app.create",
+      "stage": "create",
+      "notes": "App created in Org"
+     },
+     {
+      "event": "org.app.edit",
+      "stage": "modify",
+      "notes": ""
+     },
+     {
+      "event": "org.app.delete",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "org.app_bot.create",
+      "stage": "create",
+      "notes": "Meaning not documented"
+     },
+     {
+      "event": "api.access",
+      "stage": "use",
+      "notes": "Exists in Group and Org event lists; excluded by default; described as high-volume low-information."
+     }
+    ],
+    "correlation_keys": [
+     "user_id",
+     "org_id",
+     "group_id",
+     "project_id",
+     "created"
+    ],
+    "anomaly_cues": [
+     "Tenant-context app with broad scopes",
+     "New install via client credentials",
+     "App installed by a user who later left (tenant context persists)"
+    ],
+    "containment": {
+     "steps": "Revoke the install (UI or DELETE /rest/groups/{group_id}/apps/installs/{install_id}), revoke refresh token via POST /oauth2/revoke, or delete the app.",
+     "kills_existing": "partial",
+     "notes": "Refresh token revoked immediately; whether issued access tokens die before TTL is not stated."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit events for app install/revoke",
+     "Access token invalidation on revoke"
+    ],
+    "evidence_refs": [
+     "fc-a9da62db",
+     "fc-e89d54ca",
+     "fc-8633152f",
+     "fc-6e08e2b2"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /rest/self",
+      "reveals": "Identity of the token holder",
+      "bulk": false,
+      "scope": "org.read",
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Enterprise; api.access hidden by default; per-call detail not documented."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /rest/orgs",
+      "reveals": "Organizations the token can access",
+      "bulk": true,
+      "scope": "org.read",
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Same as above."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /rest/orgs/{org_id}/projects",
+      "reveals": "Projects / monitored repos and images",
+      "bulk": true,
+      "scope": "org.project.read",
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /rest/orgs/{org_id}/issues",
+      "reveals": "All vulnerability findings for the Org",
+      "bulk": true,
+      "scope": "org.project.snapshot.read",
+      "rate_limit": "1620 req/min per API key",
+      "logged": "plan",
+      "log_event": "api.access",
+      "log_notes": "Reads have no explicit action event."
+     }
+    ],
+    "unknown": [
+     "Whether GET /rest/orgs works for app tokens"
+    ],
+    "evidence_refs": [
+     "fc-6e08e2b2",
+     "fc-d74cf79a",
+     "fc-40d4c08e"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

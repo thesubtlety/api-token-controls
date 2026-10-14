@@ -1,0 +1,1252 @@
+{
+ "id": "slack",
+ "name": "Slack",
+ "scope_notes": "SAML SSO is available on Business+ and Enterprise, and on Free/Pro only with a connected Salesforce org. EMA uses organization-level installations and MCP user tokens.",
+ "controls": [
+  {
+   "name": "Require approved apps (Only allow pre-approved apps)",
+   "effect": "require_approval",
+   "applies_to": [
+    "slack-1",
+    "slack-2",
+    "slack-3"
+   ],
+   "what": "Members can only install pre-approved apps; others must be requested and approved, and approval covers the scopes the app will use.",
+   "setting": "Admin > Apps and workflows > App Management Settings > Require approved apps",
+   "plan": null,
+   "default": "off",
+   "level": "workspace",
+   "evidence_refs": [
+    "fc-c53a6120"
+   ],
+   "quote": "Apps connect third-party services to Slack, and by default, members can install them without approval from a Workspace Owner. If they'd like, Workspace Owners can enable app approval to pre-approve or restrict certain apps for their workspace."
+  },
+  {
+   "name": "Restrict app",
+   "effect": "disable",
+   "applies_to": [
+    "slack-1",
+    "slack-2",
+    "slack-3"
+   ],
+   "what": "Blocks members from installing or requesting a specific app; existing installs keep working until uninstalled.",
+   "setting": "Admin > Apps and workflows > Browse > [app] > Restrict",
+   "plan": null,
+   "default": "off",
+   "level": "workspace",
+   "evidence_refs": [
+    "fc-c53a6120"
+   ],
+   "quote": "If an app you restrict has already been installed to your workspace, members can continue using it. You can uninstall any app you don't want people to use."
+  },
+  {
+   "name": "App Management policy (Require App Approval)",
+   "effect": "require_approval",
+   "applies_to": [
+    "slack-1",
+    "slack-2",
+    "slack-3"
+   ],
+   "what": "Turns on app approval for every workspace in the Enterprise org.",
+   "setting": "Organization settings > Settings > Organization Policies > Apps > App Management > Add Policy",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5df27bee"
+   ],
+   "quote": "Setting an app management policy turns on app approval for every workspace in an org. When app approval is enabled, members can only use apps that have been approved for their workspaces."
+  },
+  {
+   "name": "Restrict for Organization",
+   "effect": "disable",
+   "applies_to": [
+    "slack-1",
+    "slack-2",
+    "slack-3"
+   ],
+   "what": "Org Owners/Admins can block an app from being installed anywhere in the org when reviewing a request.",
+   "setting": "Org app request notification > Restrict for Organization; or admin.apps.restrict API",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-9c1dff71"
+   ],
+   "quote": "Select Approve for Organization or Restrict for Organization . Choosing Restrict for Organization will prevent all members from installing the app."
+  },
+  {
+   "name": "Token rotation policy",
+   "effect": "require_rotation",
+   "applies_to": [
+    "slack-1",
+    "slack-2"
+   ],
+   "what": "Requires OAuth token rotation for apps and expires unused refresh tokens after 30 days; applies only to installs and updates after it is turned on.",
+   "setting": "Organization settings > Settings > Organization Policies > Apps > Token rotation > Add Policy",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5df27bee"
+   ],
+   "quote": "Token rotation Require OAuth token rotation for apps and automatically expire unused refresh tokens after 30 days. Note: Changing these settings doesn't affect existing apps."
+  },
+  {
+   "name": "Slack Marketplace installations policy",
+   "effect": "limit_scope",
+   "applies_to": [
+    "slack-1",
+    "slack-2"
+   ],
+   "what": "Limits members to installing apps listed in the Slack Marketplace.",
+   "setting": "Organization settings > Settings > Organization Policies > Apps > Slack Marketplace installations",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5df27bee"
+   ],
+   "quote": "Slack Marketplace installations Only allow members to install apps from the Slack Marketplace ."
+  },
+  {
+   "name": "Member Permissions: who can use the app",
+   "effect": "limit_resources",
+   "applies_to": [
+    "slack-1",
+    "slack-2",
+    "slack-3"
+   ],
+   "what": "Limits which members (everyone, no one, or specific people/groups) can initiate interaction with an installed app.",
+   "setting": "Organization settings > Integrations > Installed apps > [app] > Member Permissions > Who has permission to initiate interaction with this app",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-9c1dff71"
+   ],
+   "quote": "Choose who can use the app — Everyone , No one , or Specific people and groups ."
+  },
+  {
+   "name": "Member Permissions: where can this app be used",
+   "effect": "limit_resources",
+   "applies_to": [
+    "slack-1",
+    "slack-2"
+   ],
+   "what": "Limits an installed app to all channels, only specific channels, or all channels except some.",
+   "setting": "Organization settings > Integrations > Installed apps > [app] > Member Permissions > Where can this app be used",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-9c1dff71"
+   ],
+   "quote": "Next to Where can this app be used , click Edit . Choose where the app can appear — All channels , Only specific channels , or All channels except..."
+  },
+  {
+   "name": "Remove or uninstall an org-level app",
+   "effect": "revoke",
+   "applies_to": [
+    "slack-1",
+    "slack-2",
+    "slack-3"
+   ],
+   "what": "Org admins can remove an org-installed app from workspaces or uninstall it from the whole org.",
+   "setting": "Organization settings > Integrations > Installed apps; or admin.apps.uninstall API",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-9c1dff71"
+   ],
+   "quote": "There are two options for removing apps installed at the org level: Remove the app from workspaces that no longer need to use it. Uninstall the app from your org to remove it from all workspaces."
+  },
+  {
+   "name": "Enterprise-Managed Authorization (EMA)",
+   "effect": "require_sso",
+   "applies_to": [
+    "slack-3"
+   ],
+   "what": "Lets the IdP (Okta) provision and govern access to the Slack MCP server from Claude via ID-JAG; Org Owner enables it and sets the issuer URL.",
+   "setting": "Organization settings > Security > SSO settings > Enterprise-Managed Authorization > Edit",
+   "plan": "Slack Enterprise+ (Okta IdP; Claude Team/Enterprise)",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-b03b62bf"
+   ],
+   "quote": "Next to Enterprise-Managed Authorization, click Edit . Click the toggle to enable Enterprise-Managed Authorization. Review your ID-JAG issuer URL (ex. https://acmeinc.okta.com ) and verify that it’s correct."
+  },
+  {
+   "name": "MCP client app approval",
+   "effect": "require_approval",
+   "applies_to": [
+    "slack-3"
+   ],
+   "what": "MCP clients must be backed by a registered Slack app, so the normal app approval process gates MCP access.",
+   "setting": "Same as app approval settings",
+   "plan": null,
+   "default": "varies",
+   "level": "workspace",
+   "evidence_refs": [
+    "fc-43caae7e"
+   ],
+   "quote": "MCP clients must be backed by a registered Slack app with a fixed app ID and hardcode that app ID. This allows Slack to: Let admins manage and approve your app/MCP client app using standard Slack app approval process."
+  },
+  {
+   "name": "Restrict API Token Usage (Allowed IP Address Ranges)",
+   "effect": "limit_network",
+   "applies_to": [
+    "slack-1",
+    "slack-2",
+    "slack-3"
+   ],
+   "what": "Rejects Web API, SCIM API and MCP server calls made with the app's tokens from IPs not on the list (max 20 IPv4 entries).",
+   "setting": "App settings > OAuth & Permissions > Restrict API Token Usage",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "turn2search33",
+    "fc-ff89da25"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "slack-1",
+   "what": "The token rotation org policy does not apply to apps already installed before it is turned on.",
+   "evidence_refs": [
+    "fc-5df27bee"
+   ],
+   "quote": "Changing these settings doesn't affect existing apps. The settings only apply to app installations and updates after you turn the setting on.",
+   "kind": "expiry"
+  },
+  {
+   "path_id": "slack-3",
+   "what": "Unlisted (non-Marketplace, non-internal) apps cannot use the Slack MCP server at all; admins cannot allow them.",
+   "evidence_refs": [
+    "fc-43caae7e"
+   ],
+   "quote": "Only apps published in the Slack Marketplace and internal apps can use MCP at this time; unlisted apps are prohibited from using MCP.",
+   "kind": "other"
+  }
+ ],
+ "controls_unknown": [
+  "No tenant-admin IP allowlist for app tokens found; 'Restrict API Token Usage' IP ranges are set by the app developer in app config, not by workspace admins.",
+  "Whether admins can force-revoke individual user tokens without uninstalling the app.",
+  "Whether EMA lets admins restrict MCP scopes beyond IdP assignment."
+ ],
+ "credentials": [
+  {
+   "id": "slack-1",
+   "name": "Bot / user OAuth token",
+   "family": "oauth",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth bot/user bearer tokens; app-level tokens for selected functions.",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Enterprise-managed authorization exchanges external IdP ID-JAGs for user access to Slack MCP. It is not general bot/workload federation.",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "App-level allowlist supports up to 20 IPv4 ranges for Web API and SCIM. Incoming webhooks are excluded.",
+    "evidence_refs": [
+     "turn2search33",
+     "turn28view5"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Non-expiring unless rotation enabled",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "Standard bot/user tokens are non-expiring until rotation is enabled or access is revoked.",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "administration": {
+    "summary": "Bot/user scopes, app approval/install controls, token revocation and rotation; EMA permissions delegated through IdP configuration.",
+    "conditions": "SAML SSO requires eligible Business+/Enterprise tiers. EMA uses organization-level installations and MCP user tokens.",
+    "evidence_refs": [
+     "turn2search33",
+     "turn28view5"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "User tokens are revoked when the authorizing member is deactivated; bot tokens are tied to the app and keep working.",
+     "evidence_refs": [
+      "fc-8f08d285",
+      "fc-ec590494",
+      "fc-908bed78"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Org admins can list installed apps (Integrations > Installed apps, Export CSV), not individual tokens.",
+     "evidence_refs": [
+      "fc-24c190ad"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Organization settings > Security > Audit logs > Filter > Events (file downloaded) and Acting user",
+     "api": "GET https://api.slack.com/audit/v1/logs?action=file_downloaded (filter entries on context.app.id; actor= for user)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-b70d01a9",
+      "fc-417e3800",
+      "fc-6e61b2fa"
+     ]
+    },
+    "kill": {
+     "ui": "Tools & settings > Manage apps > Installed Apps > App Details > Configuration > Remove App (or Authorizations > Authorized members > See all > Revoke)",
+     "api": "GET https://slack.com/api/auth.revoke (one token); POST https://slack.com/api/apps.uninstall; POST https://slack.com/api/admin.apps.uninstall (app_id + enterprise_id or team_ids)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-3c6e457e",
+      "fc-e1520b72",
+      "fc-8605b57e",
+      "fc-8a3bfc60",
+      "fc-37d1f5bf"
+     ]
+    },
+    "offboard": {
+     "ui": "Enterprise: Organization settings > People > Members > select > Deactivate. Other plans: Admin > Workspace settings > People > three dots > Deactivate account. Bot tokens: uninstall the app (see kill)",
+     "api": "SCIM DELETE /Users/{id} (deactivates)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-744cbe83",
+      "fc-f9335c97"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "xoxb- / xoxp- (xapp- for app-level)",
+     "notes": "Prefixes documented by Slack; regex is a loose prefix match, not a vendor regex. GitHub secret scanning detects slack_api_token (partner, push protection, validity check)."
+    },
+    "log_sources": [
+     {
+      "name": "Slack Audit Logs API (GET https://api.slack.com/audit/v1/logs)",
+      "notes": "Enterprise plan only; app must have auditlogs:read and be installed org-wide by the Owner. Records app install/scope/token lifecycle; app-triggered events carry context.app. No data before March 2018; retention not documented. Tier 3, per-org rate limit."
+     },
+     {
+      "name": "Audit Logs anomaly events (action=anomaly)",
+      "notes": "Flags token IP/ASN/Tor anomalies and unexpected_credential_testing for apps."
+     },
+     {
+      "name": "team.accessLogs",
+      "notes": "Paid plans. Per user/IP/user_agent aggregates (date_first, date_last, count). Does not state whether bot/API token use is included."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "context.app.id",
+      "log": "Audit Logs API",
+      "notes": "App that made the request"
+     },
+     {
+      "field": "context.app.scopes / context.app.scopes_bot",
+      "log": "Audit Logs API",
+      "notes": "User-token vs bot-token scopes of the app"
+     },
+     {
+      "field": "context.app.creator",
+      "log": "Audit Logs API",
+      "notes": "User ID that created the app"
+     },
+     {
+      "field": "actor.user.id",
+      "log": "Audit Logs API",
+      "notes": "User behind a user token (xoxp)"
+     },
+     {
+      "field": "entity.app (entity.type=app)",
+      "log": "Audit Logs API",
+      "notes": "Target app for lifecycle events; nested key names not confirmed"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "app_approved",
+      "stage": "create",
+      "notes": "Approved, not yet installed"
+     },
+     {
+      "event": "app_installed",
+      "stage": "create",
+      "notes": "Tokens issued on install"
+     },
+     {
+      "event": "app_scopes_expanded",
+      "stage": "change",
+      "notes": "Additional OAuth scopes granted"
+     },
+     {
+      "event": "app_resources_added",
+      "stage": "change",
+      "notes": "Resource access granted"
+     },
+     {
+      "event": "bot_token_upgraded",
+      "stage": "change",
+      "notes": "Bot token moved to granular permissions"
+     },
+     {
+      "event": "bot_token_downgraded",
+      "stage": "change",
+      "notes": "Bot token moved to non-granular permissions"
+     },
+     {
+      "event": "app_token_preserved",
+      "stage": "change",
+      "notes": "Token kept instead of revoked when owner/installer removed"
+     },
+     {
+      "event": "org_app_upgraded_to_org_install",
+      "stage": "change",
+      "notes": "Access extended to all workspaces"
+     },
+     {
+      "event": "app_uninstalled",
+      "stage": "revoke",
+      "notes": "App uninstalled"
+     },
+     {
+      "event": "app_restricted",
+      "stage": "revoke",
+      "notes": "App blocked from install"
+     },
+     {
+      "event": "app_deleted",
+      "stage": "revoke",
+      "notes": "App deleted"
+     },
+     {
+      "event": "anomaly",
+      "stage": "use",
+      "notes": "details.reason e.g. ip_address, asn, tor, unexpected_credential_testing (app)"
+     }
+    ],
+    "correlation_keys": [
+     "actor.user.id",
+     "actor.user.email",
+     "context.ip_address",
+     "context.ua",
+     "context.session_id",
+     "context.location.id",
+     "context.app.id",
+     "entity.type",
+     "details.reason",
+     "details.previous_ip_address"
+    ],
+    "anomaly_cues": [
+     "app_token_preserved followed by continued app activity after the installer left",
+     "app_scopes_expanded or bot_token_downgraded outside a change window",
+     "anomaly with reason=ip_address and ip_address_details new-asn or cloud-asn for an xoxp token",
+     "anomaly reason=unexpected_credential_testing on an app (leaked token being validated)",
+     "excessive_downloads by an app shortly after app_installed",
+     "GitHub secret scanning alert for slack_api_token with validity active"
+    ],
+    "containment": {
+     "steps": "Call auth.revoke with the leaked token; or uninstall the app (apps.uninstall, or admin.apps.uninstall with app_id + enterprise_id/team_ids); restrict the app to block reinstall; rotate the client secret before reinstall.",
+     "kills_existing": "partial",
+     "notes": "auth.revoke kills one token only; other user/bot tokens of the same app stay valid until uninstall. Revoking a bot token deactivates the bot user and removes its channel memberships but does not uninstall the app."
+    },
+    "sample_query": {
+     "language": "Slack Audit Logs API (GET /audit/v1/logs query parameters)",
+     "query": "GET https://api.slack.com/audit/v1/logs?action=app_installed,app_scopes_expanded,app_token_preserved,bot_token_downgraded,app_uninstalled,anomaly&oldest=1757635200&limit=1000",
+     "purpose": "Pull app token lifecycle changes and anomalies for the last 30 days"
+    },
+    "unknown": [
+     "Per-API-call usage log keyed by token (no documented Web API call log)",
+     "Exact nested key names of entity when entity.type=app",
+     "Audit log retention period",
+     "Vendor regex for token body",
+     "Whether team.accessLogs includes bot token usage"
+    ],
+    "evidence_refs": [
+     "fc-5e37cc31",
+     "fc-6e61b2fa",
+     "fc-417e3800",
+     "fc-6a246e85",
+     "fc-3c6e457e",
+     "fc-e1520b72",
+     "fc-7dbc0352",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "auth.test",
+      "reveals": "team, user, team_id, user_id, url (bot_id for bot tokens)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "special; hundreds per minute",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit action for auth.test; the app-only anomaly unexpected_credential_testing may fire on suspicious validity testing (Enterprise only)."
+     },
+     {
+      "stage": "enumeration",
+      "call": "users.list",
+      "reveals": "All workspace members and profiles",
+      "bulk": true,
+      "scope": "users:read",
+      "rate_limit": "Tier 2: 20+/min",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit action for this read; user-token anomaly unexpected_api_call_volume may apply (Enterprise)."
+     },
+     {
+      "stage": "discovery",
+      "call": "conversations.list",
+      "reveals": "Channels and DMs the token can see",
+      "bulk": true,
+      "scope": "channels:read, groups:read, im:read, mpim:read",
+      "rate_limit": "Tier 2: 20+/min",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit action for this read."
+     },
+     {
+      "stage": "collection",
+      "call": "conversations.history",
+      "reveals": "Full message history of a channel",
+      "bulk": true,
+      "scope": "channels:history, groups:history, im:history, mpim:history",
+      "rate_limit": "Tier 3: 50+/min; 1/min and 15 objects for new non-Marketplace commercial apps (since 2025-05-29)",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit action for API message reads; audit logs do not expose message content."
+     },
+     {
+      "stage": "collection",
+      "call": "search.messages",
+      "reveals": "Keyword search across messages the user can read",
+      "bulk": true,
+      "scope": "search:read (user token only)",
+      "rate_limit": "Tier 2: 20+/min",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit action; user-token anomalies unexpected_scraping / unexpected_api_call_volume may fire (Enterprise)."
+     },
+     {
+      "stage": "collection",
+      "call": "files.list",
+      "reveals": "File listing including download URLs",
+      "bulk": true,
+      "scope": "files:read",
+      "rate_limit": "Tier 3: 50+/min",
+      "logged": "plan",
+      "log_event": "file_downloaded",
+      "log_notes": "Enterprise audit action 'A file was downloaded or viewed within Slack'; docs do not state whether API-driven downloads emit it. Anomaly excessive_downloads covers apps and users."
+     }
+    ],
+    "unknown": [
+     "Whether Web API reads (conversations.history, users.list, search.messages) appear in any Slack log; docs neither list nor deny them",
+     "Whether bot downloads via url_private emit file_downloaded",
+     "Audit Logs API retention period"
+    ],
+    "evidence_refs": [
+     "fc-ed849df9",
+     "fc-26245d9d",
+     "fc-b07f2e7a",
+     "fc-36f3ea2a",
+     "fc-e418dca6",
+     "fc-1083f686",
+     "fc-417e3800",
+     "fc-6e61b2fa",
+     "fc-6a246e85"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Slack App Added",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_app_added.yml",
+     "detects": "A Slack app was approved, installed, or added to a workspace in an Enterprise org."
+    },
+    {
+     "source": "Panther",
+     "title": "Slack App Access Expanded",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_app_access_expanded.yml",
+     "detects": "A Slack app gained scopes or resources, or its bot token was upgraded."
+    },
+    {
+     "source": "Panther",
+     "title": "Slack App Removed",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_app_removed.yml",
+     "detects": "A Slack app was restricted, uninstalled, or removed from a workspace."
+    },
+    {
+     "source": "Panther",
+     "title": "Slack Anomaly Detected",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_passthrough_anomaly.yml",
+     "detects": "Slack anomaly events, including unusual IP or user agent for a user token and unexpected API call volume."
+    }
+   ]
+  },
+  {
+   "id": "slack-2",
+   "name": "Rotating OAuth token",
+   "family": "oauth",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth bot/user bearer tokens; app-level tokens for selected functions.",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Enterprise-managed authorization exchanges external IdP ID-JAGs for user access to Slack MCP. It is not general bot/workload federation.",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "App-level allowlist supports up to 20 IPv4 ranges for Web API and SCIM. Incoming webhooks are excluded.",
+    "evidence_refs": [
+     "turn2search33",
+     "turn28view5"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 43200,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "12 hours; rotating refresh token",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "none",
+    "summary": "Refresh tokens are single-use; keep the newly returned refresh token. They do not expire on a schedule by default, but for PKCE-enabled apps all refresh tokens expire after 30 days.",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5",
+     "fc-72b18e7e"
+    ]
+   },
+   "administration": {
+    "summary": "Bot/user scopes, app approval/install controls, token revocation and rotation; EMA permissions delegated through IdP configuration.",
+    "conditions": "SAML SSO requires eligible Business+/Enterprise tiers. EMA uses organization-level installations and MCP user tokens.",
+    "evidence_refs": [
+     "turn2search33",
+     "turn28view5"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "User tokens are revoked when the authorizing member is deactivated; bot tokens are tied to the app and keep working.",
+     "evidence_refs": [
+      "fc-8f08d285",
+      "fc-ec590494",
+      "fc-908bed78"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Org admins can list installed apps (Integrations > Installed apps, Export CSV), not individual tokens.",
+     "evidence_refs": [
+      "fc-24c190ad"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Organization settings > Security > Audit logs > Filter > Events (file downloaded) and Acting user",
+     "api": "GET https://api.slack.com/audit/v1/logs?action=file_downloaded (filter entries on context.app.id)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-b70d01a9",
+      "fc-417e3800",
+      "fc-6e61b2fa"
+     ]
+    },
+    "kill": {
+     "ui": "Tools & settings > Manage apps > Installed Apps > App Details > Configuration > Remove App",
+     "api": "GET https://slack.com/api/auth.revoke (immediate, single token); POST https://slack.com/api/apps.uninstall or admin.apps.uninstall (revokes all installation tokens incl. refresh)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-3c6e457e",
+      "fc-e1520b72",
+      "fc-8a3bfc60",
+      "fc-37d1f5bf"
+     ]
+    },
+    "offboard": {
+     "ui": "Enterprise: Organization settings > People > Members > select > Deactivate. Other plans: Admin > Workspace settings > People > three dots > Deactivate account",
+     "api": "SCIM DELETE /Users/{id} (deactivates)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-744cbe83",
+      "fc-f9335c97"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "xoxe.xoxb- / xoxe.xoxp- (access); xoxe-1- (refresh)",
+     "notes": "Access tokens expire after 43,200 s (12 h). Refresh tokens are single-use. Rotation cannot be turned off once enabled. Regex is a loose prefix match."
+    },
+    "log_sources": [
+     {
+      "name": "Slack Audit Logs API (GET https://api.slack.com/audit/v1/logs)",
+      "notes": "Enterprise plan. Same app lifecycle events as non-rotating tokens; no documented event for individual token refresh."
+     },
+     {
+      "name": "Audit Logs anomaly events (action=anomaly)",
+      "notes": "Token IP/ASN/Tor anomalies, unexpected_credential_testing."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "context.app.id",
+      "log": "Audit Logs API",
+      "notes": "App that made the request"
+     },
+     {
+      "field": "context.app.scopes / context.app.scopes_bot",
+      "log": "Audit Logs API",
+      "notes": "Scopes held by the app"
+     },
+     {
+      "field": "actor.user.id",
+      "log": "Audit Logs API",
+      "notes": "User behind a rotating user token"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "app_installed",
+      "stage": "create",
+      "notes": "First access + refresh token pair issued"
+     },
+     {
+      "event": "app_scopes_expanded",
+      "stage": "change",
+      "notes": "Scopes added"
+     },
+     {
+      "event": "app_token_preserved",
+      "stage": "change",
+      "notes": "Token kept after owner/installer removal"
+     },
+     {
+      "event": "app_uninstalled",
+      "stage": "revoke",
+      "notes": "All tokens invalidated by uninstall"
+     },
+     {
+      "event": "anomaly",
+      "stage": "use",
+      "notes": "details.reason ip_address/asn/tor/unexpected_credential_testing"
+     }
+    ],
+    "correlation_keys": [
+     "context.app.id",
+     "actor.user.id",
+     "context.ip_address",
+     "context.ua",
+     "context.session_id",
+     "details.reason",
+     "details.previous_ip_address"
+    ],
+    "anomaly_cues": [
+     "Leaked refresh token (xoxe-1-) is worse than a leaked access token: it mints new 12 h tokens until revoked or app uninstalled",
+     "Legitimate app suddenly fails to refresh (attacker redeemed the single-use refresh token first)",
+     "anomaly ip_address with new-asn or cloud-asn for an app that normally runs from fixed egress",
+     "Access token seen in use far beyond 12 h after its leak time indicates refresh token or client secret also leaked"
+    ],
+    "containment": {
+     "steps": "auth.revoke the access token(s); uninstall the app (apps.uninstall / admin.apps.uninstall) to kill the refresh chain; rotate client_secret since it is required for refresh; reinstall.",
+     "kills_existing": "partial",
+     "notes": "Refreshing does not immediately invalidate the old access token; old refresh token is revoked after a short grace period. auth.revoke revokes a single token without changing the installation. Up to 2 active access tokens can exist at once."
+    },
+    "sample_query": {
+     "language": "Slack Audit Logs API (GET /audit/v1/logs query parameters)",
+     "query": "GET https://api.slack.com/audit/v1/logs?action=anomaly&oldest=1759622400&limit=1000",
+     "purpose": "Pull anomaly events, then filter entity.type=app and details.reason ip_address/tor/unexpected_credential_testing"
+    },
+    "unknown": [
+     "Audit event for token refresh or refresh-token reuse",
+     "Whether auth.revoke accepts a refresh token",
+     "Exact grace period for old refresh token",
+     "Audit log retention period"
+    ],
+    "evidence_refs": [
+     "turn2search1",
+     "fc-6e61b2fa",
+     "fc-417e3800",
+     "fc-6a246e85",
+     "fc-3c6e457e"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "oauth.v2.access (grant_type=refresh_token)",
+      "reveals": "New 12-hour xoxe. access token plus a new refresh token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No Slack audit action documented for refreshing an app's own rotating token."
+     },
+     {
+      "stage": "recon",
+      "call": "auth.test",
+      "reveals": "team, user, team_id, user_id, url (bot_id for bot tokens)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "special; hundreds per minute",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit action for auth.test; the app-only anomaly unexpected_credential_testing may fire on suspicious validity testing (Enterprise only)."
+     },
+     {
+      "stage": "discovery",
+      "call": "conversations.list",
+      "reveals": "Channels and DMs the token can see",
+      "bulk": true,
+      "scope": "channels:read, groups:read, im:read, mpim:read",
+      "rate_limit": "Tier 2: 20+/min",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit action for this read."
+     },
+     {
+      "stage": "collection",
+      "call": "conversations.history",
+      "reveals": "Full message history of a channel",
+      "bulk": true,
+      "scope": "channels:history, groups:history, im:history, mpim:history",
+      "rate_limit": "Tier 3: 50+/min; 1/min and 15 objects for new non-Marketplace commercial apps (since 2025-05-29)",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit action for API message reads; audit logs do not expose message content."
+     },
+     {
+      "stage": "collection",
+      "call": "files.list",
+      "reveals": "File listing including download URLs",
+      "bulk": true,
+      "scope": "files:read",
+      "rate_limit": "Tier 3: 50+/min",
+      "logged": "plan",
+      "log_event": "file_downloaded",
+      "log_notes": "Enterprise audit action 'A file was downloaded or viewed within Slack'; docs do not state whether API-driven downloads emit it. Anomaly excessive_downloads covers apps and users."
+     }
+    ],
+    "unknown": [
+     "Any audit event for refresh-token use by an app",
+     "Whether a rotating token used from a new IP raises an ip_address anomaly (anomaly docs describe user-token context)"
+    ],
+    "evidence_refs": [
+     "turn2search1",
+     "fc-ed849df9",
+     "fc-b07f2e7a",
+     "fc-36f3ea2a",
+     "fc-1083f686",
+     "fc-417e3800",
+     "fc-6e61b2fa",
+     "fc-6a246e85"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Slack App Added",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_app_added.yml",
+     "detects": "A Slack app was approved, installed, or added to a workspace in an Enterprise org."
+    },
+    {
+     "source": "Panther",
+     "title": "Slack App Access Expanded",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_app_access_expanded.yml",
+     "detects": "A Slack app gained scopes or resources, or its bot token was upgraded."
+    },
+    {
+     "source": "Panther",
+     "title": "Slack App Removed",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_app_removed.yml",
+     "detects": "A Slack app was restricted, uninstalled, or removed from a workspace."
+    },
+    {
+     "source": "Panther",
+     "title": "Slack Anomaly Detected",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_passthrough_anomaly.yml",
+     "detects": "Slack anomaly events, including unusual IP or user agent for a user token and unexpected API call volume."
+    }
+   ]
+  },
+  {
+   "id": "slack-3",
+   "name": "MCP enterprise-managed authorization",
+   "family": "federation",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth bot/user bearer tokens; app-level tokens for selected functions.",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "Enterprise-managed authorization exchanges external IdP ID-JAGs for user access to Slack MCP. It is not general bot/workload federation.",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "The app's Allowed IP Address Ranges (Restrict API Token Usage) also apply to Slack MCP server requests. The app owner sets the list, not the customer org admin; IPv6 is not supported.",
+    "evidence_refs": [
+     "fc-ff89da25",
+     "turn2search33"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Currently 1 hour",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "policy",
+    "summary": "Obtain another MCP user token through the IdP/ID-JAG exchange.",
+    "evidence_refs": [
+     "turn2search1",
+     "turn28view5"
+    ]
+   },
+   "administration": {
+    "summary": "Bot/user scopes, app approval/install controls, token revocation and rotation; EMA permissions delegated through IdP configuration.",
+    "conditions": "SAML SSO requires eligible Business+/Enterprise tiers. EMA uses organization-level installations and MCP user tokens.",
+    "evidence_refs": [
+     "turn2search33",
+     "turn28view5"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "Tokens are issued only from an IdP credential, and IdP admins decide which permissions each user gets for the MCP server.",
+     "evidence_refs": [
+      "turn28view5"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "EMA returns xoxp user tokens, and Slack revokes a member's API tokens when the member is deactivated.",
+     "evidence_refs": [
+      "fc-ec590494"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "EMA apps are org-level installs, visible in Integrations > Installed apps; individual MCP tokens are not listed.",
+     "evidence_refs": [
+      "fc-24c190ad"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "In the IdP: set which permissions each user gets for the Slack MCP server (token-exchange policy for audience https://mcp.slack.com/)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "turn28view5"
+     ]
+    },
+    "expiry": {
+     "ui": null,
+     "api": "oauth.v2.user.access response field expires_in (3600)",
+     "cli": null,
+     "evidence_refs": [
+      "turn28view5"
+     ]
+    },
+    "reads": {
+     "ui": "Organization settings > Security > Audit logs > Filter > Events",
+     "api": "GET https://api.slack.com/audit/v1/logs?action=mcp_slack_read_channel_tool_called,mcp_slack_read_thread_tool_called,mcp_slack_search_public_and_private_tool_called,mcp_slack_search_public_tool_called",
+     "cli": null,
+     "evidence_refs": [
+      "fc-b70d01a9",
+      "fc-417e3800"
+     ]
+    },
+    "kill": {
+     "ui": "Remove the user's access to the app in the IdP; in Slack: Manage apps > Installed Apps > App Details > Configuration > Remove App",
+     "api": "GET https://slack.com/api/auth.revoke (captured xoxp); POST https://slack.com/api/admin.apps.uninstall",
+     "cli": null,
+     "evidence_refs": [
+      "fc-3c6e457e",
+      "fc-e1520b72",
+      "fc-8a3bfc60",
+      "turn28view5"
+     ]
+    },
+    "offboard": {
+     "ui": "Organization settings > People > Members > select > Deactivate",
+     "api": "SCIM DELETE /Users/{id} (deactivates)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-744cbe83",
+      "fc-f9335c97"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "xoxp-",
+     "notes": "EMA returns a user token (sample xoxp-) from POST /api/oauth.v2.user.access with grant_type urn:ietf:params:oauth:grant-type:jwt-bearer and an IdP-issued ID-JAG (expires_in 300). Access token expires_in 3600. MCP audience https://mcp.slack.com/."
+    },
+    "log_sources": [
+     {
+      "name": "Slack Audit Logs API (GET https://api.slack.com/audit/v1/logs)",
+      "notes": "Enterprise plan. MCP tool calls logged as mcp_slack_*_tool_called; slack_ai_api_tool_called for API calls by AI apps."
+     },
+     {
+      "name": "Identity provider system log (Okta)",
+      "notes": "ID-JAG issuance happens at the IdP; Okta is the only supported IdP for Slack MCP EMA in Claude. Event names not covered by Slack docs."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "context.app.id",
+      "log": "Audit Logs API",
+      "notes": "AI app calling the MCP server"
+     },
+     {
+      "field": "actor.user.id",
+      "log": "Audit Logs API",
+      "notes": "User on whose behalf the tool ran"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "app_installed",
+      "stage": "create",
+      "notes": "MCP client app (e.g. Claude) installed before EMA is enabled"
+     },
+     {
+      "event": "mcp_slack_search_public_and_private_tool_called",
+      "stage": "use",
+      "notes": "AI app searched public and private content"
+     },
+     {
+      "event": "mcp_slack_read_channel_tool_called",
+      "stage": "use",
+      "notes": "AI app read a channel"
+     },
+     {
+      "event": "mcp_slack_send_message_tool_called",
+      "stage": "use",
+      "notes": "AI app sent a message on behalf of a user"
+     },
+     {
+      "event": "slack_ai_api_tool_called",
+      "stage": "use",
+      "notes": "AI app called a Slack API method on a user's behalf"
+     },
+     {
+      "event": "app_uninstalled",
+      "stage": "revoke",
+      "notes": "Removes the MCP client app"
+     }
+    ],
+    "correlation_keys": [
+     "actor.user.id",
+     "actor.user.email",
+     "context.app.id",
+     "context.ip_address",
+     "context.ua",
+     "context.session_id"
+    ],
+    "anomaly_cues": [
+     "mcp_slack_search_public_and_private_tool_called bursts for one user outside working hours",
+     "MCP tool calls continuing for a user already deprovisioned in the IdP (should stop within ~1 h token life)",
+     "mcp_slack_send_message_tool_called volume spike or messages to external/shared channels",
+     "MCP tool calls from an app ID other than the approved MCP client",
+     "Slack MCP use with no matching IdP token-exchange event in Okta"
+    ],
+    "containment": {
+     "steps": "Remove the user's or app's access in the IdP (Okta) so no new ID-JAG is issued; uninstall or restrict the MCP client app in Slack; auth.revoke any captured xoxp token.",
+     "kills_existing": "partial",
+     "notes": "auth.revoke kills one access token at once, but the client's long-lived IdP credential can mint new tokens until the IdP or app side is revoked. EMA docs do not describe revocation."
+    },
+    "sample_query": {
+     "language": "Slack Audit Logs API (GET /audit/v1/logs query parameters)",
+     "query": "GET https://api.slack.com/audit/v1/logs?action=mcp_slack_search_public_and_private_tool_called,mcp_slack_send_message_tool_called,slack_ai_api_tool_called&actor=W0000EXAMPLE&oldest=1759622400",
+     "purpose": "Review MCP tool activity for one user during an investigation"
+    },
+    "unknown": [
+     "Revocation mechanism and effect on issued EMA tokens",
+     "Audit event for enabling/disabling EMA or for each token exchange",
+     "Okta event names for ID-JAG issuance",
+     "Whether Slack issues refresh tokens for EMA"
+    ],
+    "evidence_refs": [
+     "turn28view5",
+     "fc-b03b62bf",
+     "fc-417e3800",
+     "fc-6e61b2fa",
+     "turn2search1"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "Okta token exchange issuing ID-JAG for Slack (Cross App Access)",
+      "reveals": "ID-JAG assertion the MCP client exchanges for a Slack token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "app.oauth2.token.grant.id_jag",
+      "log_notes": "Logged in Okta System Log (IdP side), not Slack."
+     },
+     {
+      "stage": "enumeration",
+      "call": "MCP tool: search users (POST https://mcp.slack.com/mcp)",
+      "reveals": "Users matching a query",
+      "bulk": false,
+      "scope": "search:read.users",
+      "rate_limit": "Tier 2: 20+/min",
+      "logged": "plan",
+      "log_event": "mcp_slack_search_users_tool_called",
+      "log_notes": "Slack Enterprise audit log; records an AI app acting for a user."
+     },
+     {
+      "stage": "discovery",
+      "call": "MCP tool: search channels",
+      "reveals": "Channels matching a query",
+      "bulk": false,
+      "scope": "search:read.public, search:read.private",
+      "rate_limit": "Tier 2: 20+/min",
+      "logged": "plan",
+      "log_event": "mcp_slack_search_channels_tool_called",
+      "log_notes": "Slack Enterprise audit log."
+     },
+     {
+      "stage": "collection",
+      "call": "MCP tool: search public and private content",
+      "reveals": "Messages and files across the user's visible content",
+      "bulk": true,
+      "scope": "search:read.public, search:read.private, search:read.mpim, search:read.im",
+      "rate_limit": "special (assistant.search.context)",
+      "logged": "plan",
+      "log_event": "mcp_slack_search_public_and_private_tool_called",
+      "log_notes": "Slack Enterprise audit log; mcp_slack_search_public_tool_called for public only."
+     },
+     {
+      "stage": "collection",
+      "call": "MCP tool: read channel / read thread",
+      "reveals": "Channel or thread message contents",
+      "bulk": true,
+      "scope": "channels:history, groups:history, mpim:history, im:history",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "mcp_slack_read_channel_tool_called",
+      "log_notes": "Slack Enterprise audit log; mcp_slack_read_thread_tool_called for threads."
+     }
+    ],
+    "unknown": [
+     "Exact MCP tool identifiers (docs give capabilities and audit action names, not a full tool-name list)",
+     "Whether Slack logs the ID-JAG-to-token exchange on its side"
+    ],
+    "evidence_refs": [
+     "fc-b03b62bf",
+     "fc-6aca2bd9",
+     "fc-160a1d17",
+     "fc-417e3800",
+     "fc-6e61b2fa"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Slack App Added",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_app_added.yml",
+     "detects": "A Slack app was approved, installed, or added to a workspace in an Enterprise org."
+    },
+    {
+     "source": "Panther",
+     "title": "Slack App Removed",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/slack_rules/slack_app_removed.yml",
+     "detects": "A Slack app was restricted, uninstalled, or removed from a workspace."
+    }
+   ]
+  }
+ ]
+}

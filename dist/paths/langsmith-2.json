@@ -1,0 +1,440 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "langsmith",
+      "name": "LangSmith",
+      "scope_notes": "Covers LangSmith (LangChain). SaaS (US/EU regions) plus self-hosted and BYOC; audit logs, SCIM and service-key roles are Enterprise, Viewer role needs Plus/Enterprise.",
+      "controls": [
+        {
+          "name": "Delete service key",
+          "effect": "revoke",
+          "applies_to": [
+            "langsmith-2"
+          ],
+          "what": "Service keys can only be deleted.",
+          "setting": "Settings > API Keys > Service; DELETE /api/v1/orgs/current/service-keys/{api_key_id}",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8ad90fe7",
+            "fc-9b1ee6b0"
+          ]
+        },
+        {
+          "name": "Key expiration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "langsmith-1",
+            "langsmith-2"
+          ],
+          "what": "Per-key expiry in days; default never.",
+          "setting": "API key create dialog",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8ad90fe7",
+            "fc-2ccacbe4"
+          ]
+        },
+        {
+          "name": "max_pat_expiry_days / max_service_key_expiry_days",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "langsmith-1",
+            "langsmith-2"
+          ],
+          "what": "Org-level maximum expiry fields in the org API schema (behaviour not described in guides).",
+          "setting": "PATCH /api/v1/orgs/current/info",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-9cdc042c"
+          ]
+        },
+        {
+          "name": "Service key workspace scope and roles",
+          "effect": "limit_scope",
+          "applies_to": [
+            "langsmith-2"
+          ],
+          "what": "Limit keys to specific workspaces and (Enterprise) a workspace role.",
+          "setting": "Settings > API Keys > Service",
+          "plan": "Enterprise (roles)",
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8ad90fe7"
+          ]
+        },
+        {
+          "name": "Service key creation limited to admins",
+          "effect": "other",
+          "applies_to": [
+            "langsmith-2"
+          ],
+          "what": "Only admins can create service keys, so non-admin members cannot create them.",
+          "setting": "Organization roles (Settings > Members and roles)",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-2ccacbe4"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "langsmith-2",
+          "what": "Service keys cannot be deactivated (only deleted).",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-8ad90fe7"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "What ip_allowlist covers and whether it applies to API key requests",
+        "Whether SSO-only enforcement blocks PATs",
+        "Whether pat_creation_disabled affects existing PATs",
+        "Exact behaviour of max_pat_expiry_days / max_service_key_expiry_days",
+        "SCIM token expiry",
+        "Whether whoami-style reads (list workspaces, org info) are audited"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "langsmith-2",
+      "provider_id": "langsmith",
+      "name": "Service keys (service accounts)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Admin-created keys (lsv2_sk_) for applications, scoped to one or more workspaces or the whole org; org-scoped keys need X-Tenant-Id for workspace resources.",
+        "evidence_refs": [
+          "fc-8ad90fe7",
+          "fc-2ccacbe4"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static key not tied to a user.",
+        "evidence_refs": [
+          "fc-8ad90fe7"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "ip_allowlist org field exists; semantics undocumented.",
+        "evidence_refs": [
+          "fc-9cdc042c"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Never expires by default; org field max_service_key_expiry_days",
+        "evidence_refs": [
+          "fc-8ad90fe7",
+          "fc-2ccacbe4",
+          "fc-9cdc042c"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "expiry date",
+        "summary": "Create a new key and delete the old one; roles can be edited without rotating.",
+        "evidence_refs": [
+          "fc-8ad90fe7"
+        ]
+      },
+      "administration": {
+        "summary": "Only admins create; Enterprise can assign workspace roles; key is org-wide if no workspaces given.",
+        "conditions": "Operators cannot create org-wide keys.",
+        "evidence_refs": [
+          "fc-2ccacbe4",
+          "fc-8ad90fe7",
+          "fc-d2026b37"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service keys act for a service account, not a user.",
+          "evidence_refs": [
+            "fc-2ccacbe4"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /api/v1/orgs/current/service-keys lists the org's service keys (also Settings > API Keys > Service tab).",
+          "evidence_refs": [
+            "fc-6a768b31"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Organization Settings > Audit logs; filter Operation = query_runs / create_bulk_export, Actor = the key",
+          "api": "GET /api/v1/audit-logs?operations=query_runs&operations=create_bulk_export&actor_api_key_ids=<key id> (match actor.user.credential_uid)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2e44f713",
+            "fc-8690e22f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "lsv2_sk_",
+          "notes": ""
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs",
+            "notes": "Enterprise; Organization Settings > Audit logs or GET /api/v1/audit-logs (OCSF); 400-day retention; self-hosted needs Helm 0.12.33+ and enablement."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.user.credential_uid",
+            "log": "Audit logs",
+            "notes": "UUID of the service key"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "create_service_key",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "update_service_key",
+            "stage": "modify",
+            "notes": "Role change"
+          },
+          {
+            "event": "delete_service_key",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "create_service_account",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "query_runs",
+            "stage": "use",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "actor.user.credential_uid",
+          "workspace_id"
+        ],
+        "anomaly_cues": [
+          "Org-wide service key created",
+          "Service key creating bulk exports"
+        ],
+        "containment": {
+          "steps": "Delete the key (Settings > API Keys > Service, or DELETE /api/v1/orgs/current/service-keys/{api_key_id}).",
+          "kills_existing": "yes",
+          "notes": "Auth cache means up to about a minute."
+        },
+        "sample_query": "GET /api/v1/audit-logs?operations=create_service_key&operations=delete_service_key",
+        "unknown": [],
+        "evidence_refs": [
+          "fc-2ccacbe4",
+          "fc-2e44f713",
+          "fc-8ad90fe7",
+          "fc-9b1ee6b0"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/v1/workspaces",
+            "reveals": "Workspaces visible to the key",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "Per-key 1-minute limit",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not in tracked operations list"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/v1/orgs/current/info",
+            "reveals": "Org settings",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /api/v1/runs/query",
+            "reveals": "Traces/runs incl. inputs and outputs",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "Per-key 1-minute limit",
+            "logged": "plan",
+            "log_event": "query_runs",
+            "log_notes": "Enterprise audit logs"
+          },
+          {
+            "stage": "collection",
+            "call": "POST /api/v1/bulk-exports",
+            "reveals": "Bulk export of trace data to a destination",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "create_bulk_export",
+            "log_notes": "Enterprise audit logs"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/orgs/current/service-keys",
+            "reveals": "Org service keys",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "list_org_service_keys",
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-b704dfb6",
+          "fc-586ecfe9",
+          "fc-424fb709",
+          "fc-1e0d3e9b",
+          "fc-2e44f713",
+          "fc-2ccacbe4",
+          "fc-6a768b31"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1e0d3e9b",
+      "title": "Create bulk export",
+      "url": "https://docs.langchain.com/langsmith/smith-api/bulk-exports/create-bulk-export",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2ccacbe4",
+      "title": "Administration overview",
+      "url": "https://docs.langchain.com/langsmith/administration-overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2e44f713",
+      "title": "Audit logs",
+      "url": "https://docs.langchain.com/langsmith/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-424fb709",
+      "title": "Query runs",
+      "url": "https://docs.langchain.com/langsmith/smith-api/run/query-runs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-586ecfe9",
+      "title": "Get current organization info",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/get-current-organization-info",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6a768b31",
+      "title": "List org service keys",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/list-org-service-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8690e22f",
+      "title": "Get audit logs (API reference)",
+      "url": "https://docs.langchain.com/langsmith/smith-api/audit-logs/get-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8ad90fe7",
+      "title": "Create an account and API key",
+      "url": "https://docs.langchain.com/langsmith/create-account-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9b1ee6b0",
+      "title": "Delete org service key",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/delete-org-service-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9cdc042c",
+      "title": "Update current organization info (API reference)",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/update-current-organization-info",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b704dfb6",
+      "title": "List workspaces",
+      "url": "https://docs.langchain.com/langsmith/smith-api/workspaces/list-workspaces",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d2026b37",
+      "title": "Create org service key",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/create-org-service-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

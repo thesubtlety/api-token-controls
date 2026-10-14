@@ -1,0 +1,1472 @@
+{
+ "id": "box",
+ "name": "Box",
+ "scope_notes": "Do not substitute Box Shield location/anomaly detection or corporate firewall allowlisting for API source-IP enforcement.",
+ "controls": [
+  {
+   "name": "Admin authorization of server authentication apps",
+   "effect": "require_approval",
+   "applies_to": [
+    "box-2",
+    "box-3",
+    "box-4"
+   ],
+   "what": "JWT, CCG and Limited Access (App Token) apps cannot be used in the enterprise until an admin authorizes them by Client ID.",
+   "setting": "Admin Console > Platform > Platform Apps > Server Authentication Apps",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-95b70b60"
+   ],
+   "quote": "authorize and enable custom server authentication apps, such as JSON Web Token (JWT) apps, client credential apps, and limited access apps,"
+  },
+  {
+   "name": "Re-authorization on scope/access changes",
+   "effect": "require_approval",
+   "applies_to": [
+    "box-2",
+    "box-3",
+    "box-4"
+   ],
+   "what": "Authorization is a snapshot; changed scopes or access level need admin re-authorization.",
+   "setting": "Admin Console > Platform > Platform Apps > … > Reauthorize",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-3f1dcc62"
+   ],
+   "quote": "The authorization is a snapshot in time. This means that if a developer revisits the Developer Console and changes the configuration, the Admin must re-authorize the application in order for generated Access Tokens to reflect the changes."
+  },
+  {
+   "name": "Disable unpublished platform apps by default",
+   "effect": "require_approval",
+   "applies_to": [
+    "box-1",
+    "box-2",
+    "box-3",
+    "box-4"
+   ],
+   "what": "Unpublished custom apps (OAuth and server-auth) are disabled until an admin enables them.",
+   "setting": "Admin Console > Enterprise Settings > Platform Apps",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-7f805356"
+   ],
+   "quote": "When you select Disable unpublished platform apps by default, Box disables all unpublished platform apps by default."
+  },
+  {
+   "name": "Enable/disable user authentication app",
+   "effect": "disable",
+   "applies_to": [
+    "box-1",
+    "box-5"
+   ],
+   "what": "Admins enable or disable a custom OAuth 2.0 app for the enterprise by Client ID.",
+   "setting": "Admin Console > Platform > Platform Apps > User Authentication Apps",
+   "plan": null,
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-95b70b60"
+   ],
+   "quote": "enable custom user authentication applications, such as OAuth 2.0 apps, and"
+  },
+  {
+   "name": "Integration Availability Status",
+   "effect": "disable",
+   "applies_to": [
+    "box-1"
+   ],
+   "what": "Disables a published integration for all or selected users; existing installs stop working.",
+   "setting": "Admin Console > Integrations",
+   "plan": null,
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-74a8a358"
+   ],
+   "quote": "If you disable an application on this page, account holders are unable to add the application to their Box accounts, and cannot use the application if the account holder previously installed it."
+  },
+  {
+   "name": "Enable Integrations by default",
+   "effect": "disable",
+   "applies_to": [
+    "box-1"
+   ],
+   "what": "Toggling off disables all published integrations by default.",
+   "setting": "Admin Console > Integrations > Settings",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-74a8a358"
+   ],
+   "quote": "Integrations are enabled by default. When you toggle off Enable Integrations by default, Box disables all Integrations."
+  }
+ ],
+ "no_control": [],
+ "controls_unknown": [
+  "No admin setting found that blocks developers from generating developer tokens; tokens expire after 60 minutes and inherit the app's scopes and the user's access.",
+  "Whether Box offers API source-IP enforcement for app tokens (no admin doc found; Shield/firewall not counted).",
+  "Whether new Limited Access (App Token) apps can still be created.",
+  "Whether Box SSO requirements constrain OAuth token issuance for managed users (not checked).",
+  "Whether app access level (App only vs App + Enterprise) and scopes can be overridden by the admin at authorization time; docs show them set by the developer in the Developer Console."
+ ],
+ "credentials": [
+  {
+   "id": "box-1",
+   "name": "OAuth",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth bearer; server authentication via Client Credentials Grant or signed JWT, usually using an app service account.",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Box JWT auth is app-key authentication. Box token downscoping exchanges an existing Box token, not an arbitrary external IdP token.",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Box support docs refer to an enterprise 'IP Allowlist' setting turned on per enterprise (not a plan feature). Its coverage of API calls with this credential is not documented; confirm with Box.",
+    "evidence_refs": [
+     "turn11search7",
+     "turn24search17",
+     "turn24search11",
+     "fc-de45bd2b"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "60 minutes",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "absolute",
+    "summary": "Refresh token lasts 60 days and is single use.",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "administration": {
+    "summary": "App scopes/access levels, administrator authorization, service-account/user access, token revocation and downscoped access tokens.",
+    "conditions": "Do not substitute Box Shield location/anomaly detection or corporate firewall allowlisting for API source-IP enforcement.",
+    "evidence_refs": [
+     "turn11search7",
+     "turn24search17",
+     "turn24search11"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "OAuth sign-in goes through the enterprise SSO screen, but under SSO Required existing tokens are not revoked and keep refreshing.",
+     "evidence_refs": [
+      "fc-f5a77dc1",
+      "fc-ed8aef39"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Box support says making the user inactive (or revoking tokens) is how to stop the user's tokens.",
+     "evidence_refs": [
+      "fc-ed8aef39"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Admin Console > Platform > Platform Apps > User Authentication Apps lists apps and enablement state, not per-user tokens.",
+     "evidence_refs": [
+      "fc-56b71a34"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Admin Console > Enterprise Settings > User Settings > Enable Single Sign-On (SSO) for All Users > SSO Required",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a717e101"
+     ]
+    },
+    "expiry": {
+     "ui": null,
+     "api": "Fixed 60 min; read expires_in in the POST https://api.box.com/oauth2/token response",
+     "cli": null,
+     "evidence_refs": [
+      "fc-c3d9fc59",
+      "fc-587cf300"
+     ]
+    },
+    "reads": {
+     "ui": "Admin Console > Reports > Create Report > User Activity; filter Action types to Downloaded",
+     "api": "GET /2.0/events?stream_type=admin_logs&event_type=DOWNLOAD",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d07f45ad",
+      "fc-f47fec09",
+      "fc-ed3981b6",
+      "fc-9fd10892"
+     ]
+    },
+    "offboard": {
+     "ui": "Admin Console > Users and Groups > Managed Users > (user) > Edit User Account Details > Status: Inactive",
+     "api": "PUT /2.0/users/{user_id} {\"status\":\"inactive\"}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-af8e8ada",
+      "fc-3a94ab2b"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque bearer access_token (expires_in ~3600s) plus single-use refresh_token valid 60 days. No documented prefix; not in GitHub secret scanning patterns."
+    },
+    "log_sources": [
+     {
+      "name": "Box Enterprise Events (GET /events, stream_type=admin_logs / admin_logs_streaming)",
+      "notes": "Admin/co-admin with reporting permission. admin_logs: 1 year history; admin_logs_streaming: ~2 weeks live. Admin Console reports: 7 years."
+     },
+     {
+      "name": "Box Shield alerts (SHIELD_ALERT in enterprise events)",
+      "notes": "Shield add-on only. Suspicious location/session, anomalous download alerts with ip_info and service_name."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "created_by",
+      "log": "Box Enterprise Events",
+      "notes": "User mini object (id, name, login) acting; id 2 = Unknown User"
+     },
+     {
+      "field": "session_id",
+      "log": "Box Enterprise Events",
+      "notes": "User session; not populated on all events"
+     },
+     {
+      "field": "additional_details",
+      "log": "Box Enterprise Events",
+      "notes": "Event-specific details ('how a user performed an event'); per-event keys not fully documented"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "USER_AUTHENTICATE_OAUTH2_ACCESS_TOKEN_CREATE",
+      "stage": "create",
+      "notes": "OAuth 2.0 access token created"
+     },
+     {
+      "event": "LOGIN",
+      "stage": "use",
+      "notes": "Interactive login preceding consent"
+     },
+     {
+      "event": "ADD_LOGIN_ACTIVITY_DEVICE",
+      "stage": "use",
+      "notes": "Login from a device not seen before"
+     },
+     {
+      "event": "CONTENT_ACCESS",
+      "stage": "use",
+      "notes": "File accessed by user or programmatically by a Box application"
+     },
+     {
+      "event": "DOWNLOAD",
+      "stage": "use",
+      "notes": "File download"
+     },
+     {
+      "event": "OAUTH2_ACCESS_TOKEN_REVOKE",
+      "stage": "revoke",
+      "notes": "Access token revoked"
+     },
+     {
+      "event": "OAUTH2_REFRESH_TOKEN_REVOKE",
+      "stage": "revoke",
+      "notes": "Refresh token revoked"
+     },
+     {
+      "event": "REMOVE_LOGIN_ACTIVITY_DEVICE",
+      "stage": "revoke",
+      "notes": "Box invalidated a user session associated with an app"
+     },
+     {
+      "event": "FAILED_LOGIN",
+      "stage": "auth_fail",
+      "notes": "Failed interactive login (not API token failures)"
+     }
+    ],
+    "correlation_keys": [
+     "created_by.id",
+     "created_by.login",
+     "ip_address",
+     "session_id",
+     "event_type",
+     "created_at",
+     "action_by",
+     "additional_details"
+    ],
+    "anomaly_cues": [
+     "USER_AUTHENTICATE_OAUTH2_ACCESS_TOKEN_CREATE for a user right after ADD_LOGIN_ACTIVITY_DEVICE from a new IP",
+     "Bulk DOWNLOAD/CONTENT_ACCESS by a user whose interactive LOGIN came from a different country or ASN",
+     "Token creates for a user shortly after FAILED_LOGIN bursts (consent phishing after credential stuffing)",
+     "Activity continuing after the user is deactivated or after OAUTH2_*_REVOKE",
+     "Shield SHIELD_ALERT suspicious session/location tied to the same user"
+    ],
+    "containment": {
+     "steps": "POST /oauth2/revoke with client_id, client_secret and the access or refresh token; admin can disable the user-auth app in Admin Console > Platform > Platform Apps.",
+     "kills_existing": "partial",
+     "notes": "Revoke acts on the presented token; whether other tokens the same user granted the app are killed, and whether disabling the app ends live tokens, is not documented."
+    },
+    "sample_query": {
+     "language": "Box Events API (GET /events)",
+     "query": "GET https://api.box.com/2.0/events?stream_type=admin_logs&event_type=USER_AUTHENTICATE_OAUTH2_ACCESS_TOKEN_CREATE,ADD_LOGIN_ACTIVITY_DEVICE,OAUTH2_ACCESS_TOKEN_REVOKE&created_after=2026-09-12T00:00:00-00:00&limit=500",
+     "purpose": "Pull OAuth token grants and new-device logins for 30 days to spot unexpected app consents"
+    },
+    "unknown": [
+     "Field naming the OAuth client_id/app on token-create and use events",
+     "Per-event keys of additional_details",
+     "User-agent field in enterprise events",
+     "Whether app disable invalidates already-issued tokens"
+    ],
+    "evidence_refs": [
+     "fc-9fd10892",
+     "fc-ed3981b6",
+     "fc-a4de07e3",
+     "fc-62c7849a",
+     "fc-d5097aa0",
+     "fc-b85837df",
+     "fc-c3d9fc59",
+     "turn20search16",
+     "fc-affade7e",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /users/me",
+      "reveals": "the authenticated user (OAuth: the user who authorized the app)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1000 API requests/minute per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Enterprise events feed exists but docs do not state whether this read produces an event"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /folders/0/items",
+      "reveals": "items (files, folders, web links) under the account root (id 0); walk the tree",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1000 API requests/minute per user; limit max 1000 items/page",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads: docs do not state whether folder listing produces an enterprise event"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /files/{file_id}/content",
+      "reveals": "the file contents in binary",
+      "bulk": true,
+      "scope": "root_readonly",
+      "rate_limit": "1000 API requests/minute per user",
+      "logged": "yes",
+      "log_event": "DOWNLOAD",
+      "log_notes": "Enterprise events (GET /events stream_type=admin_logs) list 'Downloaded'; 1yr historical, 2wk streaming, 7yr via Admin Console reports"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /zip_downloads",
+      "reveals": "download_url + status_url for a single zip of many files/folders",
+      "bulk": true,
+      "scope": "root_readonly",
+      "rate_limit": "up to 10,000 files per archive",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Underlying file fetches may log as DOWNLOAD; a distinct zip event is not documented"
+     }
+    ],
+    "unknown": [
+     "Whether folder-listing and GET /users/me reads produce enterprise events",
+     "Whether POST /zip_downloads produces a distinct event vs per-file DOWNLOAD"
+    ],
+    "evidence_refs": [
+     "fc-c476955c",
+     "fc-1731b801",
+     "fc-848861d0",
+     "fc-c71816b4",
+     "fc-9fd10892",
+     "fc-89808b6f"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "box-2",
+   "name": "Client Credentials Grant",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth bearer; server authentication via Client Credentials Grant or signed JWT, usually using an app service account.",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Box JWT auth is app-key authentication. Box token downscoping exchanges an existing Box token, not an arbitrary external IdP token.",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Box support docs refer to an enterprise 'IP Allowlist' setting turned on per enterprise (not a plan feature). Its coverage of API calls with this credential is not documented; confirm with Box.",
+    "evidence_refs": [
+     "turn11search7",
+     "turn24search17",
+     "turn24search11",
+     "fc-de45bd2b"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "60 minutes",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "Use client credentials to mint a new access token; no refresh token.",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "administration": {
+    "summary": "App scopes/access levels, administrator authorization, service-account/user access, token revocation and downscoped access tokens.",
+    "conditions": "Do not substitute Box Shield location/anomaly detection or corporate firewall allowlisting for API source-IP enforcement.",
+    "evidence_refs": [
+     "turn11search7",
+     "turn24search17",
+     "turn24search11"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "CCG gets tokens with client ID and secret and no sign-in; Box says SSO is not used for server-side authentication.",
+     "evidence_refs": [
+      "fc-908de866",
+      "fc-f5a77dc1"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Tokens belong to the app's auto-generated Service Account, not a person.",
+     "evidence_refs": [
+      "fc-18742eec",
+      "fc-908de866"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Admin Console > Platform > Platform Apps > Server Authentication Apps lists apps with authorization/enablement status, not individual keys or tokens.",
+     "evidence_refs": [
+      "fc-56b71a34"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "Fixed 60 min; read expires_in in the POST https://api.box.com/oauth2/token response (no refresh token)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-587cf300",
+      "fc-c3d9fc59"
+     ]
+    },
+    "reads": {
+     "ui": "Admin Console > Reports > Create Report > User Activity; filter Action types to Downloaded",
+     "api": "GET /2.0/events?stream_type=admin_logs&event_type=DOWNLOAD",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d07f45ad",
+      "fc-f47fec09",
+      "fc-ed3981b6",
+      "fc-9fd10892"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Credential is client_id + client_secret; minted access token is opaque, 60 min, no refresh token. No documented prefix; no GitHub secret scanning pattern."
+    },
+    "log_sources": [
+     {
+      "name": "Box Enterprise Events (GET /events, stream_type=admin_logs / admin_logs_streaming)",
+      "notes": "Admin/co-admin with reporting permission. admin_logs: 1 year history; admin_logs_streaming: ~2 weeks live. Admin Console reports: 7 years."
+     },
+     {
+      "name": "Box Shield alerts (SHIELD_ALERT in enterprise events)",
+      "notes": "Shield add-on only. Suspicious location/session, anomalous download alerts with ip_info and service_name."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "created_by",
+      "log": "Box Enterprise Events",
+      "notes": "User mini object (id, name, login) acting; id 2 = Unknown User"
+     },
+     {
+      "field": "session_id",
+      "log": "Box Enterprise Events",
+      "notes": "User session; not populated on all events"
+     },
+     {
+      "field": "additional_details",
+      "log": "Box Enterprise Events",
+      "notes": "Event-specific details ('how a user performed an event'); per-event keys not fully documented"
+     },
+     {
+      "field": "box_subject_id",
+      "log": "token request (POST /oauth2/token), not logged",
+      "notes": "Enterprise ID (service account) or user ID the token acts as"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "APPLICATION_CREATED",
+      "stage": "create",
+      "notes": "App created in Developer Console"
+     },
+     {
+      "event": "ENTERPRISE_APP_AUTHORIZATION_UPDATE",
+      "stage": "change",
+      "notes": "JWT app authorized or reauthorized by admin"
+     },
+     {
+      "event": "CONTENT_ACCESS",
+      "stage": "use",
+      "notes": "Programmatic file access by a Box application"
+     },
+     {
+      "event": "DOWNLOAD",
+      "stage": "use",
+      "notes": "File download"
+     },
+     {
+      "event": "USER_AUTHENTICATE_OAUTH2_ACCESS_TOKEN_CREATE",
+      "stage": "create",
+      "notes": "OAuth 2.0 access token created; coverage for CCG not documented"
+     },
+     {
+      "event": "OAUTH2_ACCESS_TOKEN_REVOKE",
+      "stage": "revoke",
+      "notes": "Access token revoked"
+     }
+    ],
+    "correlation_keys": [
+     "created_by.id",
+     "created_by.login",
+     "ip_address",
+     "session_id",
+     "event_type",
+     "created_at",
+     "action_by",
+     "additional_details"
+    ],
+    "anomaly_cues": [
+     "App service account acting from an IP outside your server egress ranges",
+     "CCG app acting as managed users/admins (box_subject_type=user) when it normally uses the service account",
+     "Service account suddenly downloading or collaborating on content it never touched",
+     "ENTERPRISE_APP_AUTHORIZATION_UPDATE or app scope changes outside change windows",
+     "Service account activity continuing after secret rotation (old secret still in use elsewhere)"
+    ],
+    "containment": {
+     "steps": "Rotate/revoke the client secret in Developer Console > Configuration; revoke live tokens via POST /oauth2/revoke; admin disables or deauthorizes the server app in Admin Console > Platform > Platform Apps.",
+     "kills_existing": "unknown",
+     "notes": "Revoking one access token does not stop minting new ones while the secret is valid; effect of secret rotation on already-issued 60-min tokens is not documented."
+    },
+    "sample_query": {
+     "language": "Box Events API (GET /events)",
+     "query": "GET https://api.box.com/2.0/events?stream_type=admin_logs&event_type=CONTENT_ACCESS,DOWNLOAD,ENTERPRISE_APP_AUTHORIZATION_UPDATE&created_after=2026-09-12T00:00:00-00:00&limit=500",
+     "purpose": "Find programmatic content access and app authorization changes; filter created_by.login to the app service account"
+    },
+    "unknown": [
+     "Event field identifying the app/client_id",
+     "Whether CCG token minting emits USER_AUTHENTICATE_OAUTH2_ACCESS_TOKEN_CREATE",
+     "Event for client secret reset",
+     "Documented UI path/effect of client secret revoke"
+    ],
+    "evidence_refs": [
+     "fc-9fd10892",
+     "fc-ed3981b6",
+     "fc-a4de07e3",
+     "fc-62c7849a",
+     "fc-908de866",
+     "fc-c3d9fc59",
+     "fc-d5097aa0",
+     "fc-6ece88bb",
+     "fc-affade7e",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /users/me",
+      "reveals": "identity; with box_subject_type=enterprise this is the app's Service Account",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1000 API requests/minute per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Read event emission not documented"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /folders/0/items",
+      "reveals": "items under the service account's root; traverse the tree",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1000/min per user; max 1000 items/page",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Listing read event not documented"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /files/{file_id}/content",
+      "reveals": "file contents in binary",
+      "bulk": true,
+      "scope": "root_readonly",
+      "rate_limit": "1000/min per user",
+      "logged": "yes",
+      "log_event": "DOWNLOAD",
+      "log_notes": "Enterprise events admin_logs; downloads appear as 'Downloaded'"
+     }
+    ],
+    "unknown": [
+     "Whether a CCG service account token can be elevated via As-User, which would change the actor recorded in events"
+    ],
+    "evidence_refs": [
+     "fc-908de866",
+     "fc-c476955c",
+     "fc-1731b801",
+     "fc-848861d0",
+     "fc-9fd10892"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "box-3",
+   "name": "JWT server authentication",
+   "family": "jwt",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth bearer; server authentication via Client Credentials Grant or signed JWT, usually using an app service account.",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Box JWT auth is app-key authentication. Box token downscoping exchanges an existing Box token, not an arbitrary external IdP token.",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Box support docs refer to an enterprise 'IP Allowlist' setting turned on per enterprise (not a plan feature). Its coverage of API calls with this credential is not documented; confirm with Box.",
+    "evidence_refs": [
+     "turn11search7",
+     "turn24search17",
+     "turn24search11",
+     "fc-de45bd2b"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "60 minutes",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "Use a signed JWT to mint a new access token; no refresh token.",
+    "evidence_refs": [
+     "turn3search35",
+     "turn20search16",
+     "turn20search7"
+    ]
+   },
+   "administration": {
+    "summary": "App scopes/access levels, administrator authorization, service-account/user access, token revocation and downscoped access tokens.",
+    "conditions": "Do not substitute Box Shield location/anomaly detection or corporate firewall allowlisting for API source-IP enforcement.",
+    "evidence_refs": [
+     "turn11search7",
+     "turn24search17",
+     "turn24search11"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Box says SSO is not used to authenticate JWT/server-side apps.",
+     "evidence_refs": [
+      "fc-f5a77dc1"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Tokens belong to the app's auto-generated Service Account, not a person.",
+     "evidence_refs": [
+      "fc-18742eec"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Admin Console > Platform > Platform Apps > Server Authentication Apps lists apps with authorization/enablement status, not individual keys or tokens.",
+     "evidence_refs": [
+      "fc-56b71a34"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "Fixed 60 min; read expires_in in the POST https://api.box.com/oauth2/token response (no refresh token)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-587cf300",
+      "fc-c3d9fc59"
+     ]
+    },
+    "reads": {
+     "ui": "Admin Console > Reports > Create Report > User Activity; filter Action types to Downloaded",
+     "api": "GET /2.0/events?stream_type=admin_logs&event_type=DOWNLOAD",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d07f45ad",
+      "fc-f47fec09",
+      "fc-ed3981b6",
+      "fc-9fd10892"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Credential is an RSA private key (JSON config file holding client secret, private key and passphrase). Signed assertion: iss=client_id, sub=enterprise or user ID, box_sub_type, jti, exp<=60s. Minted access token opaque, no refresh."
+    },
+    "log_sources": [
+     {
+      "name": "Box Enterprise Events (GET /events, stream_type=admin_logs / admin_logs_streaming)",
+      "notes": "Admin/co-admin with reporting permission. admin_logs: 1 year history; admin_logs_streaming: ~2 weeks live. Admin Console reports: 7 years."
+     },
+     {
+      "name": "Box Shield alerts (SHIELD_ALERT in enterprise events)",
+      "notes": "Shield add-on only. Suspicious location/session, anomalous download alerts with ip_info and service_name."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "created_by",
+      "log": "Box Enterprise Events",
+      "notes": "User mini object (id, name, login) acting; id 2 = Unknown User"
+     },
+     {
+      "field": "session_id",
+      "log": "Box Enterprise Events",
+      "notes": "User session; not populated on all events"
+     },
+     {
+      "field": "additional_details",
+      "log": "Box Enterprise Events",
+      "notes": "Event-specific details ('how a user performed an event'); per-event keys not fully documented"
+     },
+     {
+      "field": "kid",
+      "log": "JWT assertion header (not logged)",
+      "notes": "Public key ID used to sign"
+     },
+     {
+      "field": "iss",
+      "log": "JWT assertion (not logged)",
+      "notes": "App OAuth client ID"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "APPLICATION_CREATED",
+      "stage": "create",
+      "notes": "App created"
+     },
+     {
+      "event": "APPLICATION_PUBLIC_KEY_ADDED",
+      "stage": "create",
+      "notes": "New signing public key added"
+     },
+     {
+      "event": "APPLICATION_PUBLIC_KEY_DELETED",
+      "stage": "revoke",
+      "notes": "Public key removed"
+     },
+     {
+      "event": "ENTERPRISE_APP_AUTHORIZATION_UPDATE",
+      "stage": "change",
+      "notes": "JWT app authorized or reauthorized"
+     },
+     {
+      "event": "CONTENT_ACCESS",
+      "stage": "use",
+      "notes": "Programmatic access by a Box application"
+     },
+     {
+      "event": "DOWNLOAD",
+      "stage": "use",
+      "notes": "File download"
+     },
+     {
+      "event": "OAUTH2_ACCESS_TOKEN_REVOKE",
+      "stage": "revoke",
+      "notes": "Access token revoked"
+     }
+    ],
+    "correlation_keys": [
+     "created_by.id",
+     "created_by.login",
+     "ip_address",
+     "session_id",
+     "event_type",
+     "created_at",
+     "action_by",
+     "additional_details"
+    ],
+    "anomaly_cues": [
+     "APPLICATION_PUBLIC_KEY_ADDED not matched by a change ticket (attacker persistence key)",
+     "Service account or impersonated users active from IPs outside known server ranges",
+     "JWT app acting as many different users (box_sub_type=user) in a short window",
+     "ENTERPRISE_APP_AUTHORIZATION_UPDATE just before scope-heavy activity",
+     "Activity continuing after APPLICATION_PUBLIC_KEY_DELETED"
+    ],
+    "containment": {
+     "steps": "Delete the compromised public key in Developer Console (Add and Manage Public Keys) and rotate client secret; revoke live tokens via POST /oauth2/revoke; admin disables/deauthorizes the server app in Admin Console.",
+     "kills_existing": "unknown",
+     "notes": "Max two keypairs; check both. Removing a key blocks new assertions; issued access tokens' fate after key deletion is not documented."
+    },
+    "sample_query": {
+     "language": "Box Events API (GET /events)",
+     "query": "GET https://api.box.com/2.0/events?stream_type=admin_logs&event_type=APPLICATION_PUBLIC_KEY_ADDED,APPLICATION_PUBLIC_KEY_DELETED,ENTERPRISE_APP_AUTHORIZATION_UPDATE&created_after=2026-09-12T00:00:00-00:00&limit=500",
+     "purpose": "Track JWT signing-key and authorization changes for persistence"
+    },
+    "unknown": [
+     "Event field identifying which app (client_id) or key ID an event relates to",
+     "additional_details keys for APPLICATION_PUBLIC_KEY_* events",
+     "Whether JWT token minting is logged"
+    ],
+    "evidence_refs": [
+     "fc-9fd10892",
+     "fc-ed3981b6",
+     "fc-a4de07e3",
+     "fc-62c7849a",
+     "fc-0023630b",
+     "fc-e149f7c6",
+     "fc-c3d9fc59",
+     "fc-d5097aa0",
+     "fc-6ece88bb",
+     "fc-affade7e",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /users/me",
+      "reveals": "identity; for JWT apps defaults to the app's Service Account (As-User header can switch identity)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1000 API requests/minute per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Read event emission not documented"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /folders/0/items",
+      "reveals": "items under root; traverse tree",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1000/min per user; max 1000/page",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Listing read event not documented"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /files/{file_id}/content",
+      "reveals": "file contents in binary",
+      "bulk": true,
+      "scope": "root_readonly",
+      "rate_limit": "1000/min per user",
+      "logged": "yes",
+      "log_event": "DOWNLOAD",
+      "log_notes": "Enterprise events admin_logs; 1yr historical / 2wk streaming / 7yr reports"
+     }
+    ],
+    "unknown": [
+     "Whether reads produce events",
+     "Whether As-User impersonation is distinguishable in event actor fields"
+    ],
+    "evidence_refs": [
+     "fc-c476955c",
+     "fc-1731b801",
+     "fc-848861d0",
+     "fc-9fd10892"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "box-4",
+   "name": "App Token (Limited Access App)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "legacy",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Fixed bearer token generated in the Developer Console for a Limited Access App. It acts as the app's service account and is mainly intended for Box View previews.",
+    "evidence_refs": [
+     "fc-0a36d67a",
+     "turn3search35",
+     "fc-35bc1ca7"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Manually generated static token; no external identity exchange is documented. The token can be the subject token for Box downscoping.",
+    "evidence_refs": [
+     "fc-35bc1ca7"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "A Box staff community answer describes an enterprise IP allowlist that narrows both web app and API access, with no per-app option. Current official documentation of its coverage for App Token calls was not found; confirm with Box.",
+    "evidence_refs": [
+     "fc-4465fe85"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Set per token: auto-expire or never expire",
+    "evidence_refs": [
+     "fc-f9c36c74"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "not_applicable",
+    "summary": "The token is reused until it expires or is revoked; replace it by generating the secondary token, switching over, then revoking the primary.",
+    "evidence_refs": [
+     "fc-2c128aec"
+    ]
+   },
+   "administration": {
+    "summary": "Developer creates a Platform App; an enterprise admin must authorize it in the Admin Console before tokens can be generated. Two tokens (primary and secondary) may be active and each can be revoked in the console.",
+    "conditions": "Box calls these legacy Limited Access Apps and says the approach is being replaced by CCG and JWT, which support all App Token endpoints plus 150 more. Whether new App Token apps can still be created is not stated.",
+    "evidence_refs": [
+     "fc-f9c36c74",
+     "fc-35bc1ca7",
+     "fc-2c128aec"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "App Tokens are server-side authentication, which Box says does not use SSO.",
+     "evidence_refs": [
+      "fc-0a36d67a",
+      "fc-f5a77dc1"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "App Tokens are restricted to the application's Service Account.",
+     "evidence_refs": [
+      "fc-0a36d67a"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Admin Console > Platform > Platform Apps > Server Authentication Apps lists apps with authorization/enablement status, not individual keys or tokens.",
+     "evidence_refs": [
+      "fc-56b71a34"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Developer Console > (app) > Configuration > Primary Access Token > Generate Key; choose auto-expire or never",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-42bcb090"
+     ]
+    },
+    "reads": {
+     "ui": "Admin Console > Reports > Create Report > User Activity; filter Action types to Downloaded",
+     "api": "GET /2.0/events?stream_type=admin_logs&event_type=DOWNLOAD",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d07f45ad",
+      "fc-f47fec09",
+      "fc-ed3981b6",
+      "fc-9fd10892"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Fixed, long-lived Primary/Secondary App Token; may be set to expire or never expire. No documented prefix; no GitHub secret scanning pattern."
+    },
+    "log_sources": [
+     {
+      "name": "Box Enterprise Events (GET /events, stream_type=admin_logs / admin_logs_streaming)",
+      "notes": "Admin/co-admin with reporting permission. admin_logs: 1 year history; admin_logs_streaming: ~2 weeks live. Admin Console reports: 7 years."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "created_by",
+      "log": "Box Enterprise Events",
+      "notes": "User mini object (id, name, login) acting; id 2 = Unknown User"
+     },
+     {
+      "field": "session_id",
+      "log": "Box Enterprise Events",
+      "notes": "User session; not populated on all events"
+     },
+     {
+      "field": "additional_details",
+      "log": "Box Enterprise Events",
+      "notes": "Event-specific details ('how a user performed an event'); per-event keys not fully documented"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "APPLICATION_CREATED",
+      "stage": "create",
+      "notes": "App created"
+     },
+     {
+      "event": "PREVIEW",
+      "stage": "use",
+      "notes": "Previewed (Box View use case)"
+     },
+     {
+      "event": "CONTENT_ACCESS",
+      "stage": "use",
+      "notes": "Programmatic access by a Box application"
+     },
+     {
+      "event": "DOWNLOAD",
+      "stage": "use",
+      "notes": "File download"
+     }
+    ],
+    "correlation_keys": [
+     "created_by.id",
+     "created_by.login",
+     "ip_address",
+     "session_id",
+     "event_type",
+     "created_at",
+     "action_by",
+     "additional_details"
+    ],
+    "anomaly_cues": [
+     "App service account doing anything other than upload/preview (e.g. collaborations, shared links)",
+     "Use from IPs outside the Box View host's egress",
+     "Use of a non-expiring token long after the integration was retired",
+     "Both Primary and Secondary tokens in use at once (one may be leaked)"
+    ],
+    "containment": {
+     "steps": "Regenerate/remove the Primary or Secondary App Token in Developer Console > Configuration; admin disables the app in Admin Console.",
+     "kills_existing": "unknown",
+     "notes": "Box docs do not document revoking App Tokens or the effect of regeneration; verify in a test app."
+    },
+    "sample_query": {
+     "language": "Box Events API (GET /events)",
+     "query": "GET https://api.box.com/2.0/events?stream_type=admin_logs&event_type=PREVIEW,DOWNLOAD,CONTENT_ACCESS&created_after=2026-09-12T00:00:00-00:00&limit=500",
+     "purpose": "Review content access; filter created_by.login to the Limited Access App service account"
+    },
+    "unknown": [
+     "App Token revoke/regenerate procedure and event",
+     "Event field identifying the app",
+     "Whether POST /oauth2/revoke works on App Tokens"
+    ],
+    "evidence_refs": [
+     "fc-9fd10892",
+     "fc-ed3981b6",
+     "fc-a4de07e3",
+     "fc-0a36d67a",
+     "fc-f9c36c74",
+     "fc-affade7e",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /users/me",
+      "reveals": "the app's Service Account identity (App Token has access only to its own account)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1000 API requests/minute per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Read event emission not documented; scope limited to app's own account"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /folders/0/items",
+      "reveals": "items in the app's own account only",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1000/min per user; max 1000/page",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Listing read event not documented"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /files/{file_id}/content",
+      "reveals": "file contents in binary (within the app's own account)",
+      "bulk": true,
+      "scope": "root_readonly",
+      "rate_limit": "1000/min per user",
+      "logged": "yes",
+      "log_event": "DOWNLOAD",
+      "log_notes": "Enterprise events admin_logs record downloads as 'Downloaded'"
+     }
+    ],
+    "unknown": [
+     "App Token is scoped to the app's own account, so it cannot enumerate other users' content",
+     "Whether reads produce events"
+    ],
+    "evidence_refs": [
+     "fc-0a36d67a",
+     "fc-c476955c",
+     "fc-848861d0",
+     "fc-9fd10892"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "box-5",
+   "name": "Developer token",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Ordinary Box access token generated in the Developer Console for testing. It acts as the user who was signed in to the console when it was generated.",
+    "evidence_refs": [
+     "fc-f445ffdd",
+     "turn3search35"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Generated manually in the console; no external identity exchange applies.",
+    "evidence_refs": [
+     "fc-f445ffdd"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "A Box staff community answer describes an enterprise IP allowlist that narrows both web app and API access. Current official documentation of its coverage for developer-token calls was not found; confirm with Box.",
+    "evidence_refs": [
+     "fc-4465fe85"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 3600,
+    "configurable": "no",
+    "summary": "60 minutes",
+    "evidence_refs": [
+     "fc-f445ffdd",
+     "turn3search35"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "Cannot be refreshed programmatically; generate a new token in the Developer Console.",
+    "evidence_refs": [
+     "fc-f445ffdd"
+    ]
+   },
+   "administration": {
+    "summary": "Any developer with access to the app's Configuration tab can generate one; it carries that user's access within the app's scopes. Revoking it in the console also deletes all webhooks the app created.",
+    "conditions": "Box says developer tokens are for development and testing only and should not be used in production.",
+    "evidence_refs": [
+     "fc-f445ffdd"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Fixed 60 min, not configurable or refreshable (Developer Console > Configuration > Generate Developer Token)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-38383315"
+     ]
+    },
+    "reads": {
+     "ui": "Admin Console > Reports > Create Report > User Activity; filter Action types to Downloaded",
+     "api": "GET /2.0/events?stream_type=admin_logs&event_type=DOWNLOAD",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d07f45ad",
+      "fc-f47fec09",
+      "fc-ed3981b6",
+      "fc-9fd10892"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Ordinary opaque access token; expires after 60 minutes; cannot be refreshed. Acts as the console user."
+    },
+    "log_sources": [
+     {
+      "name": "Box Enterprise Events (GET /events, stream_type=admin_logs / admin_logs_streaming)",
+      "notes": "Admin/co-admin with reporting permission. admin_logs: 1 year history; admin_logs_streaming: ~2 weeks live. Admin Console reports: 7 years."
+     },
+     {
+      "name": "Box Shield alerts (SHIELD_ALERT in enterprise events)",
+      "notes": "Shield add-on only. Suspicious location/session, anomalous download alerts with ip_info and service_name."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "created_by",
+      "log": "Box Enterprise Events",
+      "notes": "User mini object (id, name, login) acting; id 2 = Unknown User"
+     },
+     {
+      "field": "session_id",
+      "log": "Box Enterprise Events",
+      "notes": "User session; not populated on all events"
+     },
+     {
+      "field": "additional_details",
+      "log": "Box Enterprise Events",
+      "notes": "Event-specific details ('how a user performed an event'); per-event keys not fully documented"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "CONTENT_ACCESS",
+      "stage": "use",
+      "notes": "Programmatic access by a Box application"
+     },
+     {
+      "event": "DOWNLOAD",
+      "stage": "use",
+      "notes": "File download"
+     },
+     {
+      "event": "OAUTH2_ACCESS_TOKEN_REVOKE",
+      "stage": "revoke",
+      "notes": "Access token revoked; coverage for developer tokens not documented"
+     }
+    ],
+    "correlation_keys": [
+     "created_by.id",
+     "created_by.login",
+     "ip_address",
+     "session_id",
+     "event_type",
+     "created_at",
+     "action_by",
+     "additional_details"
+    ],
+    "anomaly_cues": [
+     "Developer's account making API calls from an IP not matching their recent LOGIN events",
+     "Bursts of API-style activity under a human admin/developer account",
+     "Repeated short-lived activity windows (~60 min) suggesting regenerated developer tokens",
+     "Developer tokens generated on an app in production use (webhooks lost on revoke)"
+    ],
+    "containment": {
+     "steps": "Revoke the token in Developer Console or via POST /oauth2/revoke; it also expires on its own after 60 minutes. Disable the developer's account or the app if generation is the problem.",
+     "kills_existing": "yes",
+     "notes": "Revoking a developer token deletes all webhooks created by that app."
+    },
+    "sample_query": {
+     "language": "Box Events API (GET /events)",
+     "query": "GET https://api.box.com/2.0/events?stream_type=admin_logs&event_type=DOWNLOAD,CONTENT_ACCESS&created_after=2026-09-12T00:00:00-00:00&limit=500",
+     "purpose": "Review programmatic access by the developer user; filter created_by.login and compare ip_address to their LOGIN events"
+    },
+    "unknown": [
+     "Event recording developer token generation",
+     "Field distinguishing developer-token use from the user's normal sessions"
+    ],
+    "evidence_refs": [
+     "fc-9fd10892",
+     "fc-ed3981b6",
+     "fc-a4de07e3",
+     "fc-62c7849a",
+     "fc-f445ffdd",
+     "fc-d5097aa0",
+     "fc-b85837df",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /users/me",
+      "reveals": "the user who was logged into the Developer Console when the token was generated",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1000 API requests/minute per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Read event emission not documented; token expires after 60 minutes"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /folders/0/items",
+      "reveals": "items the console user can reach; traverse tree",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "1000/min per user; max 1000/page",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Listing read event not documented"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /files/{file_id}/content",
+      "reveals": "file contents in binary",
+      "bulk": true,
+      "scope": "root_readonly",
+      "rate_limit": "1000/min per user",
+      "logged": "yes",
+      "log_event": "DOWNLOAD",
+      "log_notes": "Enterprise events admin_logs record downloads; actor is the console user"
+     }
+    ],
+    "unknown": [
+     "Whether reads produce events"
+    ],
+    "evidence_refs": [
+     "fc-f445ffdd",
+     "fc-c476955c",
+     "fc-848861d0",
+     "fc-9fd10892"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

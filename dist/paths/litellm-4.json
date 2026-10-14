@@ -1,0 +1,312 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "litellm",
+      "name": "LiteLLM",
+      "scope_notes": "Covers LiteLLM Proxy (AI Gateway). Self-hosted open-source proxy (MIT) with an Enterprise license gating JWT auth, IP filtering, audit logs and key rotation; all controls are operator config on your own deployment.",
+      "controls": [
+        {
+          "name": "allowed_ips",
+          "effect": "limit_network",
+          "applies_to": [
+            "litellm-1",
+            "litellm-2",
+            "litellm-3",
+            "litellm-4"
+          ],
+          "what": "Only listed client IPs can call proxy endpoints; others get 403.",
+          "setting": "general_settings.allowed_ips",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-3e5f4bbf"
+          ]
+        },
+        {
+          "name": "JWT audience/issuer validation",
+          "effect": "limit_scope",
+          "applies_to": [
+            "litellm-4"
+          ],
+          "what": "JWT_AUDIENCE/JWT_ISSUER or litellm_jwtauth.issuers restrict which tokens are accepted; unset means any token from listed providers is accepted.",
+          "setting": "JWT_AUDIENCE, JWT_ISSUER, litellm_jwtauth.issuers",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7ad6da80"
+          ]
+        },
+        {
+          "name": "enable_jwt_auth",
+          "effect": "disable",
+          "applies_to": [
+            "litellm-4"
+          ],
+          "what": "JWT tokens are only checked when this config setting is on; leaving it unset means JWT auth is not accepted.",
+          "setting": "general_settings.enable_jwt_auth in config.yaml",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7ad6da80"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether /key/delete and /key/block take effect instantly or after an auth-cache TTL (only SCIM deprovisioning is documented as clearing the cache).",
+        "Master key expiry and SCIM token expiry, rotation and revocation steps.",
+        "Whether management GET calls (/key/info, /key/list, /spend/logs) are logged anywhere besides server logs.",
+        "Whether allowed_ips applies to /scim routes."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "litellm-4",
+      "provider_id": "litellm",
+      "name": "OIDC / JWT-based auth (incl. Kubernetes ServiceAccount tokens)",
+      "family": "jwt",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "With enable_jwt_auth, the proxy accepts IdP-signed JWTs as bearer tokens, validated against configured JWKS URLs; claims map to users, teams and admin scope.",
+        "evidence_refs": [
+          "fc-7ad6da80"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "Any OIDC issuer with JWKS, including Kubernetes service account tokens. Audience/issuer checks are optional unless configured.",
+        "evidence_refs": [
+          "fc-7ad6da80"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Proxy-wide allowed_ips only (Enterprise).",
+        "evidence_refs": [
+          "fc-3e5f4bbf"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Set by the IdP via exp; proxy checks exp",
+        "evidence_refs": [
+          "fc-7ad6da80"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "IdP token exp",
+        "summary": "Client obtains a new JWT from its IdP.",
+        "evidence_refs": [
+          "fc-7ad6da80"
+        ]
+      },
+      "administration": {
+        "summary": "Configured in config.yaml (enable_jwt_auth, JWT_PUBLIC_KEY_URL, JWT_AUDIENCE, litellm_jwtauth.issuers).",
+        "conditions": "Enterprise license.",
+        "evidence_refs": [
+          "fc-7ad6da80"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Tokens are issued by the operator's own OpenID provider, so IdP policy applies at issuance; LiteLLM only verifies signature and claims at use.",
+          "evidence_refs": [
+            "fc-7ad6da80"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "config.yaml general_settings: enable_jwt_auth: true; env JWT_PUBLIC_KEY_URL=<IdP JWKS URL>, JWT_AUDIENCE; or litellm_jwtauth.issuers per issuer. IdP MFA/SSO policy applies at token issuance.",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-7ad6da80"
+          ]
+        },
+        "expiry": {
+          "ui": "Set token lifetime at the OpenID provider (exp claim); proxy verifies exp on every request",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-7ad6da80"
+          ]
+        },
+        "reads": {
+          "ui": "Admin UI > Logs",
+          "api": "GET /spend/logs/v2?start_date=...&end_date=...&user_id=<value>",
+          "cli": null,
+          "evidence_refs": [
+            "fc-cd742826",
+            "fc-39f9c861"
+          ]
+        },
+        "kill": {
+          "ui": "Remove the issuer from JWT_PUBLIC_KEY_URL / litellm_jwtauth.issuers in config, or rotate IdP signing keys; restart the proxy or wait public_key_ttl (default 600s)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-7ad6da80"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "IdP-issued JWT (eyJ...)"
+        },
+        "log_sources": [
+          {
+            "name": "Audit Logs (LiteLLM_AuditLog)",
+            "notes": "Enterprise; on by default with license, else store_audit_logs: true. UI Logs -> Audit Logs; export via audit_log_callbacks (e.g. S3). Retention is your DB."
+          },
+          {
+            "name": "Spend logs (LiteLLM_SpendLogs)",
+            "notes": "Per-request rows with key hash; no prompt content by default; can be disabled; retention via maximum_spend_logs_retention_period."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "user_api_key_user_id / user_api_key_team_id",
+            "log": "Spend logs",
+            "notes": "Mapped from JWT claims"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "JWT sub / team claim",
+          "user_api_key_user_id"
+        ],
+        "anomaly_cues": [
+          "Tokens from unexpected issuer when JWT_AUDIENCE/JWT_ISSUER unset"
+        ],
+        "containment": {
+          "steps": "Revoke at the IdP, remove the issuer/JWKS URL from config, or rotate signing keys.",
+          "kills_existing": "partial",
+          "notes": "Issued JWTs remain valid until exp unless the issuer is removed; JWKS cached for public_key_ttl."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact log fields for JWT-authenticated requests"
+        ],
+        "evidence_refs": [
+          "fc-7ad6da80"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /v1/chat/completions",
+            "reveals": "Model access",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "LiteLLM_SpendLogs row",
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "POST /key/generate",
+            "reveals": "Mint a virtual key with the JWT (shown in docs)",
+            "bulk": false,
+            "scope": "litellm_proxy_admin (for admin)",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "create (LiteLLM_VerificationToken)",
+            "log_notes": "Audit logs need Enterprise/store_audit_logs"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-7ad6da80",
+          "fc-a6830e3b",
+          "fc-34776e02"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-34776e02",
+      "title": "Audit Logs",
+      "url": "https://docs.litellm.ai/docs/proxy/multiple_admins",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-39f9c861",
+      "title": "Getting Started with UI Logs",
+      "url": "https://docs.litellm.ai/docs/proxy/ui_logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3e5f4bbf",
+      "title": "IP Address Filtering",
+      "url": "https://docs.litellm.ai/docs/proxy/ip_address",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7ad6da80",
+      "title": "OIDC - JWT-based Auth",
+      "url": "https://docs.litellm.ai/docs/proxy/token_auth",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a6830e3b",
+      "title": "What is stored in the DB",
+      "url": "https://docs.litellm.ai/docs/proxy/db_info",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cd742826",
+      "title": "Spend Tracking",
+      "url": "https://docs.litellm.ai/docs/proxy/cost_tracking",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

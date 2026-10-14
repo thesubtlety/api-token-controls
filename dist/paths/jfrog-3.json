@@ -1,0 +1,353 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "jfrog",
+      "name": "JFrog",
+      "scope_notes": "Covers JFrog Platform (Cloud/SaaS). JFrog Cloud SaaS; IP allowlist, OIDC integration and MyJFrog API tokens need Enterprise X or Enterprise+, log streaming needs Enterprise+, Cloud Log Collection is on all SaaS licenses; several token thresholds are documented only as self-hosted YAML settings.",
+      "controls": [
+        {
+          "name": "Disable API Key Usage",
+          "effect": "disable",
+          "applies_to": [
+            "jfrog-3"
+          ],
+          "what": "Blocks authentication with existing API keys.",
+          "setting": "Administration > Security > General > Disable API Key Usage",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-df1d93bf"
+          ]
+        },
+        {
+          "name": "IP/CIDR Allowlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "jfrog-1",
+            "jfrog-2",
+            "jfrog-3",
+            "jfrog-4"
+          ],
+          "what": "Only listed IPs/JPDs can reach the JPD.",
+          "setting": "MyJFrog > Security > Allowlist; MyJFrog IP allowlist API",
+          "plan": "Enterprise X or Enterprise+",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-54c4dbf6"
+          ]
+        },
+        {
+          "name": "Allow Created Users Access To Profile Page",
+          "effect": "disable",
+          "applies_to": [
+            "jfrog-2",
+            "jfrog-3"
+          ],
+          "what": "When cleared, users auto-created through SAML cannot reach their profile page, where identity tokens and API keys are generated.",
+          "setting": "Administration > Authentication Providers > SAML SSO settings",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6f4d8fc5",
+            "fc-b123d5cd"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "jfrog-3",
+          "what": "Admins cannot monitor or manage individual users' API keys (only the global disable and a user list).",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-df1d93bf"
+          ]
+        },
+        {
+          "path_id": "jfrog-3",
+          "what": "API keys have no expiry.",
+          "kind": "expiry",
+          "evidence_refs": [
+            "fc-df1d93bf"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether SaaS customers can change token.max-expiry, token.allow-refreshable or revocable-expiry-threshold (documented only as Access YAML settings).",
+        "A setting to stop non-admin users creating identity tokens.",
+        "Default and maximum lifetime of UI-generated identity tokens.",
+        "Whether the IP allowlist covers the MyJFrog portal API.",
+        "Whether MyJFrog audit logs record API token generation (event names not listed).",
+        "Reference token length: Access Tokens page says 128 characters, Identity Tokens page says 64."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "jfrog-3",
+      "provider_id": "jfrog",
+      "name": "API keys (deprecated)",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Per-user static key sent in the X-JFrog-Art-Api header or as the basic-auth password. Creation is disabled since Artifactory 7.98, but existing keys keep working unless an admin turns on 'Disable API Key Usage'.",
+        "evidence_refs": [
+          "fc-df1d93bf"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Docs do not address SSO interaction for API keys.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "JPD-wide MyJFrog allowlist.",
+        "evidence_refs": [
+          "fc-54c4dbf6"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Never expires",
+        "evidence_refs": [
+          "fc-df1d93bf"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "Static until revoked; migrate to reference tokens.",
+        "evidence_refs": [
+          "fc-df1d93bf"
+        ]
+      },
+      "administration": {
+        "summary": "Admin can block all API key use with one checkbox (Security > General > Disable API Key Usage, off by default) and download a CSV of users still using API keys.",
+        "conditions": "Cloud Artifactory 7.107.1+ for the checkbox.",
+        "evidence_refs": [
+          "fc-df1d93bf"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Cloud admins can download a CSV of users still using API keys, but cannot otherwise monitor or manage users' keys.",
+          "evidence_refs": [
+            "fc-df1d93bf"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Administration > User Management > Users > banner download link (CSV of users using API keys)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-df1d93bf"
+          ]
+        },
+        "reads": {
+          "ui": "Administration > Artifactory > System Logs (access log): filter [ACCEPTED DOWNLOAD] with auth type APIKEY",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-2304a161"
+          ]
+        },
+        "kill": {
+          "ui": "Administration > Security > General > Disable API Key Usage",
+          "api": "DELETE /artifactory/api/security/apiKey/{username}; DELETE /artifactory/api/security/apiKey?deleteAll=1 (all keys)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-df1d93bf",
+            "fc-747f7c71",
+            "fc-f2d2d194"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "AKCp",
+          "notes": "73 chars: AKCp + 69 alphanumerics."
+        },
+        "log_sources": [
+          {
+            "name": "Artifactory Access Log",
+            "notes": "Auth type APIKEY."
+          },
+          {
+            "name": "API key user CSV",
+            "notes": "User Management > Users banner (Cloud 7.63.5+)."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "type APIKEY",
+            "log": "Access Log",
+            "notes": "Per-user only; one key per user."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "username",
+          "IP"
+        ],
+        "anomaly_cues": [
+          "Any APIKEY auth after migration"
+        ],
+        "containment": {
+          "steps": "Enable Disable API Key Usage; revoke the user's key.",
+          "kills_existing": "yes",
+          "notes": "Checkbox blocks API key usage platform-wide."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-b123d5cd",
+          "fc-df1d93bf",
+          "fc-2304a161"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "GET /artifactory/api/repositories",
+            "reveals": "repository list",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Request log; access log shows APIKEY type for logins."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://{jfrog_url}/artifactory/{repoKey}/{filePath} (Retrieve Artifact)",
+            "reveals": "artifact contents",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "ACCEPTED DOWNLOAD",
+            "log_notes": "Artifactory access log records downloads with user name, IP and auth type APIKEY."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-2304a161",
+          "fc-036a31be",
+          "fc-a8def87a",
+          "fc-d4d07605"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-036a31be",
+      "title": "JFrog Cloud Log Streaming",
+      "url": "https://docs.jfrog.com/administration/docs/jfrog-cloud-log-streaming",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2304a161",
+      "title": "Access Log",
+      "url": "https://docs.jfrog.com/administration/docs/access-log",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-54c4dbf6",
+      "title": "Configure Cloud Security",
+      "url": "https://docs.jfrog.com/administration/docs/configure-cloud-security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6f4d8fc5",
+      "title": "SAML SSO",
+      "url": "https://docs.jfrog.com/administration/docs/saml-sso",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-747f7c71",
+      "title": "Revoke User API Key",
+      "url": "https://docs.jfrog.com/administration/reference/revokeuserapikey",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8def87a",
+      "title": "Get Repositories by Type and Project",
+      "url": "https://docs.jfrog.com/artifactory/reference/getrepositoriesbytypeandproject",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b123d5cd",
+      "title": "Identity Tokens",
+      "url": "https://docs.jfrog.com/user-management/docs/identity-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d4d07605",
+      "title": "Retrieve Artifact",
+      "url": "https://docs.jfrog.com/artifactory/reference/retrieveartifact",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-df1d93bf",
+      "title": "API Key",
+      "url": "https://docs.jfrog.com/user-management/docs/api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f2d2d194",
+      "title": "Revoke API Key",
+      "url": "https://docs.jfrog.com/administration/reference/revokeapikey",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

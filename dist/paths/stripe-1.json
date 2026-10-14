@@ -1,0 +1,551 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "scope_notes": "Separate Dashboard SSO/session controls from key access policies. OAuth Connect and Apps are different authorization surfaces.",
+      "controls": [
+        {
+          "name": "Restricted API key permissions",
+          "effect": "limit_scope",
+          "applies_to": [
+            "stripe-1"
+          ],
+          "what": "Each resource is set to None, Read or Write; default None.",
+          "setting": "Developers > API keys > Create restricted key",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-7d8d1fd2"
+          ],
+          "quote": "For each resource you want the new key to access, select the appropriate permission: None, Read, or Write."
+        },
+        {
+          "name": "Access policies (IP addresses / Advanced)",
+          "effect": "limit_network",
+          "applies_to": [
+            "stripe-1",
+            "stripe-4"
+          ],
+          "what": "Blocks key use outside allowed IPs/CIDRs, ASNs or countries, or from VPNs, proxies and Tor.",
+          "setting": "Developers > Access policies; API keys > key ⋯ > Manage access policy",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search3"
+          ],
+          "quote": "If someone attempts a request using a key they can’t access, Stripe blocks the request and notifies you."
+        },
+        {
+          "name": "Expire API key",
+          "effect": "revoke",
+          "applies_to": [
+            "stripe-1"
+          ],
+          "what": "Expiring a secret or restricted key stops all API calls with it.",
+          "setting": "Developers > API keys > key ⋯ > Expire key",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search3"
+          ],
+          "quote": "Code that uses the expired key can no longer make API calls."
+        },
+        {
+          "name": "Rotate API key (scheduled)",
+          "effect": "require_rotation",
+          "applies_to": [
+            "stripe-1"
+          ],
+          "what": "Revokes a key with a replacement, immediately or at a chosen expiration up to 7 days.",
+          "setting": "Developers > API keys > key ⋯ > Rotate key",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search3"
+          ],
+          "quote": "You can also schedule an API key to rotate after a certain time."
+        },
+        {
+          "name": "Limited access for dormant keys",
+          "effect": "other",
+          "applies_to": [
+            "stripe-1"
+          ],
+          "what": "Keys unused for transfers/payouts for 180 days lose those abilities until restored.",
+          "setting": "Automatic; restore via API keys > key ⋯ > Restore access",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search3"
+          ],
+          "quote": "An API key might have its access limited if it hasn’t been used to create transfers, payouts, or update payout destinations for over 180 days."
+        },
+        {
+          "name": "Team roles (API key management)",
+          "effect": "limit_resources",
+          "applies_to": [
+            "stripe-1"
+          ],
+          "what": "Only Administrator, Super Administrator and Developer roles can create, view, edit and delete API keys.",
+          "setting": "Settings > Team and security > Team",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-a440ddd9"
+          ],
+          "quote": "This role can create secret keys, which grant access to almost all API resources."
+        },
+        {
+          "name": "Approval rules (agent-tagged keys)",
+          "effect": "other",
+          "applies_to": [
+            "stripe-1",
+            "stripe-4"
+          ],
+          "what": "Pauses or blocks sensitive actions by agent-tagged keys until a reviewer approves; default rules cover refunds and subscription cancellations.",
+          "setting": "Settings > Approvals > Create rule (Administrator by default)",
+          "plan": null,
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-55e7a044"
+          ],
+          "quote": "Stripe maintains default approval rules for the following sensitive actions taken by agent-tagged API keys"
+        },
+        {
+          "name": "Expire managed API keys",
+          "effect": "revoke",
+          "applies_to": [
+            "stripe-1"
+          ],
+          "what": "The user can expire app-managed keys at any time, and choose keep or expire on uninstall.",
+          "setting": "Dashboard API keys page",
+          "plan": "Preview",
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-7eb4b73e"
+          ],
+          "quote": "User can expire managed keys immediately without uninstall from the Stripe Dashboard."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "stripe-1",
+          "what": "Unrestricted secret keys cannot be permission-limited.",
+          "evidence_refs": [
+            "turn5search3"
+          ],
+          "quote": "Because you can’t limit their permissions, we don’t recommend using secret keys for new use cases",
+          "kind": "other"
+        }
+      ],
+      "controls_unknown": [
+        "No account setting found to forbid creating unrestricted secret keys or to require key expiry.",
+        "Whether access policies and approval rules can be attached to organization API keys.",
+        "Whether uninstalling a Stripe App immediately revokes its OAuth refresh tokens is not stated.",
+        "Which organization roles can create org API keys or service principals, and how to disable a service principal.",
+        "Approval rules' actor condition for service principals is mentioned on the service principals page but not described on the approvals page."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "stripe-1",
+      "provider_id": "stripe",
+      "name": "Secret / restricted API key",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Account-level secret (sk_live_/sk_test_) or restricted (rk_live_/rk_test_) API key, sent in the Authorization header on each request. This includes managed keys that a hosting platform or an approved Stripe App creates through the API, and restricted keys a Stripe App generates for a user at install. Organization keys and OAuth tokens are separate paths.",
+        "evidence_refs": [
+          "turn5search3",
+          "turn5search15"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "turn5search3",
+          "turn5search15"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Access policies, which replaced the older per-key IP address restrictions, can be attached to standard (secret) and restricted keys. A policy either allows IPv4 addresses/CIDR ranges, or (advanced) allows ASNs and countries and blocks anonymous VPN, proxy and Tor sources. Stripe blocks requests that fail the policy.",
+        "evidence_refs": [
+          "turn5search3"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Until revoked/expired/rolled",
+        "evidence_refs": [
+          "turn5search3",
+          "turn5search15"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "The same key is reused until it is expired or rotated. A Dashboard rotation can keep the old key working for up to 7 days; managed keys are rotated by the managing platform.",
+        "evidence_refs": [
+          "turn5search3",
+          "turn5search15"
+        ]
+      },
+      "administration": {
+        "summary": "Restricted-key endpoint permissions, key access policies, rotation/revocation and request logs.",
+        "conditions": "Stripe recommends restricted keys over unrestricted secret keys. Managed API keys (preview) are created and rotated by a hosting platform such as Vercel, or by an approved Stripe App with the api_key_write permission; they appear on the API keys tab, can't be revealed, and the account owner can expire them at any time. On uninstall the user chooses whether to keep or expire them. Agent-tagged restricted keys are subject to approval rules. Dashboard SSO/session controls are separate from key access policies.",
+        "evidence_refs": [
+          "turn5search3",
+          "fc-07b7df86"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Keys belong to the account, not a user; Stripe tells you to rotate keys yourself when people with access leave.",
+          "evidence_refs": [
+            "turn5search3"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "The API keys page in the Dashboard (Standard keys and Restricted keys lists) shows all keys for the account.",
+          "evidence_refs": [
+            "turn5search3"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Developers > API keys > ⋯ on the key > View request logs (opens Workbench Logs); filter Method GET, API endpoint /v1/customers",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "turn5search3",
+            "fc-a3c07fae"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "sk_live_ | rk_live_ | sk_test_ | rk_test_",
+          "notes": "Prefixes documented by Stripe; body length/charset not documented, regex is a loose hunting pattern. GitHub secret scanning covers stripe_api_key (validity check), stripe_live_restricted_key, stripe_test_secret_key, stripe_test_restricted_key, stripe_legacy_api_key."
+        },
+        "log_sources": [
+          {
+            "name": "Activity Logs API (/v2/iam/activity_logs)",
+            "notes": "Public preview. Key lifecycle (api_key_created/updated/deleted/viewed) with actor and key details. 6-month retention; >=10 min delay; rotation events may be missing for some accounts. No IP field documented."
+          },
+          {
+            "name": "Dashboard security history",
+            "notes": "Dashboard view of the same security history; exact fields not documented."
+          },
+          {
+            "name": "Workbench request logs (per key: View request logs)",
+            "notes": "Per-request API logs filterable by date, status, method, endpoint, IP address, source, account, API version, error code/type. Retention not documented; no export API documented."
+          },
+          {
+            "name": "Events (/v1/events, webhooks)",
+            "notes": "Object changes caused by API calls; request.id ties event to request. 30-day list window."
+          },
+          {
+            "name": "Connect webhooks v2.iam.api_key.* (managed keys)",
+            "notes": "For app-managed keys: v2.iam.api_key.created/updated/rotated/expired on connected accounts."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.api_key.id",
+            "log": "Activity Logs API (v2.iam.activity_log)",
+            "notes": "API key that performed a security action (e.g., created another key)"
+          },
+          {
+            "field": "details.api_key.id",
+            "log": "Activity Logs API",
+            "notes": "Key that was created/updated/deleted/viewed (example id prefix mk_)"
+          },
+          {
+            "field": "details.api_key.new_key",
+            "log": "Activity Logs API",
+            "notes": "Replacement key id when rotated"
+          },
+          {
+            "field": "details.api_key.managed_by.application.id",
+            "log": "Activity Logs API",
+            "notes": "Application that manages the key (managed keys)"
+          },
+          {
+            "field": "request.id",
+            "log": "Activity Logs API / Event object",
+            "notes": "API request that instigated the action; pivot to Workbench request logs"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "api_key_created",
+            "stage": "create",
+            "notes": "Activity Logs; also emitted for rotation replacement"
+          },
+          {
+            "event": "api_key_viewed",
+            "stage": "use",
+            "notes": "Live key secret revealed in Dashboard; sandbox reveals not logged"
+          },
+          {
+            "event": "api_key_updated",
+            "stage": "change",
+            "notes": "Name/note/policy changes"
+          },
+          {
+            "event": "api_key_deleted",
+            "stage": "revoke",
+            "notes": "Old key on rotation or deletion"
+          },
+          {
+            "event": "v2.iam.api_key.created",
+            "stage": "create",
+            "notes": "Managed keys, Connect webhook"
+          },
+          {
+            "event": "v2.iam.api_key.rotated",
+            "stage": "change",
+            "notes": "Managed keys, Connect webhook"
+          },
+          {
+            "event": "v2.iam.api_key.expired",
+            "stage": "revoke",
+            "notes": "Managed keys, Connect webhook"
+          }
+        ],
+        "correlation_keys": [
+          "actor.api_key.id",
+          "details.api_key.id",
+          "request.id",
+          "context",
+          "actor.user.email",
+          "request.idempotency_key",
+          "account"
+        ],
+        "anomaly_cues": [
+          "Workbench requests for the key from an IP/ASN never seen before, or blocked by an access policy",
+          "api_key_viewed or api_key_created by a user outside the normal admin set, or right after a role change",
+          "api_key_created where actor.type=api_key (a key minting another key)",
+          "Key that was idle for months suddenly creating payouts/transfers or payout destinations",
+          "sk_/rk_ live key requests to endpoints outside the key's normal endpoint set (e.g., customers list export, refunds)",
+          "Old key still sending requests during the 7-day rotation grace window after a leak"
+        ],
+        "containment": {
+          "steps": "Dashboard > API keys > Rotate key with Expiration 'Now' (deletes old key) or Expire key. Managed keys: rotate in Dashboard or on hosting platform. Then review the key's request logs, and apply an access policy to the replacement key.",
+          "kills_existing": "yes",
+          "notes": "Rotation defaults allow old key to keep working up to 7 days; choose 'Now' for compromise. Keys are bearer secrets with no sessions, so expiry stops all further use. Stripe may proactively deactivate detected exposed keys."
+        },
+        "sample_query": {
+          "language": "Stripe Activity Logs API (HTTP GET)",
+          "query": "curl -G https://api.stripe.com/v2/iam/activity_logs -H \"Authorization: Bearer $RAK_ACTIVITY_LOGS_READ\" -H \"Stripe-Version: 2026-09-30.preview\" -d \"action_groups[]=api_key\"  # then flag type in (api_key_created, api_key_viewed) and actor.type=api_key",
+          "purpose": "Pull key lifecycle actions to find unexpected key creation or live-key reveals."
+        },
+        "unknown": [
+          "Exact sk_/rk_ token length/charset",
+          "Workbench request log retention and export/API access",
+          "Field names in Workbench request logs (only filter labels documented)",
+          "Whether Activity Log records the API key used on ordinary (non-security) requests",
+          "Dashboard security history field names",
+          "Logging of auth failures with an expired/invalid key"
+        ],
+        "evidence_refs": [
+          "fc-2941e80e",
+          "fc-9a5c39cc",
+          "fc-db791a2f",
+          "fc-a3c07fae",
+          "fc-239f2700",
+          "fc-1c64e0dd",
+          "turn5search3",
+          "fc-4f1a552a",
+          "fc-846e1fd4",
+          "fc-7eb4b73e",
+          "fc-8d958fb2"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /v1/customers",
+            "reveals": "Customer records (names, emails, metadata)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Workbench request log (Dashboard > Workbench > Logs), not Security history; retention not stated. Per-key view via the key's 'View request logs' menu."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-1562f317",
+          "fc-a3c07fae",
+          "turn5search3"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-07b7df86",
+      "title": "Managed API keys | Stripe Documentation",
+      "url": "https://docs.stripe.com/keys/managed-api-keys",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1562f317",
+      "title": "List all customers | Stripe API Reference",
+      "url": "https://docs.stripe.com/api/customers/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1c64e0dd",
+      "title": "List all events",
+      "url": "https://docs.stripe.com/api/events/list",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-239f2700",
+      "title": "The Event object",
+      "url": "https://docs.stripe.com/api/events/object",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2941e80e",
+      "title": "Activity logs",
+      "url": "https://docs.stripe.com/activity-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4f1a552a",
+      "title": "Best practices for managing secret API keys",
+      "url": "https://docs.stripe.com/keys-best-practices",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-55e7a044",
+      "title": "Set up two-party approvals",
+      "url": "https://docs.stripe.com/account/approvals",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7d8d1fd2",
+      "title": "Restricted API keys",
+      "url": "https://docs.stripe.com/keys/restricted-api-keys",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7eb4b73e",
+      "title": "Managed API keys",
+      "url": "https://docs.stripe.com/stripe-apps/api-authentication/managed-api-keys",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8d958fb2",
+      "title": "Protecting against compromised API keys",
+      "url": "https://support.stripe.com/questions/protecting-against-compromised-api-keys",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9a5c39cc",
+      "title": "The Activity Log object",
+      "url": "https://docs.stripe.com/api/v2/iam/activity-logs/object?api-version=2026-09-30.preview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a3c07fae",
+      "title": "How Workbench works",
+      "url": "https://docs.stripe.com/workbench/overview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a440ddd9",
+      "title": "User roles",
+      "url": "https://docs.stripe.com/get-started/account/teams/roles",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-db791a2f",
+      "title": "List Activity Logs",
+      "url": "https://docs.stripe.com/api/v2/iam/activity-logs/list?api-version=2026-09-30.preview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search15",
+      "title": "OAuth 2.0 | Stripe Documentation",
+      "url": "https://docs.stripe.com/stripe-apps/api-authentication/oauth",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search3",
+      "title": "API keys | Stripe Documentation",
+      "url": "https://docs.stripe.com/keys",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

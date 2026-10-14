@@ -1,0 +1,373 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "mulesoft",
+      "name": "MuleSoft Anypoint",
+      "scope_notes": "Covers MuleSoft Anypoint Platform. Anypoint Platform control plane (US/EU/Gov); IP allowlist only US/EU commercial; audit export needs Anypoint Integration Advanced or Titanium.",
+      "controls": [
+        {
+          "name": "IP Allowlist (Enforce IP restrictions for login)",
+          "effect": "limit_network",
+          "applies_to": [
+            "mulesoft-3"
+          ],
+          "what": "Blocks sign-ins with Anypoint credentials from outside allowed IPv4 CIDRs; users can be exempted.",
+          "setting": "Access Management > Security Settings > IP Allowlist",
+          "plan": "US and EU commercial clouds only",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8a84839a"
+          ]
+        },
+        {
+          "name": "Default session timeout",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "mulesoft-3"
+          ],
+          "what": "Sets inactivity timeout that bounds bearer token validity (15-180 min).",
+          "setting": "Access Management > Business Groups > root org > Settings",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-eeca1b60",
+            "fc-f15249df"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "mulesoft-3",
+          "what": "IP allowlist does not apply to users who authenticate through SSO, so SAML-derived bearer tokens are not IP-restricted by it.",
+          "kind": "network",
+          "evidence_refs": [
+            "fc-8a84839a"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether IP allowlist applies to connected app token requests or API calls with an issued token",
+        "Whether deleting a client-credentials app or rotating its secret invalidates unexpired access tokens",
+        "Whether a client-credentials app's tokens can be revoked without deleting it (Revoke Authorization is documented for user authorizations)",
+        "Exact UI setting name for disabling connected apps org-wide",
+        "Whether read/GET API calls are audit logged",
+        "Environment client secret rotation procedure (help.salesforce.com KB 001115221 did not render)",
+        "Bearer token format/prefix",
+        "Whether IdP conditional access applies to connected app tokens (not stated)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "mulesoft-3",
+      "provider_id": "mulesoft",
+      "name": "Anypoint Platform bearer token (user token from /accounts/login or SAML assertion)",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A user exchanges username/password at /accounts/login, or an IdP-initiated SAML response at the provider receive-id endpoint, for a bearer token with that user's permissions. Used by the CLI --bearer option.",
+        "evidence_refs": [
+          "fc-8fc611df",
+          "fc-f15249df",
+          "fc-880a9252"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "User token; SAML exchange requires IdP-initiated SSO.",
+        "evidence_refs": [
+          "fc-f15249df"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "login_only",
+        "boundary": "Applies to sign-ins with Anypoint credentials; not to SSO users. Not documented for API calls with an issued token.",
+        "evidence_refs": [
+          "fc-8a84839a"
+        ]
+      },
+      "lifetime": {
+        "basis": "inactivity",
+        "default_seconds": 3600,
+        "maximum_seconds": 10800,
+        "configurable": "yes",
+        "summary": "Default Session Timeout (15-180 min)",
+        "evidence_refs": [
+          "fc-f15249df",
+          "fc-eeca1b60"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "session timeout",
+        "summary": "Log in again to get a new token.",
+        "evidence_refs": [
+          "fc-880a9252",
+          "fc-f15249df"
+        ]
+      },
+      "administration": {
+        "summary": "Only controlled through org session timeout, MFA on direct sign-ins, and IP allowlist at login.",
+        "conditions": "MuleSoft says CLI use moves to connected apps.",
+        "evidence_refs": [
+          "fc-eeca1b60",
+          "fc-6a067824"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Federated users get the token through an IdP-initiated SAML assertion, but non-federated users keep using Anypoint credentials and /accounts/login.",
+          "evidence_refs": [
+            "fc-f15249df",
+            "fc-a59b79fe"
+          ]
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Deleting a user in the IdP does not remove them from Anypoint; they must be deleted manually. Token validity follows the Default Session Timeout.",
+          "evidence_refs": [
+            "fc-a59b79fe",
+            "fc-f15249df"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Access Management > Identity Providers > SAML 2.0 (configure IdP); MFA for SSO users is set in the IdP",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-17dcb445",
+            "fc-6a067824"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Anypoint Platform audit log (Access Management > Audit Log, Audit Log Query API)",
+            "notes": "Default retention 1 year (6 years for orgs before 2023-07-10), configurable 30-2190 days; export via Telemetry Exporter needs Anypoint Integration Advanced or Titanium."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "User Name",
+            "log": "audit log",
+            "notes": "Actions attributed to the user; no token ID documented"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Login success",
+            "stage": "create",
+            "notes": "Logged only at org level"
+          },
+          {
+            "event": "Login failure",
+            "stage": "other",
+            "notes": "SSO via LDAP/OIDC failures not logged"
+          }
+        ],
+        "correlation_keys": [
+          "User Name",
+          "Time"
+        ],
+        "anomaly_cues": [
+          "Login from unexpected IP (IP allowlist blocks are logged)",
+          "API-style activity under a human account"
+        ],
+        "containment": {
+          "steps": "Disable/remove the user or wait for session timeout.",
+          "kills_existing": "partial",
+          "notes": "The user can end their own session with GET /accounts/logout; no admin-side per-token revoke is documented. Otherwise the token lasts until the Default Session Timeout."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether disabling a user kills live bearer tokens",
+          "Token identifier in logs"
+        ],
+        "evidence_refs": [
+          "fc-b98a9125",
+          "fc-8a84839a",
+          "fc-f15249df",
+          "fc-01a74253",
+          "fc-2435f1b7"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /accounts/api/me",
+            "reveals": "Caller identity and organization",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No read events documented"
+          },
+          {
+            "stage": "recon",
+            "call": "GET /accounts/api/profile",
+            "reveals": "Profile (for CC apps: owner id)",
+            "bulk": false,
+            "scope": "profile",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/organizations/{orgId}/environments",
+            "reveals": "Environments",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "CLI equivalent: anypoint-cli-v4 account:environment:list"
+          },
+          {
+            "stage": "collection",
+            "call": "POST /audit/v2/organizations/{orgId}/query",
+            "reveals": "Audit history",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "700/min/IP US; 40 EU and Gov",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Needs Audit Log Viewer or Org Admin"
+          }
+        ],
+        "unknown": [
+          "Which data reads appear in audit log"
+        ],
+        "evidence_refs": [
+          "fc-f15249df",
+          "fc-42b27fda",
+          "fc-880a9252",
+          "fc-b98a9125"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-01a74253",
+      "title": "Configure Audit Log Retention in Anypoint Platform",
+      "url": "https://docs.mulesoft.com/access-management/audit-log-retention",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-17dcb445",
+      "title": "Configuring SAML SSO for Anypoint Platform",
+      "url": "https://docs.mulesoft.com/access-management/conf-saml-sso",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2435f1b7",
+      "title": "Access Management API spec: /connectedApplications/{clientId}/revoke",
+      "url": "https://github.com/mulesoft/anypoint-public-api-specs/blob/master/apis/access-management/api.yaml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-42b27fda",
+      "title": "Access Management API - Basic Examples",
+      "url": "https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/access-management-api/minor/1.0/pages/Basic_Examples",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6a067824",
+      "title": "Enabling and Managing Multi-Factor Authentication in Anypoint Platform",
+      "url": "https://docs.mulesoft.com/access-management/multi-factor-authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-880a9252",
+      "title": "Authentication to the Anypoint Platform CLI",
+      "url": "https://docs.mulesoft.com/anypoint-cli/latest/auth",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8a84839a",
+      "title": "Managing IP Allowlists in Access Management",
+      "url": "https://docs.mulesoft.com/access-management/managing-ip-allowlists",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8fc611df",
+      "title": "Access Management API - Authentication",
+      "url": "https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/access-management-api/minor/1.0/pages/Authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a59b79fe",
+      "title": "SSO Prerequisites and Limitations",
+      "url": "https://docs.mulesoft.com/access-management/sso-prerequisites-about",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b98a9125",
+      "title": "Audit Logging in Anypoint Platform",
+      "url": "https://docs.mulesoft.com/access-management/audit-logging",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eeca1b60",
+      "title": "Managing Business Groups in Anypoint Platform",
+      "url": "https://docs.mulesoft.com/access-management/organization",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f15249df",
+      "title": "Obtaining an API Bearer Token Using a SAML Assertion",
+      "url": "https://docs.mulesoft.com/access-management/saml-bearer-token",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,242 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "zscaler",
+      "name": "Zscaler",
+      "scope_notes": "Covers Zscaler (ZIA, ZPA, OneAPI via Authentication Service / ZIdentity). SaaS; OneAPI needs services linked to Authentication Service; legacy ZIA API needs an API subscription; Workflow Automation, Client Connector and ZDX API keys not covered.",
+      "controls": [
+        {
+          "name": "Admin role functional scope",
+          "effect": "limit_scope",
+          "applies_to": [
+            "zscaler-3",
+            "zscaler-6"
+          ],
+          "what": "Key access is given only to admins with functional scope for API services.",
+          "setting": "ZIA admin roles",
+          "plan": "API subscription",
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-669097ac",
+            "fc-9551bdd1"
+          ]
+        },
+        {
+          "name": "Regenerate / delete Sandbox API token",
+          "effect": "revoke",
+          "applies_to": [
+            "zscaler-6"
+          ],
+          "what": "Regenerating immediately invalidates the old token.",
+          "setting": "Administration > API > Internet & SaaS API > Sandbox API Token",
+          "plan": "Sandbox subscription",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-da430b9a"
+          ]
+        },
+        {
+          "name": "Delete the API token",
+          "effect": "revoke",
+          "applies_to": [
+            "zscaler-6"
+          ],
+          "what": "Deleting the Sandbox API tokens stops Sandbox Submission API requests.",
+          "setting": "Administration > API > Internet & SaaS API > Sandbox API Token > Delete",
+          "plan": "Sandbox subscription",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-da430b9a"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Source-IP restriction for OneAPI clients, ZPA keys or legacy ZIA sessions (Admin Sign-On Policy and ZIA restricted admin access pages do not state API coverage)",
+        "Whether the Authentication Service Admin Sign-On Policy or MFA applies to legacy ZIA API password logins",
+        "Whether deleting/disabling a ZPA API key or ZIA authorization server ends already-issued bearer tokens",
+        "Whether API client create/delete and token revoke appear as named actions in Authentication Service audit logs (documented actions are generic Create/Update/Delete)",
+        "Whether read-only (GET) API calls are recorded in any audit log",
+        "Expiry of JWT key pairs (zscaler-2) and Sandbox tokens",
+        "OneAPI rate limits (only legacy limits fetched)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "zscaler-6",
+      "provider_id": "zscaler",
+      "name": "Sandbox API Token with ZIA admin credentials",
+      "family": "basic",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Sandbox Submission API uses an org API token plus ZIA admin username and password to create a session.",
+        "evidence_refs": [
+          "fc-da430b9a"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Password-based; same Authentication Service restriction as zscaler-3.",
+        "evidence_refs": [
+          "fc-9551bdd1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No token expiry documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Session",
+        "summary": "Reuse token and admin credentials to create a new session.",
+        "evidence_refs": [
+          "fc-da430b9a"
+        ]
+      },
+      "administration": {
+        "summary": "Up to 5 tokens per org; regenerate or delete from the Sandbox API Token page.",
+        "conditions": "Requires Sandbox subscription.",
+        "evidence_refs": [
+          "fc-da430b9a"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Sandbox API Token page (Administration > API > Internet & SaaS API > Sandbox API Token).",
+          "evidence_refs": [
+            "fc-da430b9a"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Org-level sandbox token plus admin credentials."
+        },
+        "log_sources": [
+          {
+            "name": "ZIA audit logs",
+            "notes": "Data Explorer > Audit Logs > Internet & SaaS; records Admin UI and API actions; 6-month retention; NSS admin audit feed."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Admin ID",
+            "log": "ZIA audit logs",
+            "notes": "Admin login used"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Sandbox",
+            "stage": "use",
+            "notes": "ZIA audit category/sub-category; exact token events not documented"
+          }
+        ],
+        "correlation_keys": [
+          "Admin ID",
+          "Client IP"
+        ],
+        "anomaly_cues": [
+          "Sandbox submissions from unexpected admins"
+        ],
+        "containment": {
+          "steps": "Regenerate or delete the Sandbox API token.",
+          "kills_existing": "unknown",
+          "notes": "Regeneration immediately invalidates the old token; effect on open sessions not stated."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Token-specific audit events"
+        ],
+        "evidence_refs": [
+          "fc-da430b9a",
+          "fc-3af5385d"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Sandbox API endpoints not reviewed"
+        ],
+        "evidence_refs": [
+          "fc-da430b9a"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-3af5385d",
+      "title": "About Audit Logs (Internet & SaaS)",
+      "url": "https://help.zscaler.com/zia/about-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-669097ac",
+      "title": "About Cloud Service API Key",
+      "url": "https://help.zscaler.com/zia/about-cloud-service-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9551bdd1",
+      "title": "Getting Started (ZIA API)",
+      "url": "https://help.zscaler.com/legacy-apis/getting-started-zia-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-da430b9a",
+      "title": "About Sandbox API Token",
+      "url": "https://help.zscaler.com/zia/about-sandbox-api-token",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

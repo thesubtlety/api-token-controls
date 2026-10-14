@@ -1,0 +1,312 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "portkey",
+      "name": "Portkey",
+      "scope_notes": "Covers Portkey (Prisma AIRS AI Gateway). SaaS control plane with hybrid/air-gapped self-hosted options; JWT auth, audit logs and key-permission settings are Enterprise, rotation is on all plans.",
+      "controls": [
+        {
+          "name": "JWKS configuration",
+          "effect": "limit_scope",
+          "applies_to": [
+            "portkey-4"
+          ],
+          "what": "Only JWTs signed by configured JWKS are accepted; remove JWKS to stop JWT auth.",
+          "setting": "Admin Settings > Organisation > Authentication",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-eaaae6ec"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for API keys or JWTs",
+        "Name of the org/workspace maximum key TTL setting",
+        "Whether user API keys are disabled when the user is removed or deprovisioned via SCIM",
+        "Whether SSO enforcement affects API keys",
+        "Whether GET (read) API calls appear in audit logs (filter lists only POST/PUT/DELETE)",
+        "Auth cache delay after key deletion",
+        "SCIM token expiry and revocation",
+        "API key token prefix"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "portkey-4",
+      "provider_id": "portkey",
+      "name": "JWT Authentication",
+      "family": "jwt",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Clients send an RS256 JWT instead of an API key; Portkey validates it against JWKS configured on the organisation. Claims carry org, workspace and scopes.",
+        "evidence_refs": [
+          "fc-eaaae6ec"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "Any issuer whose JWKS URL/JSON is configured; user identified from email_id, sub or uid.",
+        "evidence_refs": [
+          "fc-eaaae6ec"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "exp claim required; set by issuer",
+        "evidence_refs": [
+          "fc-eaaae6ec"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "exp",
+        "summary": "Client mints/obtains a new JWT.",
+        "evidence_refs": [
+          "fc-eaaae6ec"
+        ]
+      },
+      "administration": {
+        "summary": "Configured under Admin Settings > Organisation > Authentication.",
+        "conditions": "Enterprise.",
+        "evidence_refs": [
+          "fc-eaaae6ec"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Admin Settings > Audit Logs > filter Action = Export",
+          "api": "GET https://api.portkey.ai/v1/audit-logs?action=<export>",
+          "cli": null,
+          "evidence_refs": [
+            "fc-02f7691c",
+            "fc-46ab8a49"
+          ]
+        },
+        "expiry": {
+          "ui": "Set by the issuer via the JWT exp claim (mandatory); check exp in the token payload",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-eaaae6ec"
+          ]
+        },
+        "kill": {
+          "ui": "Admin Settings > Organisation > Authentication > remove the key (kid) from JWKS URL/JWKS JSON; then revoke at the issuer",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-eaaae6ec"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "RS256 JWT"
+        },
+        "log_sources": [
+          {
+            "name": "Audit Logs",
+            "notes": "Enterprise; Admin Settings > Audit Logs or GET /audit-logs (admin key with audit_logs.list); indefinite retention; filter by user_type=api_key."
+          },
+          {
+            "name": "Request Logs",
+            "notes": "Gateway request logs with full request/response; retention 3 days Developer, 30 days Production, unlimited Enterprise."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "email_id / sub / uid",
+            "log": "Request logs/metrics",
+            "notes": "User attribution precedence"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "email_id",
+          "sub"
+        ],
+        "anomaly_cues": [
+          "JWTs with broad scopes or long exp"
+        ],
+        "containment": {
+          "steps": "Remove or rotate the JWKS entry; revoke at issuer.",
+          "kills_existing": "partial",
+          "notes": "Valid JWTs work until exp unless JWKS removed."
+        },
+        "sample_query": null,
+        "unknown": [
+          "JWKS cache duration"
+        ],
+        "evidence_refs": [
+          "fc-eaaae6ec"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/models",
+            "reveals": "Models available to the key",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v1/api-keys",
+            "reveals": "API keys in scope",
+            "bulk": true,
+            "scope": "*_api_keys.list",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit method filter lists only POST/PUT/DELETE"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v1/integrations",
+            "reveals": "Stored provider integrations",
+            "bulk": true,
+            "scope": "organisation_integrations.list",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /v1/logs/exports",
+            "reveals": "Bulk export of request logs (full prompts/responses)",
+            "bulk": true,
+            "scope": "logs.export",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "Export",
+            "log_notes": "Audit action 'Export' exists (Enterprise)"
+          }
+        ],
+        "unknown": [
+          "Whoami endpoint"
+        ],
+        "evidence_refs": [
+          "fc-a6646e85",
+          "fc-e877444f",
+          "fc-02f7691c",
+          "fc-ec7d1ad0",
+          "fc-5308ecb8",
+          "fc-538a9eb1"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-02f7691c",
+      "title": "Audit Logs",
+      "url": "https://docs.portkey.ai/docs/product/enterprise-offering/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-46ab8a49",
+      "title": "List Audit Logs",
+      "url": "https://docs.portkey.ai/docs/api-reference/admin-api/control-plane/audit-logs/list-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5308ecb8",
+      "title": "Logs",
+      "url": "https://docs.portkey.ai/docs/product/observability/logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-538a9eb1",
+      "title": "API Keys (AuthN and AuthZ)",
+      "url": "https://docs.portkey.ai/docs/product/enterprise-offering/org-management/api-keys-authn-and-authz",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a6646e85",
+      "title": "List Models",
+      "url": "https://docs.portkey.ai/docs/api-reference/inference-api/models/models",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e877444f",
+      "title": "List API Keys",
+      "url": "https://docs.portkey.ai/docs/api-reference/admin-api/control-plane/api-keys/list-api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eaaae6ec",
+      "title": "JWT Authentication",
+      "url": "https://docs.portkey.ai/docs/product/enterprise-offering/org-management/jwt",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ec7d1ad0",
+      "title": "Create a Log Export",
+      "url": "https://docs.portkey.ai/docs/api-reference/admin-api/data-plane/logs/log-exports-beta/create-a-log-export",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

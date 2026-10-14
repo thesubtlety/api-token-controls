@@ -1,0 +1,503 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "databricks",
+      "name": "Databricks (AWS baseline)",
+      "scope_notes": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+      "controls": [
+        {
+          "name": "IP access lists",
+          "effect": "limit_network",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2",
+            "databricks-3",
+            "databricks-4"
+          ],
+          "what": "Restrict account console/account APIs and workspace/workspace APIs to approved IPs.",
+          "setting": "Account console IP access lists; workspace IP Access List API",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "workspace",
+          "evidence_refs": [
+            "turn5search18"
+          ],
+          "quote": "The default allows connections from any IP address."
+        },
+        {
+          "name": "Context-based ingress policies",
+          "effect": "limit_network",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2",
+            "databricks-3",
+            "databricks-4"
+          ],
+          "what": "Account-level allow/deny rules combining identity, network source and request scope, e.g. pinning service principals to trusted networks.",
+          "setting": "Account console network policies (account admin)",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-d0d16207"
+          ],
+          "quote": "allow and deny rules that combine who is calling, from where they are calling, and what they can reach"
+        },
+        {
+          "name": "Service principal federation policy",
+          "effect": "limit_resources",
+          "applies_to": [
+            "databricks-2"
+          ],
+          "what": "Binds a service principal to tokens from a given issuer, audience and subject.",
+          "setting": "Account console > service principal > Credentials & secrets; Federation Policy API/CLI (account admin)",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-907a73bb"
+          ],
+          "quote": "Account admins can configure a service principal federation policy"
+        },
+        {
+          "name": "Account-wide federation policy",
+          "effect": "limit_resources",
+          "applies_to": [
+            "databricks-2"
+          ],
+          "what": "Allows tokens from a registered IdP to map to Databricks users or service principals; only trusted IdPs should be added.",
+          "setting": "Account console > Security > federation policy; Account Federation Policy API",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-907a73bb"
+          ],
+          "quote": "Don't configure account-wide federation with external IdPs that you don't control."
+        },
+        {
+          "name": "Deactivate a service principal",
+          "effect": "revoke",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2"
+          ],
+          "what": "Deactivated service principals cannot authenticate; their OAuth secrets and tokens stop working until reactivated.",
+          "setting": "Account Service Principals API (account level); Workspace Service Principals API (workspace level)",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-d777e026"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No account-wide switch to disable PATs across all workspaces was found; the toggle is per workspace.",
+        "Whether IP access lists explicitly cover PAT/OAuth API calls is implied (workspace-level APIs) but not stated.",
+        "Whether context-based ingress rules can distinguish auth method (PAT vs OAuth) is not stated.",
+        "How to update or delete federation policies, and how to revoke an individual OAuth secret, were not covered on the fetched pages.",
+        "TTL min/max ranges, and whether built-in databricks-cli app follows app-connection TTL defaults, not confirmed.",
+        "Single-use refresh token details page returned 404; defaults per app not confirmed.",
+        "Azure/GCP capabilities and tiers not checked."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "databricks-2",
+      "provider_id": "databricks",
+      "name": "External token federation",
+      "family": "federation",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth user-to-machine and machine-to-machine, external token federation, and legacy personal access tokens.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "External IdP tokens exchange into Databricks OAuth using configured issuer/audience/subject trust; workload CI/runtime federation supported.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Enterprise tier. Separate account/workspace IP lists protect public UI/API access; PrivateLink traffic is not filtered by them. Context-based ingress (Enterprise) can add rules combining identity (e.g. service principal), network source and access type.",
+        "evidence_refs": [
+          "turn5search18",
+          "turn24search7",
+          "turn24search1",
+          "fc-d0d16207"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "conditional",
+        "summary": "Derived from external token lifetime",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "policy",
+        "summary": "Repeat token exchange using a valid external identity token.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "administration": {
+        "summary": "Service principals, entitlements/resource ACLs, federation policies, PAT controls and context-based ingress controls.",
+        "conditions": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+        "evidence_refs": [
+          "turn5search18",
+          "turn24search7",
+          "turn24search1"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Tokens are issued by your own IdP, so its policies apply at issuance; Databricks does not describe SSO checks on the exchanged token.",
+          "evidence_refs": [
+            "turn5search2"
+          ]
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "A deactivated user or service principal cannot authenticate to Databricks APIs; SCIM removal deactivates the user.",
+          "evidence_refs": [
+            "fc-2c40808e",
+            "fc-b6acac67",
+            "fc-d777e026"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Account console > Security > Identity provider setup > Federation policies > Create policy (issuer, audiences, subject); per SP: User management > <SP> > Credentials & secrets > Federation policies",
+          "api": "POST /api/2.0/accounts/{account_id}/federationPolicies",
+          "cli": null,
+          "evidence_refs": [
+            "fc-907a73bb",
+            "fc-b92888bc"
+          ]
+        },
+        "expiry": {
+          "ui": "Set in your IdP: Databricks token copies the subject token exp claim",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "turn5search6"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "SQL: SELECT * FROM system.access.audit WHERE service_name='workspace' AND action_name='workspaceExport' (filter user_identity.email)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ae5ed64d",
+            "fc-1f6728c3"
+          ]
+        },
+        "offboard": {
+          "ui": "Remove the user from the IdP account-level SCIM connector (deactivates the user)",
+          "api": "PATCH /api/2.1/accounts/{account_id}/scim/v2/Users/{id} with active=false",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2c40808e",
+            "fc-b6acac67"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Input is an external IdP JWT (RS256/ES256); output is a Databricks OAuth token whose exp equals the JWT exp. GitHub type databricks_federated_account_session_token exists."
+        },
+        "log_sources": [
+          {
+            "name": "Databricks audit logs (system.access.audit system table / audit log delivery)",
+            "notes": "Account- and workspace-level events; account-level rows have workspace_id 0. No general retention stated on the table page; events of a deleted workspace older than 14 days are removed."
+          },
+          {
+            "name": "External IdP / workload identity provider logs",
+            "notes": "Issuance of the federated JWT happens at the IdP; Databricks logs only the exchange and use."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "request_params.policy_id",
+            "log": "system.access.audit (accounts.*FederationPolicy)",
+            "notes": "Federation policy created/changed/deleted"
+          },
+          {
+            "field": "request_params.service_principal_id",
+            "log": "system.access.audit (accounts.*FederationPolicy)",
+            "notes": "Present for service principal (workload identity) policies"
+          },
+          {
+            "field": "request_params.client_id",
+            "log": "system.access.audit (accounts.mintOAuthToken)",
+            "notes": "Service principal UUID for workload identity federation exchanges"
+          },
+          {
+            "field": "identity_metadata.run_as",
+            "log": "system.access.audit",
+            "notes": "Databricks identity the federated token maps to"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "accounts.createFederationPolicy",
+            "stage": "create",
+            "notes": "Account-wide or SP federation policy created"
+          },
+          {
+            "event": "accounts.updateFederationPolicy",
+            "stage": "change",
+            "notes": "Issuer/audience/subject changes"
+          },
+          {
+            "event": "accounts.deleteFederationPolicy",
+            "stage": "revoke",
+            "notes": "Policy removed"
+          },
+          {
+            "event": "accounts.mintOAuthToken",
+            "stage": "use",
+            "notes": "Token minted; grant_type would be the token-exchange URN"
+          },
+          {
+            "event": "accounts.oidcTokenAuthorization",
+            "stage": "use",
+            "notes": "API call authorized with OAuth token"
+          }
+        ],
+        "correlation_keys": [
+          "user_identity.email",
+          "identity_metadata.run_by",
+          "identity_metadata.run_as",
+          "source_ip_address",
+          "user_agent",
+          "session_id",
+          "workspace_id",
+          "request_params",
+          "request_params.policy_id",
+          "request_params.service_principal_id",
+          "request_params.client_id",
+          "request_params.grant_type"
+        ],
+        "anomaly_cues": [
+          "createFederationPolicy or updateFederationPolicy adding an unfamiliar issuer or broad audience",
+          "policy change by an admin outside change windows followed by token-exchange mints",
+          "token-exchange mintOAuthToken from IPs not belonging to the CI/cloud workload",
+          "account-wide policy subject_claim changed (could let one IdP user map to another Databricks user)",
+          "federated tokens used after IdP-side workload was decommissioned"
+        ],
+        "containment": {
+          "steps": "Delete or tighten the federation policy (deleteFederationPolicy); deactivate the mapped service principal or user; revoke/rotate trust at the external IdP.",
+          "kills_existing": "partial",
+          "notes": "Docs do not state whether deleting a policy invalidates already-exchanged Databricks tokens; those expire at the JWT exp (commonly one hour). SP deactivation blocks its tokens."
+        },
+        "sample_query": {
+          "language": "Databricks SQL (system.access.audit)",
+          "query": "SELECT event_time, action_name, user_identity.email, request_params['policy_id'] AS policy_id, request_params['service_principal_id'] AS sp_id, source_ip_address FROM system.access.audit WHERE service_name = 'accounts' AND action_name IN ('createFederationPolicy','updateFederationPolicy','deleteFederationPolicy') ORDER BY event_time DESC",
+          "purpose": "Review who changed federation trust and for which service principal"
+        },
+        "unknown": [
+          "whether mintOAuthToken is logged for token-exchange grants (only documented as in-house OAuth token minted)",
+          "policy issuer/audience values in audit request_params",
+          "external JWT subject/issuer in Databricks audit rows",
+          "effect of policy deletion on issued tokens",
+          "federated token prefix/regex"
+        ],
+        "evidence_refs": [
+          "fc-1f6728c3",
+          "fc-ae5ed64d",
+          "turn5search6",
+          "fc-907a73bb",
+          "fc-d777e026",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /api/2.0/workspace/export",
+            "reveals": "Notebook or whole-directory contents (source code, sometimes embedded secrets/results)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "workspace.workspaceExport",
+            "log_notes": "Audit log / system.access.audit; user_identity shows the caller. Docs describe the event as a notebook export."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-0c3101b7",
+          "fc-1f6728c3",
+          "fc-ae5ed64d"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0c3101b7",
+      "title": "Export a workspace object | Databricks API Reference",
+      "url": "https://docs.databricks.com/api/workspace/workspace/export",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1f6728c3",
+      "title": "Audit log reference (Account-level authentication events)",
+      "url": "https://docs.databricks.com/aws/en/admin/account-settings/audit-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2c40808e",
+      "title": "Manage users | Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/admin/users-groups/users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-907a73bb",
+      "title": "Configure a federation policy",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-federation-policy",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae5ed64d",
+      "title": "Audit log system table reference",
+      "url": "https://docs.databricks.com/aws/en/admin/system-tables/audit-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b6acac67",
+      "title": "Sync users and groups from your identity provider using SCIM | Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/admin/users-groups/scim/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b92888bc",
+      "title": "Create account federation policy (Account API)",
+      "url": "https://docs.databricks.com/api/account/accountfederationpolicy/create",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d0d16207",
+      "title": "Context-based ingress control - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/network/front-end/context-based-ingress",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d777e026",
+      "title": "Manage service principals",
+      "url": "https://docs.databricks.com/aws/en/admin/users-groups/manage-service-principals",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn24search1",
+      "title": "Monitor and revoke personal access tokens - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/admin/access-control/tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn24search7",
+      "title": "Manage personal access token permissions - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/auth/api-access-permissions",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search18",
+      "title": "Manage IP access lists - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/network/front-end/ip-access-list",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search2",
+      "title": "Authenticate access to Databricks using OAuth token federation ...",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-federation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search26",
+      "title": "Authorize service principal access to Databricks with OAuth ...",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-m2m",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search6",
+      "title": "Authenticate with an identity provider token - Databricks",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-federation-exchange",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

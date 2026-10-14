@@ -1,0 +1,348 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "sailpoint",
+      "name": "SailPoint Identity Security Cloud",
+      "scope_notes": "Covers SailPoint Identity Security Cloud (SailPoint Human Fabric). SaaS tenant (docs now branded SailPoint Human Fabric); VA is customer-hosted; no plan gating found for these token controls.",
+      "controls": [
+        {
+          "name": "accessTokenValiditySeconds",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "sailpoint-1",
+            "sailpoint-2",
+            "sailpoint-3"
+          ],
+          "what": "Sets how long each issued bearer token lives (PAT default 43200s).",
+          "setting": "POST/PATCH /personal-access-tokens, /oauth-clients",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-123b2f36"
+          ]
+        },
+        {
+          "name": "Scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "sailpoint-1",
+            "sailpoint-2",
+            "sailpoint-3"
+          ],
+          "what": "Select scopes to narrow access below the user level; UI default is a no-authorization scope, API default is sp:scopes:all.",
+          "setting": "Scopes checkboxes on PAT / API client forms",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-2aa386d6",
+            "fc-e6d0a69d",
+            "fc-123b2f36"
+          ]
+        },
+        {
+          "name": "Delete API client (Bulk Delete)",
+          "effect": "revoke",
+          "applies_to": [
+            "sailpoint-2",
+            "sailpoint-3"
+          ],
+          "what": "Delete API clients on the API Management tab or via DELETE /oauth-clients/{id}.",
+          "setting": "Admin > Global > Security Settings > API Management > Bulk Delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-2aa386d6",
+            "fc-123b2f36"
+          ]
+        },
+        {
+          "name": "API client enabled flag",
+          "effect": "disable",
+          "applies_to": [
+            "sailpoint-2",
+            "sailpoint-3"
+          ],
+          "what": "OAuth client objects carry an enabled flag that can be patched.",
+          "setting": "PATCH /oauth-clients/{id} (enabled)",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-123b2f36"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any org setting to disable PAT creation or require approval for PATs/API clients",
+        "Any admin-enforced maximum PAT lifetime (API states no upper limit on expirationDate but the doc only says this, not that no policy exists)",
+        "Whether Network Settings IP/geo restrictions apply to /oauth/token or API calls",
+        "Whether deleting a PAT or API client invalidates already-issued bearer tokens (scope changes do not affect existing bearer tokens)",
+        "Audit event names for PAT/API client create, use, delete (published sample list is partial and lists none)",
+        "Whether API read calls (search, list identities) produce audit events",
+        "Whether disabling the owning identity stops its PATs",
+        "VA key lifetime, rotation and use logging"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "sailpoint-2",
+      "provider_id": "sailpoint",
+      "name": "API client (API key) - client credentials",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An admin creates an API client (client ID and secret) under API Management. The client calls /oauth/token with the client credentials grant and gets a JWT with no user context.",
+        "evidence_refs": [
+          "fc-2aa386d6",
+          "fc-d2cf0e3f"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Client credentials tokens are issued without user involvement, so no IdP sign-in occurs.",
+        "evidence_refs": [
+          "fc-d2cf0e3f"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Network Settings (CIDR network definition, country allow/block lists) restrict sign-in per identity profile and are skipped under SSO. Docs do not say they apply to /oauth/token or API calls.",
+        "evidence_refs": [
+          "fc-e12679d9"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Client secret: no documented expiry; per-client accessTokenValiditySeconds",
+        "evidence_refs": [
+          "fc-123b2f36"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Bearer token expiry (expires_in)",
+        "summary": "Holder reuses the client secret to get new access tokens.",
+        "evidence_refs": [
+          "fc-d2cf0e3f",
+          "fc-123b2f36"
+        ]
+      },
+      "administration": {
+        "summary": "Created in Admin > Global > Security Settings > API Management or POST /oauth-clients; API default scope is sp:scopes:all. Clients have an enabled flag and can be bulk deleted.",
+        "conditions": "sp:oauth-client:manage; Support/Services accounts cannot create via UI",
+        "evidence_refs": [
+          "fc-2aa386d6",
+          "fc-123b2f36"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Docs say API keys (client credentials) are not tied to a specific person.",
+          "evidence_refs": [
+            "fc-2aa386d6"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admin > Global > Security Settings > API Management lists all API clients (also GET /oauth-clients).",
+          "evidence_refs": [
+            "fc-2aa386d6"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "JWT bearer; OAuth 2.0 client IDs are UUIDs with dashes."
+        },
+        "log_sources": [
+          {
+            "name": "Search > Events (events index, POST /search)",
+            "notes": "Kept one year plus current month; older up to 5 years via support request."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "client_id",
+            "log": "JWT access token claims",
+            "notes": "No user_id/identity_id for client credentials"
+          },
+          {
+            "field": "lastUsed",
+            "log": "GET /oauth-clients",
+            "notes": "Updated once a day"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "actor.name",
+          "technicalName",
+          "trackingNumber",
+          "client_id (JWT claim)"
+        ],
+        "anomaly_cues": [
+          "PATs or clients with sp:scopes:all or no expiry",
+          "lastUsed on stale tokens (updated once a day)",
+          "High-volume POST /search with searchAfter paging"
+        ],
+        "containment": {
+          "steps": "Delete via API Management Bulk Delete or DELETE /oauth-clients/{id}; or PATCH enabled=false.",
+          "kills_existing": "unknown",
+          "notes": "Not documented whether issued access tokens die at once."
+        },
+        "sample_query": null,
+        "unknown": [
+          "API client audit event names",
+          "Whether API calls are logged"
+        ],
+        "evidence_refs": [
+          "fc-2aa386d6",
+          "fc-d2cf0e3f",
+          "fc-123b2f36",
+          "fc-049d1d25"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v2025/tenant",
+            "reveals": "Tenant details",
+            "bulk": false,
+            "scope": "sp:tenant:read",
+            "rate_limit": "100 req / 10s per client_id per API version",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not documented"
+          },
+          {
+            "stage": "collection",
+            "call": "POST /v2025/search",
+            "reveals": "Identities, access, events; searchAfter pages past 10,000",
+            "bulk": true,
+            "scope": "sp:search:read",
+            "rate_limit": "100 req / 10s per client_id per API version",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not documented"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /v2025/personal-access-tokens",
+            "reveals": "PATs (all tenant if owner-id omitted)",
+            "bulk": true,
+            "scope": "sp:all-personal-access-tokens:read",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not documented"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v2025/accounts",
+            "reveals": "Source accounts",
+            "bulk": true,
+            "scope": "idn:accounts:read",
+            "rate_limit": "100 req / 10s per client_id per API version",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Supports applicationAuth"
+          }
+        ],
+        "unknown": [
+          "Whether reads produce audit events"
+        ],
+        "evidence_refs": [
+          "fc-d2cf0e3f",
+          "fc-123b2f36",
+          "fc-ecbc2857"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-049d1d25",
+      "title": "Searchable Fields",
+      "url": "https://documentation.sailpoint.com/saas/help/search/searchable-fields.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-123b2f36",
+      "title": "SailPoint ISC API v2025 - Create personal access token",
+      "url": "https://developer.sailpoint.com/redoc/sailpoint-api-v2025-light.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2aa386d6",
+      "title": "Managing API Keys and Personal Access Tokens",
+      "url": "https://documentation.sailpoint.com/saas/help/common/api_keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d2cf0e3f",
+      "title": "Authentication",
+      "url": "https://developer.sailpoint.com/docs/api/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e12679d9",
+      "title": "Restricting Tenant Access",
+      "url": "https://documentation.sailpoint.com/saas/help/access/restrict_access.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e6d0a69d",
+      "title": "Authorization",
+      "url": "https://developer.sailpoint.com/docs/api/authorization",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ecbc2857",
+      "title": "Rate Limiting",
+      "url": "https://developer.sailpoint.com/docs/api/rate-limit",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

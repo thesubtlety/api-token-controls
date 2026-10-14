@@ -1,0 +1,805 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "github",
+      "name": "GitHub Enterprise Cloud",
+      "scope_notes": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+      "controls": [
+        {
+          "name": "Require SAML SSO authentication for all members",
+          "effect": "require_sso",
+          "applies_to": [
+            "github-1",
+            "github-4",
+            "github-6"
+          ],
+          "what": "Members must authenticate via the IdP; classic PATs and SSH keys must be SSO-authorized, and OAuth/GitHub App user authorizations need an active SSO session.",
+          "setting": "Org settings > Authentication security > SAML single sign-on; or enterprise-level SAML",
+          "plan": "GitHub Enterprise Cloud",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-03635d12"
+          ],
+          "quote": "You must authorize your personal access token (classic) after creation before the token can access an organization that uses SAML single sign-on (SSO)."
+        },
+        {
+          "name": "Revoke SSO authorizations / Delete keys and tokens",
+          "effect": "other",
+          "applies_to": [
+            "github-1",
+            "github-2",
+            "github-4",
+            "github-6"
+          ],
+          "what": "Owners revoke SSO authorizations (SAML) or delete credentials (EMU only) per user, per credential type, or in bulk.",
+          "setting": "Org settings > Authentication security; enterprise incident response; REST API",
+          "plan": "GitHub Enterprise Cloud (SAML SSO or EMU)",
+          "default": "unknown",
+          "level": "enterprise",
+          "evidence_refs": [
+            "fc-636a4131"
+          ],
+          "quote": "Revoking authorizations removes SSO authorizations for user tokens and SSH keys, either for a specific user, all users, or a specific credential type, across all organizations in your enterprise."
+        },
+        {
+          "name": "IP allow list",
+          "effect": "limit_network",
+          "applies_to": [
+            "github-1",
+            "github-2",
+            "github-3",
+            "github-4",
+            "github-5",
+            "github-6",
+            "github-7"
+          ],
+          "what": "Blocks PATs, OAuth app tokens, SSH/deploy keys, GitHub App tokens and GITHUB_TOKEN from non-allowed IPs (not user-installed apps' installation tokens).",
+          "setting": "Org settings > Authentication security > IP allow list; Enterprise settings > Authentication security",
+          "plan": "GitHub Enterprise Cloud",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-62eef186"
+          ],
+          "quote": "IP allow lists don't currently restrict access when a GitHub App is installed on a user account and uses server-to-server installation tokens to access an organization or enterprise."
+        },
+        {
+          "name": "OAuth app access restrictions",
+          "effect": "require_approval",
+          "applies_to": [
+            "github-6"
+          ],
+          "what": "Unapproved OAuth apps cannot access private org resources; members must request owner approval.",
+          "setting": "Org settings > Third-party Access > OAuth app policy",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-913b4cec"
+          ],
+          "quote": "When OAuth app access restrictions are enabled, organization members and outside collaborators cannot authorize OAuth app access to organization resources. Users can request owner approval for OAuth apps they'd like to use"
+        },
+        {
+          "name": "Deny access to a previously approved OAuth app",
+          "effect": "revoke",
+          "applies_to": [
+            "github-6"
+          ],
+          "what": "Owners remove an approved OAuth app's access to the org.",
+          "setting": "Org settings > Third-party Access > OAuth app policy",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-636a4131"
+          ],
+          "quote": "At the organization level, deny the app access. At the user level, revoke the app authorization and its associated tokens."
+        },
+        {
+          "name": "App access requests",
+          "effect": "require_approval",
+          "applies_to": [
+            "github-3",
+            "github-6"
+          ],
+          "what": "Controls whether members/outside collaborators may request installation or approval of unapproved apps.",
+          "setting": "Org settings > Third-party Access",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-3d73f0ba"
+          ],
+          "quote": "By default, app access requests are enabled. If your organization has a large number of members or outside collaborators, you may want to disable app access requests to reduce the number of requests you have to review."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether admins can set a maximum lifetime for GitHub App user access tokens or OAuth app tokens (only app-developer settings found).",
+        "Whether GITHUB_TOKEN workflow permission defaults can be made non-overridable."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "github-6",
+      "provider_id": "github",
+      "name": "OAuth app user access token",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A classic OAuth app gets a gho_ user access token through the web or device flow and sends it as Authorization: Bearer. The token acts as the user, limited by the granted scopes.",
+        "evidence_refs": [
+          "fc-f158a79d"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "The token is obtained by user authorization in the web or device flow. SAML/OIDC SSO authorization is granted automatically during an active SSO session, but no inbound token exchange is documented for this path.",
+        "evidence_refs": [
+          "turn3search28"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "The organization/enterprise IP allow list (Enterprise Cloud only) covers OAuth app tokens. Unlike GitHub Apps, OAuth app IPs cannot be added automatically. With the IdP (Entra OIDC CAP) allow list, GitHub sends the app server's IP for validation, and admins can exempt authorized OAuth apps.",
+        "evidence_refs": [
+          "fc-62eef186",
+          "fc-d5735a5c",
+          "fc-9c7c584e"
+        ]
+      },
+      "lifetime": {
+        "basis": "inactivity",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "conditional",
+        "summary": "Long-lived; revoked after 1 year unused. App can opt in to 8-hour expiring tokens",
+        "evidence_refs": [
+          "turn3search28",
+          "fc-932cd3fb",
+          "fc-f158a79d"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "inactivity",
+        "summary": "By default the same token is reused until revoked or unused for one year. If the app requires expiring tokens or requests offline_access, a refresh token (expires after six months unused) issues a new 8-hour token.",
+        "evidence_refs": [
+          "fc-f158a79d"
+        ]
+      },
+      "administration": {
+        "summary": "Users revoke an app's authorization in their settings. Organization owners control access with OAuth app access restrictions (on by default for new orgs) and can deny a previously approved app. Anyone holding a leaked token value can revoke it through the API. GitHub keeps at most ten tokens per user/app/scope.",
+        "conditions": "IP allow lists and SAML SSO need Enterprise Cloud. Admins cannot revoke SSO authorization for individual OAuth app tokens, and these authorizations are not visible in the UI.",
+        "evidence_refs": [
+          "fc-a275e930",
+          "turn3search28",
+          "fc-f158a79d"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "yes",
+          "details": "OAuth app tokens get SSO authorization automatically only during an active SAML/OIDC session; CAP checks the app server IP for user-context requests.",
+          "evidence_refs": [
+            "fc-70eb24e3",
+            "fc-893dd68a"
+          ]
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Offboarded users' app authorizations can no longer be used against enterprise/org resources.",
+          "evidence_refs": [
+            "fc-9e341652",
+            "fc-b1700c90"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Enterprise credential inventory CSV includes oauth_app_user_token.",
+          "evidence_refs": [
+            "fc-71c3f719"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Enterprise Settings > Authentication security > Credentials > Export CSV; filter credential_type",
+          "api": "POST /enterprises/{enterprise}/credentials/exports",
+          "cli": null,
+          "evidence_refs": [
+            "fc-71c3f719",
+            "fc-4aef0a67"
+          ]
+        },
+        "sso": {
+          "ui": "Org Settings > Authentication security > Require SAML SSO authentication (or Enterprise Settings > Authentication security > Require SAML authentication); EMU OIDC: Authentication security > IP allow list configuration > Identity Provider (CAP)",
+          "api": "GET /orgs/{org}/credential-authorizations",
+          "cli": null,
+          "evidence_refs": [
+            "fc-c5a134ff",
+            "fc-bf83bb86",
+            "fc-46fea6e3",
+            "fc-bd4f8977",
+            "fc-893dd68a",
+            "fc-dc3b71e8"
+          ]
+        },
+        "usage": {
+          "ui": "Enterprise Settings > Audit log; search hashed_token:\"<base64 SHA-256>\" (hash from token or credential inventory CSV)",
+          "api": "GET /enterprises/{enterprise}/audit-log?phrase=hashed_token:\"<URI-escaped hash>\"",
+          "cli": null,
+          "evidence_refs": [
+            "fc-69839963",
+            "fc-71c3f719"
+          ]
+        },
+        "reads": {
+          "ui": "Enterprise Settings > Audit log > Export Git Events > pick date range > Download Results; filter JSON on action git.clone and hashed_token",
+          "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+          "cli": null,
+          "evidence_refs": [
+            "fc-aa029406",
+            "fc-ce6df4bc",
+            "fc-19c68525",
+            "fc-69839963"
+          ]
+        },
+        "offboard": {
+          "ui": "Org > People > select member > Remove from organization; Enterprise > People > ... > Remove from enterprise; EMU: deprovision in IdP (SCIM)",
+          "api": "DELETE /orgs/{org}/members/{username}; EMU: DELETE /scim/v2/enterprises/{enterprise}/Users/{scim_user_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-a2e23dc8",
+            "fc-6c5d47e3",
+            "fc-bcecede9",
+            "fc-b1700c90"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "gho_",
+          "notes": "OAuth app access token; long-lived; max 10 per user/app/scope. Secret type github_oauth_access_token."
+        },
+        "log_sources": [
+          {
+            "name": "GitHub organization/enterprise audit log",
+            "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+          },
+          {
+            "name": "GitHub user security log",
+            "notes": "Token owner's own log: PAT/OAuth create, update, destroy events. Owner-visible only."
+          },
+          {
+            "name": "Audit log streaming (enterprise)",
+            "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+          },
+          {
+            "name": "Enterprise credential inventory export",
+            "notes": "CSV with hashed_token, credential_id and SSH key fingerprint to match against audit events."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "hashed_token",
+            "log": "audit log",
+            "notes": "Base64 SHA-256 of the token; search with hashed_token:\"...\""
+          },
+          {
+            "field": "programmatic_access_type",
+            "log": "audit log",
+            "notes": "How the actor authenticated"
+          },
+          {
+            "field": "token_id",
+            "log": "audit log",
+            "notes": "Common field; mapping to REST ids not documented"
+          },
+          {
+            "field": "token_scopes",
+            "log": "audit log",
+            "notes": "Scopes of the token, if any"
+          },
+          {
+            "field": "oauth_application_id",
+            "log": "audit/security log",
+            "notes": "OAuth app id"
+          },
+          {
+            "field": "oauth_application_name",
+            "log": "security log",
+            "notes": "OAuth app name"
+          },
+          {
+            "field": "hashed_token",
+            "log": "REST check-a-token response",
+            "notes": "Token hash returned by POST /applications/{client_id}/token"
+          },
+          {
+            "field": "token_last_eight",
+            "log": "REST check-a-token response",
+            "notes": "Last 8 chars"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "oauth_authorization.create",
+            "stage": "create",
+            "notes": "User authorized app"
+          },
+          {
+            "event": "oauth_access.create",
+            "stage": "create",
+            "notes": "Token generated"
+          },
+          {
+            "event": "oauth_access.regenerate",
+            "stage": "change",
+            "notes": "Token regenerated"
+          },
+          {
+            "event": "oauth_access.revoke",
+            "stage": "revoke",
+            "notes": "Token revoked"
+          },
+          {
+            "event": "oauth_access.destroy",
+            "stage": "revoke",
+            "notes": "Token deleted"
+          },
+          {
+            "event": "oauth_authorization.destroy",
+            "stage": "revoke",
+            "notes": "Authorization deleted/expired"
+          },
+          {
+            "event": "oauth_application.revoke_tokens",
+            "stage": "revoke",
+            "notes": "App owner revoked tokens"
+          },
+          {
+            "event": "oauth_application.revoke_all_tokens",
+            "stage": "revoke",
+            "notes": "All tokens"
+          },
+          {
+            "event": "oauth_application.reset_secret",
+            "stage": "change",
+            "notes": "Client secret reset"
+          }
+        ],
+        "correlation_keys": [
+          "actor",
+          "actor_id",
+          "user_agent",
+          "actor_ip",
+          "actor_location",
+          "hashed_token",
+          "programmatic_access_type",
+          "token_id",
+          "request_id",
+          "org",
+          "repo",
+          "created_at",
+          "oauth_application_id",
+          "oauth_application_name"
+        ],
+        "anomaly_cues": [
+          "new oauth_authorization.create for an unknown app across many users (consent phishing)",
+          "token used from a different ASN than the app's servers",
+          "device-flow authorizations by users who do not use that tool",
+          "use of scopes (repo, admin:org) beyond what the app needs"
+        ],
+        "containment": {
+          "steps": "User revokes authorization; app owner DELETE /applications/{client_id}/token or /grant or revoke all tokens; anyone posts value to revocation API; org owner denies the app's org access; reset client secret.",
+          "kills_existing": "yes",
+          "notes": "Revoking authorization kills all its tokens. Org owners cannot revoke an OAuth token's SSO authorization; denying app access blocks org data."
+        },
+        "sample_query": {
+          "language": "GitHub audit log search",
+          "query": "action:oauth_authorization.create created:>=2026-09-01",
+          "purpose": "Spot new OAuth app grants in the window; pivot on oauth_application_id."
+        },
+        "unknown": [
+          "gho_ regex/length",
+          "whether org audit log shows oauth_access.* (documented in security log)",
+          "failed-auth event"
+        ],
+        "evidence_refs": [
+          "fc-581baa8e",
+          "turn3search28",
+          "fc-69839963",
+          "fc-b07fe78b",
+          "fc-3d12b26a",
+          "fc-932cd3fb",
+          "fc-c730ca19",
+          "fc-636a4131",
+          "fc-846e1fd4",
+          "fc-8a7fd6ce",
+          "fc-6784f9ba"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /user",
+            "reveals": "login, profile; X-OAuth-Scopes response header lists the granted OAuth scopes",
+            "bulk": false,
+            "scope": "read:user or user for private fields",
+            "rate_limit": "5,000/hour per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Reads not in standard audit log"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /user/repos",
+            "reveals": "repositories the OAuth user can reach",
+            "bulk": false,
+            "scope": "repo",
+            "rate_limit": "5,000/hour per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Reads not in standard audit log"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /repos/{owner}/{repo}/tarball/{ref}",
+            "reveals": "full source archive of a repo",
+            "bulk": true,
+            "scope": "repo",
+            "rate_limit": "5,000/hour per user",
+            "logged": "unknown",
+            "log_event": "repo.download_zip (candidate)",
+            "log_notes": "API emission not stated"
+          },
+          {
+            "stage": "collection",
+            "call": "git clone with gho_ token",
+            "reveals": "full repository history",
+            "bulk": true,
+            "scope": "repo",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "git.clone",
+            "log_notes": "Enterprise Cloud only; OAuth app id recorded on some events"
+          }
+        ],
+        "unknown": [
+          "Whether reads appear in api.request streaming events"
+        ],
+        "evidence_refs": [
+          "fc-84ecf704",
+          "fc-11049102",
+          "fc-35204b4b",
+          "fc-19c68525",
+          "fc-f787d164"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "GitHub Org Authentication Method Changed",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_org_auth_modified.yml",
+          "detects": "Org authentication setting changes, including turning OAuth app access restrictions on or off (the rule also covers SAML and 2FA changes)."
+        },
+        {
+          "source": "Elastic",
+          "title": "High Number of Cloned GitHub Repos From PAT",
+          "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/github/execution_github_high_number_of_cloned_repos_from_pat.toml",
+          "detects": "Many private repository clones made with an OAuth access token or fine-grained PAT."
+        },
+        {
+          "source": "Elastic",
+          "title": "GitHub OAuth Application Authorized",
+          "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/github/persistence_github_oauth_application_authorized.toml",
+          "detects": "A user authorized an OAuth application (new OAuth authorization)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-03635d12",
+      "title": "Authorizing a personal access token for use with single sign-on",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-single-sign-on/authorizing-a-personal-access-token-for-use-with-single-sign-on",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-11049102",
+      "title": "REST API endpoints for users",
+      "url": "https://docs.github.com/en/rest/users/users",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-19c68525",
+      "title": "Audit log events for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/audit-log-events-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-35204b4b",
+      "title": "Rate limits for the REST API",
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3d12b26a",
+      "title": "Security log events",
+      "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/security-log-events",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3d73f0ba",
+      "title": "Limiting OAuth app and GitHub App access requests and installations",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-programmatic-access-to-your-organization/limiting-oauth-app-and-github-app-access-requests-and-installations",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-46fea6e3",
+      "title": "About authentication with single sign-on",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-single-sign-on/about-authentication-with-single-sign-on",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4aef0a67",
+      "title": "REST API endpoints for enterprise credential inventory",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/enterprise-admin/token-inventory",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-581baa8e",
+      "title": "About authentication to GitHub",
+      "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62eef186",
+      "title": "Managing allowed IP addresses for your organization - GitHub Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/managing-allowed-ip-addresses-for-your-organization",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-636a4131",
+      "title": "Revoking authorizations or deleting credentials in your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/respond-to-incidents/revoke-authorizations-or-tokens",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6784f9ba",
+      "title": "Searching the audit log for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/searching-the-audit-log-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69839963",
+      "title": "Identifying audit log events performed by an access token",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/identifying-audit-log-events-performed-by-an-access-token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6c5d47e3",
+      "title": "Remove an organization member",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/members#remove-an-organization-member",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-70eb24e3",
+      "title": "GitHub credential types reference",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-programmatic-access-to-your-organization/github-credential-types",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-71c3f719",
+      "title": "Reviewing credentials in your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/respond-to-incidents/reviewing-credentials-in-your-enterprise",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-84ecf704",
+      "title": "Scopes for OAuth apps",
+      "url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-893dd68a",
+      "title": "About support for your IdP's Conditional Access Policy - GitHub Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/configuring-authentication-for-enterprise-managed-users/about-support-for-your-idps-conditional-access-policy",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8a7fd6ce",
+      "title": "Responding to a security incident",
+      "url": "https://docs.github.com/en/code-security/tutorials/secure-your-organization/respond-to-a-security-incident",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-913b4cec",
+      "title": "About OAuth app access restrictions",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-932cd3fb",
+      "title": "Token expiration and revocation - GitHub Docs",
+      "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/token-expiration-and-revocation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9c7c584e",
+      "title": "About support for your IdP's Conditional Access Policy",
+      "url": "https://docs.github.com/enterprise-cloud@latest/admin/identity-and-access-management/using-enterprise-managed-users-for-iam/about-support-for-your-idps-conditional-access-policy",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9e341652",
+      "title": "About user offboarding on GitHub Enterprise Cloud",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/concepts/identity-and-access-management/user-offboarding",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a275e930",
+      "title": "About OAuth app access restrictions",
+      "url": "https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a2e23dc8",
+      "title": "Removing a member from your organization",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-membership-in-your-organization/removing-a-member-from-your-organization",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aa029406",
+      "title": "Exporting audit log activity for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/exporting-audit-log-activity-for-your-enterprise",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b07fe78b",
+      "title": "Audit log events for your organization",
+      "url": "https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/audit-log-events-for-your-organization",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b1700c90",
+      "title": "Deprovisioning and reinstating users with SCIM",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/provisioning-user-accounts-with-scim/deprovisioning-and-reinstating-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bcecede9",
+      "title": "Removing a member from your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-accounts-and-repositories/managing-users-in-your-enterprise/removing-a-member-from-your-enterprise",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bd4f8977",
+      "title": "Restricting network traffic to your enterprise with an IP allow list",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/configuring-settings/hardening-security-for-your-enterprise/restricting-network-traffic-to-your-enterprise-with-an-ip-allow-list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf83bb86",
+      "title": "Configuring SAML single sign-on for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/using-saml-for-enterprise-iam/configuring-saml-single-sign-on-for-your-enterprise",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c5a134ff",
+      "title": "Enforcing SAML single sign-on for your organization",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-saml-single-sign-on-for-your-organization/enforcing-saml-single-sign-on-for-your-organization",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c730ca19",
+      "title": "REST API endpoints for OAuth authorizations",
+      "url": "https://docs.github.com/en/rest/apps/oauth-applications",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ce6df4bc",
+      "title": "Using the audit log API for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/using-the-audit-log-api-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d5735a5c",
+      "title": "Managing allowed IP addresses for your organization",
+      "url": "https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/managing-allowed-ip-addresses-for-your-organization",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dc3b71e8",
+      "title": "List SAML SSO authorizations for an organization",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/orgs#list-saml-sso-authorizations-for-an-organization",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f158a79d",
+      "title": "Authorizing OAuth apps",
+      "url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f787d164",
+      "title": "Streaming the audit log for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/streaming-the-audit-log-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search28",
+      "title": "GitHub credential types reference",
+      "url": "https://docs.github.com/en/organizations/managing-programmatic-access-to-your-organization/github-credential-types",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,349 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "sap",
+      "name": "SAP BTP and S/4HANA Cloud",
+      "scope_notes": "Covers SAP Business Technology Platform (XSUAA, Cloud Management service, btp CLI), SAP Cloud Identity Services, and SAP S/4HANA Cloud Public Edition. Covers BTP Cloud Foundry/multi-environment subaccounts, Identity Authentication tenants, and S/4HANA Cloud Public Edition communication management; BTP docs cited from SAP's official SAP-docs GitHub source of help.sap.com.",
+      "controls": [
+        {
+          "name": "Lock / delete communication user",
+          "effect": "disable",
+          "applies_to": [
+            "sap-6"
+          ],
+          "what": "Locks or deletes a communication user in the Maintain Communication Users app.",
+          "setting": "Maintain Communication Users app",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-6211b5e5"
+          ]
+        },
+        {
+          "name": "Communication scenario / arrangement",
+          "effect": "limit_scope",
+          "applies_to": [
+            "sap-6"
+          ],
+          "what": "The arrangement's communication scenario defines which inbound services and auth methods the user can use.",
+          "setting": "Communication Arrangements app (SAP recommends one comm user per arrangement)",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-2cf7fdc8",
+            "fc-05cc6ab0"
+          ]
+        },
+        {
+          "name": "Communication user password policy",
+          "effect": "other",
+          "applies_to": [
+            "sap-6"
+          ],
+          "what": "Requires 20+ character passwords with a special character and locks after 3 failed logons.",
+          "setting": "Built in (view in Display Static System Audit > Password Policy Technical User)",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-34c952b0"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP/network allowlist for XSUAA clients, btp API credentials, IAS API secrets or S/4HANA communication users.",
+        "Whether XSUAA password-grant tokens (cis service keys) honor IAS/corporate IdP MFA or conditional access.",
+        "Exact audit message for service key deletion and for API credential create/delete in XSUAA audit log.",
+        "Whether communication user passwords expire.",
+        "Org-wide switch to block creation of service keys or API credentials (none found).",
+        "IAS audit event emitted on client secret creation/deletion (change log covers admin CREATE/UPDATE/DELETE generally)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "sap-6",
+      "provider_id": "sap",
+      "name": "S/4HANA Cloud Public Edition communication user (basic auth or X.509) in a communication arrangement",
+      "family": "basic",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A communication user is a technical user assigned to a communication system and used by a communication arrangement for inbound API calls. It authenticates with user/password (basic) or an X.509 client certificate.",
+        "evidence_refs": [
+          "fc-6211b5e5",
+          "fc-34c952b0",
+          "fc-2cf7fdc8"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "SAP: sessions using certificate-based or basic authentication 'run in the context of a technical communication user', not a business user, so business-user SSO is not involved.",
+        "evidence_refs": [
+          "fc-2cf7fdc8"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No IP allowlist for communication users found in the pages reviewed.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Password expiry not stated; cert valid until its expiry",
+        "evidence_refs": [
+          "fc-34c952b0",
+          "fc-2cf7fdc8"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Certificate validity; password policy in Display Static System Audit",
+        "summary": "Change the password or present a new cert with the same subject/issuer; both certs work until each expires.",
+        "evidence_refs": [
+          "fc-2cf7fdc8"
+        ]
+      },
+      "administration": {
+        "summary": "Administrators create/lock/delete comm users in Maintain Communication Users. The communication scenario of the arrangement bounds which APIs the user can reach. Password needs 20+ chars; 3 failures lock the user.",
+        "conditions": "Admin business role (SAP_BR_ADMINISTRATOR).",
+        "evidence_refs": [
+          "fc-6211b5e5",
+          "fc-34c952b0",
+          "fc-2cf7fdc8"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Basic/certificate sessions run as a technical communication user, not a business user.",
+          "evidence_refs": [
+            "fc-2cf7fdc8"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Maintain Communication Users app lists users and can download all of them to a spreadsheet.",
+          "evidence_refs": [
+            "fc-6211b5e5"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Maintain Communication Users app > download list to spreadsheet",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-6211b5e5"
+          ]
+        },
+        "usage": {
+          "ui": "Display Security Audit Log app; filter by user and logon events (e.g. AU1)",
+          "api": "GET <host>/sap/opu/odata4/sap/rsau_log_api/srvd_a2x/sap/rsau_log_api/0001/SecurityAuditLog?$filter=log_tstmp ge ... (comm. arrangement SAP_COM_0750)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-a99537a3",
+            "fc-53dba3ff",
+            "fc-177e477a"
+          ]
+        },
+        "reads": {
+          "ui": "Enable: Read Access Logging Configuration app > Enabling in Client > Edit > select checkbox. Review: Read Access Logging: Monitor app > search by time range and log domain/purpose",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-93029d6f",
+            "fc-89016889"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "User name/password or X.509 subject/issuer"
+        },
+        "log_sources": [
+          {
+            "name": "Security Audit Log (Display Security Audit Log app; SAL API SAP_COM_0750)",
+            "notes": "45 days default retention, configurable; archiving object BC_SAL"
+          },
+          {
+            "name": "Read Access Logging",
+            "notes": "Only if configured by customer"
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "user name",
+            "log": "Security Audit Log",
+            "notes": "Logon attempts"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "successful and unsuccessful logon attempts",
+            "stage": "use",
+            "notes": "Event IDs listed in SAP Note 2903873"
+          }
+        ],
+        "correlation_keys": [
+          "communication user name",
+          "communication system",
+          "communication arrangement"
+        ],
+        "anomaly_cues": [
+          "Logons from a comm user outside its integration schedule",
+          "Lockouts after 3 failed attempts",
+          "Comm user shared across several arrangements"
+        ],
+        "containment": {
+          "steps": "Lock or delete the user in Maintain Communication Users; change its password; remove its certificate.",
+          "kills_existing": "unknown",
+          "notes": "Security sessions created with x-sap-security-session may persist; effect of lock on them not documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether OData reads by comm users are logged without Read Access Logging"
+        ],
+        "evidence_refs": [
+          "fc-6211b5e5",
+          "fc-a99537a3",
+          "fc-6ff1335a",
+          "fc-26eac531"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "Inbound OData/SOAP services of the arranged communication scenario",
+            "reveals": "Business data in scope of the scenario",
+            "bulk": true,
+            "scope": "Communication scenario",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Logon in Security Audit Log; reads only if Read Access Logging configured"
+          }
+        ],
+        "unknown": [
+          "Generic whoami endpoint"
+        ],
+        "evidence_refs": [
+          "fc-2cf7fdc8",
+          "fc-a99537a3",
+          "fc-26eac531"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-05cc6ab0",
+      "title": "Security Recommendations (SAP S/4HANA Cloud Public Edition)",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/55a7cb346519450cb9e6d21c1ecd6ec1/fafa6639cf7b4265b68da63efbc8fb96.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-177e477a",
+      "title": "Retrieving Security Audit Log",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/733cba15cc714b5b9129224454420e63/ce394703945d426a97e1e0cad524946d.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-26eac531",
+      "title": "Security Logging (SAP S/4HANA Cloud Public Edition)",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/55a7cb346519450cb9e6d21c1ecd6ec1/005f91d089c74382ac3645628c70bede.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2cf7fdc8",
+      "title": "Secure Communication for Inbound Integration",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/55a7cb346519450cb9e6d21c1ecd6ec1/36ea4658c0c51f60e10000000a44147b.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-34c952b0",
+      "title": "How to Create Communication Users",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/0f69f8fb28ac4bf48d2b57b9637e81fa/0377adea0401467f939827242c1f4014.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-53dba3ff",
+      "title": "How to Access Security Logs via API",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/55a7cb346519450cb9e6d21c1ecd6ec1/8c170f837c5f4783947d7db0ebc4fca6.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6211b5e5",
+      "title": "Maintain Communication Users (SAP S/4HANA Cloud Public Edition)",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/0f69f8fb28ac4bf48d2b57b9637e81fa/eef80dda3867461c92ac1273689ed36f.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6ff1335a",
+      "title": "Security Audit Log (SAP S/4HANA Cloud Public Edition)",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/55a7cb346519450cb9e6d21c1ecd6ec1/ebbbc901f3b6411c8c2ed87e7a4ed71d.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-89016889",
+      "title": "How to Monitor the Read Access Log",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/55a7cb346519450cb9e6d21c1ecd6ec1/5a1011a87588417187561b63562a900e.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-93029d6f",
+      "title": "How to Enable Read Access Logging",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/55a7cb346519450cb9e6d21c1ecd6ec1/3fdad50926304d62b48d0d357e2ebd3e.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a99537a3",
+      "title": "Display Security Audit Log",
+      "url": "https://help.sap.com/docs/SAP_S4HANA_CLOUD/55a7cb346519450cb9e6d21c1ecd6ec1/7eed4aba8bcb4d7091e289cf0dc00cf4.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

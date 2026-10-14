@@ -1,0 +1,1319 @@
+{
+ "id": "databricks",
+ "name": "Databricks (AWS baseline)",
+ "scope_notes": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+ "controls": [
+  {
+   "name": "Personal Access Tokens (workspace toggle)",
+   "effect": "disable",
+   "applies_to": [
+    "databricks-3"
+   ],
+   "what": "Turns off PAT authentication for a workspace; existing tokens are not deleted.",
+   "setting": "Workspace Settings > Advanced > Personal Access Tokens",
+   "plan": "Premium or above",
+   "default": "on",
+   "level": "workspace",
+   "evidence_refs": [
+    "turn24search1"
+   ],
+   "quote": "enabled by default for all Databricks workspaces."
+  },
+  {
+   "name": "Personal access token permissions (CAN USE)",
+   "effect": "limit_resources",
+   "applies_to": [
+    "databricks-3"
+   ],
+   "what": "Restricts which users, groups and service principals can create and use PATs.",
+   "setting": "Workspace Settings > Advanced > Personal Access Tokens > Permissions; Permissions API",
+   "plan": "Premium or above",
+   "default": "varies",
+   "level": "workspace",
+   "evidence_refs": [
+    "turn24search7"
+   ],
+   "quote": "User cannot create or use personal access tokens to authenticate to the Databricks workspace."
+  },
+  {
+   "name": "maxTokenLifetimeDays",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "databricks-3"
+   ],
+   "what": "Caps lifetime of new PATs (default 730 days); does not affect existing tokens.",
+   "setting": "Workspace configuration API / CLI (no UI)",
+   "plan": "Premium or above",
+   "default": "on",
+   "level": "workspace",
+   "evidence_refs": [
+    "turn24search1"
+   ],
+   "quote": "730 days (two years)"
+  },
+  {
+   "name": "Automatic revocation of unused PATs",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "databricks-3"
+   ],
+   "what": "PATs not used for 90 days are revoked automatically.",
+   "setting": "Automatic (not configurable per docs)",
+   "plan": null,
+   "default": "on",
+   "level": "workspace",
+   "evidence_refs": [
+    "turn24search1"
+   ],
+   "quote": "Databricks automatically revokes personal access tokens that haven't been used in 90 or more days."
+  },
+  {
+   "name": "Token report and revoke (account console)",
+   "effect": "revoke",
+   "applies_to": [
+    "databricks-3"
+   ],
+   "what": "Account admins list PATs across workspaces and revoke them.",
+   "setting": "Account console > Security > Token report; databricks token-management delete",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "turn24search1"
+   ],
+   "quote": "select a token and click Revoke."
+  },
+  {
+   "name": "IP access lists",
+   "effect": "limit_network",
+   "applies_to": [
+    "databricks-1",
+    "databricks-2",
+    "databricks-3",
+    "databricks-4"
+   ],
+   "what": "Restrict account console/account APIs and workspace/workspace APIs to approved IPs.",
+   "setting": "Account console IP access lists; workspace IP Access List API",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "workspace",
+   "evidence_refs": [
+    "turn5search18"
+   ],
+   "quote": "The default allows connections from any IP address."
+  },
+  {
+   "name": "Context-based ingress policies",
+   "effect": "limit_network",
+   "applies_to": [
+    "databricks-1",
+    "databricks-2",
+    "databricks-3",
+    "databricks-4"
+   ],
+   "what": "Account-level allow/deny rules combining identity, network source and request scope, e.g. pinning service principals to trusted networks.",
+   "setting": "Account console network policies (account admin)",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-d0d16207"
+   ],
+   "quote": "allow and deny rules that combine who is calling, from where they are calling, and what they can reach"
+  },
+  {
+   "name": "Service principal OAuth secret lifetime",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "databricks-1"
+   ],
+   "what": "Each OAuth secret gets a lifetime set at creation, max 730 days.",
+   "setting": "Service principal > Secrets > Generate secret (account or workspace admin)",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "turn5search26"
+   ],
+   "quote": "Set the secret’s lifetime in days (maximum 730 days)."
+  },
+  {
+   "name": "OAuth secret scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "databricks-1"
+   ],
+   "what": "Admins choose API scopes when generating a secret; they cannot be changed later.",
+   "setting": "Service principal > Secrets > Generate secret",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "turn5search26"
+   ],
+   "quote": "Scopes are set when you generate the secret and can’t be changed afterward."
+  },
+  {
+   "name": "Service principal federation policy",
+   "effect": "limit_resources",
+   "applies_to": [
+    "databricks-2"
+   ],
+   "what": "Binds a service principal to tokens from a given issuer, audience and subject.",
+   "setting": "Account console > service principal > Credentials & secrets; Federation Policy API/CLI (account admin)",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-907a73bb"
+   ],
+   "quote": "Account admins can configure a service principal federation policy"
+  },
+  {
+   "name": "Account-wide federation policy",
+   "effect": "limit_resources",
+   "applies_to": [
+    "databricks-2"
+   ],
+   "what": "Allows tokens from a registered IdP to map to Databricks users or service principals; only trusted IdPs should be added.",
+   "setting": "Account console > Security > federation policy; Account Federation Policy API",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-907a73bb"
+   ],
+   "quote": "Don't configure account-wide federation with external IdPs that you don't control."
+  },
+  {
+   "name": "App connections (disable published or custom OAuth apps)",
+   "effect": "disable",
+   "applies_to": [
+    "databricks-4"
+   ],
+   "what": "Removing an app connection disables it and breaks existing connections.",
+   "setting": "Account console > Settings > App connections > Remove; published-app-integration / custom-app-integration CLI",
+   "plan": null,
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-fa8c9e15"
+   ],
+   "quote": "Disabling an application breaks the application connection, so use caution when disabling OAuth applications."
+  },
+  {
+   "name": "App connection token TTLs",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "databricks-4"
+   ],
+   "what": "Sets access token (default 60 min) and refresh token (default 10080 min) lifetimes for custom apps.",
+   "setting": "Account console > Settings > App connections > edit app",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-fa8c9e15"
+   ],
+   "quote": "The refresh token time-to-live (TTL) in minutes. Default: `10080`."
+  },
+  {
+   "name": "Single-use refresh tokens",
+   "effect": "require_rotation",
+   "applies_to": [
+    "databricks-4"
+   ],
+   "what": "Makes refresh tokens single-use for an app integration; API only.",
+   "setting": "Custom/published app integration API",
+   "plan": null,
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-fa8c9e15"
+   ],
+   "quote": "You can only configure additional OAuth security features (such as single-use refresh tokens) through the API."
+  },
+  {
+   "name": "Deactivate a service principal",
+   "effect": "revoke",
+   "applies_to": [
+    "databricks-1",
+    "databricks-2"
+   ],
+   "what": "Deactivated service principals cannot authenticate; their OAuth secrets and tokens stop working until reactivated.",
+   "setting": "Account Service Principals API (account level); Workspace Service Principals API (workspace level)",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-d777e026"
+   ]
+  }
+ ],
+ "no_control": [],
+ "controls_unknown": [
+  "No account-wide switch to disable PATs across all workspaces was found; the toggle is per workspace.",
+  "Whether IP access lists explicitly cover PAT/OAuth API calls is implied (workspace-level APIs) but not stated.",
+  "Whether context-based ingress rules can distinguish auth method (PAT vs OAuth) is not stated.",
+  "How to update or delete federation policies, and how to revoke an individual OAuth secret, were not covered on the fetched pages.",
+  "TTL min/max ranges, and whether built-in databricks-cli app follows app-connection TTL defaults, not confirmed.",
+  "Single-use refresh token details page returned 404; defaults per app not confirmed.",
+  "Azure/GCP capabilities and tiers not checked."
+ ],
+ "credentials": [
+  {
+   "id": "databricks-1",
+   "name": "OAuth M2M",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth user-to-machine and machine-to-machine, external token federation, and legacy personal access tokens.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "External IdP tokens exchange into Databricks OAuth using configured issuer/audience/subject trust; workload CI/runtime federation supported.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Enterprise tier. Separate account/workspace IP lists protect public UI/API access; PrivateLink traffic is not filtered by them. Context-based ingress (Enterprise) can add rules combining identity (e.g. service principal), network source and access type.",
+    "evidence_refs": [
+     "turn5search18",
+     "turn24search7",
+     "turn24search1",
+     "fc-d0d16207"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 3600,
+    "configurable": "no",
+    "summary": "1 hour",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "absolute",
+    "summary": "Re-mint a 1-hour access token with the service principal client ID and OAuth secret (SDK/CLI do this automatically). The OAuth secret has a set lifetime of up to 730 days and can be scoped.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "administration": {
+    "summary": "Service principals, entitlements/resource ACLs, federation policies, PAT controls and context-based ingress controls.",
+    "conditions": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+    "evidence_refs": [
+     "turn5search18",
+     "turn24search7",
+     "turn24search1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Credential belongs to a service principal, not a user.",
+     "evidence_refs": [
+      "turn5search26"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "OAuth secrets are listed per service principal on its Credentials & secrets tab; no account-wide secret report found.",
+     "evidence_refs": [
+      "turn5search26"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Account console > User management > Service principals > <SP> > Credentials & secrets (per SP)",
+     "api": "GET /api/2.0/accounts/{account_id}/servicePrincipals/{service_principal}/credentials/secrets",
+     "cli": "databricks account service-principal-secrets list SERVICE_PRINCIPAL_ID",
+     "evidence_refs": [
+      "turn5search26",
+      "fc-8f2795ab",
+      "fc-c8296a1a"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "SQL: SELECT * FROM system.access.audit WHERE service_name='workspace' AND action_name='workspaceExport' (filter user_identity.email)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ae5ed64d",
+      "fc-1f6728c3"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Client secret format not documented by Databricks. GitHub scans it as databricks_oauth_secret_token (no push protection). Client ID = service principal application ID."
+    },
+    "log_sources": [
+     {
+      "name": "Databricks audit logs (system.access.audit system table / audit log delivery)",
+      "notes": "Account- and workspace-level events; account-level rows have workspace_id 0. No general retention stated on the table page; events of a deleted workspace older than 14 days are removed."
+     },
+     {
+      "name": "Service principal secrets list API",
+      "notes": "Returns id, secret_hash, status, create_time, expire_time per secret; metadata only."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "request_params.client_id",
+      "log": "system.access.audit (accounts.mintOAuthToken)",
+      "notes": "Service principal application ID used in the client_credentials grant"
+     },
+     {
+      "field": "request_params.secret_id",
+      "log": "system.access.audit (servicePrincipalCredentials.create/delete)",
+      "notes": "Which OAuth secret was created or deleted"
+     },
+     {
+      "field": "request_params.service_principal",
+      "log": "system.access.audit (servicePrincipalCredentials)",
+      "notes": "Owning service principal"
+     },
+     {
+      "field": "identity_metadata.run_as",
+      "log": "system.access.audit",
+      "notes": "Identity used for authorization on API calls"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "servicePrincipalCredentials.create",
+      "stage": "create",
+      "notes": "OAuth secret generated; params include lifetime"
+     },
+     {
+      "event": "accounts.mintOAuthToken",
+      "stage": "use",
+      "notes": "Token minted; params grant_type, scope, expires_in, client_id"
+     },
+     {
+      "event": "accounts.accountInHouseOAuthClientAuthentication",
+      "stage": "use",
+      "notes": "OAuth client authenticated at account level"
+     },
+     {
+      "event": "accounts.oidcTokenAuthorization",
+      "stage": "use",
+      "notes": "API call authorized with an OAuth token"
+     },
+     {
+      "event": "servicePrincipalCredentials.list",
+      "stage": "change",
+      "notes": "Admin enumerated secrets"
+     },
+     {
+      "event": "servicePrincipalCredentials.delete",
+      "stage": "revoke",
+      "notes": "Secret deleted"
+     }
+    ],
+    "correlation_keys": [
+     "user_identity.email",
+     "identity_metadata.run_by",
+     "identity_metadata.run_as",
+     "source_ip_address",
+     "user_agent",
+     "session_id",
+     "workspace_id",
+     "request_params",
+     "request_params.client_id",
+     "request_params.secret_id"
+    ],
+    "anomaly_cues": [
+     "mintOAuthToken for a client_id from a source_ip_address outside the workload's known egress range",
+     "new servicePrincipalCredentials.create on a long-lived SP shortly followed by token minting from a new IP",
+     "SP secret created by a non-automation admin identity",
+     "mintOAuthToken with grant_type client_credentials at unusual volume or hours for a batch SP",
+     "servicePrincipalCredentials.list by an unexpected admin (reconnaissance)"
+    ],
+    "containment": {
+     "steps": "Delete the secret (DELETE /api/2.0/accounts/{account_id}/servicePrincipals/{service_principal}/credentials/secrets/{secret_id}); to stop tokens already minted, deactivate the service principal via the Account Service Principals API, then rotate.",
+     "kills_existing": "partial",
+     "notes": "Docs do not say whether deleting a secret invalidates issued access tokens (1-hour lifetime). SP deactivation blocks all its tokens."
+    },
+    "sample_query": {
+     "language": "Databricks SQL (system.access.audit)",
+     "query": "SELECT event_time, request_params['client_id'] AS client_id, source_ip_address, user_agent, response.statusCode FROM system.access.audit WHERE service_name = 'accounts' AND action_name = 'mintOAuthToken' AND event_date >= current_date() - INTERVAL 30 DAYS AND request_params['client_id'] = '<sp-application-id>' ORDER BY event_time DESC",
+     "purpose": "See where and how often a service principal mints OAuth tokens"
+    },
+    "unknown": [
+     "OAuth secret prefix/regex",
+     "whether deleting a secret revokes issued access tokens",
+     "which secret_id was used to mint a given token (mintOAuthToken params list no secret_id)",
+     "authenticationMethod values",
+     "exact retention of system.access.audit"
+    ],
+    "evidence_refs": [
+     "fc-1f6728c3",
+     "fc-ae5ed64d",
+     "turn5search26",
+     "fc-475582d1",
+     "fc-d777e026",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /api/2.0/workspace/export",
+      "reveals": "Notebook or whole-directory contents (source code, sometimes embedded secrets/results)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "workspace.workspaceExport",
+      "log_notes": "Audit log / system.access.audit; user_identity shows the caller. Docs describe the event as a notebook export."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-0c3101b7",
+     "fc-1f6728c3",
+     "fc-ae5ed64d"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "databricks-2",
+   "name": "External token federation",
+   "family": "federation",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth user-to-machine and machine-to-machine, external token federation, and legacy personal access tokens.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "External IdP tokens exchange into Databricks OAuth using configured issuer/audience/subject trust; workload CI/runtime federation supported.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Enterprise tier. Separate account/workspace IP lists protect public UI/API access; PrivateLink traffic is not filtered by them. Context-based ingress (Enterprise) can add rules combining identity (e.g. service principal), network source and access type.",
+    "evidence_refs": [
+     "turn5search18",
+     "turn24search7",
+     "turn24search1",
+     "fc-d0d16207"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "conditional",
+    "summary": "Derived from external token lifetime",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "policy",
+    "summary": "Repeat token exchange using a valid external identity token.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "administration": {
+    "summary": "Service principals, entitlements/resource ACLs, federation policies, PAT controls and context-based ingress controls.",
+    "conditions": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+    "evidence_refs": [
+     "turn5search18",
+     "turn24search7",
+     "turn24search1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Tokens are issued by your own IdP, so its policies apply at issuance; Databricks does not describe SSO checks on the exchanged token.",
+     "evidence_refs": [
+      "turn5search2"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "A deactivated user or service principal cannot authenticate to Databricks APIs; SCIM removal deactivates the user.",
+     "evidence_refs": [
+      "fc-2c40808e",
+      "fc-b6acac67",
+      "fc-d777e026"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Account console > Security > Identity provider setup > Federation policies > Create policy (issuer, audiences, subject); per SP: User management > <SP> > Credentials & secrets > Federation policies",
+     "api": "POST /api/2.0/accounts/{account_id}/federationPolicies",
+     "cli": null,
+     "evidence_refs": [
+      "fc-907a73bb",
+      "fc-b92888bc"
+     ]
+    },
+    "expiry": {
+     "ui": "Set in your IdP: Databricks token copies the subject token exp claim",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "turn5search6"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "SQL: SELECT * FROM system.access.audit WHERE service_name='workspace' AND action_name='workspaceExport' (filter user_identity.email)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ae5ed64d",
+      "fc-1f6728c3"
+     ]
+    },
+    "offboard": {
+     "ui": "Remove the user from the IdP account-level SCIM connector (deactivates the user)",
+     "api": "PATCH /api/2.1/accounts/{account_id}/scim/v2/Users/{id} with active=false",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2c40808e",
+      "fc-b6acac67"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Input is an external IdP JWT (RS256/ES256); output is a Databricks OAuth token whose exp equals the JWT exp. GitHub type databricks_federated_account_session_token exists."
+    },
+    "log_sources": [
+     {
+      "name": "Databricks audit logs (system.access.audit system table / audit log delivery)",
+      "notes": "Account- and workspace-level events; account-level rows have workspace_id 0. No general retention stated on the table page; events of a deleted workspace older than 14 days are removed."
+     },
+     {
+      "name": "External IdP / workload identity provider logs",
+      "notes": "Issuance of the federated JWT happens at the IdP; Databricks logs only the exchange and use."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "request_params.policy_id",
+      "log": "system.access.audit (accounts.*FederationPolicy)",
+      "notes": "Federation policy created/changed/deleted"
+     },
+     {
+      "field": "request_params.service_principal_id",
+      "log": "system.access.audit (accounts.*FederationPolicy)",
+      "notes": "Present for service principal (workload identity) policies"
+     },
+     {
+      "field": "request_params.client_id",
+      "log": "system.access.audit (accounts.mintOAuthToken)",
+      "notes": "Service principal UUID for workload identity federation exchanges"
+     },
+     {
+      "field": "identity_metadata.run_as",
+      "log": "system.access.audit",
+      "notes": "Databricks identity the federated token maps to"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "accounts.createFederationPolicy",
+      "stage": "create",
+      "notes": "Account-wide or SP federation policy created"
+     },
+     {
+      "event": "accounts.updateFederationPolicy",
+      "stage": "change",
+      "notes": "Issuer/audience/subject changes"
+     },
+     {
+      "event": "accounts.deleteFederationPolicy",
+      "stage": "revoke",
+      "notes": "Policy removed"
+     },
+     {
+      "event": "accounts.mintOAuthToken",
+      "stage": "use",
+      "notes": "Token minted; grant_type would be the token-exchange URN"
+     },
+     {
+      "event": "accounts.oidcTokenAuthorization",
+      "stage": "use",
+      "notes": "API call authorized with OAuth token"
+     }
+    ],
+    "correlation_keys": [
+     "user_identity.email",
+     "identity_metadata.run_by",
+     "identity_metadata.run_as",
+     "source_ip_address",
+     "user_agent",
+     "session_id",
+     "workspace_id",
+     "request_params",
+     "request_params.policy_id",
+     "request_params.service_principal_id",
+     "request_params.client_id",
+     "request_params.grant_type"
+    ],
+    "anomaly_cues": [
+     "createFederationPolicy or updateFederationPolicy adding an unfamiliar issuer or broad audience",
+     "policy change by an admin outside change windows followed by token-exchange mints",
+     "token-exchange mintOAuthToken from IPs not belonging to the CI/cloud workload",
+     "account-wide policy subject_claim changed (could let one IdP user map to another Databricks user)",
+     "federated tokens used after IdP-side workload was decommissioned"
+    ],
+    "containment": {
+     "steps": "Delete or tighten the federation policy (deleteFederationPolicy); deactivate the mapped service principal or user; revoke/rotate trust at the external IdP.",
+     "kills_existing": "partial",
+     "notes": "Docs do not state whether deleting a policy invalidates already-exchanged Databricks tokens; those expire at the JWT exp (commonly one hour). SP deactivation blocks its tokens."
+    },
+    "sample_query": {
+     "language": "Databricks SQL (system.access.audit)",
+     "query": "SELECT event_time, action_name, user_identity.email, request_params['policy_id'] AS policy_id, request_params['service_principal_id'] AS sp_id, source_ip_address FROM system.access.audit WHERE service_name = 'accounts' AND action_name IN ('createFederationPolicy','updateFederationPolicy','deleteFederationPolicy') ORDER BY event_time DESC",
+     "purpose": "Review who changed federation trust and for which service principal"
+    },
+    "unknown": [
+     "whether mintOAuthToken is logged for token-exchange grants (only documented as in-house OAuth token minted)",
+     "policy issuer/audience values in audit request_params",
+     "external JWT subject/issuer in Databricks audit rows",
+     "effect of policy deletion on issued tokens",
+     "federated token prefix/regex"
+    ],
+    "evidence_refs": [
+     "fc-1f6728c3",
+     "fc-ae5ed64d",
+     "turn5search6",
+     "fc-907a73bb",
+     "fc-d777e026",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /api/2.0/workspace/export",
+      "reveals": "Notebook or whole-directory contents (source code, sometimes embedded secrets/results)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "workspace.workspaceExport",
+      "log_notes": "Audit log / system.access.audit; user_identity shows the caller. Docs describe the event as a notebook export."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-0c3101b7",
+     "fc-1f6728c3",
+     "fc-ae5ed64d"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "databricks-3",
+   "name": "Legacy PAT",
+   "family": "pat",
+   "principal": "user_or_service",
+   "lifecycle": "legacy",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth user-to-machine and machine-to-machine, external token federation, and legacy personal access tokens.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Enterprise tier. Separate account/workspace IP lists protect public UI/API access; PrivateLink traffic is not filtered by them. Context-based ingress (Enterprise) can add rules combining identity (e.g. service principal), network source and access type.",
+    "evidence_refs": [
+     "turn5search18",
+     "turn24search7",
+     "turn24search1",
+     "fc-d0d16207"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 63072000,
+    "configurable": "yes",
+    "summary": "Default maximum 730 days; admins can reduce it (new tokens only). Unused PATs are auto-revoked after 90 days.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1",
+     "fc-8b8d94a9"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "Admins can impose a shorter PAT maximum, control who can create/use PATs and revoke them. Setting custom max to 0 restores 730-day system default.",
+    "evidence_refs": [
+     "turn5search2",
+     "turn5search6",
+     "turn5search26",
+     "turn24search1"
+    ]
+   },
+   "administration": {
+    "summary": "Service principals, entitlements/resource ACLs, federation policies, PAT controls and context-based ingress controls.",
+    "conditions": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+    "evidence_refs": [
+     "turn5search18",
+     "turn24search7",
+     "turn24search1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Tokens of a deactivated user stop working (they remain but cannot authenticate); SCIM removal deactivates the user.",
+     "evidence_refs": [
+      "fc-2c40808e",
+      "fc-b6acac67"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Account console > Security > Token report; workspace Token Management API (databricks token-management list).",
+     "evidence_refs": [
+      "turn24search1"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": null,
+     "api": "SQL: SELECT * FROM system.access.audit WHERE service_name='workspace' AND action_name='workspaceExport' (filter user_identity.email)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ae5ed64d",
+      "fc-1f6728c3"
+     ]
+    },
+    "offboard": {
+     "ui": "Remove the user from the IdP account-level SCIM connector (deactivates the user)",
+     "api": "PATCH /api/2.1/accounts/{account_id}/scim/v2/Users/{id} with active=false",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2c40808e",
+      "fc-b6acac67"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "dapi",
+     "notes": "Prefix from official legacy Tokens CLI example (dapi + 32 chars); regex inferred from example, not documented. GitHub type databricks_access_token, push protection and validity checks."
+    },
+    "log_sources": [
+     {
+      "name": "Databricks audit logs (system.access.audit system table / audit log delivery)",
+      "notes": "Account- and workspace-level events; account-level rows have workspace_id 0. No general retention stated on the table page; events of a deleted workspace older than 14 days are removed."
+     },
+     {
+      "name": "Account console token report / Token Management API",
+      "notes": "Lists token_id, owner_id, created_by_id, creation_time, expiry_time, last_used_day; filter by owner, workspace, last used."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "request_params.tokenId",
+      "log": "system.access.audit (accounts.tokenLogin)",
+      "notes": "Token used to authenticate"
+     },
+     {
+      "field": "request_params.tokenHash",
+      "log": "system.access.audit (generateDbToken/revokeDbToken/changeDbTokenState)",
+      "notes": "Hash of the token in lifecycle events"
+     },
+     {
+      "field": "request_params.userId",
+      "log": "system.access.audit (token management events)",
+      "notes": "Token owner"
+     },
+     {
+      "field": "request_params.tokenCreatedBy",
+      "log": "system.access.audit (generateDbToken)",
+      "notes": "Creator (on-behalf-of tokens for SPs)"
+     },
+     {
+      "field": "token_id",
+      "log": "Token Management API",
+      "notes": "Use to revoke"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "accounts.generateDbToken",
+      "stage": "create",
+      "notes": "Params tokenExpirationTime, tokenCreatedBy, tokenHash, userId"
+     },
+     {
+      "event": "accounts.tokenLogin",
+      "stage": "use",
+      "notes": "Params tokenId, user, authenticationMethod"
+     },
+     {
+      "event": "accounts.updateDbToken",
+      "stage": "change",
+      "notes": "Scopes changed"
+     },
+     {
+      "event": "accounts.updateOnBehalfOfToken",
+      "stage": "change",
+      "notes": "On-behalf-of token changed"
+     },
+     {
+      "event": "accounts.changeDbTokenState",
+      "stage": "revoke",
+      "notes": "Token disabled"
+     },
+     {
+      "event": "accounts.revokeDbToken",
+      "stage": "revoke",
+      "notes": "Token dropped; also on user removal"
+     },
+     {
+      "event": "accounts.garbageCollectDbToken",
+      "stage": "revoke",
+      "notes": "Expired token cleanup; includes tokenFirstAccessed"
+     }
+    ],
+    "correlation_keys": [
+     "user_identity.email",
+     "identity_metadata.run_by",
+     "identity_metadata.run_as",
+     "source_ip_address",
+     "user_agent",
+     "session_id",
+     "workspace_id",
+     "request_params",
+     "request_params.tokenId",
+     "request_params.tokenHash",
+     "request_params.userId"
+    ],
+    "anomaly_cues": [
+     "tokenLogin for a tokenId from a new source_ip_address or user_agent",
+     "tokenLogin for a token owned by a deactivated or IdP-removed user",
+     "generateDbToken with long tokenExpirationTime created right after an interactive login from an unusual IP",
+     "dormant token (old last_used_day) suddenly active",
+     "burst of generateDbToken across workspaces by one user",
+     "GitHub secret scanning alert for databricks_access_token"
+    ],
+    "containment": {
+     "steps": "Revoke: databricks token-management delete TOKEN_ID (DELETE /api/2.0/token-management/tokens/{token_id}) or account console token report > Revoke; owner can run databricks tokens revoke --token-id. Deactivate owner if compromised.",
+     "kills_existing": "yes",
+     "notes": "PAT is the bearer credential itself; docs do not state propagation delay. Tokens of deactivated users are not auto-revoked."
+    },
+    "sample_query": {
+     "language": "Databricks SQL (system.access.audit)",
+     "query": "SELECT request_params['tokenId'] AS token_id, user_identity.email, source_ip_address, user_agent, min(event_time) AS first_seen, count(*) AS uses FROM system.access.audit WHERE service_name = 'accounts' AND action_name = 'tokenLogin' AND event_date >= current_date() - INTERVAL 7 DAYS GROUP BY ALL ORDER BY first_seen DESC",
+     "purpose": "Find PATs used from new IPs or user agents"
+    },
+    "unknown": [
+     "official PAT regex/length",
+     "relationship between tokenLogin tokenId and lifecycle tokenHash",
+     "authenticationMethod values",
+     "revocation propagation delay",
+     "exact audit_level value for workspace events"
+    ],
+    "evidence_refs": [
+     "fc-1f6728c3",
+     "fc-ae5ed64d",
+     "fc-c0b2c80d",
+     "fc-8b8d94a9",
+     "turn24search1",
+     "fc-479062c7",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /api/2.0/workspace/export",
+      "reveals": "Notebook or whole-directory contents (source code, sometimes embedded secrets/results)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "workspace.workspaceExport",
+      "log_notes": "Audit log / system.access.audit; user_identity shows the caller. Docs describe the event as a notebook export."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-0c3101b7",
+     "fc-1f6728c3",
+     "fc-ae5ed64d"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Databricks Long-Lifetime Token Generated",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/databricks_rules/databricks_long_lifetime_token_generated.yml",
+     "detects": "A personal access token was generated with a lifetime over 72 hours."
+    },
+    {
+     "source": "Panther",
+     "title": "Databricks Access Token Revoked",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/databricks_rules/databricks_access_token_revoked.yml",
+     "detects": "A Databricks access token was revoked."
+    },
+    {
+     "source": "Panther",
+     "title": "Databricks TruffleHog Scan Detected",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/databricks_rules/databricks_trufflehog_scan_detected.yml",
+     "detects": "Any Databricks API request with a TruffleHog user agent, which indicates a leaked token being validated."
+    },
+    {
+     "source": "Panther",
+     "title": "Databricks Non-SSO Login Detected",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/databricks_rules/databricks_non_sso_login.yml",
+     "detects": "Successful logins that did not use SAML SSO, including token logins with a PAT."
+    }
+   ]
+  },
+  {
+   "id": "databricks-4",
+   "name": "OAuth U2M",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A user signs in through the browser and consents; the CLI, SDK or app then receives a Databricks OAuth access token (and refresh token) and sends it as a bearer token. Works at account level or for one workspace; the CLI caches tokens in ~/.databricks/token-cache.json.",
+    "evidence_refs": [
+     "fc-33dad94b"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "The user signs in interactively (which can go through the account's SSO); no external token is exchanged on this path. Token exchange of external IdP tokens is the separate external token federation path.",
+    "evidence_refs": [
+     "fc-33dad94b"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Account and workspace IP access lists cover the UI and REST APIs at each level and require the Enterprise tier. Private IPs from PrivateLink traffic are not filtered by them.",
+    "evidence_refs": [
+     "turn5search18"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 86400,
+    "configurable": "conditional",
+    "summary": "Default 1 h; app integrations accept 5 min–24 h",
+    "evidence_refs": [
+     "fc-33dad94b",
+     "fc-fa8c9e15",
+     "fc-d3229e31"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "absolute",
+    "summary": "Refresh tokens get new access tokens; app-connection default refresh TTL is 10080 min (7 days), configurable 5 min–90 days. With single-use refresh tokens (rotation) each new refresh token gets a fresh TTL, optionally capped by an absolute session lifetime (Beta).",
+    "evidence_refs": [
+     "fc-fa8c9e15",
+     "fc-d3229e31",
+     "fc-1bb66217"
+    ]
+   },
+   "administration": {
+    "summary": "Account admins manage OAuth app connections (custom and published apps), their token TTLs and single-use refresh tokens; disabling an app breaks its connections. Revoking user consent does not invalidate existing refresh tokens. Workspace permissions/ACLs govern what the user can do.",
+    "conditions": "TTL defaults and ranges are documented for app connections generally; whether the built-in databricks-cli app uses the same defaults was not confirmed. Single-use refresh tokens are on by default only for some partner apps.",
+    "evidence_refs": [
+     "fc-33dad94b",
+     "fc-fa8c9e15"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Issuance needs a browser sign-in, which uses SSO when account SSO is on; existing refresh tokens keep working.",
+     "evidence_refs": [
+      "turn16search29",
+      "fc-33dad94b"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Tokens of a deactivated user cannot authenticate; SCIM removal deactivates the user.",
+     "evidence_refs": [
+      "fc-2c40808e",
+      "fc-b6acac67"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Users can view their own consent per app (/api/2.0/oauth-app-integrations/<id>/user-consent/me); no admin-wide token list found.",
+     "evidence_refs": [
+      "fc-33dad94b"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Account console > Security > Identity provider setup > Authentication > single sign-on",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-1bcf2a77",
+      "turn16search29"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "SQL: SELECT * FROM system.access.audit WHERE service_name='workspace' AND action_name='workspaceExport' (filter user_identity.email)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ae5ed64d",
+      "fc-1f6728c3"
+     ]
+    },
+    "offboard": {
+     "ui": "Remove the user from the IdP account-level SCIM connector (deactivates the user)",
+     "api": "PATCH /api/2.1/accounts/{account_id}/scim/v2/Users/{id} with active=false",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2c40808e",
+      "fc-b6acac67"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Access/refresh token format not documented. GitHub types: databricks_oauth_refresh_token, databricks_oauth_single_use_refresh_token_parent/child, databricks_oauth_code, databricks_workspace_session_token. CLI caches in ~/.databricks/token-cache.json."
+    },
+    "log_sources": [
+     {
+      "name": "Databricks audit logs (system.access.audit system table / audit log delivery)",
+      "notes": "Account- and workspace-level events; account-level rows have workspace_id 0. No general retention stated on the table page; events of a deleted workspace older than 14 days are removed."
+     },
+     {
+      "name": "Endpoint file ~/.databricks/token-cache.json",
+      "notes": "Cached access/refresh tokens on the user's machine; theft target."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "request_params.client_id",
+      "log": "system.access.audit (mintOAuthAuthorizationCode/mintOAuthToken)",
+      "notes": "OAuth app, e.g. databricks-cli"
+     },
+     {
+      "field": "request_params.integration_id",
+      "log": "system.access.audit (oauth2.deleteCustomAppIntegration)",
+      "notes": "App integration"
+     },
+     {
+      "field": "identity_metadata.acting_resource_display_name",
+      "log": "system.access.audit",
+      "notes": "For an OAuth app, the app name"
+     },
+     {
+      "field": "user_identity.email",
+      "log": "system.access.audit",
+      "notes": "Signed-in user"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "accounts.mintOAuthAuthorizationCode",
+      "stage": "create",
+      "notes": "Authorization code minted; param client_id"
+     },
+     {
+      "event": "accounts.mintOAuthToken",
+      "stage": "create",
+      "notes": "Token minted; grant_type, scope, expires_in, client_id"
+     },
+     {
+      "event": "accounts.oidcBrowserLogin",
+      "stage": "use",
+      "notes": "Browser login step"
+     },
+     {
+      "event": "accounts.oidcTokenAuthorization",
+      "stage": "use",
+      "notes": "API call authorized via OAuth token"
+     },
+     {
+      "event": "oauth2.createCustomAppIntegration",
+      "stage": "create",
+      "notes": "Custom OAuth app (redirect_url, token_access_policy)"
+     },
+     {
+      "event": "oauth2.updateCustomAppIntegration",
+      "stage": "change",
+      "notes": "Redirect URL or TTL change"
+     },
+     {
+      "event": "oauth2.deleteCustomAppIntegration",
+      "stage": "revoke",
+      "notes": "App removed"
+     }
+    ],
+    "correlation_keys": [
+     "user_identity.email",
+     "identity_metadata.run_by",
+     "identity_metadata.run_as",
+     "source_ip_address",
+     "user_agent",
+     "session_id",
+     "workspace_id",
+     "request_params",
+     "request_params.client_id",
+     "identity_metadata.acting_resource_display_name"
+    ],
+    "anomaly_cues": [
+     "mintOAuthToken (refresh) for a user from an IP never seen in that user's oidcBrowserLogin events (stolen token-cache.json)",
+     "refresh grants continuing long after the user's last interactive login",
+     "updateCustomAppIntegration changing redirect_url to an unknown host",
+     "new custom app integration with long refresh_token_ttl_in_minutes",
+     "user_agent mismatch between login and later API calls"
+    ],
+    "containment": {
+     "steps": "Deactivate the user (account level); delete or disable the OAuth app integration; shorten refresh_token_ttl_in_minutes / enable single-use refresh tokens and absolute_session_lifetime_in_minutes; delete local token-cache.json.",
+     "kills_existing": "partial",
+     "notes": "Revoking consent doesn't invalidate existing tokens; refresh tokens work until expiry. No documented per-token revoke for OAuth tokens. Access tokens last one hour."
+    },
+    "sample_query": {
+     "language": "Databricks SQL (system.access.audit)",
+     "query": "SELECT user_identity.email, request_params['client_id'] AS client_id, request_params['grant_type'] AS grant_type, source_ip_address, user_agent, count(*) AS n FROM system.access.audit WHERE service_name = 'accounts' AND action_name IN ('mintOAuthToken','oidcBrowserLogin') AND event_date >= current_date() - INTERVAL 14 DAYS GROUP BY ALL ORDER BY user_identity.email",
+     "purpose": "Compare token-mint IPs to browser-login IPs per user"
+    },
+    "unknown": [
+     "token format/prefix",
+     "grant_type values logged for refresh (sample uses refresh_token as illustration)",
+     "per-token revocation API for U2M tokens",
+     "whether deactivating a user immediately blocks existing OAuth access tokens (documented only for SPs)",
+     "whether deleting an app integration invalidates its tokens"
+    ],
+    "evidence_refs": [
+     "fc-1f6728c3",
+     "fc-ae5ed64d",
+     "fc-33dad94b",
+     "fc-1bb66217",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /api/2.0/workspace/export",
+      "reveals": "Notebook or whole-directory contents (source code, sometimes embedded secrets/results)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "workspace.workspaceExport",
+      "log_notes": "Audit log / system.access.audit; user_identity shows the caller. Docs describe the event as a notebook export."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-0c3101b7",
+     "fc-1f6728c3",
+     "fc-ae5ed64d"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

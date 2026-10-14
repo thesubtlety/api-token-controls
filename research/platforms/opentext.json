@@ -1,0 +1,589 @@
+{
+ "id": "opentext",
+ "name": "OpenText Cloud Platform",
+ "scope_notes": "Covers OpenText Cloud Platform (Admin Center / Thrust Services APIs, used by OpenText Core SaaS apps such as Core Content). Covers the OAuth service clients and tokens of OpenText Cloud Platform (formerly OT2 / Developer Cloud), which back Core Content and other Core SaaS APIs at <region>.api.opentext.com; on-prem Content Server/OTDS and Admin Center help (CDAC-H-*) pages are not covered.",
+ "controls": [
+  {
+   "name": "Revoke client",
+   "effect": "revoke",
+   "applies_to": [
+    "opentext-1",
+    "opentext-2",
+    "opentext-3"
+   ],
+   "what": "Revokes access tokens for a confidential service client.",
+   "setting": "Admin Center > Service clients > More options > Revoke client",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-8827d31f"
+   ]
+  },
+  {
+   "name": "Regenerate client",
+   "effect": "require_rotation",
+   "applies_to": [
+    "opentext-1",
+    "opentext-2"
+   ],
+   "what": "Issues a new client secret for a confidential client.",
+   "setting": "Admin Center > Service clients > More options > Regenerate client",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-8827d31f",
+    "fc-b2ea3927"
+   ]
+  },
+  {
+   "name": "Edit token lifetimes",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "opentext-1",
+    "opentext-2",
+    "opentext-3"
+   ],
+   "what": "Sets access (900-28800 s) and refresh (900 s-1 year) token lifetimes per client.",
+   "setting": "Admin Center > Service clients > More options > Edit token lifetimes; Admin API Client.accessTokenLifetime / refreshTokenLifetime",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-8827d31f",
+    "fc-86ecf651",
+    "fc-82f0bb33"
+   ]
+  },
+  {
+   "name": "Deactivate service client (activate=false)",
+   "effect": "disable",
+   "applies_to": [
+    "opentext-1",
+    "opentext-2",
+    "opentext-3"
+   ],
+   "what": "Deactivates an app or organization service client through the Admin API.",
+   "setting": "PATCH /admin/api/v1/organizations/{organizationId}/apps/{appId}/clients/{clientId}?activate=false (or /organizations/{organizationId}/clients/{clientId})",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-82f0bb33"
+   ]
+  },
+  {
+   "name": "Client level (organization / tenant / app)",
+   "effect": "limit_resources",
+   "applies_to": [
+    "opentext-1"
+   ],
+   "what": "Choosing an app-level client limits access to one application instead of the whole tenant or organization.",
+   "setting": "Admin Center > Integrations > Service Clients at tenant or app level",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-b2ea3927"
+   ]
+  },
+  {
+   "name": "allowedScopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "opentext-1",
+    "opentext-2",
+    "opentext-3"
+   ],
+   "what": "Lists the scopes a client may request.",
+   "setting": "Admin API Client.allowedScopes",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-82f0bb33"
+   ]
+  },
+  {
+   "name": "Tenant Admin role on service client",
+   "effect": "limit_scope",
+   "applies_to": [
+    "opentext-1"
+   ],
+   "what": "Controls whether a tenant service client gets the Tenant administrator role.",
+   "setting": "Tenant > Integration > Service Clients > Add > Tenant Admin role",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-86ecf651"
+   ]
+  },
+  {
+   "name": "Redirect URLs",
+   "effect": "limit_scope",
+   "applies_to": [
+    "opentext-3"
+   ],
+   "what": "Only registered redirect URLs can receive authorization codes.",
+   "setting": "Admin Center > Service clients > Redirect URLs",
+   "plan": null,
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-86ecf651",
+    "fc-8827d31f"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "opentext-3",
+   "what": "Public clients cannot be revoked or regenerated in Admin Center (only confidential clients can).",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-8827d31f"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Audit log for OpenText Cloud Platform / Admin Center: event names for client create, regenerate, revoke and token issuance; retention; how to export.",
+  "Whether API calls or data reads (e.g. Core Content GET /v3/files) are logged and which field identifies the client.",
+  "Whether client secrets expire or can be given an expiry.",
+  "Any IP/network restriction on service clients or tokens.",
+  "Whether 'Revoke client' invalidates already-issued access tokens immediately, and whether it also invalidates the secret.",
+  "Default token lifetimes when not edited (Core Capture sample shows 900 s).",
+  "Whether the password grant can be disabled per tenant, and whether IdP MFA applies to it.",
+  "Token format/prefix."
+ ],
+ "credentials": [
+  {
+   "id": "opentext-1",
+   "name": "Confidential service client (organization, extension app, tenant-level or app-level) - client credentials",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Admin Center creates confidential OAuth clients at organization, tenant or app level (and for each extension app of a Core SaaS app such as Core Content). The holder posts client_id and client_secret to https://<region>.api.opentext.com/tenants/<tenant>/oauth2/token (or the organizations/... endpoint) and gets a bearer token.",
+    "evidence_refs": [
+     "fc-b2ea3927",
+     "fc-8827d31f",
+     "fc-d29caf40"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Client credentials carry no user, so no IdP sign-in occurs. The docs do not say how SSO or conditional access policies relate to service clients.",
+    "evidence_refs": [
+     "fc-b2ea3927"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No IP allowlist for service clients or tokens found in the developer docs or Admin API spec.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": 28800,
+    "configurable": "yes",
+    "summary": "Access token 900-28800 s per client; secret expiry not documented",
+    "evidence_refs": [
+     "fc-8827d31f",
+     "fc-82f0bb33",
+     "fc-a118a1c9"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "Client access token lifetime",
+    "summary": "Client requests a new token with the same secret; secret changes only when an admin regenerates it.",
+    "evidence_refs": [
+     "fc-b2ea3927"
+    ]
+   },
+   "administration": {
+    "summary": "Organization-level clients are created by the OpenText Developer Admin, tenant-level by tenant admins, app-level by app admins. Tenant-level clients reach all applications in the tenant and can be assigned the Tenant administrator role (used for SCIM).",
+    "conditions": "Every new or extended app gets a client pair automatically.",
+    "evidence_refs": [
+     "fc-b2ea3927",
+     "fc-8827d31f",
+     "fc-86ecf651"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Service clients belong to the organization (or app/tenant), not to a user.",
+     "evidence_refs": [
+      "fc-8827d31f"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin Center > Service clients page lists the clients; the Admin API has GET /organizations/{organizationId}/clients (Get service clients).",
+     "evidence_refs": [
+      "fc-8827d31f",
+      "fc-82f0bb33"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque bearer token per docs; format not documented."
+    },
+    "log_sources": [],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "client ID",
+     "tenant ID",
+     "organization ID"
+    ],
+    "anomaly_cues": [
+     "Tenant-level clients with Tenant administrator role",
+     "Organization-level clients used against many tenants",
+     "Secret regenerations not tied to change tickets"
+    ],
+    "containment": {
+     "steps": "Admin Center > Service clients > Revoke client, then Regenerate client; or PATCH the client with activate=false.",
+     "kills_existing": "unknown",
+     "notes": "Docs say Revoke client revokes an access token but do not state scope or timing."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit event names and log location",
+     "Token format"
+    ],
+    "evidence_refs": [
+     "fc-8827d31f",
+     "fc-82f0bb33",
+     "fc-86ecf651"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST https://<region>.api.opentext.com/tenants/<tenant_id>/oauth2/token (client_credentials)",
+      "reveals": "Whether the client works and its token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v3/files (Core Content)",
+      "reveals": "Files the client can reach",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /admin/api/v1/organizations/{organizationId}/tenants/{tenantId}/users",
+      "reveals": "All tenant users (organization client via Admin API)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "A documented whoami/introspection endpoint"
+    ],
+    "evidence_refs": [
+     "fc-b2ea3927",
+     "fc-d29caf40",
+     "fc-82f0bb33",
+     "fc-8827d31f"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "opentext-2",
+   "name": "Resource owner password grant (confidential client + user name/password)",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A confidential client sends its secret plus a user's name and password to the tenant token endpoint and receives access and refresh tokens in that user's context. OpenText says this is for testing only.",
+    "evidence_refs": [
+     "fc-b2ea3927"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "The password is sent straight to the OpenText token endpoint; the docs do not say whether federated IdP MFA or policies apply or whether the grant can be turned off.",
+    "evidence_refs": [
+     "fc-b2ea3927"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": 28800,
+    "configurable": "yes",
+    "summary": "Access 900-28800 s; refresh up to 1 year",
+    "evidence_refs": [
+     "fc-82f0bb33"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "Refresh token lifetime (900 s - 31536000 s)",
+    "summary": "Refresh tokens are single-use and replaced on each refresh.",
+    "evidence_refs": [
+     "fc-b2ea3927",
+     "fc-82f0bb33"
+    ]
+   },
+   "administration": {
+    "summary": "No admin setting to disable the password grant was found; OpenText only advises against production use. Organizations also have a service account password managed in Admin Center.",
+    "conditions": "",
+    "evidence_refs": [
+     "fc-b2ea3927",
+     "fc-8827d31f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque bearer token per docs; format not documented."
+    },
+    "log_sources": [],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "client ID",
+     "tenant ID",
+     "organization ID"
+    ],
+    "anomaly_cues": [
+     "Any production use of grant_type=password",
+     "Same client used with many user names"
+    ],
+    "containment": {
+     "steps": "Revoke the confidential client; reset the user's password.",
+     "kills_existing": "unknown",
+     "notes": "Docs say Revoke client revokes an access token but do not state scope or timing."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit event names and log location",
+     "Token format"
+    ],
+    "evidence_refs": [
+     "fc-8827d31f",
+     "fc-82f0bb33",
+     "fc-b2ea3927"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST https://<region>.api.opentext.com/tenants/<tenant_id>/oauth2/token (grant_type=password)",
+      "reveals": "Access and refresh token for the user",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v3/files (Core Content)",
+      "reveals": "Files the user can reach",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-b2ea3927",
+     "fc-d29caf40"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "opentext-3",
+   "name": "User access/refresh tokens via authorization code (confidential) or PKCE (public client)",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Users sign in through the tenant oauth2/auth endpoint (and the tenant's authentication handler, e.g. SAML to Okta/Google), and the app exchanges the code for access, refresh and ID tokens. Public clients use PKCE and have no secret.",
+    "evidence_refs": [
+     "fc-b2ea3927",
+     "fc-8827d31f"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "The interactive sign-in goes through the tenant's configured authentication scheme (e.g. SAML IdP). Whether refresh tokens are re-checked against the IdP is not documented.",
+    "evidence_refs": [
+     "fc-8827d31f"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": 31536000,
+    "configurable": "yes",
+    "summary": "Refresh token up to 1 year; access 900-28800 s",
+    "evidence_refs": [
+     "fc-82f0bb33"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "Refresh token lifetime",
+    "summary": "Rotating refresh tokens.",
+    "evidence_refs": [
+     "fc-b2ea3927"
+    ]
+   },
+   "administration": {
+    "summary": "Redirect URLs must be registered per client (up to three for tenant clients). Revoke client and Regenerate exist only for confidential clients; public clients can be deactivated via the Admin API.",
+    "conditions": "",
+    "evidence_refs": [
+     "fc-8827d31f",
+     "fc-86ecf651",
+     "fc-82f0bb33"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque bearer token per docs; format not documented."
+    },
+    "log_sources": [],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "client ID",
+     "tenant ID",
+     "organization ID"
+    ],
+    "anomaly_cues": [
+     "Long refresh token lifetimes (up to 1 year)",
+     "Wildcard redirect URLs"
+    ],
+    "containment": {
+     "steps": "Revoke the confidential client; for public clients deactivate via Admin API activate=false; disable the user.",
+     "kills_existing": "unknown",
+     "notes": "Docs say Revoke client revokes an access token but do not state scope or timing."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit event names and log location",
+     "Token format"
+    ],
+    "evidence_refs": [
+     "fc-8827d31f",
+     "fc-82f0bb33",
+     "fc-86ecf651"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /v3/files (Core Content)",
+      "reveals": "Files the user can reach",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "userinfo endpoint not documented"
+    ],
+    "evidence_refs": [
+     "fc-d29caf40"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

@@ -1,0 +1,215 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "jamf",
+      "name": "Jamf",
+      "scope_notes": "Covers Jamf (Jamf Pro, Jamf Platform API Gateway, Jamf Protect, Jamf School). Jamf Pro cloud (11.x) is the main focus; Jamf Log Stream export needs Jamf Cloud Premium; Protect and School covered from public docs only.",
+      "controls": [
+        {
+          "name": "Jamf Protect API client role",
+          "effect": "limit_scope",
+          "applies_to": [
+            "jamf-4"
+          ],
+          "what": "Each Protect API client is assigned a role such as Read Only; max five clients.",
+          "setting": "Jamf Protect > Administrative > API Clients",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-0923c517"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for Jamf Pro API clients or user API access (none found in public docs).",
+        "Default and maximum Access Token Lifetime for API clients (the doc example shows expires_in 599, but no default is stated).",
+        "Whether Jamf Pro admins can block a user account from using /v1/auth/token while keeping UI access.",
+        "Which identity Change Management logs for actions taken by an API client, and whether /v1/oauth/token requests appear in the Access Log.",
+        "Exact Change Management object/action names for API client create/rotate/disable.",
+        "Jamf Protect API token lifetime and revocation; Jamf School API key expiry, auth header format and revocation behavior.",
+        "Platform API Gateway: revoke/disable controls for an integration and IP restrictions."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "jamf-4",
+      "provider_id": "jamf",
+      "name": "Jamf Protect API client (client ID + API client password)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Created in Jamf Protect > Administrative > API Clients. The client ID and API client password are posted as JSON to the tenant's /token endpoint for an access token used against /graphql. Jamf recommends the Platform API Gateway instead.",
+        "evidence_refs": [
+          "fc-0923c517",
+          "fc-4a3ba4e3"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented publicly.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Not documented publicly",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "unknown",
+        "summary": "New token requested with the same client ID and password.",
+        "evidence_refs": [
+          "fc-4a3ba4e3"
+        ]
+      },
+      "administration": {
+        "summary": "Max five API clients per tenant; each is assigned a role (e.g. Read Only); delete to remove.",
+        "conditions": "",
+        "evidence_refs": [
+          "fc-0923c517"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Protect API clients are created under Administrative > API Clients and are not tied to a user.",
+          "evidence_refs": [
+            "fc-0923c517"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Jamf Protect > Administrative > API Clients shows the tenant's API clients (max five).",
+          "evidence_refs": [
+            "fc-0923c517"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Jamf Protect > Administrative > Audit Logs > select entries > Export Selected (CSV)",
+          "api": "POST https://<tenant>.protect.jamfcloud.com/graphql query listAuditLogsByDate",
+          "cli": null,
+          "evidence_refs": [
+            "fc-c78c2562",
+            "fc-1d9f236d",
+            "fc-3cb7fe95"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Jamf Protect Audit Logs",
+            "notes": "Kept one year, CSV export; records user, operation, arguments, IPs, resource ID."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "User",
+          "IP's"
+        ],
+        "anomaly_cues": [
+          "New API client created (max five)"
+        ],
+        "containment": {
+          "steps": "Delete the API client in Administrative > API Clients.",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether API-client activity appears in Protect audit logs"
+        ],
+        "evidence_refs": [
+          "fc-1d9f236d",
+          "fc-0923c517"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "GraphQL queries for bulk read are not documented on public pages fetched"
+        ],
+        "evidence_refs": []
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0923c517",
+      "title": "Creating an API Client in Jamf Protect",
+      "url": "https://learn.jamf.com/r/en-US/jamf-protect-documentation/Creating_an_API_Client_in_Jamf_Protect",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1d9f236d",
+      "title": "Audit Logs (Jamf Protect)",
+      "url": "https://learn.jamf.com/r/en-US/jamf-protect-documentation/Audit_Logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3cb7fe95",
+      "title": "jamf/jamfprotect list_audit_logs.py (official example)",
+      "url": "https://github.com/jamf/jamfprotect/blob/main/jamf_protect_api/scripts/python/list_audit_logs.py",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4a3ba4e3",
+      "title": "Move an existing integration to the Platform API Gateway",
+      "url": "https://developer.jamf.com/platform-api/reference/move-an-existing-integration-to-the-platform-api-gateway",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c78c2562",
+      "title": "Exporting Audit Logs (Jamf Protect)",
+      "url": "https://learn.jamf.com/r/en-US/jamf-protect-documentation/Exporting_Audit_Logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

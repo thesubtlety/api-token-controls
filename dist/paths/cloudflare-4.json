@@ -1,0 +1,261 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "scope_notes": "Covers Cloudflare (API, Zero Trust Access, R2). All plans have API tokens and 18-month Audit Logs v2; Logpush beyond 18 months is Enterprise; Access service tokens need Cloudflare Zero Trust; R2 credentials need R2.",
+      "controls": [
+        {
+          "name": "Change Origin CA key",
+          "effect": "revoke",
+          "applies_to": [
+            "cloudflare-4"
+          ],
+          "what": "Immediately invalidates all previously shown Origin CA key values.",
+          "setting": "User Profile > API Tokens > API Keys > Origin CA Key > Change",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-064610e8"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "cloudflare-4",
+          "what": "Changing the Origin CA key is not recorded in Audit Logs.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-064610e8"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Any account-level setting to block members from creating user API tokens or using the Global API Key.",
+        "Any account-wide policy forcing token expiry or IP filters.",
+        "Whether Super Administrators can list or revoke other members' user API tokens.",
+        "Whether dashboard SSO or Access policies are checked on API token / Global API Key requests (no explicit statement).",
+        "Exact Audit Logs v2 action names for token create/delete/roll.",
+        "Whether Origin CA keys still authenticate after the 2026-09-30 removal date.",
+        "IP restrictions for Access service tokens and for R2 S3 requests.",
+        "Cloudflare OAuth tokens (actor context 'oauth', e.g. Wrangler) were not researched."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "cloudflare-4",
+      "provider_id": "cloudflare",
+      "name": "Origin CA key (Service Key, deprecated)",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "legacy",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Key starting v1.0- sent in X-AUTH-USER-SERVICE-KEY for the Origin CA certificates API and Keyless SSL. Scheduled for removal on 2026-09-30.",
+        "evidence_refs": [
+          "fc-064610e8",
+          "fc-0d500e59"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "No doc ties it to SSO.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No IP option documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Valid until Change; service ends 2026-09-30 per deprecation notice",
+        "evidence_refs": [
+          "fc-064610e8",
+          "fc-0d500e59"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Valid until Change",
+        "summary": "Each view shows a different value; all are valid until Change.",
+        "evidence_refs": [
+          "fc-064610e8"
+        ]
+      },
+      "administration": {
+        "summary": "Reaches every account the user can access. Changing the key is not audit logged.",
+        "conditions": "Verify whether keys still work after 2026-09-30.",
+        "evidence_refs": [
+          "fc-064610e8"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "The key reaches every account the user can access, so removing the user's membership removes that account from its reach.",
+          "evidence_refs": [
+            "fc-064610e8"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "No admin list of Origin CA keys found; use shows in audit logs with actor.context origin_ca_key.",
+          "evidence_refs": [
+            "fc-e9870043"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": null,
+          "api": "GET /accounts/{account_id}/logs/audit?actor_context=origin_ca_key (shows users whose key was used; no key list exists)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e9870043",
+            "fc-19960253"
+          ]
+        },
+        "usage": {
+          "ui": "Manage Account > Audit Logs",
+          "api": "GET /accounts/{account_id}/logs/audit?actor_context=origin_ca_key",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e9870043",
+            "fc-19960253"
+          ]
+        },
+        "kill": {
+          "ui": "User Profile > API Tokens > API Keys > Origin CA Key > Change",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-064610e8"
+          ]
+        },
+        "offboard": {
+          "ui": "Manage Account > Members > expand member > Revoke > Yes, revoke access (removes that account from the key's reach)",
+          "api": "DELETE /accounts/{account_id}/members/{member_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-db6610b5",
+            "fc-064610e8"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "v1.0-",
+          "notes": "Each view returns a different valid value."
+        },
+        "log_sources": [
+          {
+            "name": "Audit Logs v2",
+            "notes": "actor.context = origin_ca_key for actions; key changes not logged."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.context",
+            "log": "Audit Logs v2",
+            "notes": "origin_ca_key"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "actor.email",
+          "actor.ip_address"
+        ],
+        "anomaly_cues": [
+          "Any origin_ca_key activity after the deprecation date"
+        ],
+        "containment": {
+          "steps": "Click Change on the Origin CA key; move integrations to an API token with SSL and Certificates Edit.",
+          "kills_existing": "yes",
+          "notes": "Change immediately invalidates all prior values."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Post-EOL behavior"
+        ],
+        "evidence_refs": [
+          "fc-064610e8",
+          "fc-19960253"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Origin CA certificate API calls not researched"
+        ],
+        "evidence_refs": [
+          "fc-064610e8"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-064610e8",
+      "title": "Get Origin CA keys",
+      "url": "https://developers.cloudflare.com/fundamentals/api/get-started/ca-keys/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0d500e59",
+      "title": "API deprecations",
+      "url": "https://developers.cloudflare.com/fundamentals/api/reference/deprecations/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-19960253",
+      "title": "Get account audit logs (Version 2)",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/logs/subresources/audit/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-db6610b5",
+      "title": "Manage (account members)",
+      "url": "https://developers.cloudflare.com/fundamentals/manage-members/manage/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9870043",
+      "title": "Audit Logs - version 2",
+      "url": "https://developers.cloudflare.com/fundamentals/account/account-security/audit-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

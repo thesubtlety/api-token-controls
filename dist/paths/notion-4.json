@@ -1,0 +1,380 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "notion",
+      "name": "Notion",
+      "scope_notes": "Enterprise for IP restrictions; Business/Enterprise for SAML SSO. Confirm API enforcement and token-expiry requirements with Notion.",
+      "controls": [
+        {
+          "name": "Admin bot token scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "notion-4"
+          ],
+          "what": "Org owners pick which admin actions each admin token may perform.",
+          "setting": "Manage organization > General > Manage organization-level admin API tokens",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-81707e22"
+          ],
+          "quote": "Give the connection a name that your team will recognize, like “Compliance automation,” and pick only the access it needs."
+        },
+        {
+          "name": "Rotate or delete admin token",
+          "effect": "require_rotation",
+          "applies_to": [
+            "notion-4"
+          ],
+          "what": "Owners rotate or delete admin tokens; scripts using a revoked token stop immediately.",
+          "setting": "Manage organization > General > admin API tokens",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6d6ae280"
+          ],
+          "quote": "Rotate or delete a token at any time. Any script using a revoked token stops working right away."
+        },
+        {
+          "name": "Admin APIs (organization owners only)",
+          "effect": "other",
+          "applies_to": [
+            "notion-4"
+          ],
+          "what": "Only organization owners on Enterprise can create admin connections and tokens; no other role can.",
+          "setting": "Manage organization → General → Manage organization-level admin API tokens",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-81707e22"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "notion-4",
+          "what": "Admin tokens cannot be restricted to IP addresses or networks.",
+          "evidence_refs": [
+            "fc-81707e22"
+          ],
+          "quote": "You can't limit an admin token to specific IP addresses or networks.",
+          "kind": "network"
+        }
+      ],
+      "controls_unknown": [
+        "Whether Notion IP address restrictions apply to internal connection tokens, PATs or public OAuth tokens (help page only describes user sign-in; admin tokens are excluded).",
+        "Whether SAML SSO enforcement affects API tokens (not stated).",
+        "Whether admins can set a maximum PAT lifetime (creators choose 7 days to 1 year; default 1 year).",
+        "Whether internal connection tokens or OAuth tokens expire or can be force-rotated by admins."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "notion-4",
+      "provider_id": "notion",
+      "name": "Admin API token",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Organization-level token issued to an admin bot and used for Enterprise admin actions such as workspace exports, legal holds and logging out managed users. It is separate from workspace connection tokens.",
+        "evidence_refs": [
+          "fc-81707e22"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static organization token created in Notion settings. No external identity exchange is documented for this path.",
+        "evidence_refs": [
+          "fc-81707e22"
+        ]
+      },
+      "ip_restriction": {
+        "status": "not_supported",
+        "enforcement_stage": "login_only",
+        "boundary": "Notion states admin tokens cannot be limited to specific IP addresses or networks; Enterprise IP restrictions apply only to people signing in. Restrict use at your own network or secrets layer.",
+        "evidence_refs": [
+          "fc-81707e22"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Static token; expiry not documented",
+        "evidence_refs": [
+          "fc-81707e22"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "unknown",
+        "summary": "The same token is reused until it is deleted; Notion recommends rotating on a schedule your security team sets.",
+        "evidence_refs": [
+          "fc-81707e22"
+        ]
+      },
+      "administration": {
+        "summary": "Only organization owners create admin bots and tokens, choosing which admin actions each token may perform. Deleting a token stops it immediately. Actions appear in the audit log with the admin bot as actor.",
+        "conditions": "Enterprise plan only. The help page names exports, legal holds and user logout; it does not list SCIM or audit-log API coverage.",
+        "evidence_refs": [
+          "fc-81707e22"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Admin tokens belong to the organization, not a user.",
+          "evidence_refs": [
+            "fc-81707e22"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admin connections are listed in organization settings (General → Manage organization-level admin API tokens) with creator and date.",
+          "evidence_refs": [
+            "fc-81707e22"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Settings > Audit log; filter Event = Workspace content exported and Person or agent = the admin bot name; Export for CSV",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-5cd2b23a",
+            "fc-9412eb43"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Organization bot token format not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Notion organization audit log (organization events)",
+            "notes": "Enterprise; records organization token lifecycle; admin-token actions logged with the admin bot as actor."
+          },
+          {
+            "name": "Notion SIEM connection (webhook)",
+            "notes": "Enterprise; real-time JSON webhook of every audit log event; payload field names not documented publicly."
+          },
+          {
+            "name": "Organization console → Manage organization-level admin API tokens",
+            "notes": "Lists connections with creator and creation time."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "revoked_by",
+            "log": "Admin API list PATs",
+            "notes": "type organization_bot shows a PAT revoked by an admin token"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Organization token created",
+            "stage": "create",
+            "notes": "audit log display name"
+          },
+          {
+            "event": "Organization token updated",
+            "stage": "change",
+            "notes": "e.g. scopes changed"
+          },
+          {
+            "event": "Organization token deleted",
+            "stage": "revoke",
+            "notes": "listed in help-center audit log page under Bots"
+          },
+          {
+            "event": "Organization token access changed",
+            "stage": "change",
+            "notes": "listed in help-center audit log page under Bots"
+          },
+          {
+            "event": "Admin bot created or deleted",
+            "stage": "create",
+            "notes": "help-center audit log page"
+          }
+        ],
+        "correlation_keys": [
+          "revoked_by"
+        ],
+        "anomaly_cues": [
+          "Organization token created/updated by an owner outside change control",
+          "Scope widened to write-high-impact or export",
+          "Admin bot actor running workspace exports or legal-hold exports not on schedule",
+          "Admin bot revoking sessions or PATs en masse (possible attacker cover)",
+          "Use after the token creator changed roles"
+        ],
+        "containment": {
+          "steps": "Organization console → Manage organization-level admin API tokens → delete/revoke the token; review audit log for actions with that admin bot as actor.",
+          "kills_existing": "yes",
+          "notes": "Help doc: any script using the token stops immediately. Admin tokens cannot be IP-restricted."
+        },
+        "sample_query": {
+          "language": "Notion audit log UI filters",
+          "query": "Organization event log; Actor = <admin bot name>; Date range = incident window",
+          "purpose": "List every admin action taken with a suspect organization token."
+        },
+        "unknown": [
+          "token format/prefix",
+          "'Organization token deleted' appears on the help page but not in the developer audit-log glossary",
+          "log field names for actor/IP",
+          "token expiry"
+        ],
+        "evidence_refs": [
+          "fc-81707e22",
+          "fc-9412eb43",
+          "fc-01c2978f",
+          "fc-710b4de5",
+          "fc-5cd2b23a"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "GET /v1/legal_holds",
+            "reveals": "all legal holds for the organization, active and released",
+            "bulk": false,
+            "scope": "legal-hold:read",
+            "rate_limit": "429 with retry-after when limited",
+            "logged": "yes",
+            "log_event": "(admin token action)",
+            "log_notes": "Actions taken with an admin token show up in the audit log with the bot as actor; Enterprise, 365-day retention"
+          },
+          {
+            "stage": "collection",
+            "call": "POST /v1/spaces/{space_id}/exports",
+            "reveals": "enqueues a full workspace export (html/markdown, with contents and comments)",
+            "bulk": true,
+            "scope": "workspace:export",
+            "rate_limit": "429 with retry-after when limited",
+            "logged": "yes",
+            "log_event": "Workspace content exported",
+            "log_notes": "Admin token action, appears in audit log; event 'Workspace content exported'"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v1/spaces/{space_id}/exports/{export_job_id}",
+            "reveals": "export status plus short-lived bot-scoped download_urls for the completed export",
+            "bulk": true,
+            "scope": "workspace:export",
+            "rate_limit": "429 with retry-after when limited",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Admin token actions are logged generally; specific status-poll event not named"
+          }
+        ],
+        "unknown": [
+          "No whoami endpoint documented for the admin token (base URL https://api.notion.com/admin)",
+          "Exact audit event names for legal-hold reads and export status polls"
+        ],
+        "evidence_refs": [
+          "fc-1dd3bbea",
+          "fc-bcc5e910",
+          "fc-581fc07d",
+          "fc-81707e22",
+          "fc-5cd2b23a"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-01c2978f",
+      "title": "Admin API scopes",
+      "url": "https://developers.notion.com/reference/admin/scopes",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1dd3bbea",
+      "title": "List legal holds (Admin API)",
+      "url": "https://developers.notion.com/reference/admin/list-legal-holds.md",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-581fc07d",
+      "title": "Get workspace export status (Admin API)",
+      "url": "https://developers.notion.com/reference/admin/get-space-export-status.md",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5cd2b23a",
+      "title": "Workspace audit log in Notion",
+      "url": "https://www.notion.com/help/audit-log",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6d6ae280",
+      "title": "Organization-level controls in Notion",
+      "url": "https://www.notion.com/help/organization-level-controls",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-710b4de5",
+      "title": "List personal access tokens in a workspace - Notion Docs",
+      "url": "https://developers.notion.com/reference/admin/list-personal-access-tokens",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-81707e22",
+      "title": "Admin APIs for Enterprise organizations",
+      "url": "https://www.notion.com/help/admin-apis-for-enterprise-organizations",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9412eb43",
+      "title": "Audit log events - Notion Docs",
+      "url": "https://developers.notion.com/compliance/audit-log-events",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bcc5e910",
+      "title": "Enqueue a workspace export (Admin API)",
+      "url": "https://developers.notion.com/reference/admin/enqueue-space-export.md",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    }
+  ]
+}

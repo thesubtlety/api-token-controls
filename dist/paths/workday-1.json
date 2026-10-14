@@ -1,0 +1,380 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "workday",
+      "name": "Workday",
+      "scope_notes": "Covers Workday (HCM/Financials tenant APIs: SOAP WWS, REST, RaaS). Covers core Workday tenants; many authentication-policy, OAuth and REST API reference pages on doc.workday.com and Community require customer login and were not readable, so several items are unknown.",
+      "controls": [
+        {
+          "name": "Integration System Security Group domain permissions",
+          "effect": "limit_resources",
+          "applies_to": [
+            "workday-1",
+            "workday-2",
+            "workday-3"
+          ],
+          "what": "ISU access is limited to domains granted to its security group.",
+          "setting": "Create Security Group (Integration System Security Group) + Maintain Permissions for Security Group",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-6fb644f5"
+          ]
+        },
+        {
+          "name": "Do Not Allow UI Sessions",
+          "effect": "other",
+          "applies_to": [
+            "workday-1"
+          ],
+          "what": "Prevents the ISU from signing in to the Workday UI.",
+          "setting": "Create Integration System User",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-4de5b17e"
+          ]
+        },
+        {
+          "name": "Authentication policies with IP restrictions",
+          "effect": "limit_network",
+          "applies_to": [
+            "workday-1"
+          ],
+          "what": "Authentication policy rules can target the ISU security group and restrict by IP and allowed authentication types.",
+          "setting": "Manage Authentication Policies; Activate All Pending Authentication Policy Changes",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4de5b17e",
+            "fc-7600f613"
+          ]
+        },
+        {
+          "name": "Maintain Password Rules (System Users exempt from password expiration)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "workday-1"
+          ],
+          "what": "Adding an ISU here stops its password from expiring; leaving it off keeps tenant expiry.",
+          "setting": "Maintain Password Rules",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4de5b17e"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether authentication-policy IP rules are enforced on each API request or only at sign-in/token issuance (authentication policy pages require login).",
+        "Whether disabling an API client or regenerating a refresh token invalidates already-issued access tokens (docs say tokens can be replayed within their lifetime).",
+        "Exact task names to disable/delete an API client and to revoke a refresh token.",
+        "Default access-token lifetime for integration clients.",
+        "Whether ISU password authentication bypasses SAML SSO / IdP conditional access.",
+        "Whether User Activity Logging records web service (SOAP/REST) calls made by ISUs; the activityLogging REST API reference requires login.",
+        "Audit event names for API client creation, refresh token generation, or client disablement."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "workday-1",
+      "provider_id": "workday",
+      "name": "Integration System User (ISU) user name and password",
+      "family": "basic",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An admin creates a non-person ISU with the Create Integration System User task and sets its password. Integrations send the ISU user name and password to Workday web services.",
+        "evidence_refs": [
+          "fc-6fb644f5",
+          "fc-4de5b17e"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Public docs do not say whether ISU password logins bypass SAML/SSO. Do Not Allow UI Sessions blocks UI sign-in only. ISUs can be given their own authentication policy rule (example allows User Name Password).",
+        "evidence_refs": [
+          "fc-4de5b17e"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "Authentication policies support IP restrictions and can target the ISU's security group. Public docs do not say whether this is checked per web service request or only at authentication.",
+        "evidence_refs": [
+          "fc-4de5b17e",
+          "fc-7600f613"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Password follows tenant password rules; ISU can be exempted from expiration; session timeout 0 = no expiry",
+        "evidence_refs": [
+          "fc-6fb644f5",
+          "fc-4de5b17e"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "password rules",
+        "summary": "Same password is reused until an admin changes it.",
+        "evidence_refs": [
+          "fc-6fb644f5"
+        ]
+      },
+      "administration": {
+        "summary": "Created with Create Integration System User; access comes from Integration System Security Group domain permissions.",
+        "conditions": "Requires Integration Security domain.",
+        "evidence_refs": [
+          "fc-6fb644f5"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Authentication policies can include a rule for the ISU security group, but the ISU signs in with user name and password rather than through SSO.",
+          "evidence_refs": [
+            "fc-4de5b17e",
+            "fc-e2ebdeca"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "An ISU is a dedicated non-person system account.",
+          "evidence_refs": [
+            "fc-6fb644f5"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Manage Authentication Policies > Authentication Ruleset: rule for the ISU's security group > Allowed Authentication Types; then Activate All Pending Authentication Policy Changes",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-ab95c2ca"
+          ]
+        },
+        "network": {
+          "ui": "Manage Authentication Policies > Authentication Ruleset: rule for the ISU's security group > Authentication Condition > Create IP Range; then Activate All Pending Authentication Policy Changes",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-ab95c2ca"
+          ]
+        },
+        "expiry": {
+          "ui": "Maintain Password Rules > System Users Exempt from password expiration (remove the ISU to make its password expire)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-c15c8a98"
+          ]
+        },
+        "usage": {
+          "ui": "View User Activity report (filter System Account = ISU); ISU related actions > Security Profile > View Signon History",
+          "api": "GET https://<tenantHostname>/privacy/v1/activityLogging (spec basePath)?from=...&to=...&systemAccount=<account>",
+          "cli": null,
+          "evidence_refs": [
+            "fc-7a74b5d0",
+            "fc-7726818f",
+            "fc-c15c8a98"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Admin-set password; no token format."
+        },
+        "log_sources": [
+          {
+            "name": "Update Audit report",
+            "notes": "Sign-on/sign-off times and invalid password use per account. Requires System Monitoring / Update Audit domains."
+          },
+          {
+            "name": "View User Activity report / User Activity data source / /activityLogging REST API",
+            "notes": "Must be enabled in tenant setup; 30-day retention; export weekly. Coverage of web service calls not stated."
+          },
+          {
+            "name": "API Activity Reports",
+            "notes": "Monthly aggregates incl. Top 10 IP Addresses; up to 13 months; US and EU only."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "System Account",
+            "log": "User Activity",
+            "notes": "The ISU account name."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "ISU user name",
+          "IP Address",
+          "User Agent"
+        ],
+        "anomaly_cues": [
+          "ISU sign-ons from IPs outside the integration's known egress",
+          "Invalid password attempts on ISU accounts",
+          "Spike in ISU activity or new tasks/reports accessed"
+        ],
+        "containment": {
+          "steps": "Change the ISU password and/or restrict it with an authentication policy; exact disable task not public.",
+          "kills_existing": "unknown",
+          "notes": "Session Timeout 0 means ISU sessions do not time out."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact audit event names for ISU password changes",
+          "Whether SOAP reads by ISUs appear in User Activity"
+        ],
+        "evidence_refs": [
+          "fc-6fb644f5",
+          "fc-7a74b5d0",
+          "fc-b14c0028",
+          "fc-b7d6607b"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "SOAP Human_Resources Get_Workers",
+            "reveals": "Public and private worker data within ISU security",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "Throttled under load (HTTP 500/429)",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Workday says it doesn't log GET requests or unsuccessful requests for web services; whether SOAP reads appear in User Activity is not stated."
+          }
+        ],
+        "unknown": [
+          "No documented whoami call for ISUs"
+        ],
+        "evidence_refs": [
+          "fc-1cbbaa57",
+          "fc-2aa3cd99"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1cbbaa57",
+      "title": "Workday Web Services v47.0 Human_Resources Get_Workers",
+      "url": "https://community.workday.com/sites/default/files/file-hosting/productionapi/Human_Resources/v47.0/Get_Workers.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2aa3cd99",
+      "title": "Reference: Integrations, EIB, and Web Service Limits",
+      "url": "https://doc.workday.com/admin-guide/en-us/manage-workday/tenant-configuration/it-administrator-resources/limitations-and-availability/dan1370797408285.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4de5b17e",
+      "title": "Steps: Set Up Workday Integration (Peakon)",
+      "url": "https://doc.workday.com/peakon/en-us/workday-peakon-employee-voice/integrations/workday-integration/qdk1635869479224.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6fb644f5",
+      "title": "Set Up Live Data Query ISU Authentication in Workday",
+      "url": "https://doc.workday.com/admin-guide/en-us/workday-data-cloud/data-out/workday-live-data-query-/set-up-live-data-query-isu-authentication.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7600f613",
+      "title": "Steps: Set Up Workday Mobile Applications",
+      "url": "https://doc.workday.com/admin-guide/en-us/manage-workday/tenant-configuration/mobile-setup/dan1370797996359.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7726818f",
+      "title": "Workday REST API reference: privacy v1 GET /activityLogging",
+      "url": "https://community.workday.com/sites/default/files/file-hosting/restapi/index.html#privacy/v1/get-/activityLogging",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7a74b5d0",
+      "title": "Concept: User Activity Logging",
+      "url": "https://doc.workday.com/admin-guide/en-us/manage-workday/tenant-configuration/user-activity-logging/unv1636547598141.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ab95c2ca",
+      "title": "Example: Maintain Access to Payment Elections (authentication policy)",
+      "url": "https://doc.workday.com/admin-guide/en-us/financial-management/expenses/configuration-examples/yuj1547597493242.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b14c0028",
+      "title": "Reference: Auditing-Related Reports",
+      "url": "https://doc.workday.com/admin-guide/en-us/manage-workday/tenant-configuration/auditing/wln1467042699742.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b7d6607b",
+      "title": "Workday AI Admin Guide PDF (FAQ: Agent Security)",
+      "url": "https://doc.workday.com/content/dam/fmdita-outputs/pdfs/admin-guide/en-us/Admin-Guide-Workday-AI.pdf",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c15c8a98",
+      "title": "Peakon Workday integration troubleshooting",
+      "url": "https://doc.workday.com/peakon/en-us/workday-peakon-employee-voice/integrations/workday-integration/nkb1654263618325_1.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e2ebdeca",
+      "title": "Connect to Workday Using OAuth (Peakon)",
+      "url": "https://doc.workday.com/peakon/en-us/workday-peakon-employee-voice/integrations/workday-integration/nfa1667304944189.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,404 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "scope_notes": "Separate Dashboard SSO/session controls from key access policies. OAuth Connect and Apps are different authorization surfaces.",
+      "controls": [
+        {
+          "name": "Install-time permission consent",
+          "effect": "limit_scope",
+          "applies_to": [
+            "stripe-2"
+          ],
+          "what": "The installing user sees and accepts the app's requested permissions before tokens are issued.",
+          "setting": "Stripe App install flow",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search15"
+          ],
+          "quote": "the user selects the appropriate account and accepts permissions for installing the app."
+        },
+        {
+          "name": "Install and manage Stripe Apps (role)",
+          "effect": "limit_resources",
+          "applies_to": [
+            "stripe-2"
+          ],
+          "what": "Installing apps is a role permission (e.g. Developer, Administrator).",
+          "setting": "Settings > Team and security > Team",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-a440ddd9"
+          ],
+          "quote": "Install and manage Stripe Apps"
+        },
+        {
+          "name": "Uninstall app",
+          "effect": "revoke",
+          "applies_to": [
+            "stripe-2"
+          ],
+          "what": "An Administrator removes an installed app.",
+          "setting": "Installed Apps page > ⋯ > Uninstall",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-3f5dfff6"
+          ],
+          "quote": "Stripe Apps can be uninstalled by an Administrator from the Installed Apps page."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No account setting found to forbid creating unrestricted secret keys or to require key expiry.",
+        "Whether access policies and approval rules can be attached to organization API keys.",
+        "Whether uninstalling a Stripe App immediately revokes its OAuth refresh tokens is not stated.",
+        "Which organization roles can create org API keys or service principals, and how to disable a service principal.",
+        "Approval rules' actor condition for service principals is mentioned on the service principals page but not described on the approvals page."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "stripe-2",
+      "provider_id": "stripe",
+      "name": "Stripe Apps OAuth (Connect OAuth tokens deprecated)",
+      "family": "oauth",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "A Stripe App set to OAuth sends the user to an install link; the app backend exchanges the one-time code (valid 5 minutes) at /v1/oauth/token using the developer's own secret key and gets a 1-hour access token, which it sends like an API key. Connect OAuth's returned access_token and refresh_token are deprecated; Connect platforms should use their platform key with the Stripe-Account header (stripe-1).",
+        "evidence_refs": [
+          "turn5search3",
+          "turn5search15"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Tokens come from user authorization at app install and are refreshed with the developer's secret key. No exchange of an external identity token is documented for this path. Stripe Workload Identity Federation (private preview) is a separate mechanism.",
+        "evidence_refs": [
+          "turn5search3",
+          "turn5search15",
+          "fc-e56c55ba"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Per-key IP controls are documented for API keys. Equivalent Connect/Apps OAuth enforcement was not verified.",
+        "evidence_refs": [
+          "turn5search3"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Stripe Apps OAuth access token: 1 hour. Connect OAuth access_token is deprecated (use platform key + Stripe-Account header).",
+        "evidence_refs": [
+          "turn5search3",
+          "turn5search15",
+          "fc-bc7603d9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "inactivity",
+        "summary": "Stripe Apps: refresh token (1 year, rolled on each exchange, so effectively 1 year from last use; 31536000 s) gets a new 1-hour access token. Connect OAuth tokens are deprecated.",
+        "evidence_refs": [
+          "turn5search3",
+          "turn5search15"
+        ]
+      },
+      "administration": {
+        "summary": "The app manifest lists the Stripe permissions the app needs, and the installing user accepts them during install. Each refresh returns a new refresh token and expires the previous one. Connect platforms can revoke a Standard account's connection with POST /oauth/deauthorize.",
+        "conditions": "Stripe Apps choose one API access method in the manifest (platform key, OAuth 2.0, or restricted API key); this path covers OAuth only. The token exchange requires the app developer's secret key. For Connect OAuth, the access_token, refresh_token and stripe_publishable_key response fields are deprecated, and since June 2021 read_write OAuth can't connect accounts controlled by another platform.",
+        "evidence_refs": [
+          "turn5search3",
+          "turn5search15",
+          "fc-019f6e75"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The app is installed on the Stripe account, not tied to the installing user.",
+          "evidence_refs": [
+            "fc-ba5233f6"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Installed Apps page (dashboard.stripe.com/apps/installed) lists apps installed on the account; per account, not org-wide.",
+          "evidence_refs": [
+            "fc-3f5dfff6"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Workbench > Logs; filter Method GET, API endpoint /v1/customers, and Account",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-a3c07fae"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Authorization code prefix ac_ shown in docs example; access/refresh token formats not documented. Code valid 5 min, one-time; access token 1 h; refresh token 1 year, rolled on each exchange."
+        },
+        "log_sources": [
+          {
+            "name": "Events / webhooks (app install events)",
+            "notes": "apps.install.created/updated/deleted (app.install.* before 2026-09-30) and account.application.authorized/deauthorized; event.account identifies installing account."
+          },
+          {
+            "name": "Workbench request logs (installing account)",
+            "notes": "Requests made with the app's access token appear in the installing account's logs; per-token attribution fields not documented."
+          },
+          {
+            "name": "Workbench request logs (developer account)",
+            "notes": "/v1/oauth/token exchanges are made with the developer's own secret key (see stripe-1)."
+          },
+          {
+            "name": "Activity Logs API",
+            "notes": "No documented OAuth/app install action types."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "account",
+            "log": "Event object",
+            "notes": "Installing (connected) account id on app events"
+          },
+          {
+            "field": "stripe_user_id",
+            "log": "/v1/oauth/token response",
+            "notes": "Account the token grants access to"
+          },
+          {
+            "field": "scope",
+            "log": "/v1/oauth/token response",
+            "notes": "stripe_apps"
+          },
+          {
+            "field": "request.id",
+            "log": "Event object",
+            "notes": "Request that triggered an event"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "apps.install.created",
+            "stage": "create",
+            "notes": "App installed (app.install.created on older API versions)"
+          },
+          {
+            "event": "account.application.authorized",
+            "stage": "create",
+            "notes": "Account connects or installs app"
+          },
+          {
+            "event": "apps.install.updated",
+            "stage": "change",
+            "notes": "App updated or reauthorized"
+          },
+          {
+            "event": "apps.install.deleted",
+            "stage": "revoke",
+            "notes": "App uninstalled"
+          },
+          {
+            "event": "account.application.deauthorized",
+            "stage": "revoke",
+            "notes": "Account disconnects or uninstalls app"
+          }
+        ],
+        "correlation_keys": [
+          "account",
+          "stripe_user_id",
+          "request.id",
+          "livemode",
+          "context"
+        ],
+        "anomaly_cues": [
+          "Unexpected apps.install.created / account.application.authorized for an app nobody in the business requested",
+          "API activity from the app's access token in the installing account after apps.install.deleted",
+          "Refresh token used from two backends (old refresh token reused after roll fails) - developer-side signal",
+          "App access token calling endpoints beyond the app's declared permissions pattern (bulk customer reads)",
+          "Burst of /v1/oauth/token code exchanges on the developer account from a new IP"
+        ],
+        "containment": {
+          "steps": "Installing account: uninstall the app (Settings > Installed apps). Developer: rotate the developer secret key used at /v1/oauth/token (stripe-1) and delete stored refresh tokens. Connect OAuth (deprecated) platforms: POST https://connect.stripe.com/oauth/deauthorize.",
+          "kills_existing": "unknown",
+          "notes": "Docs do not state whether uninstall immediately invalidates issued access/refresh tokens. Access tokens expire after 1 hour regardless."
+        },
+        "sample_query": {
+          "language": "Stripe Events API (HTTP GET)",
+          "query": "curl -G https://api.stripe.com/v1/events -u \"$SK:\" -d \"types[]=apps.install.created\" -d \"types[]=apps.install.deleted\" -d \"types[]=account.application.authorized\" -d \"types[]=account.application.deauthorized\" -d \"created[gte]=1788998400\"",
+          "purpose": "List recent app installs/uninstalls to spot unexpected app grants (30-day window)."
+        },
+        "unknown": [
+          "Access/refresh token prefix and format",
+          "Whether uninstall revokes outstanding access and refresh tokens immediately",
+          "Revocation endpoint for Stripe Apps OAuth tokens (Connect deauthorize applies to Connect OAuth)",
+          "Request log field identifying which app/token made a call",
+          "Logging of failed token exchanges"
+        ],
+        "evidence_refs": [
+          "turn5search15",
+          "fc-a5ab5607",
+          "fc-1c64e0dd",
+          "fc-239f2700",
+          "fc-a3c07fae"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /v1/customers",
+            "reveals": "Customer records the app has permission to read",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Workbench request log (Dashboard > Workbench > Logs), not Security history; retention not stated. Docs do not say how app-token requests are labeled in the log."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "turn5search15",
+          "fc-1562f317",
+          "fc-a3c07fae"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-019f6e75",
+      "title": "API authentication methods | Stripe Documentation",
+      "url": "https://docs.stripe.com/stripe-apps/api-authentication",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1562f317",
+      "title": "List all customers | Stripe API Reference",
+      "url": "https://docs.stripe.com/api/customers/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1c64e0dd",
+      "title": "List all events",
+      "url": "https://docs.stripe.com/api/events/list",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-239f2700",
+      "title": "The Event object",
+      "url": "https://docs.stripe.com/api/events/object",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3f5dfff6",
+      "title": "How can I uninstall an App?",
+      "url": "https://support.stripe.com/questions/how-can-i-uninstall-an-app",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a3c07fae",
+      "title": "How Workbench works",
+      "url": "https://docs.stripe.com/workbench/overview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a440ddd9",
+      "title": "User roles",
+      "url": "https://docs.stripe.com/get-started/account/teams/roles",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a5ab5607",
+      "title": "Stripe Apps: Add server-side logic",
+      "url": "https://docs.stripe.com/stripe-apps/build-backend",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ba5233f6",
+      "title": "How do I install a Stripe App? : Stripe: Help & Support",
+      "url": "https://support.stripe.com/questions/how-do-i-install-a-stripe-app",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bc7603d9",
+      "title": "Connect OAuth reference | Stripe Documentation",
+      "url": "https://docs.stripe.com/connect/oauth-reference",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e56c55ba",
+      "title": "Workload Identity Federation | Stripe Documentation",
+      "url": "https://docs.stripe.com/workload-identity-federation",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search15",
+      "title": "OAuth 2.0 | Stripe Documentation",
+      "url": "https://docs.stripe.com/stripe-apps/api-authentication/oauth",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search3",
+      "title": "API keys | Stripe Documentation",
+      "url": "https://docs.stripe.com/keys",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

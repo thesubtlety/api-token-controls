@@ -1,0 +1,336 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "glean",
+      "name": "Glean",
+      "scope_notes": "Glean-hosted enterprise SaaS (single tenant, <instance>-be.glean.com); plan tiers are not documented for these controls, and log delivery to customer storage needs Glean account team setup.",
+      "controls": [
+        {
+          "name": "Tenant-wide IP greenlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "glean-1",
+            "glean-2",
+            "glean-4",
+            "glean-5",
+            "glean-6"
+          ],
+          "what": "VPC firewall allowlist for the tenant; MCP also checks at app layer.",
+          "setting": "Not documented (Glean-managed)",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ac27dc28"
+          ]
+        },
+        {
+          "name": "Enable Glean OAuth Server",
+          "effect": "disable",
+          "applies_to": [
+            "glean-4",
+            "glean-6"
+          ],
+          "what": "Turns Glean-issued OAuth on or off.",
+          "setting": "Admin console > Settings > Third-party access (OAuth)",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-1d735752",
+            "fc-d0c3bb63"
+          ]
+        },
+        {
+          "name": "Enterprise Managed Auth (trusted issuer, allowed scopes)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "glean-6"
+          ],
+          "what": "EMA tokens limited to selected scopes; rejected without a trusted issuer.",
+          "setting": "Users & permissions > Third-party access (OAuth) > Enterprise Managed Auth",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-818ab68e"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether revoking a Glean-issued API token takes effect immediately",
+        "Whether user deprovisioning revokes that user's Glean-issued API tokens",
+        "Whether admin audit logs record API token create/revoke (coverage list does not mention tokens)",
+        "Per-token IP allowlist for Client API tokens",
+        "Default OAuth server state (admin docs: off; developer docs: on)",
+        "Where the tenant-wide IP greenlist is configured and whether customers manage it",
+        "EMA token lifetime"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "glean-6",
+      "provider_id": "glean",
+      "name": "Enterprise Managed Auth (JWT bearer assertion for MCP)",
+      "family": "federation",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An AI app sends an IdP-signed identity assertion to /oauth/token with the JWT bearer grant; Glean returns an MCP access token without a consent screen.",
+        "evidence_refs": [
+          "fc-818ab68e"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "Trusted issuer must be configured; currently Claude with Okta only.",
+        "evidence_refs": [
+          "fc-818ab68e"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "MCP app-layer IP greenlisting.",
+        "evidence_refs": [
+          "fc-ac27dc28"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Not stated for EMA",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "IdP assertion",
+        "summary": "App obtains a new assertion from the IdP.",
+        "evidence_refs": [
+          "fc-818ab68e"
+        ]
+      },
+      "administration": {
+        "summary": "Off unless the EMA toggle is on and a trusted issuer is set; allowed scopes limit tokens.",
+        "conditions": "Admin role required.",
+        "evidence_refs": [
+          "fc-818ab68e"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "yes",
+          "details": "Each token comes from an IdP identity assertion, and admins control which users and apps can connect in the IdP.",
+          "evidence_refs": [
+            "fc-818ab68e"
+          ]
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "No refresh tokens are issued, so once the IdP stops issuing assertions no new tokens are minted. Existing access tokens run until they expire.",
+          "evidence_refs": [
+            "fc-818ab68e"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "In the IdP, register Glean as a Cross App Access resource server and assign users; in Glean: Users & permissions → Third-party access (OAuth) → Enterprise Managed Auth → Trusted issuer",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-818ab68e"
+          ]
+        },
+        "network": {
+          "ui": "No self-serve setting; send Glean the allowed CIDRs and Glean enables IP green listing (tenant-wide)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-000bc4ba",
+            "fc-ac27dc28"
+          ]
+        },
+        "usage": {
+          "ui": "MCP activity logs (filter by server, tool, user, date; shows OAuth client name); GCE log: type = MCP_USAGE, McpUsage.Application / AuthMethod",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-94c8cbbf",
+            "fc-b9e88402",
+            "fc-4b0dcb82"
+          ]
+        },
+        "reads": {
+          "ui": "In glean-customer-event log, filter jsonPayload.type = MCP_USAGE (EventType TOOL_CALL, ToolName)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-b9e88402",
+            "fc-4b0dcb82"
+          ]
+        },
+        "kill": {
+          "ui": "Users & permissions → Third-party access (OAuth) → turn off Enterprise Managed Auth, or delete the app's static client; then User roles → ⋮ → Sign out of all sessions to cut existing tokens",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-818ab68e",
+            "fc-cfa35c05"
+          ]
+        },
+        "offboard": {
+          "ui": "Unassign the user in the IdP Cross App Access connection; Admin console → Users & permissions → User roles → ⋮ → Sign out of all sessions",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-818ab68e",
+            "fc-cfa35c05"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Glean access token."
+        },
+        "log_sources": [
+          {
+            "name": "GCE MCP_USAGE",
+            "notes": ""
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "user identity"
+        ],
+        "anomaly_cues": [],
+        "containment": {
+          "steps": "Turn off EMA or remove the trusted issuer; unassign the user in the IdP.",
+          "kills_existing": "partial",
+          "notes": "Turning off EMA or removing the issuer leaves existing tokens valid until expiry. Admin 'sign out of all sessions' invalidates them after the revocation cache refreshes (~10 minutes)."
+        },
+        "sample_query": null,
+        "unknown": [
+          "EMA-specific log fields"
+        ],
+        "evidence_refs": [
+          "fc-818ab68e",
+          "fc-b9e88402",
+          "fc-ac27dc28"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "MCP tool calls",
+            "reveals": "Per allowed scopes",
+            "bulk": true,
+            "scope": "MCP",
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "MCP_USAGE",
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-b9e88402"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-000bc4ba",
+      "title": "Glean web application firewall on AWS",
+      "url": "https://docs.glean.com/security/cloud-prem/aws/aws-waf",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1d735752",
+      "title": "Glean OAuth Authorization Server",
+      "url": "https://docs.glean.com/administration/oauth/authorization-server",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4b0dcb82",
+      "title": "Event schemas | Glean Customer Event logs",
+      "url": "https://docs.glean.com/administration/gce-logs/data-dictionary-detailed",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-818ab68e",
+      "title": "Enterprise Managed Auth",
+      "url": "https://docs.glean.com/administration/oauth/enterprise-managed-auth",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-94c8cbbf",
+      "title": "MCP usage tracking and analytics",
+      "url": "https://docs.glean.com/administration/platform/mcp/analytics",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac27dc28",
+      "title": "MCP Security, Data Flow, and Permissions",
+      "url": "https://docs.glean.com/administration/platform/mcp/security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9e88402",
+      "title": "Glean Customer Event logs overview",
+      "url": "https://docs.glean.com/administration/gce-logs/data-dictionary",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cfa35c05",
+      "title": "Managing Users",
+      "url": "https://docs.glean.com/administration/identity/roles/manage-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d0c3bb63",
+      "title": "Client API Authentication",
+      "url": "https://developers.glean.com/api-info/client/authentication/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

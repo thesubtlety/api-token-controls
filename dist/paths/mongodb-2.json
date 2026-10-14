@@ -1,0 +1,426 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "mongodb",
+      "name": "MongoDB Atlas",
+      "scope_notes": "Atlas cloud service; Admin API credentials (service accounts, legacy API keys) manage Atlas but cannot read cluster data, while database users read data; database auditing, access history and workload federation need dedicated (M10+) clusters.",
+      "controls": [
+        {
+          "name": "Require IP Access List for the Atlas Administration API",
+          "effect": "limit_network",
+          "applies_to": [
+            "mongodb-1",
+            "mongodb-2"
+          ],
+          "what": "Rejects Admin API requests from service accounts or API keys without a matching access list entry.",
+          "setting": "Organization Settings > Require IP Access List for the Atlas Administration API; API field apiAccessListRequired",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7552a84c",
+            "fc-d909ecf5"
+          ]
+        },
+        {
+          "name": "API Access List (per service account / API key)",
+          "effect": "limit_network",
+          "applies_to": [
+            "mongodb-1",
+            "mongodb-2"
+          ],
+          "what": "Limits each credential to listed IPs or CIDRs.",
+          "setting": "Applications > Service Accounts/API Keys > Edit > Add Access List Entry; /orgs/{orgId}/serviceAccounts/{clientId}/accessList, /orgs/{orgId}/apiKeys/{apiUserId}/accessList",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-7552a84c"
+          ]
+        },
+        {
+          "name": "Atlas roles",
+          "effect": "limit_scope",
+          "applies_to": [
+            "mongodb-1",
+            "mongodb-2"
+          ],
+          "what": "Org and project roles limit which Admin API operations the credential can perform.",
+          "setting": "Applications > Service Accounts/API Keys > roles",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-82575dfe"
+          ]
+        },
+        {
+          "name": "Delete API key",
+          "effect": "revoke",
+          "applies_to": [
+            "mongodb-2"
+          ],
+          "what": "Deletes the key and removes it from all projects.",
+          "setting": "Applications > API Keys > Delete; atlas organizations apiKeys delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-0766262d"
+          ]
+        },
+        {
+          "name": "Organization Owner role required to create service accounts and API keys",
+          "effect": "other",
+          "applies_to": [
+            "mongodb-1",
+            "mongodb-2"
+          ],
+          "what": "Only Organization Owners can create org-level service accounts and API keys; project-level ones are created by project roles and are added to the org as Organization Member.",
+          "setting": "Atlas organization/project role assignment",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-7552a84c"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether an org can block creation of legacy API keys entirely.",
+        "Whether API keys have any expiry setting.",
+        "Whether deleting a service account or secret invalidates already-issued 1-hour access tokens.",
+        "Whether deleting a database user terminates open connections.",
+        "Whether Admin API read (GET) calls are recorded anywhere; Activity Feed documents changes, not reads.",
+        "Default secret expiration value for service accounts."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "mongodb-2",
+      "provider_id": "mongodb",
+      "name": "Programmatic API key (legacy, HTTP Digest)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Public key plus private key used with HTTP Digest auth on each Admin API request. Legacy; MongoDB recommends service accounts.",
+        "evidence_refs": [
+          "fc-82575dfe"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Cannot log into the UI; UI session timeouts do not apply. No doc statement on IdP conditional access.",
+        "evidence_refs": [
+          "fc-7fb8b355"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Per-key API access list; org setting can require a list for every request. Not applied to Atlas CLI user logins or App Connections.",
+        "evidence_refs": [
+          "fc-7552a84c"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "No documented expiry",
+        "summary": "Same key pair reused on every request until deleted.",
+        "evidence_refs": [
+          "fc-82575dfe"
+        ]
+      },
+      "administration": {
+        "summary": "Org Owners create org keys; Project Owners create project keys. Private key shown once. Roles scope access.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-7552a84c",
+          "fc-82575dfe"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "API keys belong to an organization, not to a user.",
+          "evidence_refs": [
+            "fc-82575dfe"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Organization Owners can view all API keys or call GET /api/atlas/v2/orgs/{orgId}/apiKeys.",
+          "evidence_refs": [
+            "fc-0766262d",
+            "fc-46cb934a"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Organization > Configurations > Activity Feed (or Project > Security > Activity Feed) > Filter > Initiated By",
+          "api": "GET /api/atlas/v2/orgs/{orgId}/events (filter results on apiKeyId); GET /api/atlas/v2/groups/{groupId}/events",
+          "cli": "atlas events organizations list",
+          "evidence_refs": [
+            "fc-fc4b905a",
+            "fc-9803de9f"
+          ]
+        },
+        "reads": {
+          "ui": "Project > Security > Activity Feed > Filter > Event = database user added (MONGODB_USER_ADDED); add Initiated By filter for the key/service account",
+          "api": "GET /api/atlas/v2/groups/{groupId}/events?eventType=MONGODB_USER_ADDED",
+          "cli": "atlas events projects list --type MONGODB_USER_ADDED",
+          "evidence_refs": [
+            "fc-fc4b905a",
+            "fc-9803de9f",
+            "fc-416ed3ab"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Public/private key pair; no documented prefix."
+        },
+        "log_sources": [
+          {
+            "name": "Organization / Project Activity Feed",
+            "notes": "All tiers; API and SIEM export."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "apiKeyId",
+            "log": "Activity Feed event",
+            "notes": "Present when an API key triggered the event (userId omitted)."
+          },
+          {
+            "field": "remoteAddress",
+            "log": "Activity Feed event",
+            "notes": null
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "API_KEY_CREATED",
+            "stage": "create",
+            "notes": null
+          },
+          {
+            "event": "API_KEY_ROLES_CHANGED",
+            "stage": "modify",
+            "notes": null
+          },
+          {
+            "event": "API_KEY_ADDED_TO_GROUP",
+            "stage": "modify",
+            "notes": null
+          },
+          {
+            "event": "API_KEY_ACCESS_LIST_ENTRY_ADDED",
+            "stage": "modify",
+            "notes": null
+          },
+          {
+            "event": "API_KEY_ACCESS_LIST_ENTRY_DELETED",
+            "stage": "modify",
+            "notes": null
+          },
+          {
+            "event": "API_KEY_DELETED",
+            "stage": "revoke",
+            "notes": null
+          }
+        ],
+        "correlation_keys": [
+          "apiKeyId",
+          "remoteAddress",
+          "orgId",
+          "groupId"
+        ],
+        "anomaly_cues": [
+          "Old keys with no expiry still active",
+          "Key added to new projects",
+          "Access list widened"
+        ],
+        "containment": {
+          "steps": "Delete the API key (UI, atlas organizations apiKeys delete, or Admin API).",
+          "kills_existing": "yes",
+          "notes": "Digest auth checks the key on each request, so deletion should stop further calls; not explicitly stated."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether read calls are logged"
+        ],
+        "evidence_refs": [
+          "fc-82575dfe",
+          "fc-0766262d",
+          "fc-96310969",
+          "fc-d909ecf5",
+          "fc-fc4b905a"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/atlas/v2",
+            "reveals": "System status and API key metadata",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/atlas/v2/groups",
+            "reveals": "Projects",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "POST /api/atlas/v2/groups/{groupId}/databaseUsers",
+            "reveals": "Creates a database user for data access",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "MONGODB_USER_ADDED",
+            "log_notes": "Event carries apiKeyId"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-d909ecf5",
+          "fc-9bd547dc"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "MongoDB Atlas API Key Created",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/mongodb_rules/mongodb_atlas_api_key_created.yml",
+          "detects": "An IP access list entry was added to an Atlas programmatic API key."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0766262d",
+      "title": "Manage Programmatic Access to an Organization",
+      "url": "https://www.mongodb.com/docs/atlas/configure-api-access-org/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-416ed3ab",
+      "title": "atlas events projects list - Atlas CLI",
+      "url": "https://www.mongodb.com/docs/atlas/cli/current/command/atlas-events-projects-list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-46cb934a",
+      "title": "Return All Organization API Keys",
+      "url": "https://www.mongodb.com/docs/api/doc/atlas-admin-api-v2/operation/operation-listapikeys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7552a84c",
+      "title": "Get Started with the Atlas Administration API",
+      "url": "https://www.mongodb.com/docs/atlas/configure-api-access/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7fb8b355",
+      "title": "Manage Organization Settings",
+      "url": "https://www.mongodb.com/docs/atlas/tutorial/manage-organization-settings/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-82575dfe",
+      "title": "Atlas Administration API Authentication Methods",
+      "url": "https://www.mongodb.com/docs/atlas/api/api-authentication/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-96310969",
+      "title": "Atlas Alert Event Types",
+      "url": "https://www.mongodb.com/docs/atlas/reference/atlas-alert-event-types/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9803de9f",
+      "title": "MongoDB Atlas Administration API v2 OpenAPI spec (mongodb/openapi)",
+      "url": "https://raw.githubusercontent.com/mongodb/openapi/main/openapi/v2.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9bd547dc",
+      "title": "Configure Database Users",
+      "url": "https://www.mongodb.com/docs/atlas/security-add-mongodb-users/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d909ecf5",
+      "title": "Atlas Administration API v2 OpenAPI spec (OrganizationSettings)",
+      "url": "https://www.mongodb.com/docs/api/doc/atlas-admin-api-v2.yaml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fc4b905a",
+      "title": "View Activity Feed",
+      "url": "https://www.mongodb.com/docs/atlas/tutorial/activity-feed/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

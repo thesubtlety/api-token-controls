@@ -1,0 +1,331 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "jfrog",
+      "name": "JFrog",
+      "scope_notes": "Covers JFrog Platform (Cloud/SaaS). JFrog Cloud SaaS; IP allowlist, OIDC integration and MyJFrog API tokens need Enterprise X or Enterprise+, log streaming needs Enterprise+, Cloud Log Collection is on all SaaS licenses; several token thresholds are documented only as self-hosted YAML settings.",
+      "controls": [
+        {
+          "name": "IP/CIDR Allowlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "jfrog-1",
+            "jfrog-2",
+            "jfrog-3",
+            "jfrog-4"
+          ],
+          "what": "Only listed IPs/JPDs can reach the JPD.",
+          "setting": "MyJFrog > Security > Allowlist; MyJFrog IP allowlist API",
+          "plan": "Enterprise X or Enterprise+",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-54c4dbf6"
+          ]
+        },
+        {
+          "name": "Identity mapping claims",
+          "effect": "limit_scope",
+          "applies_to": [
+            "jfrog-4"
+          ],
+          "what": "Claims in each mapping restrict which workloads get tokens and with what scope.",
+          "setting": "OIDC integration identity mappings (UI) or Create/Update Identity Mapping API",
+          "plan": "Enterprise X or Enterprise+",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-a25125a6",
+            "fc-f71d8e4b"
+          ]
+        },
+        {
+          "name": "Delete OIDC Configuration",
+          "effect": "revoke",
+          "applies_to": [
+            "jfrog-4"
+          ],
+          "what": "Removes the provider so no new tokens can be exchanged.",
+          "setting": "DELETE OIDC Configuration API",
+          "plan": "Enterprise X or Enterprise+",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-a25125a6"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether SaaS customers can change token.max-expiry, token.allow-refreshable or revocable-expiry-threshold (documented only as Access YAML settings).",
+        "A setting to stop non-admin users creating identity tokens.",
+        "Default and maximum lifetime of UI-generated identity tokens.",
+        "Whether the IP allowlist covers the MyJFrog portal API.",
+        "Whether MyJFrog audit logs record API token generation (event names not listed).",
+        "Reference token length: Access Tokens page says 128 characters, Identity Tokens page says 64."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "jfrog-4",
+      "provider_id": "jfrog",
+      "name": "OpenID Connect integrations (OIDC token exchange)",
+      "family": "federation",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An external IdP token (e.g. GitHub Actions OIDC) is exchanged at /access/api/v1/oidc/token for a short-lived JFrog access token whose scope comes from the matching identity mapping.",
+        "evidence_refs": [
+          "fc-a25125a6",
+          "fc-f71d8e4b",
+          "fc-50d75ad1"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "Inbound workload federation. Identity mappings without claims, or GitHub 'Enable Permissive Configuration', let any workload of the provider get a token.",
+        "evidence_refs": [
+          "fc-a25125a6"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "JPD-wide MyJFrog allowlist; CI runner egress IPs must be listed.",
+        "evidence_refs": [
+          "fc-54c4dbf6"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Expiration time set per identity mapping (minutes)",
+        "evidence_refs": [
+          "fc-f71d8e4b"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "new exchange per job",
+        "summary": "Workload re-exchanges a fresh IdP token.",
+        "evidence_refs": [
+          "fc-50d75ad1"
+        ]
+      },
+      "administration": {
+        "summary": "Admins create OIDC configurations and identity mappings; project admins can manage project identity mappings.",
+        "conditions": "Enterprise X or Enterprise+.",
+        "evidence_refs": [
+          "fc-a25125a6"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "OIDC provider configurations are listed under General Management > Manage Integrations; issued tokens are not listed separately in the docs.",
+          "evidence_refs": [
+            "fc-a25125a6"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Administration > General Management > Manage Integrations > OIDC integration > identity mapping > Expiration Time (minutes)",
+          "api": "POST /access/api/v1/oidc/{provider_name}/identity_mappings with token_spec.expires_in (seconds)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-a25125a6",
+            "fc-a4de16eb"
+          ]
+        },
+        "reads": {
+          "ui": "Administration > Artifactory > System Logs (access log): filter [ACCEPTED DOWNLOAD] for the identity mapping's User Name",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-2304a161",
+            "fc-a25125a6"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Issued token is a JFrog access token (may be reference token)."
+        },
+        "log_sources": [
+          {
+            "name": "Request Log",
+            "notes": "POST /access/api/v1/oidc/token and subsequent requests."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "subject from identity mapping",
+            "log": "Request Log Username",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "identity mapping name",
+          "CI repository/workflow claims"
+        ],
+        "anomaly_cues": [
+          "Exchanges from unexpected repositories",
+          "Mappings without claims or with Permissive Configuration"
+        ],
+        "containment": {
+          "steps": "Delete or tighten the identity mapping / OIDC configuration.",
+          "kills_existing": "partial",
+          "notes": "Tokens with expiry below revocable-expiry-threshold (default 6 hours) cannot be revoked and run until expiry; longer ones can be revoked."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit event for OIDC config changes"
+        ],
+        "evidence_refs": [
+          "fc-a25125a6",
+          "fc-ed4d9658",
+          "fc-50d75ad1",
+          "fc-b5410fc6"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST /access/api/v1/oidc/token",
+            "reveals": "issues JFrog token",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Request log."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://{jfrog_url}/artifactory/{repoKey}/{filePath} (Retrieve Artifact)",
+            "reveals": "artifact contents",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "ACCEPTED DOWNLOAD",
+            "log_notes": "Access log entry shows user name, IP and auth type TOKEN; the user is whatever the identity mapping assigns."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-036a31be",
+          "fc-50d75ad1",
+          "fc-2304a161",
+          "fc-d4d07605"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-036a31be",
+      "title": "JFrog Cloud Log Streaming",
+      "url": "https://docs.jfrog.com/administration/docs/jfrog-cloud-log-streaming",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2304a161",
+      "title": "Access Log",
+      "url": "https://docs.jfrog.com/administration/docs/access-log",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-50d75ad1",
+      "title": "OIDC Token Exchange",
+      "url": "https://docs.jfrog.com/administration/reference/oidctokenexchange",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-54c4dbf6",
+      "title": "Configure Cloud Security",
+      "url": "https://docs.jfrog.com/administration/docs/configure-cloud-security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a25125a6",
+      "title": "OpenID Connect Integration",
+      "url": "https://docs.jfrog.com/administration/docs/openid-connect-integration",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a4de16eb",
+      "title": "Create an Identity Mapping",
+      "url": "https://docs.jfrog.com/administration/reference/createoidcidentitymapping",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b5410fc6",
+      "title": "Access Tokens",
+      "url": "https://docs.jfrog.com/administration/docs/access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d4d07605",
+      "title": "Retrieve Artifact",
+      "url": "https://docs.jfrog.com/artifactory/reference/retrieveartifact",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed4d9658",
+      "title": "Log Files Location and Naming",
+      "url": "https://docs.jfrog.com/administration/docs/log-files-location-and-naming",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f71d8e4b",
+      "title": "JFrog Authentication and Token Management Overview",
+      "url": "https://docs.jfrog.com/administration/docs/jfrog-authentication-and-token-management-overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

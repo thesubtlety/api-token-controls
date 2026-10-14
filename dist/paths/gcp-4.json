@@ -1,0 +1,382 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "gcp",
+      "name": "Google Cloud",
+      "scope_notes": "Covers Google Cloud (IAM, API Keys, Cloud Storage). Covers Google Cloud project/org credentials; org policy constraints and VPC Service Controls need an organization resource; Workspace user OAuth and domain-wide delegation are in the separate `google` platform.",
+      "controls": [
+        {
+          "name": "iam.serviceAccountKeyExposureResponse",
+          "effect": "revoke",
+          "applies_to": [
+            "gcp-1",
+            "gcp-4"
+          ],
+          "what": "Auto-disables SA keys and SA-bound API keys that Google detects as exposed.",
+          "setting": "Organization policies (DISABLE_KEY or WAIT_FOR_ABUSE)",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7af2d5e5"
+          ]
+        },
+        {
+          "name": "Disable service account (serviceAccounts.disable)",
+          "effect": "revoke",
+          "applies_to": [
+            "gcp-1",
+            "gcp-2",
+            "gcp-3",
+            "gcp-4"
+          ],
+          "what": "Immediately disables the SA, which is the documented way to cut off already-issued short-lived tokens.",
+          "setting": "IAM > Service accounts > Disable; POST .../serviceAccounts/SA_ID:disable",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-e9b2abab",
+            "fc-6fc9753d"
+          ]
+        },
+        {
+          "name": "iam.managed.disableServiceAccountApiKeyCreation",
+          "effect": "disable",
+          "applies_to": [
+            "gcp-4"
+          ],
+          "what": "Blocks binding API keys to service accounts except for allowed services.",
+          "setting": "Organization policies > Block service account API key bindings",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7af2d5e5",
+            "fc-38d3a9e8"
+          ]
+        },
+        {
+          "name": "API key application and API restrictions",
+          "effect": "limit_network",
+          "applies_to": [
+            "gcp-4"
+          ],
+          "what": "Restricts a key to listed external IPs, referrers or apps, and to specific APIs.",
+          "setting": "APIs & Services > Credentials > key > Application restrictions / API restrictions",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-38d3a9e8"
+          ]
+        },
+        {
+          "name": "Delete API key",
+          "effect": "revoke",
+          "applies_to": [
+            "gcp-4"
+          ],
+          "what": "Deletes the key; it can be restored for 30 days.",
+          "setting": "APIs & Services > Credentials; DeleteKey",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-38d3a9e8",
+            "fc-096deda2"
+          ]
+        },
+        {
+          "name": "VPC Service Controls",
+          "effect": "limit_network",
+          "applies_to": [
+            "gcp-1",
+            "gcp-2",
+            "gcp-3",
+            "gcp-4",
+            "gcp-5"
+          ],
+          "what": "Service perimeters with ingress rules limit API access by network origin and identity, even with stolen credentials.",
+          "setting": "Security > VPC Service Controls",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-c4499f95"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether existing keys created before iam.serviceAccountKeyExpiryHours was set get an expiry (docs say 'newly created').",
+        "Federated (STS) access token lifetime.",
+        "Whether API keys support an expiry setting.",
+        "Which audit field identifies the API key or HMAC access ID used on a data-plane request.",
+        "Whether GetKeyString/lookupKey calls are logged for keys.lookupKey.",
+        "Plan/pricing for VPC Service Controls (needs organization)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "gcp-4",
+      "provider_id": "gcp",
+      "name": "API keys (standard keys and authorization keys bound to a service account)",
+      "family": "api_key",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A bearer string (AIza...) sent with requests. Standard keys only identify a project for billing/quota; authorization keys act as the bound service account, similar to a long-lived access token.",
+        "evidence_refs": [
+          "fc-38d3a9e8"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Standard keys identify no principal; authorization keys act as a service account. Neither is tied to user SSO.",
+        "evidence_refs": [
+          "fc-38d3a9e8",
+          "fc-214cc15d"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Per-key application restrictions (external IPs, referrers, Android/iOS apps) and API restrictions. Keys created by REST API are unrestricted unless set. Internal IPs are not supported.",
+        "evidence_refs": [
+          "fc-38d3a9e8"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry setting found on fetched pages",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Valid until deleted",
+        "summary": "Console 'Rotate key' creates a new key with the same restrictions; then delete the old one.",
+        "evidence_refs": [
+          "fc-38d3a9e8"
+        ]
+      },
+      "administration": {
+        "summary": "Binding keys to service accounts is blocked by a default org policy (Gemini API allowed by default). Standard key creation needs serviceusage.apiKeys.create.",
+        "conditions": "Changing the constraint needs an organization resource.",
+        "evidence_refs": [
+          "fc-7af2d5e5",
+          "fc-38d3a9e8",
+          "fc-096deda2"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Standard keys don't identify a principal; authorization keys act as a service account.",
+          "evidence_refs": [
+            "fc-38d3a9e8"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Cloud Asset Inventory supports apikeys.googleapis.com/Key; per project also gcloud services api-keys list.",
+          "evidence_refs": [
+            "fc-55f8493d"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Logs Explorer: protoPayload.serviceName=\"apikeys.googleapis.com\" (CreateKey/DeleteKey/UpdateKey are Admin Activity; GetKeyString needs Data Access Admin Read enabled)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-096deda2",
+            "fc-5c044d8c",
+            "fc-a6bc72ba"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "AIza",
+          "notes": "Encrypted string, e.g. AIzaSy..."
+        },
+        "log_sources": [
+          {
+            "name": "Cloud Audit Logs (apikeys.googleapis.com)",
+            "notes": "CreateKey/DeleteKey/UpdateKey are Admin Activity; GetKeyString is Data Access."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "unknown",
+            "log": "Cloud Audit Logs",
+            "notes": "Docs say authorization keys obscure end-user identity; data-plane key field not documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "google.api.apikeys.v2.ApiKeys.CreateKey",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "google.api.apikeys.v2.ApiKeys.DeleteKey",
+            "stage": "revoke",
+            "notes": "Restorable 30 days via UndeleteKey"
+          },
+          {
+            "event": "google.api.apikeys.v2.ApiKeys.GetKeyString",
+            "stage": "use",
+            "notes": "Someone read the key string; Data Access"
+          }
+        ],
+        "correlation_keys": [
+          "key ID",
+          "bound service account email"
+        ],
+        "anomaly_cues": [
+          "Unrestricted keys",
+          "GetKeyString by unusual principal",
+          "Authorization key created after constraint change"
+        ],
+        "containment": {
+          "steps": "Delete the key (or add restrictions); for authorization keys also disable the bound SA.",
+          "kills_existing": "unknown",
+          "notes": "Propagation time for deletion not documented."
+        },
+        "sample_query": "protoPayload.serviceName=\"apikeys.googleapis.com\"",
+        "unknown": [
+          "Which log field shows the API key on API calls"
+        ],
+        "evidence_refs": [
+          "fc-38d3a9e8",
+          "fc-3ff88682",
+          "fc-096deda2"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "No documented whoami for API keys; reachable APIs depend on key restrictions"
+        ],
+        "evidence_refs": [
+          "fc-38d3a9e8"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "GCP serviceusage.apiKeys.create Privilege Escalation",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_serviceusage_apikeys_create_privilege_escalation.yml",
+          "detects": "An API key was created (methodName ending ApiKeys.CreateKey with serviceusage.apiKeys.create granted)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-096deda2",
+      "title": "API Keys audit logging",
+      "url": "https://cloud.google.com/api-keys/docs/audit-logging",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-214cc15d",
+      "title": "Set up Context-Aware Access",
+      "url": "https://cloud.google.com/beyondcorp-enterprise/docs/securing-console-and-apis",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-38d3a9e8",
+      "title": "Manage API keys",
+      "url": "https://cloud.google.com/docs/authentication/api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3ff88682",
+      "title": "Best practices for managing API keys",
+      "url": "https://cloud.google.com/docs/authentication/api-keys-best-practices",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-55f8493d",
+      "title": "Asset types - Cloud Asset Inventory",
+      "url": "https://cloud.google.com/asset-inventory/docs/supported-asset-types",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5c044d8c",
+      "title": "View logs by using the Logs Explorer",
+      "url": "https://cloud.google.com/logging/docs/view/logs-explorer-interface",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6fc9753d",
+      "title": "Create and delete service account keys",
+      "url": "https://cloud.google.com/iam/docs/keys-create-delete",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7af2d5e5",
+      "title": "Restricting service account usage",
+      "url": "https://cloud.google.com/resource-manager/docs/organization-policy/restricting-service-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a6bc72ba",
+      "title": "Enable Data Access audit logs",
+      "url": "https://cloud.google.com/logging/docs/audit/configure-data-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c4499f95",
+      "title": "Overview of VPC Service Controls",
+      "url": "https://cloud.google.com/vpc-service-controls/docs/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9b2abab",
+      "title": "Disable and enable service accounts",
+      "url": "https://cloud.google.com/iam/docs/service-accounts-disable-enable",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

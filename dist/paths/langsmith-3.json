@@ -1,0 +1,227 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "langsmith",
+      "name": "LangSmith",
+      "scope_notes": "Covers LangSmith (LangChain). SaaS (US/EU regions) plus self-hosted and BYOC; audit logs, SCIM and service-key roles are Enterprise, Viewer role needs Plus/Enterprise.",
+      "controls": [
+        {
+          "name": "Delete SCIM token",
+          "effect": "revoke",
+          "applies_to": [
+            "langsmith-3"
+          ],
+          "what": "Deletes a SCIM bearer token.",
+          "setting": "DELETE /v1/platform/orgs/current/scim/tokens/{scim_token_id}",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-b3558a37"
+          ]
+        },
+        {
+          "name": "OrganizationAuthenticationManage permission",
+          "effect": "disable",
+          "applies_to": [
+            "langsmith-3"
+          ],
+          "what": "Creating a SCIM token requires the OrganizationAuthenticationManage permission; users without it get 403.",
+          "setting": "POST /api/v1/platform/orgs/current/scim/tokens (role permission)",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-a78a9680"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "What ip_allowlist covers and whether it applies to API key requests",
+        "Whether SSO-only enforcement blocks PATs",
+        "Whether pat_creation_disabled affects existing PATs",
+        "Exact behaviour of max_pat_expiry_days / max_service_key_expiry_days",
+        "SCIM token expiry",
+        "Whether whoami-style reads (list workspaces, org info) are audited"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "langsmith-3",
+      "provider_id": "langsmith",
+      "name": "SCIM bearer token",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Org token used by the IdP to call SCIM endpoints; value shown only at creation.",
+        "evidence_refs": [
+          "fc-b3558a37"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static token held by IdP.",
+        "evidence_refs": [
+          "fc-b3558a37"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Not documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "unknown",
+        "summary": "Create new token, delete old.",
+        "evidence_refs": [
+          "fc-b3558a37"
+        ]
+      },
+      "administration": {
+        "summary": "Managed via /v1/platform/orgs/current/scim/tokens endpoints.",
+        "conditions": "Enterprise (SCIM).",
+        "evidence_refs": [
+          "fc-b3558a37"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The SCIM token is an org-level token used by the IdP, not a user credential.",
+          "evidence_refs": [
+            "fc-b3558a37"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /api/v1/platform/orgs/current/scim/tokens lists all SCIM tokens for the org.",
+          "evidence_refs": [
+            "fc-43b7fc71"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented"
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs",
+            "notes": "Enterprise; Organization Settings > Audit logs or GET /api/v1/audit-logs (OCSF); 400-day retention; self-hosted needs Helm 0.12.33+ and enablement."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [
+          {
+            "event": "create_scim_token",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "update_scim_token",
+            "stage": "modify",
+            "notes": ""
+          },
+          {
+            "event": "delete_scim_token",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [],
+        "anomaly_cues": [
+          "Unexpected create_scim_user / delete_scim_user"
+        ],
+        "containment": {
+          "steps": "DELETE /v1/platform/orgs/current/scim/tokens/{scim_token_id}",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "Cache latency"
+        ],
+        "evidence_refs": [
+          "fc-2e44f713",
+          "fc-b3558a37"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "SCIM read endpoints a holder could call"
+        ],
+        "evidence_refs": [
+          "fc-b3558a37"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-2e44f713",
+      "title": "Audit logs",
+      "url": "https://docs.langchain.com/langsmith/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-43b7fc71",
+      "title": "List SCIM tokens",
+      "url": "https://docs.langchain.com/langsmith/smith-api/scim-tokens/list-scim-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a78a9680",
+      "title": "Create a SCIM token",
+      "url": "https://docs.langchain.com/langsmith/smith-api/scim-tokens/create-a-scim-token",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b3558a37",
+      "title": "User management",
+      "url": "https://docs.langchain.com/langsmith/user-management",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

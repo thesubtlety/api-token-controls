@@ -1,0 +1,512 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "notion",
+      "name": "Notion",
+      "scope_notes": "Enterprise for IP restrictions; Business/Enterprise for SAML SSO. Confirm API enforcement and token-expiry requirements with Notion.",
+      "controls": [
+        {
+          "name": "Limit which connections members can install",
+          "effect": "require_approval",
+          "applies_to": [
+            "notion-1",
+            "notion-3"
+          ],
+          "what": "Restricts members to no restriction, approved & recommended, or approved-only connections.",
+          "setting": "Settings > Connections > Manage tab",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "workspace",
+          "evidence_refs": [
+            "fc-84f64cdd"
+          ],
+          "quote": "Approved only: Workspace members can only install connections pre-approved by a workspace owner."
+        },
+        {
+          "name": "Approved connections list (revoke / disconnect)",
+          "effect": "other",
+          "applies_to": [
+            "notion-1",
+            "notion-3"
+          ],
+          "what": "Owners revoke specific users' access to a connection or disconnect all users.",
+          "setting": "Settings > Connections > Manage tab > ••• menu",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "workspace",
+          "evidence_refs": [
+            "fc-84f64cdd"
+          ],
+          "quote": "Click the ••• menu to: Filter by user. Revoke specific users' access to a connection. Disconnect all users. Remove the connection from the approved list."
+        },
+        {
+          "name": "Manage page access (connection)",
+          "effect": "limit_resources",
+          "applies_to": [
+            "notion-1",
+            "notion-3"
+          ],
+          "what": "Owners choose which pages a connection can access and whether only owners can connect/disconnect it from pages.",
+          "setting": "Settings > Connections > Manage tab > ••• > Manage page access",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "workspace",
+          "evidence_refs": [
+            "fc-bb7342aa"
+          ],
+          "quote": "Workspace owners on the Enterprise Plan can decide what pages a connection can access, as well as who can connect or disconnect them from pages."
+        },
+        {
+          "name": "Who can add integrations (organization security setting)",
+          "effect": "disable",
+          "applies_to": [
+            "notion-1",
+            "notion-3"
+          ],
+          "what": "Org owners enable or disable adding integrations for every workspace, or leave it workspace-managed.",
+          "setting": "Admin console (Manage organization) > Security",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6d6ae280"
+          ],
+          "quote": "These settings can be Workspace managed so that they can be different for every workspace, Enabled for everyone in your organization, or Disabled for everyone in your organization."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether Notion IP address restrictions apply to internal connection tokens, PATs or public OAuth tokens (help page only describes user sign-in; admin tokens are excluded).",
+        "Whether SAML SSO enforcement affects API tokens (not stated).",
+        "Whether admins can set a maximum PAT lifetime (creators choose 7 days to 1 year; default 1 year).",
+        "Whether internal connection tokens or OAuth tokens expire or can be force-rotated by admins."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "notion-3",
+      "provider_id": "notion",
+      "name": "Public connection OAuth",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Internal connection tokens, personal access tokens and public-connection OAuth bearer tokens.",
+        "evidence_refs": [
+          "turn3search6",
+          "turn3search26",
+          "turn3search30"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "OAuth/connection authorization is documented; no general external workload identity exchange established.",
+        "evidence_refs": [
+          "turn3search6",
+          "turn3search26",
+          "turn3search30"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "login_only",
+        "boundary": "Enterprise IP allowlist restricts managed-user sign-in and explicitly does not apply to admin tokens on the admin APIs. Coverage of connection, PAT and OAuth API calls is not documented.",
+        "evidence_refs": [
+          "turn3search10",
+          "turn3search22"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Refresh/revoke exists; default TTL not verified",
+        "evidence_refs": [
+          "turn3search6",
+          "turn3search26",
+          "turn3search30"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "unknown",
+        "summary": "Refresh returns a new access token and a new refresh token. Access- and refresh-token lifetimes are not documented.",
+        "evidence_refs": [
+          "turn3search6",
+          "turn3search26",
+          "turn3search30"
+        ]
+      },
+      "administration": {
+        "summary": "Connection capabilities plus explicit content access; PATs inherit user access. Admin connection controls and token revocation.",
+        "conditions": "Enterprise for IP restrictions; Business/Enterprise for SAML SSO. Confirm API enforcement and token-expiry requirements with Notion.",
+        "evidence_refs": [
+          "turn3search10",
+          "turn3search22"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Enterprise only: Settings → Connections → Manage tab shows which members have each connection installed; no token-level list.",
+          "evidence_refs": [
+            "fc-84f64cdd"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Changelog says new 'Public API tokens' use ntn_; whether that covers OAuth access tokens is not stated. GitHub detects notion_oauth_client_secret (client secret, not access token)."
+        },
+        "log_sources": [
+          {
+            "name": "Notion workspace audit log",
+            "notes": "Enterprise only; 365-day retention; UI filter by user/integration/agent; IP included where available. API data-access calls are not listed as events."
+          },
+          {
+            "name": "Notion SIEM connection (webhook)",
+            "notes": "Enterprise; real-time JSON webhook of every audit log event; payload field names not documented publicly."
+          },
+          {
+            "name": "Settings → Connections (workspace owner)",
+            "notes": "Connection catalog, connected members, disconnect."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "bot_id",
+            "log": "OAuth token response",
+            "notes": "identifier for this authorization"
+          },
+          {
+            "field": "owner",
+            "log": "OAuth token response",
+            "notes": "user who authorized"
+          },
+          {
+            "field": "workspace_id",
+            "log": "OAuth token response",
+            "notes": "workspace of the authorization"
+          },
+          {
+            "field": "active",
+            "log": "POST /v1/oauth/introspect",
+            "notes": "token still valid"
+          },
+          {
+            "field": "iat",
+            "log": "POST /v1/oauth/introspect",
+            "notes": "issued time"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "workspace.integration_added",
+            "stage": "create",
+            "notes": "first time an integration is added to the workspace"
+          },
+          {
+            "event": "workspace.external_account_connected",
+            "stage": "create",
+            "notes": "public integration connected"
+          },
+          {
+            "event": "page.permissions.integration_role_added",
+            "stage": "change",
+            "notes": "page shared with connection"
+          },
+          {
+            "event": "workspace.external_account_disconnected",
+            "stage": "revoke",
+            "notes": "disconnected or owner removed for all users"
+          },
+          {
+            "event": "workspace.integration_removed",
+            "stage": "revoke",
+            "notes": "all bots for a public integration removed"
+          }
+        ],
+        "correlation_keys": [
+          "bot_id",
+          "owner",
+          "workspace_id"
+        ],
+        "anomaly_cues": [
+          "workspace.external_account_connected for an app not on approved connections",
+          "Same public integration connected by many members in a short window (consent phishing)",
+          "Connection kept after authorizing user offboarded",
+          "Rapid page.permissions.integration_role_added followed by exports",
+          "Re-authorizations minting new token pairs repeatedly (each auth now issues a fresh pair)"
+        ],
+        "containment": {
+          "steps": "App operator: POST /v1/oauth/revoke with the token (Basic auth with client id/secret). Workspace owner: Settings → Connections → disconnect the connection or disconnect members. Remove from approved connections.",
+          "kills_existing": "partial",
+          "notes": "Revoke endpoint revokes the given access token; docs do not say if sibling refresh/access tokens or other authorizations are revoked. Since 2026-06-08 each authorization mints a fresh pair, so one user may hold several."
+        },
+        "sample_query": {
+          "language": "Notion audit log UI filters",
+          "query": "Event type = 'External/Public integration connected'; Date range = incident window; review actor per row",
+          "purpose": "Find members who authorized a suspicious public connection."
+        },
+        "unknown": [
+          "OAuth access token prefix",
+          "access token lifetime",
+          "whether disconnect in UI revokes tokens immediately",
+          "audit/SIEM payload field names",
+          "API usage logging per token"
+        ],
+        "evidence_refs": [
+          "turn3search6",
+          "fc-611bff12",
+          "fc-bae14e39",
+          "fc-401258f9",
+          "fc-9412eb43",
+          "fc-bb7342aa",
+          "fc-4890a8d2",
+          "fc-b7178bb2",
+          "fc-846e1fd4",
+          "fc-5cd2b23a"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST /v1/oauth/introspect",
+            "reveals": "token active status, scope, and issued time (iat)",
+            "bulk": false,
+            "scope": "OAuth client credentials",
+            "rate_limit": "~3 requests/second",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No documented audit event for introspection"
+          },
+          {
+            "stage": "recon",
+            "call": "GET /v1/users/me",
+            "reveals": "the bot user; owner and workspace_name of the authorizing workspace",
+            "bulk": false,
+            "scope": "read content capability",
+            "rate_limit": "~3 requests/second",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Enterprise audit log records integration activity; /users/me specifics not stated"
+          },
+          {
+            "stage": "discovery",
+            "call": "POST /v1/search",
+            "reveals": "all pages/data sources shared with the public connection",
+            "bulk": true,
+            "scope": "read content capability",
+            "rate_limit": "~3 requests/second",
+            "logged": "yes",
+            "log_event": "Content search queried",
+            "log_notes": "Enterprise audit log, 365-day retention"
+          },
+          {
+            "stage": "collection",
+            "call": "POST /v1/data_sources/{data_source_id}/query",
+            "reveals": "pages/rows in accessible databases",
+            "bulk": true,
+            "scope": "read content capability",
+            "rate_limit": "~3 requests/second",
+            "logged": "yes",
+            "log_event": "Page viewed",
+            "log_notes": "Reading page data logged as Page viewed; Enterprise only"
+          }
+        ],
+        "unknown": [
+          "Whether reads are logged on non-Enterprise workspaces"
+        ],
+        "evidence_refs": [
+          "fc-bae14e39",
+          "fc-0de83dd6",
+          "fc-ba492238",
+          "fc-47ed5f7a",
+          "fc-5cd2b23a",
+          "fc-d7cebd77"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Notion Page API Permissions Changed",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/notion_rules/notion_page_accessible_to_api.yml",
+          "detects": "An integration was given access to a Notion page or its page role changed."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0de83dd6",
+      "title": "Retrieve your token's bot user - Notion Docs",
+      "url": "https://developers.notion.com/reference/get-self",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-401258f9",
+      "title": "SIEM events - Notion Docs",
+      "url": "https://developers.notion.com/compliance/siem-events",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-47ed5f7a",
+      "title": "Query a data source",
+      "url": "https://developers.notion.com/reference/query-a-data-source",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4890a8d2",
+      "title": "Authentication - Notion Docs",
+      "url": "https://developers.notion.com/reference/authentication",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5cd2b23a",
+      "title": "Workspace audit log in Notion",
+      "url": "https://www.notion.com/help/audit-log",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-611bff12",
+      "title": "Revoke a token - Notion Docs",
+      "url": "https://developers.notion.com/reference/revoke-token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6d6ae280",
+      "title": "Organization-level controls in Notion",
+      "url": "https://www.notion.com/help/organization-level-controls",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-84f64cdd",
+      "title": "Enterprise connection settings in Notion",
+      "url": "https://www.notion.com/help/enterprise-connection-settings",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9412eb43",
+      "title": "Audit log events - Notion Docs",
+      "url": "https://developers.notion.com/compliance/audit-log-events",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b7178bb2",
+      "title": "Changelog - Notion Docs",
+      "url": "https://developers.notion.com/page/changelog",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ba492238",
+      "title": "Search by title",
+      "url": "https://developers.notion.com/reference/post-search",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bae14e39",
+      "title": "Introspect a token - Notion Docs",
+      "url": "https://developers.notion.com/reference/introspect-token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bb7342aa",
+      "title": "Add and manage connections with the API",
+      "url": "https://www.notion.com/help/add-and-manage-connections-with-the-api",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7cebd77",
+      "title": "Request limits",
+      "url": "https://developers.notion.com/reference/request-limits",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search10",
+      "title": "IP address restrictions in Notion | Notion Help – Notion Help Center",
+      "url": "https://www.notion.com/help/ip-address-restrictions",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search22",
+      "title": "Secure API credentials - Notion Docs",
+      "url": "https://developers.notion.com/guides/get-started/handling-api-keys",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search26",
+      "title": "Create a token - Notion Docs",
+      "url": "https://developers.notion.com/reference/create-a-token",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search30",
+      "title": "Refresh a token - Notion Docs",
+      "url": "https://developers.notion.com/reference/refresh-a-token",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search6",
+      "title": "Authorization - Notion Docs",
+      "url": "https://developers.notion.com/guides/get-started/authorization",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

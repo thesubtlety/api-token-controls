@@ -1,0 +1,284 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "pingone",
+      "name": "PingOne",
+      "scope_notes": "Covers PingOne (PingOne Platform / Management APIs). SaaS; covers PingOne platform Worker apps and gateway credentials; inbound traffic policies need a Cloudflare-based custom domain.",
+      "controls": [
+        {
+          "name": "Delete Gateway Credentials",
+          "effect": "revoke",
+          "applies_to": [
+            "pingone-3"
+          ],
+          "what": "Deletes and revokes a gateway credential for all instances using it.",
+          "setting": "DELETE /v1/environments/{envID}/gateways/{gatewayID}/credentials/{credentialID}",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-c008774c"
+          ]
+        },
+        {
+          "name": "Environment Admin role required for gateway entities",
+          "effect": "other",
+          "applies_to": [
+            "pingone-3"
+          ],
+          "what": "Only admins with the Environment Admin role can create or manage gateway credentials.",
+          "setting": "Administrator role assignment (Environment Admin)",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-98bb9a87"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether disabling the app or rotating the secret invalidates already-issued access tokens (role removal does take effect per call per S5)",
+        "Whether successful client_credentials token issuance produces an audit event",
+        "Whether Management API read calls (e.g., GET users) are audited",
+        "Whether inbound traffic policies apply to api.pingone.com",
+        "Admin-level policy to block Worker app creation or require approval",
+        "Gateway credential expiry and whether its creation/deletion has a distinct audit event",
+        "Maximum configurable access token lifetime for the PingOne API resource"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "pingone-3",
+      "provider_id": "pingone",
+      "name": "Gateway credential",
+      "family": "jwt",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A gateway instance (LDAP, PingFederate, RADIUS, API gateway integration, Authorize) running in the customer's infrastructure holds a signed JWT gateway credential. It exchanges the credential at /as/token (token_exchange grant) for an access token to PingOne resources.",
+        "evidence_refs": [
+          "fc-98bb9a87",
+          "fc-22604945"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static signed JWT issued by PingOne.",
+        "evidence_refs": [
+          "fc-98bb9a87"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No IP restriction documented for gateway credentials.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented; claims list has no exp claim",
+        "evidence_refs": [
+          "fc-98bb9a87"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "Create a new credential (max five per gateway) and delete the old one",
+        "summary": "Rotation is manual by issuing a new credential.",
+        "evidence_refs": [
+          "fc-457630cf",
+          "fc-c008774c"
+        ]
+      },
+      "administration": {
+        "summary": "Environment Admins create, list, and delete gateway credentials. Deleting a credential revokes it for all gateway instances using it.",
+        "conditions": "Max five credentials per gateway; token value shown only at creation.",
+        "evidence_refs": [
+          "fc-98bb9a87",
+          "fc-457630cf",
+          "fc-c008774c"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The credential belongs to a gateway instance, not a user.",
+          "evidence_refs": [
+            "fc-98bb9a87"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /v1/environments/{envID}/gateways/{gatewayID}/credentials lists credentials per gateway (max five per gateway).",
+          "evidence_refs": [
+            "fc-61792fcd"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Signed JWT; iss wss://gateways.pingone.com; jti equals the credential ID."
+        },
+        "log_sources": [
+          {
+            "name": "PingOne Audit (Monitoring > Audit) and GET/POST /v1/environments/{envID}/activities",
+            "notes": "Configuration events kept 2 years, user events 90 days; queries max 14 days; Audit API rate 10/second."
+          },
+          {
+            "name": "Subscriptions (webhooks)",
+            "notes": "Streams audit events to HTTPS/TCP endpoints; events lost if target down >7 days."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "id / jti",
+            "log": "Gateway credentials API",
+            "notes": "lastUsedAt shows last use"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "GATEWAY.CREATED",
+            "stage": "create",
+            "notes": "Gateway, not credential"
+          },
+          {
+            "event": "GATEWAY.UPDATED",
+            "stage": "other",
+            "notes": ""
+          },
+          {
+            "event": "GATEWAY.DELETED",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "jti",
+          "gatewayId",
+          "lastUsedAt"
+        ],
+        "anomaly_cues": [
+          "lastUsedAt changes on a credential for a decommissioned gateway",
+          "More credentials than running gateway instances"
+        ],
+        "containment": {
+          "steps": "DELETE /v1/environments/{envID}/gateways/{gatewayID}/credentials/{credentialID}",
+          "kills_existing": "yes",
+          "notes": "Docs say all instances using it lose their credentials; already-exchanged access tokens not addressed."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Credential-level audit events"
+        ],
+        "evidence_refs": [
+          "fc-98bb9a87",
+          "fc-c008774c",
+          "fc-d7a2894c"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST /{envID}/as/token (grant_type=urn:ietf:params:oauth:grant-type:token-exchange)",
+            "reveals": "Access token for gateway use",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "SSO API Rate 300/second",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "What the exchanged token can read"
+        ],
+        "evidence_refs": [
+          "fc-22604945",
+          "fc-a2298e01"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-22604945",
+      "title": "Token Exchange (Gateway Credential)",
+      "url": "https://developer.pingidentity.com/pingone-api/auth/openid-connect-oauth-2/token/token-exchange-gateway-credential-.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-457630cf",
+      "title": "Create Gateway Credentials",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/gateway-management/gateway-credentials/create-gateway-credentials.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-61792fcd",
+      "title": "Read All Gateway Credentials | PingOne Platform APIs",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/gateway-management/gateway-credentials/read-all-gateway-credentials.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-98bb9a87",
+      "title": "Gateway Credentials",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/gateway-management/gateway-credentials/index.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a2298e01",
+      "title": "Base rate limits",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/rate-limiting/base-rate-limits.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c008774c",
+      "title": "Delete Gateway Credentials",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/gateway-management/gateway-credentials/delete-gateway-credentials.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7a2894c",
+      "title": "Audit Reporting Events",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/reference/audit-reporting-events.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

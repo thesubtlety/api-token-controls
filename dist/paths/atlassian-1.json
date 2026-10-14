@@ -1,0 +1,703 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "atlassian",
+      "name": "Atlassian Jira / Confluence Cloud",
+      "scope_notes": "Product IP allowlisting requires Premium/Enterprise. SAML SSO typically requires Atlassian Guard Standard or an included entitlement.",
+      "controls": [
+        {
+          "name": "User API tokens (authentication policy)",
+          "effect": "disable",
+          "applies_to": [
+            "atlassian-1"
+          ],
+          "what": "Blocks members in a policy from creating new or using existing user API tokens against the org's apps; takes up to 10 minutes.",
+          "setting": "Atlassian Administration > Security > User security > Authentication policies > Edit > Block members from creating a new or using an existing API token",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d1e3a46e"
+          ],
+          "quote": "By default, your organization's user API token settings are set to allow access. With the user API token setting, you can allow or block members from: Creating a new API token Using an existing API token"
+        },
+        {
+          "name": "User API token expiration (authentication policy)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "atlassian-1"
+          ],
+          "what": "Sets user API tokens of policy members to expire after 1-365 days (or never).",
+          "setting": "Atlassian Administration > Security > User security > Authentication policies > Edit > Never expires / Expires",
+          "plan": "Atlassian Guard Standard",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d1e3a46e"
+          ],
+          "quote": "You can set the token to never expire or set a different expiration date in an authentication policy. You can set the token to expire between 1 to 365 days."
+        },
+        {
+          "name": "API token access for external users",
+          "effect": "disable",
+          "applies_to": [
+            "atlassian-1"
+          ],
+          "what": "Blocks external (unmanaged) users from calling app APIs with user API tokens, including existing tokens.",
+          "setting": "Atlassian Administration > Security > User security > External users > API token access for external users > Block",
+          "plan": "Atlassian Guard Standard",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ad70363d"
+          ],
+          "quote": "When you block user API token access for external users, they are unable to use a token to access app s through an app API, even if they previously used a token to access them."
+        },
+        {
+          "name": "Revoke user API tokens",
+          "effect": "revoke",
+          "applies_to": [
+            "atlassian-1"
+          ],
+          "what": "Org admins can permanently revoke managed accounts' API tokens, singly or in bulk, or via the Delete API token API.",
+          "setting": "Atlassian Administration > Insights > API token activity > Revoke",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-21ea89c0"
+          ],
+          "quote": "You can to revoke one or more of a managed account’s API tokens from one place."
+        },
+        {
+          "name": "IP allowlists",
+          "effect": "limit_network",
+          "applies_to": [
+            "atlassian-1",
+            "atlassian-2"
+          ],
+          "what": "Users outside allowed IPs/locations cannot reach Jira/Confluence content, including via the APIs.",
+          "setting": "admin.atlassian.com > Security > Device security > IP allowlists",
+          "plan": "Premium (Jira, JSM, Confluence, Compass) or Enterprise (Analytics, Focus)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-797355fe"
+          ],
+          "quote": "Users also won't be able to access that app programmatically via the APIs."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "atlassian-1",
+          "what": "The Marketplace and custom app access control cannot block apps that use Atlassian API tokens.",
+          "evidence_refs": [
+            "fc-93b3db2f"
+          ],
+          "quote": "Marketplace, custom and other third-party app s that use Atlassian API tokens to access data",
+          "kind": "disable"
+        },
+        {
+          "path_id": "atlassian-1",
+          "what": "Admins cannot create or issue API tokens on a user's behalf (only users create them).",
+          "evidence_refs": [
+            "fc-ad70363d"
+          ],
+          "quote": "It’s not possible for anyone else to create an API token on behalf of a user. Users must create API tokens themselves.",
+          "kind": "other"
+        }
+      ],
+      "controls_unknown": [
+        "Whether IP allowlists apply to service account credentials calling api.atlassian.com.",
+        "Whether OAuth 2.0 service account client secrets expire or can be given an expiry (no official statement found; access tokens last 60 minutes).",
+        "Whether the authentication-policy API token block also applies to service accounts.",
+        "No per-app allow/block list for 3LO user grants was found in official docs (only the global Block user apps toggle)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "atlassian-1",
+      "provider_id": "atlassian",
+      "name": "API token (product REST)",
+      "family": "api_key",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Email + API token via Basic; scoped API tokens; delegated OAuth 2.0 (3LO) bearer tokens. Forge has a separate app model.",
+        "evidence_refs": [
+          "turn2search3",
+          "turn2search19",
+          "turn20search2"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "General inbound external-IdP token exchange is not established for product REST APIs. SAML SSO alone does not replace API credentials.",
+        "evidence_refs": [
+          "turn2search3",
+          "turn2search19",
+          "turn20search2"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Site IP allowlists cover Jira/Confluence REST access. Organization administration and provisioning APIs have separate coverage and are excluded from site rules.",
+        "evidence_refs": [
+          "turn10search15",
+          "turn2search11",
+          "turn10search19"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 31536000,
+        "maximum_seconds": 31536000,
+        "configurable": "yes",
+        "summary": "Default 365 days; choose 1–365 days",
+        "evidence_refs": [
+          "turn2search3",
+          "turn2search19",
+          "turn20search2"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "absolute",
+        "summary": "The static API token is reused on each request until it expires (1 to 365 days); after that the user must create a new token. No refresh token is involved.",
+        "evidence_refs": [
+          "turn2search3",
+          "turn2search19",
+          "turn20search2"
+        ]
+      },
+      "administration": {
+        "summary": "Token revocation, managed-account API-token controls, scopes, app access policies and app installation controls.",
+        "conditions": "Product IP allowlisting requires Premium/Enterprise. SAML SSO typically requires Atlassian Guard Standard or an included entitlement.",
+        "evidence_refs": [
+          "turn10search15",
+          "turn2search11",
+          "turn10search19"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Atlassian says API tokens and scripts keep working after SAML SSO is enforced; token use is governed by the separate User API tokens policy setting.",
+          "evidence_refs": [
+            "turn13search10"
+          ]
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Deleting the account revokes token access, but deactivation or SCIM unsync does not remove site access and tokens stay usable until access is removed or tokens are revoked.",
+          "evidence_refs": [
+            "fc-16f7c4a4"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Atlassian Administration > Insights > API token activity (and the Get API tokens API) lists tokens created by managed accounts only.",
+          "evidence_refs": [
+            "fc-a0c70238"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Atlassian Administration > Insights > Audit log; filter activity \"Viewed Jira issue\" / \"Viewed Confluence page\" and the token owner",
+          "api": "GET https://api.atlassian.com/admin/v1/orgs/{orgId}/events?action=<activity>&actor=<accountId>",
+          "cli": null,
+          "evidence_refs": [
+            "fc-f1da018c",
+            "fc-4100e8ce",
+            "fc-84d854df"
+          ]
+        },
+        "offboard": {
+          "ui": "Atlassian Administration > Directory > Users > Account type = Managed accounts > user > ••• > Delete account; or revoke tokens at Insights > API token activity > Revoke",
+          "api": "POST https://api.atlassian.com/users/{account_id}/manage/lifecycle/delete; DELETE https://api.atlassian.com/users/{account_id}/manage/api-tokens/{tokenId}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-b870ecae",
+            "fc-2bfa8257",
+            "fc-21ea89c0",
+            "fc-728697d8"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "ATAT",
+          "notes": "Atlassian Bamboo Javadoc says API tokens start with ATAT. Length is variable by design; no official regex. GitHub secret scanning has an atlassian_api_token partner pattern."
+        },
+        "log_sources": [
+          {
+            "name": "Atlassian organization audit log (Admin > Insights > Audit log; Organizations REST API /v1/orgs/{orgId}/events and /events-stream)",
+            "notes": "Requires Atlassian Guard Standard/Premium or an Enterprise plan; 180-day retention, default view 7 days. API token activities only for managed (claimed-domain) accounts."
+          },
+          {
+            "name": "API token activity (Admin > Insights) / API Access REST API GET /v1/orgs/{orgId}/api-tokens",
+            "notes": "Inventory of managed users' tokens: created, expiry, last used, scopes, status. Any plan."
+          },
+          {
+            "name": "Atlassian account API token page (id.atlassian.com)",
+            "notes": "Owner's own token list; owner can revoke one or all."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "attributes.actor.auth.authType",
+            "log": "Org audit log events API",
+            "notes": "enum includes api-token, auth-token-for-2LO, auth-token-for-3LO"
+          },
+          {
+            "field": "attributes.actor.auth.tokenId",
+            "log": "Org audit log events API",
+            "notes": "ID of the authentication token"
+          },
+          {
+            "field": "attributes.actor.auth.tokenLabel",
+            "log": "Org audit log events API",
+            "notes": "label/name of the token"
+          },
+          {
+            "field": "id",
+            "log": "API Access REST API api-tokens",
+            "notes": "token ID"
+          },
+          {
+            "field": "label",
+            "log": "API Access REST API api-tokens",
+            "notes": "token name"
+          },
+          {
+            "field": "lastActiveAt",
+            "log": "API Access REST API api-tokens",
+            "notes": "last use time"
+          },
+          {
+            "field": "user.id",
+            "log": "API Access REST API api-tokens",
+            "notes": "owning account"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Created API token",
+            "stage": "create",
+            "notes": "Settings category; ALQL key ts_api_token_creation"
+          },
+          {
+            "event": "Revoked API token",
+            "stage": "revoke",
+            "notes": "user token revoked; ALQL key api_token_revoked"
+          },
+          {
+            "event": "Revoked API tokens for users in authentication policy",
+            "stage": "revoke",
+            "notes": "bulk via auth policy"
+          },
+          {
+            "event": "Viewed API token",
+            "stage": "change",
+            "notes": "admin viewed token details"
+          },
+          {
+            "event": "Exported API tokens",
+            "stage": "change",
+            "notes": "CSV export of token inventory"
+          },
+          {
+            "event": "Deactivated account",
+            "stage": "revoke",
+            "notes": "owner account disabled"
+          }
+        ],
+        "correlation_keys": [
+          "attributes.actor.id",
+          "attributes.actor.email",
+          "attributes.actor.auth.authType",
+          "attributes.actor.auth.tokenId",
+          "attributes.location.ip",
+          "attributes.location.countryName",
+          "attributes.container[].id",
+          "ALQL: actor, \"auth type\", \"ip address\", site, app"
+        ],
+        "anomaly_cues": [
+          "ALQL \"auth type\" = api-token activity from an IP/country never seen for that actor",
+          "token used (lastActiveAt) after owner Deactivated account or left the project",
+          "Created API token followed within minutes by bulk exports or third-party API reads from a new IP",
+          "token with no expiry set near 1 year and scopes broader than owner's normal work",
+          "same tokenId seen from multiple countries in one day",
+          "unscoped (classic) token used against site URL from cloud/VPS ASN"
+        ],
+        "containment": {
+          "steps": "Admin: Insights > API token activity > Revoke (or DELETE /v1/orgs/{orgId}/api-tokens for all managed user tokens); owner: id.atlassian.com > Revoke / Revoke all. Optionally block user API token access via authentication policy; deactivate account.",
+          "kills_existing": "yes",
+          "notes": "Token is sent on each request (Basic/Bearer), so revocation stops further calls; propagation delay not documented for user tokens (service-account tokens: up to 10 min). Revocation is permanent."
+        },
+        "sample_query": {
+          "language": "Atlassian audit log ALQL",
+          "query": "created >= \"2026-09-12\" AND \"auth type\" = api-token AND actor = \"Fran Perez\" AND \"ip address\" !~ \"203.0.113.*\" ORDER BY created desc",
+          "purpose": "Find API-token activity by one user from outside their known IP range."
+        },
+        "unknown": [
+          "official regex / full token structure",
+          "user agent field in audit events",
+          "exact action key values returned in attributes.action for token use events",
+          "whether every data-plane API call by token is logged (only some product events appear)",
+          "revocation propagation delay for user tokens"
+        ],
+        "evidence_refs": [
+          "fc-dc06055c",
+          "fc-846e1fd4",
+          "fc-f1da018c",
+          "fc-4100e8ce",
+          "fc-84d854df",
+          "fc-b26c78de",
+          "fc-54f950fa",
+          "fc-bf99abe6",
+          "fc-9b677dd4",
+          "fc-e6ed74ae",
+          "fc-21ea89c0",
+          "turn2search3"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/myself",
+            "reveals": "accountId, email, groups and application roles of the token principal",
+            "bulk": false,
+            "scope": "read:jira-user",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "API token last-used is visible in Insights > API token activity (managed accounts)."
+          },
+          {
+            "stage": "recon",
+            "call": "GET https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/mypermissions",
+            "reveals": "Which Jira permissions the principal holds",
+            "bulk": false,
+            "scope": "read:jira-work",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/users/search",
+            "reveals": "All users in the site",
+            "bulk": true,
+            "scope": "read:jira-user",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "discovery",
+            "call": "GET https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/project/search",
+            "reveals": "Projects visible to the principal",
+            "bulk": true,
+            "scope": "read:jira-work",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/search/jql",
+            "reveals": "Issues matching JQL, paged with nextPageToken",
+            "bulk": true,
+            "scope": "read:jira-work",
+            "rate_limit": "API tokens: burst limits (default 100 req/s GET per tenant/endpoint); OAuth apps: points-based hourly budget",
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Org audit log records in-app views (e.g. viewing a Confluence page) only on Guard Premium or Cloud Enterprise; retention 180 days without Guard, 365 days with Guard from 2026-10-01. Docs do not state whether REST API reads produce these entries."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://api.atlassian.com/ex/confluence/{cloudId}/wiki/api/v2/pages",
+            "reveals": "Confluence pages (bodies via body-format)",
+            "bulk": true,
+            "scope": "read:page:confluence",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Org audit log records in-app views (e.g. viewing a Confluence page) only on Guard Premium or Cloud Enterprise; retention 180 days without Guard, 365 days with Guard from 2026-10-01. Docs do not state whether REST API reads produce these entries."
+          }
+        ],
+        "unknown": [
+          "Whether REST API reads generate org audit-log entries (docs describe UI views, not API reads)",
+          "Classic unscoped tokens use the site *.atlassian.net URL; scoped tokens require the api.atlassian.com gateway"
+        ],
+        "evidence_refs": [
+          "fc-cf1c3895",
+          "fc-f24ba556",
+          "turn2search19",
+          "fc-4fdf14ea",
+          "fc-97018e46",
+          "fc-a31e2d9f",
+          "fc-cd7a4151"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-16f7c4a4",
+      "title": "Status of API tokens/keys when a user who generated the token/key has left the organization",
+      "url": "https://support.atlassian.com/jira/kb/atlassian-api-token-key-status-of-api-tokens-keys-when-a-user-who-generated-the-token-key-has-left-the-organization/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-21ea89c0",
+      "title": "Revoke user API tokens",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/revoke-user-api-tokens/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2bfa8257",
+      "title": "User management REST API - Lifecycle",
+      "url": "https://developer.atlassian.com/cloud/admin/user-management/rest/api-group-lifecycle/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4100e8ce",
+      "title": "Audit log activities database",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/audit-log-activities-database/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4fdf14ea",
+      "title": "Jira rate limiting",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/rate-limiting/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-54f950fa",
+      "title": "ALQL operators",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/alql-operators/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-728697d8",
+      "title": "User management REST API - API tokens",
+      "url": "https://developer.atlassian.com/cloud/admin/user-management/rest/api-group-api-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-797355fe",
+      "title": "Specify IP addresses for app access - Atlassian Support",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/specify-ip-addresses-for-product-access/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-84d854df",
+      "title": "Organizations REST API: Events",
+      "url": "https://developer.atlassian.com/cloud/admin/organization/rest/api-group-events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-93b3db2f",
+      "title": "https://support.atlassian.com/security-and-access-policies/docs/app-access-rule-coverage-summary/",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/app-access-rule-coverage-summary/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-97018e46",
+      "title": "Track organization activities from the audit log",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/track-organization-activities-from-the-audit-log/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9b677dd4",
+      "title": "API Access REST API: API Token",
+      "url": "https://developer.atlassian.com/cloud/admin/api-access/rest/api-group-api-token/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a0c70238",
+      "title": "View API token activity",
+      "url": "https://support.atlassian.com/organization-administration/docs/view-user-api-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a31e2d9f",
+      "title": "What activities does the audit log include?",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/accessing-audit-log-activities/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ad70363d",
+      "title": "Block user API token access | Atlassian Support",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/set-api-token-access/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b26c78de",
+      "title": "ALQL fields",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/alql-fields/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b870ecae",
+      "title": "Delete a managed account",
+      "url": "https://support.atlassian.com/user-management/docs/delete-a-managed-account/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf99abe6",
+      "title": "What is advanced search in audit log?",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/what-is-advanced-search-in-audit-log/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cd7a4151",
+      "title": "View API token activity",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/view-user-api-tokens/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cf1c3895",
+      "title": "Jira Cloud REST v3 OpenAPI",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d1e3a46e",
+      "title": "Authentication policy settings for your organizations | Atlassian Support",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/authentication-policy-settings-for-your-organizations/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dc06055c",
+      "title": "Bamboo Javadoc: BitbucketCloudApiTokenUtils",
+      "url": "https://docs.atlassian.com/atlassian-bamboo/11.0.7/com/atlassian/bamboo/repository/configuration/BitbucketCloudApiTokenUtils.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e6ed74ae",
+      "title": "Understand user API tokens",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/understand-user-api-tokens/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f1da018c",
+      "title": "View audit log activities",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/view-audit-log-activities/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f24ba556",
+      "title": "Confluence Cloud REST v2 OpenAPI",
+      "url": "https://dac-static.atlassian.com/cloud/confluence/openapi-v2.v3.json",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search15",
+      "title": "Scope of IP allowlists in Atlassian Cloud",
+      "url": "https://support.atlassian.com/atlassian-cloud/kb/what-is-the-scope-of-ip-allowlists-in-atlassian-cloud/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search19",
+      "title": "Manage your organization's Marketplace and third-party apps",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/manage-your-users-third-party-apps/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn13search10",
+      "title": "Configure SAML single sign-on with an identity provider",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/configure-saml-single-sign-on-with-an-identity-provider/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn20search2",
+      "title": "Security for other integrations - Atlassian",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/security-for-other-integrations/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search11",
+      "title": "Understand user API tokens - Atlassian Support",
+      "url": "https://support.atlassian.com/organization-administration/docs/understand-user-api-tokens/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search19",
+      "title": "OAuth 2.0 (3LO) apps - Atlassian",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search3",
+      "title": "Manage API tokens for your Atlassian account",
+      "url": "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

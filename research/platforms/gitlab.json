@@ -1,0 +1,1405 @@
+{
+ "id": "gitlab",
+ "name": "GitLab.com",
+ "scope_notes": "Group IP controls require Premium/Ultimate. Do not transfer Self-Managed 400-day/configuration options to GitLab.com.",
+ "controls": [
+  {
+   "name": "Require fine-grained personal access tokens after a specific date",
+   "effect": "disable",
+   "applies_to": [
+    "gitlab-1",
+    "gitlab-4"
+   ],
+   "what": "After the date, legacy PATs cannot access the top-level group, subgroups or projects; group/project/service-account tokens are exempt.",
+   "setting": "Top-level group > Settings > General > Permissions and group features",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-8f2adc67"
+   ],
+   "quote": "On GitLab.com, enforcement applies to the group and its subgroups and projects, and blocks legacy personal access tokens from accessing those resources after the enforcement date."
+  },
+  {
+   "name": "Disable personal access tokens (enterprise users)",
+   "effect": "disable",
+   "applies_to": [
+    "gitlab-1",
+    "gitlab-4"
+   ],
+   "what": "Stops the group's enterprise users from creating PATs and disables their existing PATs; service account PATs unaffected.",
+   "setting": "Group > Settings > General > Permissions and group features > Enterprise users",
+   "plan": "Premium or Ultimate",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "turn3search1"
+   ],
+   "quote": "Stops the enterprise users from creating new personal access tokens. This behavior applies even if an enterprise user is also an administrator of the group. Disables the existing personal access tokens of the enterprise users."
+  },
+  {
+   "name": "Users can create group access tokens and project access tokens in this group",
+   "effect": "disable",
+   "applies_to": [
+    "gitlab-1"
+   ],
+   "what": "Clearing it blocks new group/project access tokens across the group; existing ones stay valid.",
+   "setting": "Top-level group > Settings > General > Permissions and group features",
+   "plan": "Premium or Ultimate",
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-b48f2218"
+   ],
+   "quote": "The restriction covers the entire group, including all subgroups and their projects. Existing tokens remain valid until they expire or you revoke them."
+  },
+  {
+   "name": "Restrict access by IP address",
+   "effect": "limit_network",
+   "applies_to": [
+    "gitlab-1",
+    "gitlab-2",
+    "gitlab-3",
+    "gitlab-4"
+   ],
+   "what": "Limits UI and API access to the group to listed CIDRs, including group/project tokens, deploy keys and CI clone operations.",
+   "setting": "Top-level group > Settings > General > Permissions and group features",
+   "plan": "Premium or Ultimate",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "turn11search0"
+   ],
+   "quote": "IP restrictions apply to project and group access tokens, service accounts, deploy keys, and deploy tokens."
+  },
+  {
+   "name": "Enforce SSO-only authentication for Git and Dependency Proxy activity",
+   "effect": "require_sso",
+   "applies_to": [
+    "gitlab-1",
+    "gitlab-2",
+    "gitlab-4"
+   ],
+   "what": "Git over HTTPS/SSH and Git-related API calls by users need an active SSO session; not enforced for bot tokens or CI jobs.",
+   "setting": "Group > Settings > SAML SSO",
+   "plan": "Premium or Ultimate",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-da8222d3"
+   ],
+   "quote": "For Git activity over SSH and HTTPS, users must have at least one active session signed-in through SSO before they can push to or pull from a GitLab repository."
+  },
+  {
+   "name": "Credentials inventory (revoke tokens)",
+   "effect": "other",
+   "applies_to": [
+    "gitlab-1",
+    "gitlab-4"
+   ],
+   "what": "Top-level group owners view and revoke enterprise users' PATs and group/project access tokens.",
+   "setting": "Group > Secure > Credentials inventory",
+   "plan": "Ultimate",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-a8fd30a2"
+   ],
+   "quote": "On GitLab.com, the credentials inventory monitors enterprise users and service accounts in a top-level group."
+  },
+  {
+   "name": "CI/CD job token allowlist",
+   "effect": "limit_resources",
+   "applies_to": [
+    "gitlab-3"
+   ],
+   "what": "Only jobs from the project itself and allowlisted groups/projects can use a job token against this project.",
+   "setting": "Project > Settings > CI/CD > Job token permissions",
+   "plan": null,
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-04527bfb"
+   ],
+   "quote": "By default, job token access is restricted to only CI/CD jobs that run in pipelines in your project."
+  },
+  {
+   "name": "Fine-grained permissions for job tokens",
+   "effect": "limit_scope",
+   "applies_to": [
+    "gitlab-3"
+   ],
+   "what": "Limits allowlisted job tokens to a set of REST API endpoints.",
+   "setting": "Project > Settings > CI/CD > Job token permissions (allowlist entry)",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-04527bfb"
+   ],
+   "quote": "You can use fine-grained permissions to explicitly allow access to a limited set of REST API endpoints."
+  },
+  {
+   "name": "Allow Git push requests to the repository",
+   "effect": "limit_scope",
+   "applies_to": [
+    "gitlab-3"
+   ],
+   "what": "Off by default; when off job tokens cannot push to the repository.",
+   "setting": "Project > Settings > CI/CD > Job token permissions; projects API",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-04527bfb"
+   ],
+   "quote": "You can configure your project to allow Git push requests that are authenticated with a CI/CD job token. This setting is turned off by default."
+  },
+  {
+   "name": "Limit job token scope for public or internal projects (feature visibility)",
+   "effect": "limit_resources",
+   "applies_to": [
+    "gitlab-3"
+   ],
+   "what": "Setting features to 'Only project members' stops non-allowlisted job tokens reading artifacts, registries, releases or the repo.",
+   "setting": "Project > Settings > General > Visibility, project features, permissions",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-04527bfb"
+   ],
+   "quote": "You can limit access to these actions to only the projects on the allowlist by setting each feature to be only visible to project members."
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "gitlab-2",
+   "what": "Group SSO enforcement does not apply to API requests (PAT or OAuth).",
+   "evidence_refs": [
+    "fc-da8222d3"
+   ],
+   "quote": "SSO enforcement does not apply to API requests. However, you can disable password and passkey authentication for enterprise users to prevent password-based API access.",
+   "kind": "other"
+  },
+  {
+   "path_id": "gitlab-1",
+   "what": "Web SSO enforcement does not cover project/group access tokens, service accounts or deploy keys.",
+   "evidence_refs": [
+    "fc-da8222d3"
+   ],
+   "quote": "Credentials that are not tied to regular users (for example, project and group access tokens, service accounts, and deploy keys) do not have the SSO check enforced.",
+   "kind": "other"
+  },
+  {
+   "path_id": "gitlab-4",
+   "what": "Fine-grained token enforcement does not cover service account, group or project access tokens.",
+   "evidence_refs": [
+    "fc-8f2adc67"
+   ],
+   "quote": "Enforcement does not apply to tokens for service accounts, group access tokens, or project access tokens.",
+   "kind": "other"
+  },
+  {
+   "path_id": "gitlab-3",
+   "what": "Group IP restrictions do not cover runner registration or job requests.",
+   "evidence_refs": [
+    "turn11search0"
+   ],
+   "quote": "IP restrictions do not apply to runner registration or when runners request or update CI/CD jobs.",
+   "kind": "network"
+  }
+ ],
+ "controls_unknown": [
+  "Whether a GitLab.com group owner can block or allowlist third-party OAuth applications that members authorize (no group-level control found).",
+  "Whether a GitLab.com group owner can set a shorter maximum token lifetime than the 365-day default (docs describe this only for administrators/Self-Managed)."
+ ],
+ "credentials": [
+  {
+   "id": "gitlab-1",
+   "name": "Personal / project / group token",
+   "family": "pat",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Personal/project/group access tokens, OAuth bearer, CI_JOB_TOKEN and deployment credentials for limited endpoints.",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Group restriction covers UI/API/Git, including service-account and project/group tokens. Runner coordination and other documented exceptions remain.",
+    "evidence_refs": [
+     "turn11search0",
+     "turn3search1"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": 31536000,
+    "maximum_seconds": 31536000,
+    "configurable": "yes",
+    "summary": "Normally ≤365 days; service-account exceptions",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "No refresh token. Rotate the token (new token, same scopes; the old one becomes inactive immediately) or create a new one before expiry.",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "administration": {
+    "summary": "Scopes and project/group membership, token rotation/revocation, SAML enforcement and CI job-token allowlists.",
+    "conditions": "Group IP controls require Premium/Ultimate. Do not transfer Self-Managed 400-day/configuration options to GitLab.com.",
+    "evidence_refs": [
+     "turn11search0",
+     "turn3search1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "SAML SSO enforcement does not cover API requests, except Git-related endpoints when the Git/Dependency Proxy option is on; project and group access tokens are never SSO-checked.",
+     "evidence_refs": [
+      "fc-da8222d3"
+     ]
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Deleting or blocking an enterprise user revokes their PATs; project/group tokens are not tied to a user; non-enterprise users not covered.",
+     "evidence_refs": [
+      "turn3search1",
+      "fc-da8222d3"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Group > Secure > Credentials lists PATs of enterprise users plus group/project tokens and service accounts only (Ultimate).",
+     "evidence_refs": [
+      "fc-a8fd30a2"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Group > Settings > SAML SSO > Configuration: Disable password and passkey authentication for enterprise users; Enforce SSO-only authentication for Git and Dependency Proxy activity for this group > Save changes",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-da8222d3"
+     ]
+    },
+    "expiry": {
+     "ui": "User avatar > Edit profile > Access > Personal access tokens > Expiration date (default and max 365 days); service accounts: Group > Settings > General > Permissions and group features > Require expiration dates for service accounts; view expiry: Group > Secure > Credentials",
+     "api": "GET /personal_access_tokens/:id (expires_at); GET /groups/:id/access_tokens",
+     "cli": null,
+     "evidence_refs": [
+      "turn3search1",
+      "fc-5c5fddd1",
+      "fc-a8fd30a2",
+      "fc-4bdaa453"
+     ]
+    },
+    "usage": {
+     "ui": "Group > Secure > Credentials (usage patterns, enterprise users); user: Access > Personal access tokens > token details panel",
+     "api": "GET /personal_access_tokens?user_id=<id> (last_used_at, last_used_ips)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-a8fd30a2",
+      "turn3search1",
+      "fc-5c5fddd1"
+     ]
+    },
+    "reads": {
+     "ui": "Project > Secure > Audit events; filter by user and date, look for repository_download_operation",
+     "api": "GET /projects/:id/audit_events",
+     "cli": null,
+     "evidence_refs": [
+      "fc-7131da7c",
+      "fc-23a2e1e0",
+      "fc-56c8a759"
+     ]
+    },
+    "offboard": {
+     "ui": null,
+     "api": "DELETE /groups/:id/enterprise_users/:user_id (deleting or blocking an enterprise user revokes their PATs)",
+     "cli": null,
+     "evidence_refs": [
+      "turn3search1",
+      "fc-abd209bd"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "glpat-",
+     "notes": "Same glpat- prefix for personal, project, group and impersonation tokens; prefix configurable on Self-Managed. Regex is the documented legacy 20-char form; routable format regex not established."
+    },
+    "log_sources": [
+     {
+      "name": "GitLab audit events (group/project/instance)",
+      "notes": "Retained indefinitely. Group/project events need Premium/Ultimate; API date range max 30 days per query. Streaming needs Ultimate."
+     },
+     {
+      "name": "Token API usage fields (last_used_at, last_used_ips)",
+      "notes": "Last five distinct IPs per token; usage time updates every 10 min, IPs every minute."
+     },
+     {
+      "name": "api_json.log / production_json.log",
+      "notes": "Self-Managed only. Per-request remote_ip, ua, user_id, username, route/path; correlation_id in production_json.log."
+     },
+     {
+      "name": "Secret detection automatic response",
+      "notes": "Leaked PATs in public or Ultimate projects are revoked and owner emailed; no audit record documented."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "id",
+      "log": "Personal/project/group access tokens API",
+      "notes": "Token ID; use for revoke/rotate"
+     },
+     {
+      "field": "user_id",
+      "log": "Personal/project access tokens API",
+      "notes": "Owner, or the project/group bot user for project/group tokens"
+     },
+     {
+      "field": "last_used_ips",
+      "log": "Personal/project access tokens API",
+      "notes": "Up to five most recent distinct IPs"
+     },
+     {
+      "field": "previous_personal_access_token_id",
+      "log": "Token information API (admin)",
+      "notes": "Links rotated token to predecessor"
+     },
+     {
+      "field": "author_id",
+      "log": "Audit events API",
+      "notes": "User or bot that acted"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "personal_access_token_created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "project_access_token_created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "group_access_token_created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "personal_access_token_used_from_unseen_ip",
+      "stage": "use",
+      "notes": "First use from new IP"
+     },
+     {
+      "event": "api_request_access_with_scope",
+      "stage": "use",
+      "notes": "Only a subset of API requests with an audited scope"
+     },
+     {
+      "event": "issue_created_by_project_bot",
+      "stage": "use",
+      "notes": "Example bot-activity event for project tokens"
+     },
+     {
+      "event": "personal_access_token_revoked",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "project_access_token_deleted",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "group_access_token_deleted",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "project_access_token_creation_failed",
+      "stage": "auth_fail",
+      "notes": "Creation failure, not auth failure"
+     }
+    ],
+    "correlation_keys": [
+     "author_id",
+     "details.author_name",
+     "details.ip_address",
+     "entity_id",
+     "entity_type",
+     "details.target_id",
+     "last_used_ips",
+     "user_id",
+     "remote_ip",
+     "ua",
+     "correlation_id"
+    ],
+    "anomaly_cues": [
+     "personal_access_token_used_from_unseen_ip for a token normally used only from CI runners",
+     "project/group bot user acting on projects outside its usual set",
+     "token created then used within minutes from a different IP than the creator session",
+     "rotate attempted on an already revoked token (family-wide revocation fired)",
+     "PAT with api scope and no expiry created shortly before mass clone/archive activity",
+     "use after the owning enterprise user was blocked or deleted"
+    ],
+    "containment": {
+     "steps": "DELETE /personal_access_tokens/:id (or self); DELETE /projects/:id/access_tokens/:token_id or groups equivalent; or revoke in UI. Admins can revoke any user's PAT; Self-Managed admins can identify a leaked value via POST /admin/token.",
+     "kills_existing": "yes",
+     "notes": "Revocation is immediate. Rotation revokes the old token at once. Rotating a revoked token revokes the whole token family. Blocking/deleting an enterprise user auto-revokes their PATs."
+    },
+    "sample_query": {
+     "language": "GitLab REST API (personal access tokens list)",
+     "query": "GET /api/v4/personal_access_tokens?state=active&last_used_after=2026-10-01T00:00:00Z&sort=last_used_desc",
+     "purpose": "List active tokens used recently, then review last_used_ips per token"
+    },
+    "unknown": [
+     "audit event for PAT rotation or expiry",
+     "whether audit event details carry the token ID",
+     "routable token regex",
+     "failed-auth event for invalid/revoked token"
+    ],
+    "evidence_refs": [
+     "fc-9077f334",
+     "fc-7131da7c",
+     "fc-23a2e1e0",
+     "fc-56c8a759",
+     "fc-5c5fddd1",
+     "turn3search1",
+     "fc-449cbad0",
+     "fc-2afd1f9b",
+     "fc-8aec12ae",
+     "fc-c9fe6e27",
+     "fc-d9934bca"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /personal_access_tokens/self",
+      "reveals": "scopes, expires_at, active, last_used_at, last_used_ips for the calling token",
+      "bulk": false,
+      "scope": "api or read_api",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit event for token self-introspection"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /personal_access_tokens/self/associations",
+      "reveals": "groups and projects the calling token can access",
+      "bulk": false,
+      "scope": "api or read_api",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented read event"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /projects?membership=true",
+      "reveals": "projects the token's user is a member of",
+      "bulk": false,
+      "scope": "read_api",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit event list documents no read/listing events"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /projects/:id/repository/archive[.format]",
+      "reveals": "full repository file archive (tar/zip)",
+      "bulk": true,
+      "scope": "read_repository or api",
+      "rate_limit": "5 requests per minute (GitLab.com)",
+      "logged": "yes",
+      "log_event": "repository_download_operation",
+      "log_notes": "Premium/Ultimate to save to DB; Ultimate to stream. public projects: public_repository_download_operation (not saved to DB)"
+     }
+    ],
+    "unknown": [
+     "Whether project/group access tokens can use the /self introspection endpoints (docs cover only personal access tokens)"
+    ],
+    "evidence_refs": [
+     "fc-5c5fddd1",
+     "fc-dcc837a9",
+     "fc-d1a48cb3",
+     "fc-7131da7c",
+     "fc-23a2e1e0"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "gitlab-2",
+   "name": "OAuth",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Personal/project/group access tokens, OAuth bearer, CI_JOB_TOKEN and deployment credentials for limited endpoints.",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "CI OIDC ID tokens federate outward to external services. CI_JOB_TOKEN is a native short-lived credential, not generic external federation.",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Group restriction covers UI/API/Git, including service-account and project/group tokens. Runner coordination and other documented exceptions remain.",
+    "evidence_refs": [
+     "turn11search0",
+     "turn3search1"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 7200,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "2 hours on GitLab.com (configurable only by Self-Managed/Dedicated admins)",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13",
+     "fc-09098da4"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "unknown",
+    "summary": "Refresh exchange invalidates the previous access/refresh pair.",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "administration": {
+    "summary": "Scopes and project/group membership, token rotation/revocation, SAML enforcement and CI job-token allowlists.",
+    "conditions": "Group IP controls require Premium/Ultimate. Do not transfer Self-Managed 400-day/configuration options to GitLab.com.",
+    "evidence_refs": [
+     "turn11search0",
+     "turn3search1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "API requests are not SSO-checked, except Git-related endpoints when the Git/Dependency Proxy SSO option is on.",
+     "evidence_refs": [
+      "fc-da8222d3"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Group > Settings > SAML SSO > Enforce SSO-only authentication for Git and Dependency Proxy activity for this group (Git-related API only)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-da8222d3"
+     ]
+    },
+    "expiry": {
+     "ui": null,
+     "api": "POST /oauth/token response expires_in (7200); GET /oauth/token/info shows expires_in",
+     "cli": null,
+     "evidence_refs": [
+      "fc-09098da4",
+      "turn29search0"
+     ]
+    },
+    "reads": {
+     "ui": "Project > Secure > Audit events; filter by user and date, look for repository_download_operation",
+     "api": "GET /projects/:id/audit_events",
+     "cli": null,
+     "evidence_refs": [
+      "fc-7131da7c",
+      "fc-23a2e1e0",
+      "fc-56c8a759"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Access token prefix not documented. Application secret uses gloas-. Default expires_in 7200 s."
+    },
+    "log_sources": [
+     {
+      "name": "GitLab audit events (group/project/instance)",
+      "notes": "Retained indefinitely. Group/project events need Premium/Ultimate; API date range max 30 days per query. Streaming needs Ultimate."
+     },
+     {
+      "name": "api_json.log / production_json.log",
+      "notes": "Self-Managed only. Per-request remote_ip, ua, user_id, username, route/path; correlation_id in production_json.log."
+     },
+     {
+      "name": "/oauth/token/info",
+      "notes": "Returns resource_owner_id, scope, expires_in, application.uid, created_at for a live token"
+     },
+     {
+      "name": "User profile > Access > Applications (Authorized applications)",
+      "notes": "Per-user list of authorized OAuth apps with Revoke"
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "application.uid",
+      "log": "/oauth/token/info",
+      "notes": "OAuth client ID that owns the token"
+     },
+     {
+      "field": "resource_owner_id",
+      "log": "/oauth/token/info",
+      "notes": "User the token acts as"
+     },
+     {
+      "field": "scope",
+      "log": "/oauth/token/info",
+      "notes": "Granted scopes"
+     },
+     {
+      "field": "author_id",
+      "log": "Audit events API",
+      "notes": "User acting"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "oauth_application_created",
+      "stage": "create",
+      "notes": "App registration"
+     },
+     {
+      "event": "user_authorized_oauth_application",
+      "stage": "create",
+      "notes": "User grants consent"
+     },
+     {
+      "event": "oauth_application_updated",
+      "stage": "change",
+      "notes": "Redirect URI/scopes change"
+     },
+     {
+      "event": "api_request_access_with_scope",
+      "stage": "use",
+      "notes": "Subset of requests with audited scope"
+     },
+     {
+      "event": "oauth_application_deleted",
+      "stage": "revoke",
+      "notes": "Removes all grants and tokens"
+     },
+     {
+      "event": "authenticated_with_oauth",
+      "stage": "use",
+      "notes": "Sign-in with OAuth (OmniAuth), not API token use"
+     },
+     {
+      "event": "omniauth_login_failed",
+      "stage": "auth_fail",
+      "notes": "OmniAuth sign-in failure"
+     }
+    ],
+    "correlation_keys": [
+     "application.uid",
+     "resource_owner_id",
+     "author_id",
+     "details.ip_address",
+     "details.target_id",
+     "remote_ip",
+     "ua",
+     "user_id"
+    ],
+    "anomaly_cues": [
+     "user_authorized_oauth_application for an app created minutes earlier (consent phishing)",
+     "oauth_application_updated changing redirect URI followed by new authorizations",
+     "many users authorizing the same non-trusted app in a short window",
+     "API activity for a user from IPs never seen in their interactive sessions",
+     "refresh-token use from a host different from the app's normal egress"
+    ],
+    "containment": {
+     "steps": "User revokes the app under Access > Applications > Authorized applications; app owner calls POST /oauth/revoke with client_id, client_secret, token; delete the application to remove all grants and tokens; Renew secret to stop the app from obtaining new tokens.",
+     "kills_existing": "partial",
+     "notes": "Deleting the app removes all tokens. Effect of revoking a refresh token on outstanding access tokens is not documented; access tokens expire after 2 hours."
+    },
+    "sample_query": {
+     "language": "GitLab REST API (OAuth token info)",
+     "query": "GET /oauth/token/info with header Authorization: Bearer <suspect token>",
+     "purpose": "Identify the app (application.uid), user (resource_owner_id) and scope of a found token"
+    },
+    "unknown": [
+     "OAuth access/refresh token prefix",
+     "audit event for OAuth token revocation",
+     "whether revoking refresh token kills access tokens",
+     "target_type value for OAuth events"
+    ],
+    "evidence_refs": [
+     "turn29search0",
+     "fc-09098da4",
+     "fc-7131da7c",
+     "fc-23a2e1e0",
+     "fc-56c8a759",
+     "fc-9077f334",
+     "fc-d9934bca"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /oauth/token/info",
+      "reveals": "resource_owner_id, scope, expires_in, application for the OAuth token",
+      "bulk": false,
+      "scope": "any OAuth token",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Doorkeeper introspection; no documented audit event"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /projects?membership=true",
+      "reveals": "projects the OAuth user is a member of",
+      "bulk": false,
+      "scope": "read_api",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented read/listing event"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /projects/:id/repository/archive[.format]",
+      "reveals": "full repository file archive (tar/zip)",
+      "bulk": true,
+      "scope": "read_repository or api",
+      "rate_limit": "5 requests per minute (GitLab.com)",
+      "logged": "yes",
+      "log_event": "repository_download_operation",
+      "log_notes": "Premium/Ultimate to save to DB; Ultimate to stream; public projects use public_repository_download_operation (not saved)"
+     }
+    ],
+    "unknown": [
+     "Whether archive downloads over Git (git clone via OAuth) emit the same repository_download_operation event"
+    ],
+    "evidence_refs": [
+     "turn29search0",
+     "fc-dcc837a9",
+     "fc-d1a48cb3",
+     "fc-7131da7c"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "gitlab-3",
+   "name": "CI_JOB_TOKEN",
+   "family": "job_token",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Personal/project/group access tokens, OAuth bearer, CI_JOB_TOKEN and deployment credentials for limited endpoints.",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Group IP restriction applies to Git clones by CI/CD jobs, but does not work with GitLab.com hosted runners and does not cover runner job requests. Use self-managed runners with allowlisted IPs. Job-token API coverage is not stated.",
+    "evidence_refs": [
+     "turn11search0",
+     "turn3search1"
+    ]
+   },
+   "lifetime": {
+    "basis": "job",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "While the job runs",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "renewal": {
+    "mechanism": "job_reissued",
+    "expiry_basis": "job",
+    "summary": "A new job receives its own job token.",
+    "evidence_refs": [
+     "turn3search1",
+     "turn29search0",
+     "turn19search13"
+    ]
+   },
+   "administration": {
+    "summary": "Scopes and project/group membership, token rotation/revocation, SAML enforcement and CI job-token allowlists.",
+    "conditions": "Group IP controls require Premium/Ultimate. Do not transfer Self-Managed 400-day/configuration options to GitLab.com.",
+    "evidence_refs": [
+     "turn11search0",
+     "turn3search1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Docs say Git activity from CI/CD jobs is not SSO-checked.",
+     "evidence_refs": [
+      "fc-da8222d3"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Fixed: valid only while the job runs; no setting",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-04527bfb"
+     ]
+    },
+    "reads": {
+     "ui": "Project > Secure > Audit events; filter by user and date, look for repository_download_operation",
+     "api": "GET /projects/:id/audit_events",
+     "cli": null,
+     "evidence_refs": [
+      "fc-7131da7c",
+      "fc-23a2e1e0",
+      "fc-56c8a759"
+     ]
+    },
+    "kill": {
+     "ui": "Project > Build > Pipelines > job > Cancel; limit reach: Settings > CI/CD > Job token permissions > CI/CD job token allowlist",
+     "api": "POST /projects/:id/jobs/:job_id/cancel",
+     "cli": null,
+     "evidence_refs": [
+      "fc-04527bfb",
+      "fc-0dd7570e",
+      "fc-c7e5e657"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "glcbt-",
+     "notes": "JWT by default from GitLab 19.0 (legacy format until 20.0). Secret detection rule gitlab_ci_build_token; regex not established."
+    },
+    "log_sources": [
+     {
+      "name": "Job token Authentication log (Settings > CI/CD > Job token permissions)",
+      "notes": "Shows max 100 authentication events"
+     },
+     {
+      "name": "GitLab audit events (group/project/instance)",
+      "notes": "Retained indefinitely. Group/project events need Premium/Ultimate; API date range max 30 days per query. Streaming needs Ultimate."
+     },
+     {
+      "name": "api_json.log / production_json.log",
+      "notes": "Self-Managed only. Per-request remote_ip, ua, user_id, username, route/path; correlation_id in production_json.log."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "author_id",
+      "log": "Audit events API",
+      "notes": "User whose access the token carries (pipeline triggerer)"
+     },
+     {
+      "field": "user_id",
+      "log": "api_json.log",
+      "notes": "Triggering user on API calls"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "user_authenticated_using_job_token",
+      "stage": "use",
+      "notes": "Streamed only, not saved to database"
+     },
+     {
+      "event": "secure_ci_job_token_project_added",
+      "stage": "change",
+      "notes": "Inbound allowlist widened"
+     },
+     {
+      "event": "secure_ci_job_token_group_added",
+      "stage": "change",
+      "notes": "Group added to allowlist"
+     },
+     {
+      "event": "secure_ci_job_token_inbound_disabled",
+      "stage": "change",
+      "notes": "Inbound restriction turned off"
+     },
+     {
+      "event": "secure_ci_job_token_policies_updated",
+      "stage": "change",
+      "notes": "Fine-grained permissions changed"
+     },
+     {
+      "event": "secure_ci_job_token_project_removed",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "author_id",
+     "details.ip_address",
+     "entity_id",
+     "entity_path",
+     "remote_ip",
+     "ua",
+     "user_id",
+     "route"
+    ],
+    "anomaly_cues": [
+     "job token use from an IP that is not a known runner egress",
+     "job token used after its job finished (should fail)",
+     "secure_ci_job_token_inbound_disabled or allowlist group add shortly before cross-project access",
+     "authentication-log entries from projects not in normal dependency graph",
+     "jobs from forks/MRs touching other projects' APIs"
+    ],
+    "containment": {
+     "steps": "Cancel the running job; tighten inbound allowlist (remove projects/groups, re-enable inbound scope); restrict fine-grained job token permissions; block the triggering user if their access is abused.",
+     "kills_existing": "yes",
+     "notes": "Token is invalid once the job is no longer running. Allowlist changes limit cross-project reach."
+    },
+    "sample_query": {
+     "language": "GitLab REST API (project audit events)",
+     "query": "GET /api/v4/projects/:id/audit_events?created_after=2026-09-12T00:00:00Z&created_before=2026-10-12T00:00:00Z",
+     "purpose": "Pull 30 days of project events and filter for secure_ci_job_token_* changes"
+    },
+    "unknown": [
+     "job token regex",
+     "fields in the job token Authentication log",
+     "stored audit record for job token use",
+     "token ID field for job tokens"
+    ],
+    "evidence_refs": [
+     "fc-04527bfb",
+     "fc-9077f334",
+     "fc-7131da7c",
+     "fc-2571b83c",
+     "fc-23a2e1e0",
+     "fc-56c8a759",
+     "fc-d9934bca"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /job (JOB-TOKEN header)",
+      "reveals": "the job generated by this CI_JOB_TOKEN; confirms token validity (valid only while the job runs)",
+      "bulk": false,
+      "scope": "CI_JOB_TOKEN (GET /job only)",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit event for this read"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /projects/:id/repository/archive[.format]",
+      "reveals": "full repository file archive for accessible projects",
+      "bulk": true,
+      "scope": "CI_JOB_TOKEN (Repositories API: archive and changelog only)",
+      "rate_limit": "5 requests per minute (GitLab.com)",
+      "logged": "yes",
+      "log_event": "repository_download_operation",
+      "log_notes": "Premium/Ultimate to save to DB; Ultimate to stream"
+     },
+     {
+      "stage": "collection",
+      "call": "GET job-artifact download endpoints",
+      "reveals": "job artifacts from accessible projects",
+      "bulk": true,
+      "scope": "CI_JOB_TOKEN (Job artifacts API: download only)",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": "job_artifact_downloaded",
+      "log_notes": "job_artifact_downloaded is documented but 'Saved to database: No'"
+     }
+    ],
+    "unknown": [
+     "Whether a download triggered under CI_JOB_TOKEN records the job/pipeline rather than a user actor in audit details"
+    ],
+    "evidence_refs": [
+     "fc-04527bfb",
+     "fc-c7e5e657",
+     "fc-7131da7c"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "gitlab-4",
+   "name": "Fine-grained personal access token",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A personal access token limited to selected resources (groups/projects, user, global) and specific permissions. It is sent like other PATs, for example in the PRIVATE-TOKEN header.",
+    "evidence_refs": [
+     "fc-8f2adc67",
+     "turn3search1"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This is a static user-created token. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "fc-8f2adc67"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Top-level group IP restriction (Premium/Ultimate) covers the UI and API for that group's resources. The page does not name personal access tokens explicitly; runner job requests and other listed exceptions are excluded.",
+    "evidence_refs": [
+     "turn11search0"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 31536000,
+    "maximum_seconds": 31536000,
+    "configurable": "yes",
+    "summary": "Default 365 days; ≤365 days unless admin changes the maximum",
+    "evidence_refs": [
+     "fc-8f2adc67"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "No refresh token. The user rotates the token (new token, old one becomes inactive immediately) or creates a new one before expiry.",
+    "evidence_refs": [
+     "turn3search1"
+    ]
+   },
+   "administration": {
+    "summary": "Any user can create one; requests must pass both the token's permissions and the owner's own access. On GitLab.com a top-level group Owner can require fine-grained tokens after a date; on Self-Managed an administrator sets this instance-wide. Tokens can be revoked immediately.",
+    "conditions": "Beta in 18.10, GA in 19.2 (all tiers). Full REST coverage; GraphQL covers the most common types and mutations. Enforcement does not apply to service account, group or project access tokens, and existing legacy PATs keep working until they expire.",
+    "evidence_refs": [
+     "fc-8f2adc67",
+     "fc-da24dd40"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Same as PATs: API not SSO-checked except Git-related endpoints under the Git/Dependency Proxy option.",
+     "evidence_refs": [
+      "fc-da8222d3"
+     ]
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Enterprise users' PATs are revoked when the account is deleted or blocked; other users not covered.",
+     "evidence_refs": [
+      "turn3search1"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Credentials inventory lists PATs of enterprise users only on GitLab.com (Ultimate).",
+     "evidence_refs": [
+      "fc-a8fd30a2"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Group > Secure > Credentials",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a8fd30a2"
+     ]
+    },
+    "sso": {
+     "ui": "Group > Settings > SAML SSO > Disable password and passkey authentication for enterprise users; Enforce SSO-only authentication for Git and Dependency Proxy activity for this group",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-da8222d3"
+     ]
+    },
+    "expiry": {
+     "ui": "User avatar > Edit profile > Access > Personal access tokens > Generate token > Fine-grained token > Expiration date; view: Group > Secure > Credentials",
+     "api": "GET /personal_access_tokens/:id (expires_at)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-8f2adc67",
+      "fc-a8fd30a2",
+      "fc-5c5fddd1"
+     ]
+    },
+    "usage": {
+     "ui": "Group > Secure > Credentials (usage patterns); user: Access > Personal access tokens > token details panel",
+     "api": "GET /personal_access_tokens?user_id=<id> (last_used_at, last_used_ips, granular_scopes)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-a8fd30a2",
+      "turn3search1",
+      "fc-5c5fddd1"
+     ]
+    },
+    "reads": {
+     "ui": "Project > Secure > Audit events; filter by user and date, look for repository_download_operation",
+     "api": "GET /projects/:id/audit_events",
+     "cli": null,
+     "evidence_refs": [
+      "fc-7131da7c",
+      "fc-23a2e1e0",
+      "fc-56c8a759"
+     ]
+    },
+    "offboard": {
+     "ui": null,
+     "api": "DELETE /groups/:id/enterprise_users/:user_id (deleting or blocking an enterprise user revokes their PATs)",
+     "cli": null,
+     "evidence_refs": [
+      "turn3search1",
+      "fc-abd209bd"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "glpat-",
+     "notes": "No distinct fine-grained prefix documented; shares PAT prefix. Default expiry 365 days."
+    },
+    "log_sources": [
+     {
+      "name": "GitLab audit events (group/project/instance)",
+      "notes": "Retained indefinitely. Group/project events need Premium/Ultimate; API date range max 30 days per query. Streaming needs Ultimate."
+     },
+     {
+      "name": "Token API usage fields (last_used_at, last_used_ips)",
+      "notes": "Last five distinct IPs per token; usage time updates every 10 min, IPs every minute."
+     },
+     {
+      "name": "api_json.log / production_json.log",
+      "notes": "Self-Managed only. Per-request remote_ip, ua, user_id, username, route/path; correlation_id in production_json.log."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "id",
+      "log": "Personal access tokens API",
+      "notes": "Token ID"
+     },
+     {
+      "field": "granular_scopes",
+      "log": "Personal access tokens API",
+      "notes": "Present only for fine-grained tokens; identifies the type"
+     },
+     {
+      "field": "last_used_ips",
+      "log": "Personal access tokens API",
+      "notes": "Last five distinct IPs"
+     },
+     {
+      "field": "user_id",
+      "log": "Personal access tokens API",
+      "notes": "Owner"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "personal_access_token_created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "personal_access_token_used_from_unseen_ip",
+      "stage": "use",
+      "notes": ""
+     },
+     {
+      "event": "personal_access_token_settings_updated",
+      "stage": "change",
+      "notes": "Namespace fine-grained PAT settings changed"
+     },
+     {
+      "event": "personal_access_token_revoked",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "author_id",
+     "details.ip_address",
+     "user_id",
+     "last_used_ips",
+     "remote_ip",
+     "ua",
+     "route"
+    ],
+    "anomaly_cues": [
+     "token with granular_scopes used from an unseen IP",
+     "fine-grained token with sudo capability created by an admin outside change window",
+     "personal_access_token_settings_updated relaxing enforcement before legacy-token activity",
+     "token used against projects outside its granted boundary (should 403; repeated 403s = probing)",
+     "instance on a version affected by the 19.x scope-bypass fix"
+    ],
+    "containment": {
+     "steps": "DELETE /personal_access_tokens/:id or revoke in UI; admins can revoke any user's token.",
+     "kills_existing": "yes",
+     "notes": "Revocation is immediate; rotation revokes the previous token."
+    },
+    "sample_query": {
+     "language": "GitLab REST API (personal access tokens list)",
+     "query": "GET /api/v4/personal_access_tokens?state=active&created_after=2026-10-01T00:00:00Z",
+     "purpose": "List new tokens; check granular_scopes and last_used_ips"
+    },
+    "unknown": [
+     "distinct prefix or format for fine-grained tokens",
+     "audit event distinguishing fine-grained token creation"
+    ],
+    "evidence_refs": [
+     "fc-8f2adc67",
+     "fc-5c5fddd1",
+     "turn3search1",
+     "fc-7131da7c",
+     "fc-9077f334",
+     "fc-c9fe6e27",
+     "fc-56c8a759",
+     "fc-d9934bca"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /personal_access_tokens/self",
+      "reveals": "scopes, granular_scopes, expires_at, active for the calling fine-grained token",
+      "bulk": false,
+      "scope": "api or read_api",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit event for self-introspection"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /personal_access_tokens/self/associations",
+      "reveals": "groups and projects the token can access (reflects its selected resources)",
+      "bulk": false,
+      "scope": "api or read_api",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented read event"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /projects/:id/repository/archive[.format]",
+      "reveals": "full repository file archive within the token's selected resources",
+      "bulk": true,
+      "scope": "read_repository or api",
+      "rate_limit": "5 requests per minute (GitLab.com)",
+      "logged": "yes",
+      "log_event": "repository_download_operation",
+      "log_notes": "Premium/Ultimate to save to DB; Ultimate to stream"
+     }
+    ],
+    "unknown": [
+     "Whether audit event details record which token (fine-grained vs classic) performed the download"
+    ],
+    "evidence_refs": [
+     "fc-5c5fddd1",
+     "fc-d1a48cb3",
+     "fc-7131da7c"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

@@ -1,0 +1,453 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "scope_notes": "Covers Cloudflare (API, Zero Trust Access, R2). All plans have API tokens and 18-month Audit Logs v2; Logpush beyond 18 months is Enterprise; Access service tokens need Cloudflare Zero Trust; R2 credentials need R2.",
+      "controls": [
+        {
+          "name": "Client IP Address Filtering",
+          "effect": "limit_network",
+          "applies_to": [
+            "cloudflare-1",
+            "cloudflare-2"
+          ],
+          "what": "Token only works from listed CIDRs (verify endpoint excepted).",
+          "setting": "API token > Client IP Address Filtering; condition.request.ip",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-30d87826",
+            "fc-0165b637"
+          ]
+        },
+        {
+          "name": "TTL (not_before / expires_on)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "cloudflare-1",
+            "cloudflare-2"
+          ],
+          "what": "Sets when a token starts and stops being valid.",
+          "setting": "API token > TTL",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-30d87826",
+            "fc-8d72ca7d",
+            "fc-0165b637"
+          ]
+        },
+        {
+          "name": "Token permissions and resources",
+          "effect": "limit_scope",
+          "applies_to": [
+            "cloudflare-1",
+            "cloudflare-2",
+            "cloudflare-6"
+          ],
+          "what": "Limits a token to chosen permission groups, accounts, zones or R2 buckets.",
+          "setting": "API token > Permissions / Resources",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-f816803c",
+            "fc-8d72ca7d",
+            "fc-54356738"
+          ]
+        },
+        {
+          "name": "API Token Provisioning capability",
+          "effect": "require_approval",
+          "applies_to": [
+            "cloudflare-2"
+          ],
+          "what": "Only members with this capability or Super Administrator can create account tokens.",
+          "setting": "Manage Account > Members roles",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-8d72ca7d"
+          ]
+        },
+        {
+          "name": "Delete / roll API token",
+          "effect": "revoke",
+          "applies_to": [
+            "cloudflare-1",
+            "cloudflare-2",
+            "cloudflare-6"
+          ],
+          "what": "Deleting or rolling invalidates the token secret.",
+          "setting": "DELETE /user/tokens/{token_id}; DELETE /accounts/{account_id}/tokens/{token_id}; PUT /user/tokens/{token_id}/value",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-2543f505",
+            "fc-1cffa3ce",
+            "fc-389be483",
+            "fc-7df6eed0"
+          ]
+        },
+        {
+          "name": "Leaked token detection (GitHub Secret Scanning)",
+          "effect": "revoke",
+          "applies_to": [
+            "cloudflare-1",
+            "cloudflare-2",
+            "cloudflare-3"
+          ],
+          "what": "Tokens leaked in public GitHub repos are auto-revoked; private-repo leaks only notify.",
+          "setting": "Automatic",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-56457d26"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any account-level setting to block members from creating user API tokens or using the Global API Key.",
+        "Any account-wide policy forcing token expiry or IP filters.",
+        "Whether Super Administrators can list or revoke other members' user API tokens.",
+        "Whether dashboard SSO or Access policies are checked on API token / Global API Key requests (no explicit statement).",
+        "Exact Audit Logs v2 action names for token create/delete/roll.",
+        "Whether Origin CA keys still authenticate after the 2026-09-30 removal date.",
+        "IP restrictions for Access service tokens and for R2 S3 requests.",
+        "Cloudflare OAuth tokens (actor context 'oauth', e.g. Wrangler) were not researched."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "cloudflare-2",
+      "provider_id": "cloudflare",
+      "name": "Account API tokens",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Bearer token (cfat_ prefix) owned by the account, not a user; acts as a service principal with its own permissions.",
+        "evidence_refs": [
+          "fc-8d72ca7d"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Not tied to a user, so dashboard SSO does not apply.",
+        "evidence_refs": [
+          "fc-8d72ca7d",
+          "fc-41e5245a"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Client IP filter (request.ip condition) available via API; dashboard flow documents only optional expiry.",
+        "evidence_refs": [
+          "fc-0165b637",
+          "fc-30d87826",
+          "fc-8d72ca7d"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Valid until revoked or optional expiration date",
+        "evidence_refs": [
+          "fc-8d72ca7d",
+          "fc-54356738"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Valid until deleted or expiry",
+        "summary": "Roll or recreate; survives member removal.",
+        "evidence_refs": [
+          "fc-8d72ca7d",
+          "fc-54356738"
+        ]
+      },
+      "administration": {
+        "summary": "Only members with API Token Provisioning or Super Administrator can create; Super Admins see and manage all account tokens; permissions capped at the creator's own.",
+        "conditions": "Some products do not support account tokens yet.",
+        "evidence_refs": [
+          "fc-8d72ca7d"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Cloudflare tells admins to keep an Account API token as a way to call the API and disable SSO if locked out, so these tokens work outside dashboard SSO.",
+          "evidence_refs": [
+            "fc-41e5245a"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Account API tokens are owned by the account and keep working after the creating user leaves.",
+          "evidence_refs": [
+            "fc-8d72ca7d"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Super Administrators see all account API tokens on Manage account > Account API tokens; API: GET /accounts/{account_id}/tokens.",
+          "evidence_refs": [
+            "fc-8d72ca7d",
+            "fc-3810b4ce"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Manage Account > Audit Logs > filter on token",
+          "api": "GET /accounts/{account_id}/logs/audit?actor_token_id={token_id} (or actor_token_name=...; actor_type=account)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e9870043",
+            "fc-19960253"
+          ]
+        },
+        "reads": {
+          "ui": "Manage Account > Audit Logs > set Action type = view",
+          "api": "GET /accounts/{account_id}/logs/audit?action_type=view&actor_token_id={token_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e9870043",
+            "fc-19960253"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "cfat_",
+          "notes": "cfat_ + 40 chars + checksum."
+        },
+        "log_sources": [
+          {
+            "name": "Audit Logs v2",
+            "notes": "18 months; also Logpush."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.token_id",
+            "log": "Audit Logs v2",
+            "notes": ""
+          },
+          {
+            "field": "actor.token_name",
+            "log": "Audit Logs v2",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "unknown",
+            "stage": "create",
+            "notes": "Account token metadata includes creator attribution"
+          }
+        ],
+        "correlation_keys": [
+          "actor.token_id",
+          "actor.ip_address",
+          "raw.cf_ray_id"
+        ],
+        "anomaly_cues": [
+          "Account token created by non-admin with provisioning capability",
+          "Use from new IP"
+        ],
+        "containment": {
+          "steps": "DELETE /accounts/{account_id}/tokens/{token_id} or roll.",
+          "kills_existing": "unknown",
+          "notes": "Token survives member removal; must be deleted."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact create/delete action strings"
+        ],
+        "evidence_refs": [
+          "fc-8d72ca7d",
+          "fc-e9870043",
+          "fc-19960253",
+          "fc-389be483"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /accounts/{account_id}/tokens/verify",
+            "reveals": "Token status",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /accounts/{account_id}/members",
+            "reveals": "All account members",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Logged as a view action in Audit Logs v2 with actor_type \"account\" and actor.token_id."
+          }
+        ],
+        "unknown": [
+          "Other calls as cloudflare-1 within granted permissions"
+        ],
+        "evidence_refs": [
+          "fc-e12445b0",
+          "fc-06b63f43",
+          "fc-e9870043"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0165b637",
+      "title": "Create tokens via API",
+      "url": "https://developers.cloudflare.com/fundamentals/api/how-to/create-via-api/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-06b63f43",
+      "title": "List Members",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/members/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-19960253",
+      "title": "Get account audit logs (Version 2)",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/logs/subresources/audit/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1cffa3ce",
+      "title": "Delete Token",
+      "url": "https://developers.cloudflare.com/api/resources/user/subresources/tokens/methods/delete/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2543f505",
+      "title": "Roll tokens",
+      "url": "https://developers.cloudflare.com/fundamentals/api/how-to/roll-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-30d87826",
+      "title": "Restrict tokens",
+      "url": "https://developers.cloudflare.com/fundamentals/api/how-to/restrict-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3810b4ce",
+      "title": "List Tokens (account)",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/tokens/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-389be483",
+      "title": "Delete Token (account)",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/tokens/methods/delete/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-41e5245a",
+      "title": "Set up dashboard SSO",
+      "url": "https://developers.cloudflare.com/fundamentals/manage-members/dashboard-sso/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-54356738",
+      "title": "R2 Authentication",
+      "url": "https://developers.cloudflare.com/r2/api/tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-56457d26",
+      "title": "Token formats",
+      "url": "https://developers.cloudflare.com/fundamentals/api/get-started/token-formats/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7df6eed0",
+      "title": "Roll Token",
+      "url": "https://developers.cloudflare.com/api/resources/user/subresources/tokens/subresources/value/methods/update/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8d72ca7d",
+      "title": "Account API tokens",
+      "url": "https://developers.cloudflare.com/fundamentals/api/get-started/account-owned-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e12445b0",
+      "title": "Verify Token (account)",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/tokens/methods/verify/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9870043",
+      "title": "Audit Logs - version 2",
+      "url": "https://developers.cloudflare.com/fundamentals/account/account-security/audit-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f816803c",
+      "title": "Create API token",
+      "url": "https://developers.cloudflare.com/fundamentals/api/get-started/create-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

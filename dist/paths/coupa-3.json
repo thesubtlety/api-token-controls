@@ -1,0 +1,258 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "coupa",
+      "name": "Coupa",
+      "scope_notes": "Covers Coupa (Core platform REST API). Covers customer-created integrations to the Coupa Core platform; Treasury, CSO and Supply Chain products have separate APIs and are out of scope.",
+      "controls": [
+        {
+          "name": "Revoke API Key",
+          "effect": "revoke",
+          "applies_to": [
+            "coupa-3"
+          ],
+          "what": "Revokes the access and API permissions granted by the key.",
+          "setting": "Setup > Integrations > API Keys > edit key",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-5c8d8450",
+            "fc-0d5c298b"
+          ]
+        },
+        {
+          "name": "API key expiration date",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "coupa-3"
+          ],
+          "what": "Optional date after which the key stops working (midnight UTC).",
+          "setting": "Setup > Integrations > API Keys",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-5c8d8450"
+          ]
+        },
+        {
+          "name": "API key Enable Permissions",
+          "effect": "limit_scope",
+          "applies_to": [
+            "coupa-3"
+          ],
+          "what": "Restricts the key to selected APIs; unchecked allows all Coupa APIs.",
+          "setting": "Setup > Integrations > API Keys",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-5c8d8450"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether deactivating a client invalidates already-issued 24h JWT access tokens.",
+        "Whether client secrets can be rotated without recreating the client, and whether they expire.",
+        "Admin audit log events for OAuth client creation, edits, secret views or deactivation.",
+        "Whether customers can view the API telemetry data (docs describe 'internal reporting').",
+        "Whether Coupa SAML SSO settings affect OAuth token use or API key use.",
+        "Whether any legacy API keys still authenticate on current releases."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "coupa-3",
+      "provider_id": "coupa",
+      "name": "API Key (legacy, X-COUPA-API-KEY)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A 40-character key sent in the X-COUPA-API-KEY header. Tied to an API user equivalent to an admin. Deprecated; unsupported from R35.",
+        "evidence_refs": [
+          "fc-f94514e9",
+          "fc-0d5c298b",
+          "fc-48f488d9"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Static header key; docs do not address SSO.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No IP control documented for API keys.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Never expires unless an expiry date is set",
+        "evidence_refs": [
+          "fc-5c8d8450"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "optional admin-set date",
+        "summary": "Same key reused; can be regenerated.",
+        "evidence_refs": [
+          "fc-5c8d8450"
+        ]
+      },
+      "administration": {
+        "summary": "Setup > Integrations > API Keys: optional expiry, optional per-API permissions, revoke, regenerate.",
+        "conditions": "New keys no longer issued; existing keys should be revoked.",
+        "evidence_refs": [
+          "fc-0d5c298b",
+          "fc-5c8d8450"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The key belongs to a dedicated API user, not a person's account.",
+          "evidence_refs": [
+            "fc-f94514e9"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Keys are managed and revoked under Setup > API Keys.",
+          "evidence_refs": [
+            "fc-0d5c298b"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "40-character case-sensitive alphanumeric key in X-COUPA-API-KEY header."
+        },
+        "log_sources": [
+          {
+            "name": "Object Integration History",
+            "notes": "Key contact first/last name appears on the object's integration history when the key is used."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "contact first name / last name",
+            "log": "Integration History",
+            "notes": "Set when the key is created."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "API key contact name",
+          "API user"
+        ],
+        "anomaly_cues": [
+          "Any remaining active API key after OAuth migration",
+          "Keys with no expiry and no permissions set"
+        ],
+        "containment": {
+          "steps": "Edit the key under Setup > Integrations > API Keys and use Revoke API Key.",
+          "kills_existing": "yes",
+          "notes": "Static key; revocation removes its API access."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit events for key revoke/regenerate"
+        ],
+        "evidence_refs": [
+          "fc-5c8d8450",
+          "fc-f94514e9"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /api/users (X-COUPA-API-KEY)",
+            "reveals": "User records; key acts as admin-equivalent API user",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "25 req/s, burst 20",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Reads are not documented as logged; writes are attributed to the API user."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-eb306fb1",
+          "fc-f94514e9"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0d5c298b",
+      "title": "OAuth 2.0 and OIDC (Coupa Documentation)",
+      "url": "https://docs.coupa.com/en/developer-documentation/the-coupa-core-api/oauth-2.0-and-oidc",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-48f488d9",
+      "title": "Häufig gestellte Fragen zur Deprecation von API-Schlüsseln (German)",
+      "url": "https://compass.coupa.com/de-de/products/product-documentation/integration-technical-documentation/the-coupa-core-api/oauth-2.0-and-oidc/api-key-deprecation-faq",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5c8d8450",
+      "title": "Sécurité de clé API (Coupa Compass, French, modified 14 January 2022)",
+      "url": "https://compass.coupa.com/fr-fr/products/product-documentation/integration-docs/the-coupa-core-api/get-started-with-the-api/api-key-security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eb306fb1",
+      "title": "Get Started with the API",
+      "url": "https://docs.coupa.com/en/developer-documentation/the-coupa-core-api/get-started-with-the-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f94514e9",
+      "title": "Coupa REST API Integration (Revised 21 February 2020)",
+      "url": "https://compass.coupa.com/en-us/products/total-spend-management-platform/integration-playbooks-and-resources/other-integration-playbooks/erp-integration-adapters/build-your-integration/integration-methods/coupa-rest-api-integration",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

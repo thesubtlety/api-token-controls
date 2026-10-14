@@ -1,0 +1,787 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "salesforce",
+      "name": "Salesforce (core platform)",
+      "scope_notes": "API availability depends on edition. Creation of Connected Apps is restricted from Spring ’26; assess External Client Apps for new integrations.",
+      "controls": [
+        {
+          "name": "Permitted Users: Admin approved users are pre-authorized",
+          "effect": "require_approval",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Only users whose profile or permission set is assigned to the connected app can use it; others are refused.",
+          "setting": "Setup > Connected Apps > Manage > Edit Policies > Permitted Users; Metadata ConnectedAppOauthPolicy isAdminApproved (ECA: permittedUsersPolicyType=AdminApprovedPreAuthorized)",
+          "plan": "Not available in Group Edition",
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "If set to true , only users with the appropriate profile or permission set can access the app. These users don’t have to approve the app before they can access it."
+        },
+        {
+          "name": "API Access Control (Allow only admin-approved apps)",
+          "effect": "disable",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Org-wide: only connected apps installed or approved by an admin can call the Salesforce API; a separate switch covers customer/partner users.",
+          "setting": "Metadata ConnectedAppSettings enableAdminApprovedAppsOnly / enableAdminApprovedAppsOnlyForExternalUser; Setup > Connected Apps OAuth Usage (install/unblock)",
+          "plan": "Must be enabled by Salesforce Customer Support",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7432d011"
+          ],
+          "quote": "If true , only apps that have been approved or installed by the admin can call the Salesforce API. To access this field, you must contact Salesforce Customer Support to enable API Access Control."
+        },
+        {
+          "name": "IP Relaxation",
+          "effect": "limit_network",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Enforce (default) applies org and profile IP restrictions to the app; Bypass options relax them, and Enforce_RelaxRefresh skips them for refresh-token exchanges.",
+          "setting": "Connected app / external client app OAuth policies > IP Relaxation; Metadata ipRelaxation (ECA ipRelaxationPolicyType)",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "ENFORCE (default)—Enforces the IP restrictions configured for the org, such as the IP ranges assigned to a user profile."
+        },
+        {
+          "name": "Profile Login IP Ranges",
+          "effect": "limit_network",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Restricts the IP ranges from which users of a profile, including API integration users, can log in.",
+          "setting": "Setup > Profiles > [profile] > Login IP Ranges; Metadata Profile.loginIpRanges",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f9aef927"
+          ],
+          "quote": "The list of IP address ranges from which users with a particular profile can log in."
+        },
+        {
+          "name": "Enforce login IP ranges on every request",
+          "effect": "limit_network",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Checks profile Login IP Ranges on every request, including from client apps, not only at login.",
+          "setting": "Setup > Session Settings; Metadata SecuritySettings/SessionSettings enforceIpRangesEveryRequest",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4f3984ca"
+          ],
+          "quote": "If true , the IP addresses in Login IP Ranges are enforced when a user accesses Salesforce (on every page request), including access from a client app."
+        },
+        {
+          "name": "Lock sessions to the IP address from which they originated",
+          "effect": "limit_network",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Binds a session to the IP it was created from.",
+          "setting": "Setup > Session Settings; Metadata SessionSettings lockSessionsToIp",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4f3984ca"
+          ],
+          "quote": "Indicates whether user sessions are locked to the IP address from which the user logged in ( true ) or not ( false )."
+        },
+        {
+          "name": "Connected app session timeout",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "Sets how long an access token session from the app lasts; falls back to profile then org session timeout.",
+          "setting": "Connected app policies > Session Policies > Timeout Value; Metadata ConnectedAppSessionPolicy sessionTimeout",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "If you don’t set a value, Salesforce uses the timeout value in the connected app user’s profile."
+        },
+        {
+          "name": "High assurance session required (Block / Raise session level)",
+          "effect": "other",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3"
+          ],
+          "what": "Requires MFA-level sessions for the app; flows without a user approval step, such as JWT bearer, are blocked.",
+          "setting": "Connected app policies > Session Policies > High assurance session required; Metadata sessionLevel/policyAction",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "For flows without a user approval step, API logins with the High Assurance session security level are blocked."
+        },
+        {
+          "name": "Connected app creation restricted (Spring '26)",
+          "effect": "disable",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-3",
+            "salesforce-4"
+          ],
+          "what": "New connected apps cannot be created without contacting Support; existing apps keep working and external client apps are recommended.",
+          "setting": "Platform default; contact Salesforce Support to re-enable",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d2265723"
+          ],
+          "quote": "Connected apps creation is restricted as of Spring ‘26. You can use existing connected apps during and after Spring ‘26."
+        },
+        {
+          "name": "External client app JWT access token timeout",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2",
+            "salesforce-4"
+          ],
+          "what": "For ECAs issuing JWT-based access tokens, sets a custom expiry (1 minute to 12 hours) instead of the session timeout.",
+          "setting": "ECA OAuth policies; Metadata ExtlClntAppOauthConfigurablePolicies namedUserJwtSessionTimeoutType/namedUserJwtTimeout",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-f709bafd"
+          ],
+          "quote": "the amount of time before a JWT-based access token issued to a named user expires. Values are in minutes."
+        },
+        {
+          "name": "Block (Connected Apps OAuth Usage)",
+          "effect": "disable",
+          "applies_to": [
+            "salesforce-1",
+            "salesforce-2"
+          ],
+          "what": "Blocking a connected app ends all current sessions for it and prevents new ones until unblocked.",
+          "setting": "Setup > Connected Apps OAuth Usage > Block",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-4550d91a"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "help.salesforce.com articles (connected app OAuth policies, JWT/SAML bearer flow pre-authorization, Use Any API Client, uninstalled connected app restrictions, OAuth token revocation) could not be fetched; controls are sourced from the Winter '27 Metadata API reference only.",
+        "Whether JWT bearer and SAML bearer flows always enforce IP restrictions regardless of IP Relaxation (stated in older packaging guides; not verified in current docs).",
+        "Behavior and timeline of the 'Use Any API Client' permission, which bypasses admin pre-approval; vendor deprecation page not fetched.",
+        "Whether a per-flow switch exists to disable JWT bearer or SAML bearer flows org-wide; none found in OauthOidcSettings.",
+        "Default of isSecretRequiredForTokenExchange and enableClientSecretInRestApiAccess."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "salesforce-2",
+      "provider_id": "salesforce",
+      "name": "JWT bearer",
+      "family": "jwt",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth bearer: authorization code, client credentials, JWT bearer and SAML bearer/assertion flows. External Client Apps or existing Connected Apps.",
+        "evidence_refs": [
+          "turn24search6",
+          "turn24search0",
+          "turn24search12"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "SAML assertions can obtain API access. App-signed JWT bearer is also supported but requires a private key and is not itself keyless workload federation.",
+        "evidence_refs": [
+          "turn24search6",
+          "turn24search0",
+          "turn24search12",
+          "fc-187f7c08"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "mixed",
+        "boundary": "Profile login ranges and app IP policies; continuous per-request IP enforcement is separately configured. JWT/SAML bearer flows enforce IP restrictions.",
+        "evidence_refs": [
+          "turn1search2",
+          "turn1search6"
+        ]
+      },
+      "lifetime": {
+        "basis": "inactivity",
+        "default_seconds": 7200,
+        "maximum_seconds": 86400,
+        "configurable": "yes",
+        "summary": "Session timeout (inactivity); default 2 h; set per app, profile or org",
+        "evidence_refs": [
+          "turn24search6",
+          "turn24search0",
+          "turn24search12",
+          "fc-58a5df56",
+          "fc-a0f2a8b4",
+          "turn1search2"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "absolute",
+        "summary": "No refresh token; the app signs a new JWT with its private key and requests a new token. Continued access depends on the registered certificate and the app's pre-authorization.",
+        "evidence_refs": [
+          "turn24search6",
+          "turn24search0",
+          "turn24search12",
+          "fc-187f7c08"
+        ]
+      },
+      "administration": {
+        "summary": "Pre-authorize users, restrict OAuth scopes, apply permission sets/profiles, configure session/refresh policies, revoke grants and disable flows.",
+        "conditions": "API availability depends on edition. Creation of Connected Apps is restricted from Spring ’26; assess External Client Apps for new integrations.",
+        "evidence_refs": [
+          "turn1search2",
+          "turn1search6"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "JWT bearer flow has no UI login, so MFA/SSO login enforcement does not apply.",
+          "evidence_refs": [
+            "fc-90c22654"
+          ]
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Deactivating the subject user stops opaque tokens immediately; JWT-based access tokens stay valid until timeout.",
+          "evidence_refs": [
+            "fc-9a2a3683"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Connected Apps OAuth Usage and the Connect REST API usage resources list app connections and tokens; docs do not confirm JWT bearer grants appear there.",
+          "evidence_refs": [
+            "fc-4550d91a",
+            "fc-c60e725e"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Setup > Quick Find 'OAuth' > Connected Apps OAuth Usage (click user count for per-user tokens)",
+          "api": "GET /apps/oauth/usage/{appId}/users (Connect REST resource; external client apps)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-4256de7a",
+            "fc-0a1b3de8",
+            "fc-e84cef78",
+            "fc-10973e89"
+          ]
+        },
+        "usage": {
+          "ui": "Setup > Quick Find 'Login History' > Login History (filter/download; Application column)",
+          "api": "SOQL: SELECT ... FROM LoginHistory WHERE Application = '<app>' (LoginSubType for flow); ApiEvent WHERE ConnectedAppId = '<id>' (Shield/Event Monitoring); OauthToken.UseCount",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ceadd812",
+            "fc-4b9059be",
+            "fc-750b32b7",
+            "fc-759709ef"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "SOQL: SELECT Query, QueriedEntities, RowsProcessed FROM ApiEvent WHERE ConnectedAppId = '<id>' (needs Shield or Event Monitoring + View Real-Time Event Monitoring Data)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-750b32b7"
+          ]
+        },
+        "offboard": {
+          "ui": "Setup > Quick Find 'Users' > Users > Edit > deselect Active > Save",
+          "api": "SCIM: PATCH /services/scim/v2/Users/{userId} (replace active=false)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-324d6e2b",
+            "fc-8d31d836"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Client signs a JWT with its private key; access token returned is a Salesforce bearer token. No refresh token is issued."
+        },
+        "log_sources": [
+          {
+            "name": "LoginHistory",
+            "notes": "Every OAuth token grant shows as a login with LoginType/LoginSubType, SourceIp, Application. 6 months; no add-on needed."
+          },
+          {
+            "name": "LoginEvent / ApiEvent (Real-Time Event Monitoring)",
+            "notes": "Needs Shield or Event Monitoring add-on. LoginKey ties a session's events; ApiEvent has ConnectedAppId."
+          },
+          {
+            "name": "OauthToken object",
+            "notes": "Current tokens per user+app with UseCount and LastUsedDate."
+          },
+          {
+            "name": "SetupAuditTrail",
+            "notes": "Connected app / external client app config changes; at least 180 days."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Application",
+            "log": "LoginHistory / LoginEvent",
+            "notes": "Connected app name used to log in"
+          },
+          {
+            "field": "LoginSubType",
+            "log": "LoginHistory / LoginEvent",
+            "notes": "OAuth flow (e.g. OauthWebServer, OauthClientCredentials, OauthRefreshToken)"
+          },
+          {
+            "field": "ConnectedAppId",
+            "log": "ApiEvent",
+            "notes": "External client app ID; null if session already active"
+          },
+          {
+            "field": "LoginKey",
+            "log": "LoginEvent / ApiEvent",
+            "notes": "Ties all events in one session"
+          },
+          {
+            "field": "AppName",
+            "log": "OauthToken",
+            "notes": "App holding the token"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "UserId",
+          "Username",
+          "SourceIp",
+          "Application",
+          "LoginKey",
+          "SessionKey",
+          "LoginHistoryId",
+          "ConnectedAppId",
+          "UserAgent",
+          "CountryIso"
+        ],
+        "anomaly_cues": [
+          "JWT bearer logins (Application = the integration app) from a SourceIp outside the integration's hosts",
+          "Integration user's access spreading to objects it never queried (ApiEvent QueriedEntities)",
+          "Certificate on the connected app changed in SetupAuditTrail before new logins",
+          "JWT logins for a sub (user) other than the expected integration user"
+        ],
+        "containment": {
+          "steps": "Remove or replace the certificate on the connected app; remove pre-authorized profiles/permission sets; revoke current access tokens via /services/oauth2/revoke; delete AuthSession rows; freeze the integration user.",
+          "kills_existing": "partial",
+          "notes": "No refresh token exists, so attacker re-mints with the private key until the cert or pre-authorization is removed. Issued access tokens need explicit revoke or session deletion."
+        },
+        "sample_query": {
+          "language": "SOQL",
+          "query": "SELECT UserId, LoginTime, SourceIp, Application, LoginSubType, Status FROM LoginHistory WHERE LoginTime = LAST_N_DAYS:30 AND UserId = '005000000000002AAA' ORDER BY LoginTime DESC",
+          "purpose": "Review JWT integration user's logins by IP and app"
+        },
+        "unknown": [
+          "LoginSubType value for JWT bearer (none listed in Object Reference)",
+          "Event marking JWT signature failure",
+          "Setup Audit Trail Action names for certificate changes"
+        ],
+        "evidence_refs": [
+          "fc-010a773f",
+          "fc-3fc0d26a",
+          "fc-4a3b4c01",
+          "fc-dcaa218f"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST /services/oauth2/token (grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer, signed JWT)",
+            "reveals": "Mints a Salesforce access token for the JWT subject user without interactive login; confirms foothold",
+            "bulk": false,
+            "scope": "connected-app pre-authorized scopes; JWT bearer flow",
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "LoginHistory / LoginEvent",
+            "log_notes": "Each token issuance is a login recorded in LoginHistory; LoginSubType distinguishes OAuth flows. (Login event type in EventLogFile is available free on EE/UE/PE.)"
+          },
+          {
+            "stage": "recon",
+            "call": "GET /services/oauth2/userinfo",
+            "reveals": "user_id, organization_id, username of the JWT subject; which identity the service token holds",
+            "bulk": false,
+            "scope": "openid; current user only",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not established that userinfo reads are logged"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /services/data/vXX.X/sobjects/ (Describe Global)",
+            "reveals": "Objects visible to the service user and query batch size; schema reconnaissance",
+            "bulk": false,
+            "scope": "api",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Metadata read; not confirmed logged"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /services/data/vXX.X/query/?q={SOQL}",
+            "reveals": "Bulk record data via SOQL for the service user's permissions",
+            "bulk": true,
+            "scope": "api + object/field read",
+            "rate_limit": "org daily API allocation; 2,000 records/page",
+            "logged": "plan",
+            "log_event": "ApiEvent (QueriedEntities, Query)",
+            "log_notes": "Read logged only with Shield/Event Monitoring add-on + View Real-Time Event Monitoring Data; EventLogFile API event type needs paid Event Monitoring for 30-day retention"
+          }
+        ],
+        "unknown": [
+          "Exact LoginSubType string for JWT bearer in current API version (SAML/Token Exchange confirmed; JWT Bearer not confirmed in fetched source)",
+          "Whether read queries leave an audit trail without Event Monitoring"
+        ],
+        "evidence_refs": [
+          "fc-25845f35",
+          "fc-4b9059be",
+          "fc-47c4b843",
+          "fc-e83afbe3",
+          "fc-750b32b7",
+          "fc-0b943c0b"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Salesforce Third-Party Integration Monitoring",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/salesforce_rules/salesforce_third_party_integration.yml",
+          "detects": "Connected app usage events (OAuth apps accessing Salesforce), with higher severity for refresh-token connections."
+        },
+        {
+          "source": "Panther",
+          "title": "Salesforce API Anomaly Detection (RET Passthrough)",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/salesforce_rules/salesforce_api_anomaly_passthrough.yml",
+          "detects": "Salesforce Real-Time Event Monitoring API anomaly events, which flag unusual API use by a session or token."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-010a773f",
+      "title": "OAuth 2.0 JWT Bearer Flow",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_jwt_flow.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0a1b3de8",
+      "title": "Manage External Client App OAuth Usage",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.manage_external_client_app_usage.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0b943c0b",
+      "title": "Access and Use Your Event Log Files (Trailhead)",
+      "url": "https://trailhead.salesforce.com/content/learn/modules/event-log-files-quick-look/access-and-use-your-event-log-files",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-10973e89",
+      "title": "OAuth Usage (Connect REST API)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/connect_resources_usage.htm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-187f7c08",
+      "title": "OAuth 2.0 JWT Bearer Flow for Server-to-Server Integration",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_jwt_flow.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-25845f35",
+      "title": "OAuth 2.0 JWT Bearer Flow for Server-to-Server Integration",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_jwt_flow.htm&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-324d6e2b",
+      "title": "Deactivate Users",
+      "url": "https://help.salesforce.com/s/articleView?id=platform.how_to_deactivate_users.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3fc0d26a",
+      "title": "Object Reference: LoginHistory",
+      "url": "https://resources.docs.salesforce.com/latest/latest/en-us/sfdc/pdf/object_reference.pdf",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4256de7a",
+      "title": "Manage Current OAuth Connected App Sessions",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.connected_app_manage_current_sessions.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4550d91a",
+      "title": "Manage Current OAuth Connected App Sessions",
+      "url": "https://help.salesforce.com/s/articleView?id=connected_app_manage_current_sessions.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-47c4b843",
+      "title": "Describe Global | REST API Developer Guide",
+      "url": "https://developer.salesforce.com/docs/platform/api-rest/guide/resources-describeglobal.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4a3b4c01",
+      "title": "Platform Events: LoginEvent",
+      "url": "https://resources.docs.salesforce.com/latest/latest/en-us/sfdc/pdf/platform_events.pdf",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4b9059be",
+      "title": "LoginHistory | Object Reference",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.object_reference.meta/object_reference/sforce_api_objects_loginhistory.htm",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4f3984ca",
+      "title": "SecuritySettings | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_securitysettings.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-58a5df56",
+      "title": "Modify Session Security Settings | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.admin_sessions.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7432d011",
+      "title": "ConnectedAppSettings | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_connectedappsettings.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-750b32b7",
+      "title": "ApiEvent | Platform Events",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.platform_events.meta/platform_events/sforce_api_objects_apievent.htm",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-759709ef",
+      "title": "OauthToken (Object Reference)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.object_reference.meta/object_reference/sforce_api_objects_oauthtoken.htm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8d31d836",
+      "title": "Examples: Deactivate and Reactivate Users with SCIM",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.identity_scim_deactivate_reactivate_user.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-90c22654",
+      "title": "Prepare for MFA Enforcement for All Employee Users",
+      "url": "https://help.salesforce.com/s/articleView?id=005321561&language=en_US&type=1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9a2a3683",
+      "title": "Access Tokens",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_access_tokens.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a0f2a8b4",
+      "title": "Session Security | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.security_overview_sessions.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c60e725e",
+      "title": "External Client App OAuth Usage",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.meta_external_client_app_oauth_usage.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ceadd812",
+      "title": "Monitor Login History",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.users_login_history.htm&type=5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d2265723",
+      "title": "ConnectedApp | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_connectedapp.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dcaa218f",
+      "title": "Revoke OAuth Tokens",
+      "url": "https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_revoke_token.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e83afbe3",
+      "title": "Query resource | REST API Developer Guide",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api/resources_query.htm",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e84cef78",
+      "title": "OAuth Users by App ID (Connect REST API)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.chatterapi.meta/chatterapi/connect_resources_usage_app_id_users.htm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f709bafd",
+      "title": "ExtlClntAppOauthConfigurablePolicies | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_extlclntappoauthconfigurablepolicies.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f9aef927",
+      "title": "Profile | Metadata API Developer Guide (Winter '27)",
+      "url": "https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_profile.htm",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn1search2",
+      "title": "Manage OAuth Access Policies for a Connected App | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.connected_app_manage_oauth.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn1search6",
+      "title": "Connected App IP Relaxation and Continuous IP Enforcement | Salesforce Help",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.connected_app_continuous_ip.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn24search0",
+      "title": "OAuth 2.0 SAML Bearer Assertion Flow for Previously Authorized Apps ...",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_SAML_bearer_flow.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn24search12",
+      "title": "SAML Assertion Flow for Accessing the API",
+      "url": "https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_web_sso_flow.htm&language=en_US&type=5",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn24search6",
+      "title": "Authorization Through External Client Apps or Connected Apps and OAuth ...",
+      "url": "https://developer.salesforce.com/docs/platform/api-rest/guide/intro-oauth-and-connected-apps.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

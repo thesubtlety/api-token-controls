@@ -1,0 +1,272 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "scope_notes": "Covers Hugging Face Hub (Team / Enterprise / Enterprise Plus). Hosted Hub; token management needs Team or Enterprise, org revoke and service accounts need Enterprise, IP ranges need Enterprise Plus. Inference Endpoints use the same user access tokens.",
+      "controls": [
+        {
+          "name": "Token Exchange token duration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "huggingface-5"
+          ],
+          "what": "Admins set issued token duration (8 h default, max 30 days) and can refresh the client secret.",
+          "setting": "OAuth app settings",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-6bd457a1"
+          ]
+        },
+        {
+          "name": "Token Exchange OAuth app set up by Hugging Face support",
+          "effect": "other",
+          "applies_to": [
+            "huggingface-5"
+          ],
+          "what": "Token Exchange only works through an org-bound OAuth app with the token-exchange privilege, which Hugging Face support sets up on request.",
+          "setting": "Contact Hugging Face support",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6bd457a1"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Admin-enforced expiry for user access tokens or service account tokens (no setting found; PATs are valid until revoked).",
+        "Whether access tokens require or bypass an SSO session under Basic or Managed SSO.",
+        "Org-level allowlist or block for third-party OAuth apps.",
+        "Org-level control over who can configure Trusted Publishers on org repos.",
+        "Exact audit event name for OAuth Token Exchange issuance (docs say exchanges are logged).",
+        "Whether IP ranges apply to OAuth, Token Exchange and Trusted Publisher tokens."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "huggingface-5",
+      "provider_id": "huggingface",
+      "name": "OAuth Token Exchange (org-bound app, RFC 8693)",
+      "family": "oauth",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Backend uses an org-bound OAuth app's client credentials to mint hf_oauth_ tokens for any member by email, without the member's consent.",
+        "evidence_refs": [
+          "fc-6bd457a1"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "Bridges an internal directory by email; not OIDC federation.",
+        "evidence_refs": [
+          "fc-6bd457a1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not addressed in docs.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 28800,
+        "maximum_seconds": 2592000,
+        "configurable": "yes",
+        "summary": "8 h default, up to 30 days; no refresh",
+        "evidence_refs": [
+          "fc-6bd457a1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "expires_in",
+        "summary": "Re-run the exchange.",
+        "evidence_refs": [
+          "fc-6bd457a1"
+        ]
+      },
+      "administration": {
+        "summary": "App set up through HF support; org admins can refresh the client secret and set token duration. Tokens are limited to org resources.",
+        "conditions": "Enterprise plan.",
+        "evidence_refs": [
+          "fc-6bd457a1"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Issuance checks current org membership, so a removed user gets no new tokens; already-issued tokens are not addressed (they expire after 8 h by default).",
+          "evidence_refs": [
+            "fc-6bd457a1"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "No token list; all token exchanges appear in the org audit logs.",
+          "evidence_refs": [
+            "fc-6bd457a1"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Organization settings > Audit Logs (token exchanges are logged); download as JSON",
+          "api": "GET https://huggingface.co/api/organizations/{org}/audit-log/export",
+          "cli": null,
+          "evidence_refs": [
+            "fc-6bd457a1",
+            "fc-e1e6add6"
+          ]
+        },
+        "offboard": {
+          "ui": "Organization settings > Members > revoke membership (or SCIM deprovision). Issued tokens are not revoked; they expire per the OAuth app's duration (8 h default)",
+          "api": "SCIM: set user active=false or delete the user via SCIM",
+          "cli": null,
+          "evidence_refs": [
+            "fc-f5309a6f",
+            "fc-15476517",
+            "fc-6bd457a1"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "hf_oauth_",
+          "notes": ""
+        },
+        "log_sources": [
+          {
+            "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+            "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [
+          {
+            "event": "token exchange (name not documented)",
+            "stage": "create",
+            "notes": "Docs say all exchanges are logged in org audit logs"
+          }
+        ],
+        "correlation_keys": [
+          "token id (24-char, org token settings)",
+          "username",
+          "anonymized IP/location"
+        ],
+        "anomaly_cues": [
+          "Token exchanges for members who are not using the integration"
+        ],
+        "containment": {
+          "steps": "Refresh the OAuth app client secret; issued tokens expire per configured duration.",
+          "kills_existing": "unknown",
+          "notes": "Effect of secret refresh on issued tokens not stated."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Event name for exchanges"
+        ],
+        "evidence_refs": [
+          "fc-6bd457a1"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/whoami-v2",
+            "reveals": "User, orgs and auth method of the token",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Not among the documented audit event types"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+            "reveals": "File contents (models, datasets)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Org audit log has no download events"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-e1e6add6",
+          "fc-6bd457a1",
+          "fc-5fdecf58"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-15476517",
+      "title": "User Provisioning (SCIM)",
+      "url": "https://huggingface.co/docs/hub/enterprise-scim",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5fdecf58",
+      "title": "Hub OpenAPI",
+      "url": "https://huggingface.co/.well-known/openapi.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6bd457a1",
+      "title": "Sign in with Hugging Face",
+      "url": "https://huggingface.co/docs/hub/oauth",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e1e6add6",
+      "title": "Audit Logs",
+      "url": "https://huggingface.co/docs/hub/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f5309a6f",
+      "title": "Managing organizations",
+      "url": "https://huggingface.co/docs/hub/organizations-managing",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

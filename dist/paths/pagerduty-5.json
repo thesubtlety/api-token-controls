@@ -1,0 +1,294 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "pagerduty",
+      "name": "PagerDuty",
+      "scope_notes": "SaaS; REST API on current plans, user token keys need Advanced Permissions, Audit Trail on Business/Enterprise for Incident Management/Digital Operations (legacy); SCIM uses general access keys or app OAuth tokens.",
+      "controls": [
+        {
+          "name": "Generate a new integration key",
+          "effect": "require_rotation",
+          "applies_to": [
+            "pagerduty-5"
+          ],
+          "what": "Overwrites the integration key immediately.",
+          "setting": "Services > Service Directory > service > Integrations > Edit Integration > Generate a new integration key",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-74172493"
+          ]
+        },
+        {
+          "name": "Delete Integration",
+          "effect": "revoke",
+          "applies_to": [
+            "pagerduty-5"
+          ],
+          "what": "Deletes the integration and its key; cannot be recovered.",
+          "setting": "Services > service > Integrations > Delete Integration",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-74172493"
+          ]
+        },
+        {
+          "name": "Manager role required for integration keys",
+          "effect": "other",
+          "applies_to": [
+            "pagerduty-5"
+          ],
+          "what": "Only users with a Manager role or above can generate Events API integration keys.",
+          "setting": "User base role",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "pagerduty-5",
+          "what": "No IP restriction on Events API traffic.",
+          "kind": "network",
+          "evidence_refs": [
+            "fc-67bc3044"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether general access or user token keys can be given an expiry, or ever expire.",
+        "Whether SSO enforcement or deprovisioning in the IdP affects existing API keys (only \"user leaves the account\" disables user keys).",
+        "Any admin setting to block users from creating user token keys or to block Classic User OAuth app authorization.",
+        "Whether API key create/disable/delete events appear in the Audit Trail (the tracked resource list does not include API keys).",
+        "Whether disabling/deleting a key or Revoke All User Tokens ends in-flight access immediately (Revoke All runs in the background).",
+        "Whether private app (client credentials) tokens can be revoked by admins other than the app owner; client secret expiry/rotation.",
+        "Whether read (GET) API calls are logged anywhere customer-visible.",
+        "Whether integration key creation/rotation appears in audit records (support page says integration add/remove is not captured; Audit API lists Integrations as an associated resource of Services)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "pagerduty-5",
+      "provider_id": "pagerduty",
+      "name": "Events API integration key (routing key)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "32-character key on a service (or Event Orchestration) integration, sent in the event body as routing_key to https://events.pagerduty.com/v2/enqueue. Can only send events (create/ack/resolve alerts, change events), not read data.",
+        "evidence_refs": [
+          "fc-d45e559a",
+          "fc-3e9c6e89"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static key in payload.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "excluded",
+        "enforcement_stage": "login_only",
+        "boundary": "IP allow list does not affect Events API traffic.",
+        "evidence_refs": [
+          "fc-67bc3044"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "No documented expiry.",
+        "summary": "'Generate a new integration key' overwrites the key immediately.",
+        "evidence_refs": [
+          "fc-74172493"
+        ]
+      },
+      "administration": {
+        "summary": "Manager role or above can create integrations and keys; rotate or delete on the service Integrations tab.",
+        "conditions": "Events API available on all accounts.",
+        "evidence_refs": [
+          "fc-d45e559a",
+          "fc-74172493"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Integration keys belong to a service integration, not a user.",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Keys are shown per service on the service's Integrations tab; no account-wide key list found.",
+          "evidence_refs": [
+            "fc-d45e559a"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Services > Service Directory > service > Integrations tab > expand integration > Integration Key (per service)",
+          "api": "GET /services?include[]=integrations (per-service integrations); GET /event_orchestrations/{id}/integrations (orchestration routing keys)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-74172493",
+            "fc-d45e559a",
+            "fc-079a8df5"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "32-character string; ruleset keys begin with R."
+        },
+        "log_sources": [
+          {
+            "name": "Incident/alert log entries (GET /log_entries)",
+            "notes": "Events produce alerts/incidents; no per-key audit documented. Audit Trail does not capture integration add/remove."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "method.type",
+          "method.truncated_token",
+          "actors[].type/id",
+          "execution_context.request_id",
+          "execution_context.remote_address"
+        ],
+        "anomaly_cues": [
+          "Unexpected incidents/alerts or change events on a service",
+          "Spikes near 120 events/min per key"
+        ],
+        "containment": {
+          "steps": "Services > service > Integrations > Edit Integration > Generate a new integration key, or Delete Integration.",
+          "kills_existing": "yes",
+          "notes": "Rotation overwrites the key immediately; old key presumably rejected (not stated)."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Any log of Events API sends by key beyond the resulting alerts/incidents",
+          "Audit coverage of key rotation"
+        ],
+        "evidence_refs": [
+          "fc-62771079",
+          "fc-74172493",
+          "fc-d45e559a",
+          "fc-53ac0b95"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST https://events.pagerduty.com/v2/enqueue",
+            "reveals": "Key validity (202 vs error); cannot read data",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "~120 calls/min per integration key",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Creates alerts/incidents visible in the service."
+          }
+        ],
+        "unknown": [
+          "No read endpoints for integration keys."
+        ],
+        "evidence_refs": [
+          "fc-3e9c6e89",
+          "fc-53ac0b95"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-079a8df5",
+      "title": "PagerDuty REST API OpenAPI v3 spec - List users",
+      "url": "https://github.com/PagerDuty/api-schema/blob/main/reference/REST/openapiv3.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3e9c6e89",
+      "title": "Events API v2 OpenAPI spec",
+      "url": "https://docs.pagerduty.com/api-specs/events-v2.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-53ac0b95",
+      "title": "Events API Rate Limits",
+      "url": "https://docs.pagerduty.com/developer/events-api-rate-limits",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62771079",
+      "title": "Audit Trail Reporting",
+      "url": "https://support.pagerduty.com/main/docs/audit-trail-reporting",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-67bc3044",
+      "title": "IP Allow List for User Sessions",
+      "url": "https://support.pagerduty.com/main/docs/ip-allow-list-for-user-sessions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-74172493",
+      "title": "Services and Integrations",
+      "url": "https://support.pagerduty.com/main/docs/services-and-integrations",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d45e559a",
+      "title": "API Access Keys",
+      "url": "https://support.pagerduty.com/main/docs/api-access-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

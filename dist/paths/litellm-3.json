@@ -1,0 +1,491 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "litellm",
+      "name": "LiteLLM",
+      "scope_notes": "Covers LiteLLM Proxy (AI Gateway). Self-hosted open-source proxy (MIT) with an Enterprise license gating JWT auth, IP filtering, audit logs and key rotation; all controls are operator config on your own deployment.",
+      "controls": [
+        {
+          "name": "key/block",
+          "effect": "disable",
+          "applies_to": [
+            "litellm-2",
+            "litellm-3"
+          ],
+          "what": "Blocks a virtual key; /key/unblock re-enables it.",
+          "setting": "POST /key/block",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-c8c961a5"
+          ]
+        },
+        {
+          "name": "key/delete",
+          "effect": "revoke",
+          "applies_to": [
+            "litellm-2",
+            "litellm-3"
+          ],
+          "what": "Deletes a virtual key; deletion is recorded in audit logs and the Deleted Keys view.",
+          "setting": "POST /key/delete; Admin UI Keys page",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-34776e02",
+            "fc-f9271513"
+          ]
+        },
+        {
+          "name": "custom_key_policy",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "litellm-2",
+            "litellm-3"
+          ],
+          "what": "Custom Python hook that can deny any key create, update or regenerate (e.g. require expiry within 7 days).",
+          "setting": "general_settings.custom_key_policy",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-c8c961a5"
+          ]
+        },
+        {
+          "name": "allowed_routes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "litellm-2",
+            "litellm-3"
+          ],
+          "what": "Restricts which proxy routes a key can call, including admin-owned keys.",
+          "setting": "allowed_routes on /key/generate or /key/update",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-c8c961a5"
+          ]
+        },
+        {
+          "name": "allowed_ips",
+          "effect": "limit_network",
+          "applies_to": [
+            "litellm-1",
+            "litellm-2",
+            "litellm-3",
+            "litellm-4"
+          ],
+          "what": "Only listed client IPs can call proxy endpoints; others get 403.",
+          "setting": "general_settings.allowed_ips",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-3e5f4bbf"
+          ]
+        },
+        {
+          "name": "Key regenerate (rotation)",
+          "effect": "revoke",
+          "applies_to": [
+            "litellm-2",
+            "litellm-3"
+          ],
+          "what": "Issues a new secret; old secret is revoked immediately unless a grace_period is set.",
+          "setting": "POST /key/{key}/regenerate",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-c8c961a5"
+          ]
+        },
+        {
+          "name": "store_audit_logs",
+          "effect": "other",
+          "applies_to": [
+            "litellm-1",
+            "litellm-2",
+            "litellm-3"
+          ],
+          "what": "Records create/update/delete/regenerate of keys, teams, users, models.",
+          "setting": "litellm_settings.store_audit_logs",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-34776e02"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether /key/delete and /key/block take effect instantly or after an auth-cache TTL (only SCIM deprovisioning is documented as clearing the cache).",
+        "Master key expiry and SCIM token expiry, rotation and revocation steps.",
+        "Whether management GET calls (/key/info, /key/list, /spend/logs) are logged anywhere besides server logs.",
+        "Whether allowed_ips applies to /scim routes."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "litellm-3",
+      "provider_id": "litellm",
+      "name": "Service account keys",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Virtual keys created via /key/service-account/generate with team_id and no user_id; they persist when users are deleted and apply team limits.",
+        "evidence_refs": [
+          "fc-0ecc05f0"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static keys.",
+        "evidence_refs": [
+          "fc-0ecc05f0"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Proxy-wide allowed_ips only (Enterprise).",
+        "evidence_refs": [
+          "fc-3e5f4bbf"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Same key controls as virtual keys; custom_key_policy covers the service-account endpoint",
+        "evidence_refs": [
+          "fc-c8c961a5"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "duration / rotation_interval",
+        "summary": "Regenerate like other virtual keys.",
+        "evidence_refs": [
+          "fc-c8c961a5"
+        ]
+      },
+      "administration": {
+        "summary": "Not removed by user deletion or SCIM deprovisioning of a user, so must be revoked directly.",
+        "conditions": "Requires team_id.",
+        "evidence_refs": [
+          "fc-0ecc05f0"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Team keys have no user_id and are not deleted when users are removed.",
+          "evidence_refs": [
+            "fc-ee00c8b3"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Service account keys are virtual keys; listed on the Virtual Keys page / GET /key/list, visible to proxy_admin_viewer.",
+          "evidence_refs": [
+            "fc-ee00c8b3",
+            "fc-c8c961a5"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Admin UI > Logs (filter by key alias)",
+          "api": "GET /spend/logs/v2?start_date=...&end_date=...&api_key=<key> (or team_id=<team>)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-cd742826",
+            "fc-39f9c861"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "sk-",
+          "notes": "Master key must start with sk-; generated keys are returned as sk-... and stored hashed."
+        },
+        "log_sources": [
+          {
+            "name": "Audit Logs (LiteLLM_AuditLog)",
+            "notes": "Enterprise; on by default with license, else store_audit_logs: true. UI Logs -> Audit Logs; export via audit_log_callbacks (e.g. S3). Retention is your DB."
+          },
+          {
+            "name": "Spend logs (LiteLLM_SpendLogs)",
+            "notes": "Per-request rows with key hash; no prompt content by default; can be disabled; retention via maximum_spend_logs_retention_period."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "changed_by_api_key",
+            "log": "Audit log",
+            "notes": "Hashed key that performed the admin action"
+          },
+          {
+            "field": "user_api_key_hash",
+            "log": "Spend logs / logging payload",
+            "notes": "sha256 hash of virtual key"
+          },
+          {
+            "field": "object_id (table_name=LiteLLM_VerificationToken)",
+            "log": "Audit log",
+            "notes": "Key affected by the action"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "create (LiteLLM_VerificationToken)",
+            "stage": "create",
+            "notes": "Audit log action create"
+          },
+          {
+            "event": "update (LiteLLM_VerificationToken)",
+            "stage": "modify",
+            "notes": "Includes block/unblock via update"
+          },
+          {
+            "event": "delete (LiteLLM_VerificationToken)",
+            "stage": "revoke",
+            "notes": "Also shown in Deleted Keys view"
+          },
+          {
+            "event": "Regenerate",
+            "stage": "rotate",
+            "notes": "Listed as tracked action"
+          },
+          {
+            "event": "LiteLLM_SpendLogs row",
+            "stage": "use",
+            "notes": "LLM requests only"
+          }
+        ],
+        "correlation_keys": [
+          "user_api_key_hash",
+          "user_api_key_alias",
+          "user_api_key_user_id",
+          "user_api_key_team_id",
+          "x-litellm-call-id"
+        ],
+        "anomaly_cues": [
+          "Key created by an admin-owned key with no user_id",
+          "New keys with no duration (never expire)",
+          "Spend spikes per key hash",
+          "Requests from IPs outside normal ranges (if logged by your ingress)"
+        ],
+        "containment": {
+          "steps": "POST /key/block or /key/delete; for master key, change LITELLM_MASTER_KEY and restart all instances.",
+          "kills_existing": "partial",
+          "notes": "Same per-worker cache behaviour as virtual keys: without Redis, a revoked key works on other workers until user_api_key_cache_ttl (default 60 s) expires."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether management reads are audited"
+        ],
+        "evidence_refs": [
+          "fc-c8c961a5",
+          "fc-7d6648d7",
+          "fc-34776e02",
+          "fc-39f9c861",
+          "fc-8db90b49",
+          "fc-b1f46815",
+          "fc-f9271513",
+          "fc-a6830e3b",
+          "fc-eb11ef79",
+          "fc-2460c2d8"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /key/info?key=<key>",
+            "reveals": "Key spend, models, expiry, metadata",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not in audit log action list (create/update/delete/regenerate)"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /key/list",
+            "reveals": "Keys visible to caller",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Admin-owned keys can call management routes"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /spend/logs",
+            "reveals": "Request logs; prompts only if store_prompts_in_spend_logs",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /chat/completions",
+            "reveals": "Model access on proxy credit",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "Key/team rpm/tpm",
+            "logged": "yes",
+            "log_event": "LiteLLM_SpendLogs row",
+            "log_notes": "Unless disable_spend_logs"
+          }
+        ],
+        "unknown": [
+          "Whether management GETs are logged"
+        ],
+        "evidence_refs": [
+          "fc-c8c961a5",
+          "fc-ee00c8b3",
+          "fc-a6830e3b",
+          "fc-39f9c861"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0ecc05f0",
+      "title": "Service Accounts",
+      "url": "https://docs.litellm.ai/docs/proxy/service_accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2460c2d8",
+      "title": "Production Best Practices",
+      "url": "https://docs.litellm.ai/docs/proxy/prod",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-34776e02",
+      "title": "Audit Logs",
+      "url": "https://docs.litellm.ai/docs/proxy/multiple_admins",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-39f9c861",
+      "title": "Getting Started with UI Logs",
+      "url": "https://docs.litellm.ai/docs/proxy/ui_logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3e5f4bbf",
+      "title": "IP Address Filtering",
+      "url": "https://docs.litellm.ai/docs/proxy/ip_address",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7d6648d7",
+      "title": "Rotating the Master Key",
+      "url": "https://docs.litellm.ai/docs/proxy/master_key_rotations",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8db90b49",
+      "title": "StandardLoggingPayload spec",
+      "url": "https://docs.litellm.ai/docs/proxy/logging_spec",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a6830e3b",
+      "title": "What is stored in the DB",
+      "url": "https://docs.litellm.ai/docs/proxy/db_info",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b1f46815",
+      "title": "SCIM with LiteLLM",
+      "url": "https://docs.litellm.ai/docs/tutorials/scim_litellm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c8c961a5",
+      "title": "Virtual Keys",
+      "url": "https://docs.litellm.ai/docs/proxy/virtual_keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cd742826",
+      "title": "Spend Tracking",
+      "url": "https://docs.litellm.ai/docs/proxy/cost_tracking",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eb11ef79",
+      "title": "What Needs Redis",
+      "url": "https://docs.litellm.ai/docs/proxy/redis_requirements",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ee00c8b3",
+      "title": "Role-based Access Controls (RBAC)",
+      "url": "https://docs.litellm.ai/docs/proxy/access_control",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f9271513",
+      "title": "Deleted Keys & Teams Audit Logs",
+      "url": "https://docs.litellm.ai/docs/proxy/deleted_keys_teams",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

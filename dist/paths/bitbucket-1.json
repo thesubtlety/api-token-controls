@@ -1,0 +1,417 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "bitbucket",
+      "name": "Bitbucket Cloud",
+      "scope_notes": "Bitbucket Cloud SaaS; workspace/project access tokens and IP allowlisting need Premium, org-level audit log needs Atlassian Guard; API tokens are Atlassian-account tokens shared with Jira/Confluence.",
+      "controls": [
+        {
+          "name": "Revoke API token (user)",
+          "effect": "revoke",
+          "applies_to": [
+            "bitbucket-1"
+          ],
+          "what": "User revokes own token; it stops working immediately.",
+          "setting": "Atlassian account > Security > API tokens > Revoke",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "turn2search3"
+          ]
+        },
+        {
+          "name": "Revoke user API tokens (API token activity)",
+          "effect": "revoke",
+          "applies_to": [
+            "bitbucket-1"
+          ],
+          "what": "Org admin revokes one or many managed users' API tokens.",
+          "setting": "Atlassian Administration > Insights > API token activity > Revoke; or Delete API token API",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-e1dfb3f5"
+          ]
+        },
+        {
+          "name": "Access token scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "bitbucket-1",
+            "bitbucket-3"
+          ],
+          "what": "Scopes and resource container are fixed at creation.",
+          "setting": "Token creation dialog",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-4bf122a1",
+            "fc-02ac8d2f"
+          ]
+        },
+        {
+          "name": "Restrict access to certain IP addresses",
+          "effect": "limit_network",
+          "applies_to": [
+            "bitbucket-1",
+            "bitbucket-3",
+            "bitbucket-4",
+            "bitbucket-5"
+          ],
+          "what": "Only allowlisted IPs can view private content or clone/push/pull private repos.",
+          "setting": "Workspace settings > Access controls > Restrict access to certain IP addresses",
+          "plan": "Premium",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-b50f7c86"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "bitbucket-1",
+          "what": "Org admins cannot block managed users from creating API tokens for Bitbucket.",
+          "kind": "disable",
+          "evidence_refs": [
+            "fc-4bf122a1"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether the workspace IP allowlist is enforced on REST API calls (docs only mention viewing content and Git clone/push/pull).",
+        "Whether API tokens or OAuth tokens are checked against IdP SSO or conditional access at use time.",
+        "Whether the workspace audit log records access token creation, rotation or revocation (no such events listed).",
+        "Lifetime of the Pipelines OIDC token.",
+        "OAuth access token lifetime: developer docs say 1 hour, support docs say 2 hours.",
+        "Any admin approval workflow for users authorizing third-party OAuth consumers."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "bitbucket-1",
+      "provider_id": "bitbucket",
+      "name": "API tokens (Atlassian account API tokens with Bitbucket scopes)",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "User creates a scoped token in Atlassian account security settings. Sent as Basic auth (Atlassian email + token) or Bearer to the REST API, or as the password for Git over HTTPS.",
+        "evidence_refs": [
+          "fc-4bf122a1",
+          "fc-ec207668"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Docs say API tokens do not require 2SV; they do not say whether IdP SSO or conditional access is checked on token use. The org-level 'limit API token creation' policy does not apply to Bitbucket.",
+        "evidence_refs": [
+          "fc-4bf122a1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "Premium workspace IP allowlist covers private repos, wikis, issue trackers and snippets and blocks clone/push/pull; docs do not state whether REST API calls with tokens are checked, and metadata is not necessarily restricted.",
+        "evidence_refs": [
+          "fc-b50f7c86"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 31536000,
+        "maximum_seconds": 31536000,
+        "configurable": "yes",
+        "summary": "1 to 365 days, default 1 year",
+        "evidence_refs": [
+          "turn2search3"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "fixed expiry date set at creation",
+        "summary": "Create a new token; tokens cannot be edited or extended.",
+        "evidence_refs": [
+          "fc-4bf122a1",
+          "turn2search3"
+        ]
+      },
+      "administration": {
+        "summary": "User manages own tokens. Org admins can view and revoke managed accounts' API tokens from Insights > API token activity. Org admins cannot block Bitbucket API token creation.",
+        "conditions": "Admin view/revoke only for managed accounts (verified domain).",
+        "evidence_refs": [
+          "fc-4bf122a1",
+          "fc-e1dfb3f5"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Docs say API tokens don't require two-step verification, and org API token restrictions do not extend to Bitbucket.",
+          "evidence_refs": [
+            "fc-4bf122a1"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Atlassian Administration > Insights > API token activity lists API tokens of managed accounts only; not confirmed to include Bitbucket-scoped tokens.",
+          "evidence_refs": [
+            "fc-a0c70238"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Account settings > Security > Create and manage API tokens > Create API token with scopes > set expiry date",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-8b7e3ed0"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Variable-length Atlassian API token; no documented prefix."
+        },
+        "log_sources": [
+          {
+            "name": "Atlassian organization audit log",
+            "notes": "Insights > Audit log; up to 180 days; token events tied to managed accounts. Guard needed for Bitbucket enterprise-level events."
+          },
+          {
+            "name": "API token activity (Insights)",
+            "notes": "Lists managed users' tokens with created, expiry and last used; CSV export."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "token name / created date / last used",
+            "log": "API token activity",
+            "notes": "Export includes date last used."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Created API token",
+            "stage": "create",
+            "notes": "Org audit log."
+          },
+          {
+            "event": "Revoked API token",
+            "stage": "revoke",
+            "notes": "Org audit log."
+          },
+          {
+            "event": "Exported API tokens",
+            "stage": "other",
+            "notes": "Admin export of token inventory."
+          }
+        ],
+        "correlation_keys": [
+          "Atlassian account ID",
+          "token name",
+          "last used date"
+        ],
+        "anomaly_cues": [
+          "Token created then used from unfamiliar automation shortly after",
+          "Tokens near 1-year max on high-privilege accounts",
+          "Last-used dates on tokens of departed users"
+        ],
+        "containment": {
+          "steps": "Revoke in API token activity (org admin) or Atlassian account > Security (user); also deactivate the account if compromised.",
+          "kills_existing": "yes",
+          "notes": "Revoked tokens no longer work."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Per-request API call logging for Bitbucket REST use",
+          "Source IP of token use"
+        ],
+        "evidence_refs": [
+          "turn2search3",
+          "fc-e1dfb3f5",
+          "fc-4100e8ce",
+          "fc-4e80eaad"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /2.0/user",
+            "reveals": "current user identity",
+            "bulk": false,
+            "scope": "read:user:bitbucket",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No documented API request log."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /2.0/user/workspaces",
+            "reveals": "workspaces and admin flag",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /2.0/repositories/{workspace}",
+            "reveals": "all repositories in workspace",
+            "bulk": true,
+            "scope": "read:repository:bitbucket",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit log excludes repo/commit activity."
+          },
+          {
+            "stage": "collection",
+            "call": "git clone https://bitbucket.org/{workspace}/{repo}.git",
+            "reveals": "full source",
+            "bulk": true,
+            "scope": "read:repository:bitbucket",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "Whether any REST read is logged"
+        ],
+        "evidence_refs": [
+          "fc-6327d20e",
+          "fc-7034dcb2",
+          "fc-cb0c2b12",
+          "fc-4e80eaad"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-02ac8d2f",
+      "title": "Access tokens | Bitbucket Cloud",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/access-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4100e8ce",
+      "title": "Audit log activities database",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/audit-log-activities-database/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4bf122a1",
+      "title": "API tokens | Bitbucket Cloud",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/api-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4e80eaad",
+      "title": "Bitbucket Cloud audit log events",
+      "url": "https://support.atlassian.com/bitbucket-cloud/kb/bitbucket-cloud-audit-log-events/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6327d20e",
+      "title": "Bitbucket REST API - Users",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/api-group-users/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7034dcb2",
+      "title": "Bitbucket REST API - Workspaces",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/api-group-workspaces/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8b7e3ed0",
+      "title": "Create an API token",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/create-an-api-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a0c70238",
+      "title": "View API token activity",
+      "url": "https://support.atlassian.com/organization-administration/docs/view-user-api-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b50f7c86",
+      "title": "Control access to private content in a workspace",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/control-access-to-private-content-in-a-workspace/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cb0c2b12",
+      "title": "Bitbucket REST API - Repositories",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/api-group-repositories/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e1dfb3f5",
+      "title": "Revoke user API tokens",
+      "url": "https://support.atlassian.com/organization-administration/docs/revoke-user-api-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ec207668",
+      "title": "Using API tokens | Bitbucket Cloud",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search3",
+      "title": "Manage API tokens for your Atlassian account",
+      "url": "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

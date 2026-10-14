@@ -1,0 +1,398 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "anthropic",
+      "name": "Anthropic API",
+      "scope_notes": "Covers Anthropic Claude API (Claude Console / Claude Platform). Claude Console organizations on platform.claude.com; Claude Enterprise (claude.ai) compliance keys and App Attest device tokens are noted but not catalogued as paths.",
+      "controls": [
+        {
+          "name": "Remove user / archive service account",
+          "effect": "revoke",
+          "applies_to": [
+            "anthropic-1",
+            "anthropic-2",
+            "anthropic-5"
+          ],
+          "what": "Personal keys stop on user removal; service account keys stop on account archive.",
+          "setting": "Console or Admin API",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6484f42c",
+            "fc-834a1ca7"
+          ]
+        },
+        {
+          "name": "Archive federation rule / issuer",
+          "effect": "revoke",
+          "applies_to": [
+            "anthropic-5"
+          ],
+          "what": "Archived rules reject token exchange.",
+          "setting": "Console or POST /v1/organizations/federation_rules/{id}/archive (org:admin token)",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-e2562915",
+            "fc-834a1ca7",
+            "fc-6484f42c"
+          ]
+        },
+        {
+          "name": "Federation rule token_lifetime_seconds",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "anthropic-5"
+          ],
+          "what": "Sets minted token lifetime 60-86400 s.",
+          "setting": "Federation rule",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-e2562915"
+          ]
+        },
+        {
+          "name": "Compliance API (Activity Feed)",
+          "effect": "other",
+          "applies_to": [
+            "anthropic-1",
+            "anthropic-2",
+            "anthropic-3",
+            "anthropic-4",
+            "anthropic-5",
+            "anthropic-6"
+          ],
+          "what": "Must be on for key and federation activity to be recorded.",
+          "setting": "Claude Console > Settings > Security > Compliance API",
+          "plan": "Eligible organizations (self-service) or via account team",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-0e07061e"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Customer IP allowlisting for Claude API requests (not found in docs).",
+        "Whether keys or OAuth tokens are subject to SSO / IdP conditional access.",
+        "Whether disabling a key or archiving a rule ends already-minted WIF tokens immediately.",
+        "Lifetime and admin revocation of ant CLI OAuth tokens.",
+        "Console UI path for the maximum expiration policy and the member API key creation setting.",
+        "Whether Messages API calls generate Activity Feed events (feed excludes prompt/response text)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "anthropic-5",
+      "provider_id": "anthropic",
+      "name": "Workload Identity Federation access token",
+      "family": "federation",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Workload exchanges an IdP JWT at POST /v1/oauth/token for a short-lived token acting as a service account, per a federation rule.",
+        "evidence_refs": [
+          "fc-e8692afd",
+          "fc-ac0c2877"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "AWS, Google Cloud, Azure and standards-compliant OIDC issuers (GitHub Actions, Kubernetes, SPIFFE, Entra ID, Okta).",
+        "evidence_refs": [
+          "fc-e8692afd"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No customer IP allowlist for Claude API requests found in fetched docs; the IP addresses page only lists Anthropic's own ranges.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 86400,
+        "configurable": "yes",
+        "summary": "Rule token_lifetime_seconds 60-86400, capped by 2x remaining IdP JWT lifetime",
+        "evidence_refs": [
+          "fc-ac0c2877",
+          "fc-e2562915"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "Re-exchange IdP JWT",
+        "summary": "SDK re-exchanges automatically before expiry.",
+        "evidence_refs": [
+          "fc-e8692afd"
+        ]
+      },
+      "administration": {
+        "summary": "Issuers, rules and service accounts are managed in Console or via Admin API endpoints that accept only an org:admin OAuth token. Archiving a rule blocks new exchanges.",
+        "conditions": "Issuer sets maximum accepted IdP token lifetime (1h default).",
+        "evidence_refs": [
+          "fc-6484f42c",
+          "fc-e2562915",
+          "fc-834a1ca7"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Token issuance depends on a JWT from your own IdP, so IdP controls such as conditional access apply at exchange time; org SSO/MFA does not apply to the minted token.",
+          "evidence_refs": [
+            "fc-ac0c2877"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Tokens act as a service account, not a user.",
+          "evidence_refs": [
+            "fc-6484f42c"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Admins can list service accounts, federation issuers and federation rules via the Admin API list endpoints, but not individual minted tokens.",
+          "evidence_refs": [
+            "fc-834a1ca7"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Console > Workload identity (platform.claude.com/settings/workload-identity-federation)",
+          "api": "GET /v1/organizations/service_accounts; GET /v1/organizations/federation_issuers; GET /v1/organizations/federation_rules",
+          "cli": "ant organization:service-accounts list; ant organization:federation:issuers list; ant organization:federation:rules list --issuer-id <fdis_id>",
+          "evidence_refs": [
+            "fc-834a1ca7",
+            "fc-ac0c2877"
+          ]
+        },
+        "sso": {
+          "ui": "Console > Workload identity > rule match conditions (subject_prefix, audience, claims, CEL condition); conditional access is set in your IdP",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-ac0c2877"
+          ]
+        },
+        "expiry": {
+          "ui": "Console > Workload identity > Connect workload (wizard sets token_lifetime_seconds, default 600)",
+          "api": "POST /v1/organizations/federation_rules/{rule_id} with token_lifetime_seconds (60-86400)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e2562915",
+            "fc-834a1ca7",
+            "fc-ac0c2877"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "GET /v1/compliance/activities?activity_types[]=platform_file_content_downloaded; match actor.api_key_id client-side (actor_ids[] accepts only user_ IDs)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-0f28eb08",
+            "fc-b0efd6b0"
+          ]
+        },
+        "kill": {
+          "ui": null,
+          "api": "POST /v1/organizations/federation_rules/{rule_id}/archive (also /federation_issuers/{id}/archive, /service_accounts/{id}/archive)",
+          "cli": "ant organization:federation:rules archive --federation-rule-id <fdrl_id>",
+          "evidence_refs": [
+            "fc-834a1ca7"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Short-lived access token; format not documented"
+        },
+        "log_sources": [
+          {
+            "name": "Compliance API Activity Feed (GET /v1/compliance/activities)",
+            "notes": "Must be enabled; 6-year retention; not retroactive. Admin API keys can read it."
+          },
+          {
+            "name": "Usage and Cost API",
+            "notes": "Aggregated usage filterable by API key."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "service account id (svac_...)",
+            "log": "Activity Feed",
+            "notes": "Actor attribution for WIF calls not verified"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "platform_federated_authentication",
+            "stage": "use",
+            "notes": "Token exchange attempt"
+          },
+          {
+            "event": "platform_federation_rule_archived",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "actor.api_key_id",
+          "actor.ip_address",
+          "actor.user_agent",
+          "workspace id"
+        ],
+        "anomaly_cues": [
+          "New platform_api_key_created outside change window",
+          "platform_file_content_downloaded bursts",
+          "Key used from unfamiliar ip_address"
+        ],
+        "containment": {
+          "steps": "Archive the federation rule (then issuer/service account).",
+          "kills_existing": "partial",
+          "notes": "Archiving a federation rule stops new exchanges immediately, but tokens already minted stay valid until they expire (default 3600s, max 86400s)."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Effect on live tokens"
+        ],
+        "evidence_refs": [
+          "fc-e2562915",
+          "fc-834a1ca7",
+          "fc-b0efd6b0",
+          "fc-6bd38093"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/models",
+            "reveals": "Key is valid; available models",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+            "reveals": "Files uploaded to the workspace",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "platform_file_content_downloaded",
+            "log_notes": "Requires Compliance API enabled"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-03a98433",
+          "fc-b0efd6b0"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-03a98433",
+      "title": "API overview",
+      "url": "https://platform.claude.com/docs/en/api/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0e07061e",
+      "title": "Set up the Compliance API",
+      "url": "https://platform.claude.com/docs/en/manage-claude/compliance-api-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0f28eb08",
+      "title": "Compliance API Activity Feed",
+      "url": "https://platform.claude.com/docs/en/manage-claude/compliance-activity-feed",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6484f42c",
+      "title": "Admin API",
+      "url": "https://platform.claude.com/docs/en/manage-claude/admin-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6bd38093",
+      "title": "Archive Federation Rule",
+      "url": "https://platform.claude.com/docs/en/api/organization/federation/rules/archive",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-834a1ca7",
+      "title": "Manage WIF with the Admin API",
+      "url": "https://platform.claude.com/docs/en/manage-claude/wif-admin-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac0c2877",
+      "title": "Workload Identity Federation",
+      "url": "https://platform.claude.com/docs/en/manage-claude/workload-identity-federation",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b0efd6b0",
+      "title": "Query compliance activities",
+      "url": "https://platform.claude.com/docs/en/api/compliance/activities/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e2562915",
+      "title": "WIF reference",
+      "url": "https://platform.claude.com/docs/en/manage-claude/wif-reference",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e8692afd",
+      "title": "Authentication",
+      "url": "https://platform.claude.com/docs/en/manage-claude/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

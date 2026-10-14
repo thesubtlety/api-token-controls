@@ -1,0 +1,1083 @@
+{
+ "id": "stripe",
+ "name": "Stripe",
+ "scope_notes": "Separate Dashboard SSO/session controls from key access policies. OAuth Connect and Apps are different authorization surfaces.",
+ "controls": [
+  {
+   "name": "Restricted API key permissions",
+   "effect": "limit_scope",
+   "applies_to": [
+    "stripe-1"
+   ],
+   "what": "Each resource is set to None, Read or Write; default None.",
+   "setting": "Developers > API keys > Create restricted key",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-7d8d1fd2"
+   ],
+   "quote": "For each resource you want the new key to access, select the appropriate permission: None, Read, or Write."
+  },
+  {
+   "name": "Access policies (IP addresses / Advanced)",
+   "effect": "limit_network",
+   "applies_to": [
+    "stripe-1",
+    "stripe-4"
+   ],
+   "what": "Blocks key use outside allowed IPs/CIDRs, ASNs or countries, or from VPNs, proxies and Tor.",
+   "setting": "Developers > Access policies; API keys > key ⋯ > Manage access policy",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "turn5search3"
+   ],
+   "quote": "If someone attempts a request using a key they can’t access, Stripe blocks the request and notifies you."
+  },
+  {
+   "name": "Expire API key",
+   "effect": "revoke",
+   "applies_to": [
+    "stripe-1"
+   ],
+   "what": "Expiring a secret or restricted key stops all API calls with it.",
+   "setting": "Developers > API keys > key ⋯ > Expire key",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "turn5search3"
+   ],
+   "quote": "Code that uses the expired key can no longer make API calls."
+  },
+  {
+   "name": "Rotate API key (scheduled)",
+   "effect": "require_rotation",
+   "applies_to": [
+    "stripe-1"
+   ],
+   "what": "Revokes a key with a replacement, immediately or at a chosen expiration up to 7 days.",
+   "setting": "Developers > API keys > key ⋯ > Rotate key",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "turn5search3"
+   ],
+   "quote": "You can also schedule an API key to rotate after a certain time."
+  },
+  {
+   "name": "Limited access for dormant keys",
+   "effect": "other",
+   "applies_to": [
+    "stripe-1"
+   ],
+   "what": "Keys unused for transfers/payouts for 180 days lose those abilities until restored.",
+   "setting": "Automatic; restore via API keys > key ⋯ > Restore access",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "turn5search3"
+   ],
+   "quote": "An API key might have its access limited if it hasn’t been used to create transfers, payouts, or update payout destinations for over 180 days."
+  },
+  {
+   "name": "Team roles (API key management)",
+   "effect": "limit_resources",
+   "applies_to": [
+    "stripe-1"
+   ],
+   "what": "Only Administrator, Super Administrator and Developer roles can create, view, edit and delete API keys.",
+   "setting": "Settings > Team and security > Team",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-a440ddd9"
+   ],
+   "quote": "This role can create secret keys, which grant access to almost all API resources."
+  },
+  {
+   "name": "Approval rules (agent-tagged keys)",
+   "effect": "other",
+   "applies_to": [
+    "stripe-1",
+    "stripe-4"
+   ],
+   "what": "Pauses or blocks sensitive actions by agent-tagged keys until a reviewer approves; default rules cover refunds and subscription cancellations.",
+   "setting": "Settings > Approvals > Create rule (Administrator by default)",
+   "plan": null,
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-55e7a044"
+   ],
+   "quote": "Stripe maintains default approval rules for the following sensitive actions taken by agent-tagged API keys"
+  },
+  {
+   "name": "Expire managed API keys",
+   "effect": "revoke",
+   "applies_to": [
+    "stripe-1"
+   ],
+   "what": "The user can expire app-managed keys at any time, and choose keep or expire on uninstall.",
+   "setting": "Dashboard API keys page",
+   "plan": "Preview",
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-7eb4b73e"
+   ],
+   "quote": "User can expire managed keys immediately without uninstall from the Stripe Dashboard."
+  },
+  {
+   "name": "Install-time permission consent",
+   "effect": "limit_scope",
+   "applies_to": [
+    "stripe-2"
+   ],
+   "what": "The installing user sees and accepts the app's requested permissions before tokens are issued.",
+   "setting": "Stripe App install flow",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "turn5search15"
+   ],
+   "quote": "the user selects the appropriate account and accepts permissions for installing the app."
+  },
+  {
+   "name": "Install and manage Stripe Apps (role)",
+   "effect": "limit_resources",
+   "applies_to": [
+    "stripe-2"
+   ],
+   "what": "Installing apps is a role permission (e.g. Developer, Administrator).",
+   "setting": "Settings > Team and security > Team",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-a440ddd9"
+   ],
+   "quote": "Install and manage Stripe Apps"
+  },
+  {
+   "name": "Uninstall app",
+   "effect": "revoke",
+   "applies_to": [
+    "stripe-2"
+   ],
+   "what": "An Administrator removes an installed app.",
+   "setting": "Installed Apps page > ⋯ > Uninstall",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-3f5dfff6"
+   ],
+   "quote": "Stripe Apps can be uninstalled by an Administrator from the Installed Apps page."
+  },
+  {
+   "name": "Organization API key permissions",
+   "effect": "limit_scope",
+   "applies_to": [
+    "stripe-3"
+   ],
+   "what": "Org keys can be restricted to read or write specific resources.",
+   "setting": "Organization Dashboard > API keys tab",
+   "plan": "Requires a Stripe organization",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-8205e55f"
+   ],
+   "quote": "Restrict organization API keys to grant read or write permission to only specific resources."
+  },
+  {
+   "name": "Service principal subject and permissions",
+   "effect": "limit_resources",
+   "applies_to": [
+    "stripe-4"
+   ],
+   "what": "Only workloads matching the trusted IdP and subject get tokens, limited to assigned permissions.",
+   "setting": "Organization > Developers > API authentication > Service principals",
+   "plan": "Private preview; requires a Stripe organization",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-29a3be8d"
+   ],
+   "quote": "Assign permissions to the service principal in the same way you would when creating an API key."
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "stripe-1",
+   "what": "Unrestricted secret keys cannot be permission-limited.",
+   "evidence_refs": [
+    "turn5search3"
+   ],
+   "quote": "Because you can’t limit their permissions, we don’t recommend using secret keys for new use cases",
+   "kind": "other"
+  }
+ ],
+ "controls_unknown": [
+  "No account setting found to forbid creating unrestricted secret keys or to require key expiry.",
+  "Whether access policies and approval rules can be attached to organization API keys.",
+  "Whether uninstalling a Stripe App immediately revokes its OAuth refresh tokens is not stated.",
+  "Which organization roles can create org API keys or service principals, and how to disable a service principal.",
+  "Approval rules' actor condition for service principals is mentioned on the service principals page but not described on the approvals page."
+ ],
+ "credentials": [
+  {
+   "id": "stripe-1",
+   "name": "Secret / restricted API key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Account-level secret (sk_live_/sk_test_) or restricted (rk_live_/rk_test_) API key, sent in the Authorization header on each request. This includes managed keys that a hosting platform or an approved Stripe App creates through the API, and restricted keys a Stripe App generates for a user at install. Organization keys and OAuth tokens are separate paths.",
+    "evidence_refs": [
+     "turn5search3",
+     "turn5search15"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn5search3",
+     "turn5search15"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Access policies, which replaced the older per-key IP address restrictions, can be attached to standard (secret) and restricted keys. A policy either allows IPv4 addresses/CIDR ranges, or (advanced) allows ASNs and countries and blocks anonymous VPN, proxy and Tor sources. Stripe blocks requests that fail the policy.",
+    "evidence_refs": [
+     "turn5search3"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Until revoked/expired/rolled",
+    "evidence_refs": [
+     "turn5search3",
+     "turn5search15"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "The same key is reused until it is expired or rotated. A Dashboard rotation can keep the old key working for up to 7 days; managed keys are rotated by the managing platform.",
+    "evidence_refs": [
+     "turn5search3",
+     "turn5search15"
+    ]
+   },
+   "administration": {
+    "summary": "Restricted-key endpoint permissions, key access policies, rotation/revocation and request logs.",
+    "conditions": "Stripe recommends restricted keys over unrestricted secret keys. Managed API keys (preview) are created and rotated by a hosting platform such as Vercel, or by an approved Stripe App with the api_key_write permission; they appear on the API keys tab, can't be revealed, and the account owner can expire them at any time. On uninstall the user chooses whether to keep or expire them. Agent-tagged restricted keys are subject to approval rules. Dashboard SSO/session controls are separate from key access policies.",
+    "evidence_refs": [
+     "turn5search3",
+     "fc-07b7df86"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Keys belong to the account, not a user; Stripe tells you to rotate keys yourself when people with access leave.",
+     "evidence_refs": [
+      "turn5search3"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "The API keys page in the Dashboard (Standard keys and Restricted keys lists) shows all keys for the account.",
+     "evidence_refs": [
+      "turn5search3"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Developers > API keys > ⋯ on the key > View request logs (opens Workbench Logs); filter Method GET, API endpoint /v1/customers",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "turn5search3",
+      "fc-a3c07fae"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "sk_live_ | rk_live_ | sk_test_ | rk_test_",
+     "notes": "Prefixes documented by Stripe; body length/charset not documented, regex is a loose hunting pattern. GitHub secret scanning covers stripe_api_key (validity check), stripe_live_restricted_key, stripe_test_secret_key, stripe_test_restricted_key, stripe_legacy_api_key."
+    },
+    "log_sources": [
+     {
+      "name": "Activity Logs API (/v2/iam/activity_logs)",
+      "notes": "Public preview. Key lifecycle (api_key_created/updated/deleted/viewed) with actor and key details. 6-month retention; >=10 min delay; rotation events may be missing for some accounts. No IP field documented."
+     },
+     {
+      "name": "Dashboard security history",
+      "notes": "Dashboard view of the same security history; exact fields not documented."
+     },
+     {
+      "name": "Workbench request logs (per key: View request logs)",
+      "notes": "Per-request API logs filterable by date, status, method, endpoint, IP address, source, account, API version, error code/type. Retention not documented; no export API documented."
+     },
+     {
+      "name": "Events (/v1/events, webhooks)",
+      "notes": "Object changes caused by API calls; request.id ties event to request. 30-day list window."
+     },
+     {
+      "name": "Connect webhooks v2.iam.api_key.* (managed keys)",
+      "notes": "For app-managed keys: v2.iam.api_key.created/updated/rotated/expired on connected accounts."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.api_key.id",
+      "log": "Activity Logs API (v2.iam.activity_log)",
+      "notes": "API key that performed a security action (e.g., created another key)"
+     },
+     {
+      "field": "details.api_key.id",
+      "log": "Activity Logs API",
+      "notes": "Key that was created/updated/deleted/viewed (example id prefix mk_)"
+     },
+     {
+      "field": "details.api_key.new_key",
+      "log": "Activity Logs API",
+      "notes": "Replacement key id when rotated"
+     },
+     {
+      "field": "details.api_key.managed_by.application.id",
+      "log": "Activity Logs API",
+      "notes": "Application that manages the key (managed keys)"
+     },
+     {
+      "field": "request.id",
+      "log": "Activity Logs API / Event object",
+      "notes": "API request that instigated the action; pivot to Workbench request logs"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "api_key_created",
+      "stage": "create",
+      "notes": "Activity Logs; also emitted for rotation replacement"
+     },
+     {
+      "event": "api_key_viewed",
+      "stage": "use",
+      "notes": "Live key secret revealed in Dashboard; sandbox reveals not logged"
+     },
+     {
+      "event": "api_key_updated",
+      "stage": "change",
+      "notes": "Name/note/policy changes"
+     },
+     {
+      "event": "api_key_deleted",
+      "stage": "revoke",
+      "notes": "Old key on rotation or deletion"
+     },
+     {
+      "event": "v2.iam.api_key.created",
+      "stage": "create",
+      "notes": "Managed keys, Connect webhook"
+     },
+     {
+      "event": "v2.iam.api_key.rotated",
+      "stage": "change",
+      "notes": "Managed keys, Connect webhook"
+     },
+     {
+      "event": "v2.iam.api_key.expired",
+      "stage": "revoke",
+      "notes": "Managed keys, Connect webhook"
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key.id",
+     "details.api_key.id",
+     "request.id",
+     "context",
+     "actor.user.email",
+     "request.idempotency_key",
+     "account"
+    ],
+    "anomaly_cues": [
+     "Workbench requests for the key from an IP/ASN never seen before, or blocked by an access policy",
+     "api_key_viewed or api_key_created by a user outside the normal admin set, or right after a role change",
+     "api_key_created where actor.type=api_key (a key minting another key)",
+     "Key that was idle for months suddenly creating payouts/transfers or payout destinations",
+     "sk_/rk_ live key requests to endpoints outside the key's normal endpoint set (e.g., customers list export, refunds)",
+     "Old key still sending requests during the 7-day rotation grace window after a leak"
+    ],
+    "containment": {
+     "steps": "Dashboard > API keys > Rotate key with Expiration 'Now' (deletes old key) or Expire key. Managed keys: rotate in Dashboard or on hosting platform. Then review the key's request logs, and apply an access policy to the replacement key.",
+     "kills_existing": "yes",
+     "notes": "Rotation defaults allow old key to keep working up to 7 days; choose 'Now' for compromise. Keys are bearer secrets with no sessions, so expiry stops all further use. Stripe may proactively deactivate detected exposed keys."
+    },
+    "sample_query": {
+     "language": "Stripe Activity Logs API (HTTP GET)",
+     "query": "curl -G https://api.stripe.com/v2/iam/activity_logs -H \"Authorization: Bearer $RAK_ACTIVITY_LOGS_READ\" -H \"Stripe-Version: 2026-09-30.preview\" -d \"action_groups[]=api_key\"  # then flag type in (api_key_created, api_key_viewed) and actor.type=api_key",
+     "purpose": "Pull key lifecycle actions to find unexpected key creation or live-key reveals."
+    },
+    "unknown": [
+     "Exact sk_/rk_ token length/charset",
+     "Workbench request log retention and export/API access",
+     "Field names in Workbench request logs (only filter labels documented)",
+     "Whether Activity Log records the API key used on ordinary (non-security) requests",
+     "Dashboard security history field names",
+     "Logging of auth failures with an expired/invalid key"
+    ],
+    "evidence_refs": [
+     "fc-2941e80e",
+     "fc-9a5c39cc",
+     "fc-db791a2f",
+     "fc-a3c07fae",
+     "fc-239f2700",
+     "fc-1c64e0dd",
+     "turn5search3",
+     "fc-4f1a552a",
+     "fc-846e1fd4",
+     "fc-7eb4b73e",
+     "fc-8d958fb2"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /v1/customers",
+      "reveals": "Customer records (names, emails, metadata)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Workbench request log (Dashboard > Workbench > Logs), not Security history; retention not stated. Per-key view via the key's 'View request logs' menu."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-1562f317",
+     "fc-a3c07fae",
+     "turn5search3"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "stripe-2",
+   "name": "Stripe Apps OAuth (Connect OAuth tokens deprecated)",
+   "family": "oauth",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "A Stripe App set to OAuth sends the user to an install link; the app backend exchanges the one-time code (valid 5 minutes) at /v1/oauth/token using the developer's own secret key and gets a 1-hour access token, which it sends like an API key. Connect OAuth's returned access_token and refresh_token are deprecated; Connect platforms should use their platform key with the Stripe-Account header (stripe-1).",
+    "evidence_refs": [
+     "turn5search3",
+     "turn5search15"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Tokens come from user authorization at app install and are refreshed with the developer's secret key. No exchange of an external identity token is documented for this path. Stripe Workload Identity Federation (private preview) is a separate mechanism.",
+    "evidence_refs": [
+     "turn5search3",
+     "turn5search15",
+     "fc-e56c55ba"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Per-key IP controls are documented for API keys. Equivalent Connect/Apps OAuth enforcement was not verified.",
+    "evidence_refs": [
+     "turn5search3"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Stripe Apps OAuth access token: 1 hour. Connect OAuth access_token is deprecated (use platform key + Stripe-Account header).",
+    "evidence_refs": [
+     "turn5search3",
+     "turn5search15",
+     "fc-bc7603d9"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "inactivity",
+    "summary": "Stripe Apps: refresh token (1 year, rolled on each exchange, so effectively 1 year from last use; 31536000 s) gets a new 1-hour access token. Connect OAuth tokens are deprecated.",
+    "evidence_refs": [
+     "turn5search3",
+     "turn5search15"
+    ]
+   },
+   "administration": {
+    "summary": "The app manifest lists the Stripe permissions the app needs, and the installing user accepts them during install. Each refresh returns a new refresh token and expires the previous one. Connect platforms can revoke a Standard account's connection with POST /oauth/deauthorize.",
+    "conditions": "Stripe Apps choose one API access method in the manifest (platform key, OAuth 2.0, or restricted API key); this path covers OAuth only. The token exchange requires the app developer's secret key. For Connect OAuth, the access_token, refresh_token and stripe_publishable_key response fields are deprecated, and since June 2021 read_write OAuth can't connect accounts controlled by another platform.",
+    "evidence_refs": [
+     "turn5search3",
+     "turn5search15",
+     "fc-019f6e75"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The app is installed on the Stripe account, not tied to the installing user.",
+     "evidence_refs": [
+      "fc-ba5233f6"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Installed Apps page (dashboard.stripe.com/apps/installed) lists apps installed on the account; per account, not org-wide.",
+     "evidence_refs": [
+      "fc-3f5dfff6"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Workbench > Logs; filter Method GET, API endpoint /v1/customers, and Account",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a3c07fae"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Authorization code prefix ac_ shown in docs example; access/refresh token formats not documented. Code valid 5 min, one-time; access token 1 h; refresh token 1 year, rolled on each exchange."
+    },
+    "log_sources": [
+     {
+      "name": "Events / webhooks (app install events)",
+      "notes": "apps.install.created/updated/deleted (app.install.* before 2026-09-30) and account.application.authorized/deauthorized; event.account identifies installing account."
+     },
+     {
+      "name": "Workbench request logs (installing account)",
+      "notes": "Requests made with the app's access token appear in the installing account's logs; per-token attribution fields not documented."
+     },
+     {
+      "name": "Workbench request logs (developer account)",
+      "notes": "/v1/oauth/token exchanges are made with the developer's own secret key (see stripe-1)."
+     },
+     {
+      "name": "Activity Logs API",
+      "notes": "No documented OAuth/app install action types."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "account",
+      "log": "Event object",
+      "notes": "Installing (connected) account id on app events"
+     },
+     {
+      "field": "stripe_user_id",
+      "log": "/v1/oauth/token response",
+      "notes": "Account the token grants access to"
+     },
+     {
+      "field": "scope",
+      "log": "/v1/oauth/token response",
+      "notes": "stripe_apps"
+     },
+     {
+      "field": "request.id",
+      "log": "Event object",
+      "notes": "Request that triggered an event"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "apps.install.created",
+      "stage": "create",
+      "notes": "App installed (app.install.created on older API versions)"
+     },
+     {
+      "event": "account.application.authorized",
+      "stage": "create",
+      "notes": "Account connects or installs app"
+     },
+     {
+      "event": "apps.install.updated",
+      "stage": "change",
+      "notes": "App updated or reauthorized"
+     },
+     {
+      "event": "apps.install.deleted",
+      "stage": "revoke",
+      "notes": "App uninstalled"
+     },
+     {
+      "event": "account.application.deauthorized",
+      "stage": "revoke",
+      "notes": "Account disconnects or uninstalls app"
+     }
+    ],
+    "correlation_keys": [
+     "account",
+     "stripe_user_id",
+     "request.id",
+     "livemode",
+     "context"
+    ],
+    "anomaly_cues": [
+     "Unexpected apps.install.created / account.application.authorized for an app nobody in the business requested",
+     "API activity from the app's access token in the installing account after apps.install.deleted",
+     "Refresh token used from two backends (old refresh token reused after roll fails) - developer-side signal",
+     "App access token calling endpoints beyond the app's declared permissions pattern (bulk customer reads)",
+     "Burst of /v1/oauth/token code exchanges on the developer account from a new IP"
+    ],
+    "containment": {
+     "steps": "Installing account: uninstall the app (Settings > Installed apps). Developer: rotate the developer secret key used at /v1/oauth/token (stripe-1) and delete stored refresh tokens. Connect OAuth (deprecated) platforms: POST https://connect.stripe.com/oauth/deauthorize.",
+     "kills_existing": "unknown",
+     "notes": "Docs do not state whether uninstall immediately invalidates issued access/refresh tokens. Access tokens expire after 1 hour regardless."
+    },
+    "sample_query": {
+     "language": "Stripe Events API (HTTP GET)",
+     "query": "curl -G https://api.stripe.com/v1/events -u \"$SK:\" -d \"types[]=apps.install.created\" -d \"types[]=apps.install.deleted\" -d \"types[]=account.application.authorized\" -d \"types[]=account.application.deauthorized\" -d \"created[gte]=1788998400\"",
+     "purpose": "List recent app installs/uninstalls to spot unexpected app grants (30-day window)."
+    },
+    "unknown": [
+     "Access/refresh token prefix and format",
+     "Whether uninstall revokes outstanding access and refresh tokens immediately",
+     "Revocation endpoint for Stripe Apps OAuth tokens (Connect deauthorize applies to Connect OAuth)",
+     "Request log field identifying which app/token made a call",
+     "Logging of failed token exchanges"
+    ],
+    "evidence_refs": [
+     "turn5search15",
+     "fc-a5ab5607",
+     "fc-1c64e0dd",
+     "fc-239f2700",
+     "fc-a3c07fae"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /v1/customers",
+      "reveals": "Customer records the app has permission to read",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Workbench request log (Dashboard > Workbench > Logs), not Security history; retention not stated. Docs do not say how app-token requests are labeled in the log."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "turn5search15",
+     "fc-1562f317",
+     "fc-a3c07fae"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "stripe-3",
+   "name": "Organization API key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A secret key (prefix sk_org) created at the Stripe organization level and sent as a bearer token. Requests must include Stripe-Version, and Stripe-Context to name the target account; one key can reach any account in the organization.",
+    "evidence_refs": [
+     "fc-8205e55f"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static secret key; no external identity exchange is involved.",
+    "evidence_refs": [
+     "fc-8205e55f"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Access policies (IPv4/CIDR, ASN, country, proxy/Tor blocking) are documented for account-level standard and restricted keys. The docs reviewed do not say whether they can be attached to organization keys.",
+    "evidence_refs": [
+     "turn5search3"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No default expiration (stated for Stripe API keys generally)",
+    "evidence_refs": [
+     "fc-e56c55ba"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "unknown",
+    "summary": "The same static key is reused on every request until it is expired or replaced; rotation and expiry steps are documented only for account-level keys.",
+    "evidence_refs": [
+     "fc-8205e55f"
+    ]
+   },
+   "administration": {
+    "summary": "Created and managed on the organization Dashboard's API keys tab; permissions can be restricted to read or write on specific resources. Organization-level roles apply to every account in the organization. Security history includes an API action category.",
+    "conditions": "Requires a Stripe organization with multiple accounts. Stripe advises using an organization key only for cross-account or organization operations. Which organization roles can create keys was not found.",
+    "evidence_refs": [
+     "fc-8205e55f",
+     "fc-b0c32d27"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Organization keys work at the organization level and are not tied to a user.",
+     "evidence_refs": [
+      "turn5search3"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "API keys tab of the organization Dashboard.",
+     "evidence_refs": [
+      "fc-8205e55f"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Organization Dashboard > API keys tab (dashboard.stripe.com/org/api-keys/secret)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-8205e55f"
+     ]
+    },
+    "reads": {
+     "ui": "Workbench > Logs (organization); filter API endpoint /v1/balance, Method GET, Account",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a3c07fae"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "sk_org",
+     "notes": "All org keys use sk_org regardless of permissions (no rk_org). Body format not documented; regex is loose. No GitHub secret scanning pattern listed for sk_org."
+    },
+    "log_sources": [
+     {
+      "name": "Workbench request logs (organization view)",
+      "notes": "Org-level logs identify which account in the organization each request/error applies to; filter by account, IP, endpoint, source."
+     },
+     {
+      "name": "Activity Logs API",
+      "notes": "API key actions are per account (context); whether org-key lifecycle appears is not documented."
+     },
+     {
+      "name": "Events (/v1/events)",
+      "notes": "Object changes in the targeted account; context field carries authentication context."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "details.api_key.id",
+      "log": "Activity Logs API",
+      "notes": "If org keys are logged (not confirmed)"
+     },
+     {
+      "field": "context",
+      "log": "Activity Logs API / Event object",
+      "notes": "Target account; matches Stripe-Context value"
+     },
+     {
+      "field": "request.id",
+      "log": "Event object",
+      "notes": "Pivot to request logs"
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "Stripe-Context",
+     "context",
+     "request.id",
+     "account"
+    ],
+    "anomaly_cues": [
+     "One sk_org key touching many accounts (Stripe-Context values) it normally never reaches",
+     "Stripe-Context using platform/connected path format (acct_x/acct_y) not seen before",
+     "Org key requests from IPs outside known servers",
+     "Org key used where only one account is needed (violates documented guidance) - review scope",
+     "Write calls (refunds, payouts) from an org key normally used for reporting"
+    ],
+    "containment": {
+     "steps": "Organization Dashboard > API keys tab (org/api-keys/secret): rotate or expire the sk_org key; then review org-level Workbench logs per account.",
+     "kills_existing": "unknown",
+     "notes": "Org-key rotate/expire semantics are not separately documented; assume same as account keys (7-day grace unless expired now)."
+    },
+    "sample_query": {
+     "language": "Stripe Events API (HTTP GET, org key)",
+     "query": "curl -G https://api.stripe.com/v1/events -u \"$SK_ORG:\" -H \"Stripe-Version: 2026-09-30\" -H \"Stripe-Context: acct_EXAMPLE0001\" -d \"type=refund.*\" -d \"created[gte]=1788998400\"",
+     "purpose": "Per-account sweep of recent refunds to check for org-key misuse; repeat per Stripe-Context."
+    },
+    "unknown": [
+     "Org-key lifecycle events (Activity Logs coverage for sk_org)",
+     "Org-key rotation/expire grace behavior",
+     "Whether access policies apply to org keys",
+     "Request log field naming the org key used",
+     "sk_org token length/format",
+     "Secret scanning partner coverage for sk_org"
+    ],
+    "evidence_refs": [
+     "fc-8205e55f",
+     "fc-a3c07fae",
+     "fc-239f2700",
+     "turn5search3"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /v1/balance (with Stripe-Context header)",
+      "reveals": "Balance of any account in the organization",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Workbench request log (Dashboard > Workbench > Logs), not Security history; retention not stated. Organization view identifies the target account."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-8205e55f",
+     "fc-a3c07fae"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "stripe-4",
+   "name": "Workload Identity Federation (service principal)",
+   "family": "federation",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A workload on AWS or Google Cloud gets an identity token from its cloud provider and exchanges it, using the service principal's client ID (oacli_...), for a short-lived Stripe access token used to call the API. During the preview, the Ruby and TypeScript SDKs handle the exchange; requests name the target account with Stripe-Context.",
+    "evidence_refs": [
+     "fc-e56c55ba"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "Trust is set on an organization-level service principal by the provider's issuer URL and the workload's subject: the IAM role ARN on AWS (outbound identity federation, audience https://access.stripe.com/wif) or the service account's numeric unique ID on Google Cloud.",
+    "evidence_refs": [
+     "fc-e56c55ba"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "unknown",
+    "boundary": "Stripe says access policies can be applied to service principals, but the WIF page does not describe how they are enforced on exchanged tokens. Without a policy, tokens can be used from anywhere; only a trusted workload can obtain them.",
+    "evidence_refs": [
+     "fc-29a3be8d",
+     "fc-e56c55ba"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "1 hour",
+    "evidence_refs": [
+     "fc-e56c55ba"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "policy",
+    "summary": "No refresh token is documented; the SDK exchanges a fresh cloud identity token for a new access token, so continued access depends on the workload keeping its cloud identity and on the service principal's trust settings.",
+    "evidence_refs": [
+     "fc-e56c55ba"
+    ]
+   },
+   "administration": {
+    "summary": "Service principals are created in the organization Dashboard (Organization > Developers > API authentication > Service principals) with a trusted identity provider, one or more subjects, and permissions assigned like an API key. Stripe says activity can be monitored per service principal and controls such as access policies and approval rules can be applied.",
+    "conditions": "Private preview; requires a Stripe organization. Only the Ruby and TypeScript SDKs (preview builds) are supported, and service principals support only WIF as an authentication method during the preview. Which roles can create service principals, and how to revoke or disable one, were not found.",
+    "evidence_refs": [
+     "fc-29a3be8d",
+     "fc-e56c55ba"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "A service principal is a non-human identity.",
+     "evidence_refs": [
+      "fc-29a3be8d"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Organization > Developers > API authentication > Service principals page.",
+     "evidence_refs": [
+      "fc-29a3be8d"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Workbench > Logs; filter Method GET, API endpoint /v1/customers, Account",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a3c07fae"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "oacli_ (client ID, not a secret)",
+     "notes": "Client ID oacli_... (example oacli_live_...). Issued Stripe access token format not documented; lifetime 1 hour. Cloud identity token audience https://access.stripe.com/wif."
+    },
+    "log_sources": [
+     {
+      "name": "Workbench request logs",
+      "notes": "Requests made with the exchanged token; service-principal attribution fields not documented."
+     },
+     {
+      "name": "AWS CloudTrail / Google Cloud audit logs",
+      "notes": "Workload side: AWS sts:GetWebIdentityToken calls with audience https://access.stripe.com/wif; GCP identity token minting for the service account."
+     },
+     {
+      "name": "Activity Logs API",
+      "notes": "No documented service principal action types."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "sts:IdentityTokenAudience",
+      "log": "AWS IAM policy condition (CloudTrail context)",
+      "notes": "Value https://access.stripe.com/wif identifies Stripe-bound token requests"
+     },
+     {
+      "field": "sub",
+      "log": "Cloud identity token",
+      "notes": "IAM role ARN (AWS) or numeric service account unique ID (GCP) registered as the service principal subject"
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "sub",
+     "Stripe-Context",
+     "request.id",
+     "context"
+    ],
+    "anomaly_cues": [
+     "sts:GetWebIdentityToken for audience https://access.stripe.com/wif from a role/session that is not the expected workload",
+     "New subject added to a service principal, or new trusted identity provider issuer URL",
+     "GCP: unexpected principals granted Service Account OpenID Connect Identity Token Creator on the Stripe-caller service account",
+     "Stripe API calls with Stripe-Context for accounts the workload never targets",
+     "Local/laptop assumption of the workload role (assumed-role session names from humans)"
+    ],
+    "containment": {
+     "steps": "Cloud side: remove the WIF inline policy / revoke role sessions (AWS) or remove token-creator grants and disable the service account (GCP). Stripe side: edit or delete the service principal / subject in Organization > Developers > API authentication > Service principals.",
+     "kills_existing": "unknown",
+     "notes": "Exchanged tokens expire in 1 hour; docs do not say whether deleting the service principal revokes tokens already issued."
+    },
+    "sample_query": {
+     "language": "Stripe Events API (HTTP GET)",
+     "query": "curl -G https://api.stripe.com/v1/events -H \"Authorization: Bearer $WIF_ACCESS_TOKEN\" -H \"Stripe-Context: acct_EXAMPLE0001\" -d \"type=payout.*\" -d \"created[gte]=1788998400\"",
+     "purpose": "Per-account sweep of recent payouts in accounts the service principal can reach; no Stripe-side service-principal filter is documented."
+    },
+    "unknown": [
+     "Stripe-side log fields identifying a service principal on requests",
+     "Lifecycle events for service principal/identity provider changes",
+     "Token exchange endpoint and failure logging",
+     "Whether deleting a service principal revokes live tokens",
+     "Issued access token prefix",
+     "CloudTrail field names for GetWebIdentityToken (not researched; vendor-side hunt query omitted)"
+    ],
+    "evidence_refs": [
+     "fc-e56c55ba",
+     "fc-29a3be8d"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /v1/customers",
+      "reveals": "Customer records, if the service principal was granted that permission",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Workbench request log (Dashboard > Workbench > Logs), not Security history; retention not stated. Private preview; docs do not say how service-principal requests are labeled."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-29a3be8d",
+     "fc-1562f317",
+     "fc-a3c07fae"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

@@ -1,0 +1,296 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "scope_notes": "Private-app and newer developer-platform static authentication coexist. SSO requires eligible Professional/Enterprise subscriptions.",
+      "controls": [
+        {
+          "name": "User permission: Developer tools access",
+          "effect": "disable",
+          "applies_to": [
+            "hubspot-5",
+            "hubspot-3",
+            "hubspot-4"
+          ],
+          "what": "Controls which non-Super Admin users can access developer features; creating service keys requires it.",
+          "setting": "Settings > Users & Teams > user > permissions (Settings access)",
+          "plan": null,
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-b4d7cd80"
+          ],
+          "quote": "Developer tools access : toggle the Developer tools access switch on to let the user access and manage developer features"
+        },
+        {
+          "name": "Service key scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "hubspot-5"
+          ],
+          "what": "Each key gets only the scopes selected, and only scopes the creating user already has; editable later.",
+          "setting": "Settings > Integrations > Service Keys (or Development > Keys > Service Keys) > key > Edit",
+          "plan": null,
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-bb6d856f"
+          ],
+          "quote": "A key can only be granted scopes the creating user already has"
+        },
+        {
+          "name": "Service key Rotate / Delete",
+          "effect": "other",
+          "applies_to": [
+            "hubspot-5"
+          ],
+          "what": "Rotate creates a new key and expires the old one now or in 7 days; Delete removes the key.",
+          "setting": "Settings > Integrations > Service Keys > key > Rotate / Delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-07562392"
+          ],
+          "quote": "If your key is compromised and you want to immediately revoke access, click **Rotate and expire now**."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No IP allowlist for API calls found; \"Allowed login IPs\" (Settings > Security > Login) is documented only for logins.",
+        "Whether app governance (approval) covers privately distributed OAuth apps and static-auth apps, or only HubSpot Marketplace listings.",
+        "No admin-set token lifetime or mandatory rotation policy found for private app tokens, static tokens, service keys or the developer API key (only manual rotation and reminders).",
+        "No account-wide switch found to block service key creation other than withholding Developer tools access / Super Admin."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "hubspot-5",
+      "provider_id": "hubspot",
+      "name": "Service key",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Account-level API key created in Development > Keys > Service keys (also shown under Settings > Integrations > Service Keys), with selected object scopes. It is sent as a Bearer token and only authenticates REST API requests, not webhooks, UI extensions or other app features.",
+        "evidence_refs": [
+          "fc-07562392",
+          "fc-766956d4"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static account key created in the HubSpot UI; no external identity exchange is documented for service keys.",
+        "evidence_refs": [
+          "fc-07562392"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "login_only",
+        "boundary": "HubSpot's trusted-IP and allowed-location settings limit account logins (Starter, Professional or Enterprise; Super Admin). The service key docs and launch posts do not mention any source-IP control for API calls made with a service key.",
+        "evidence_refs": [
+          "turn11search1",
+          "fc-07562392"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented; rotation or deletion ends access",
+        "evidence_refs": [
+          "fc-07562392",
+          "fc-766956d4"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "The key is reused until rotated or deleted; rotation can expire the old key immediately or after a 7-day overlap, which can be ended early or cancelled (cancelling revokes the new key).",
+        "evidence_refs": [
+          "fc-07562392"
+        ]
+      },
+      "administration": {
+        "summary": "Super admins and users with the Developer tools access permission can create, edit (name and scopes), rotate and delete service keys and view their request logs. Keys use the developer-platform scope list, are not tied to an individual user, and key values are visible only to admins by default.",
+        "conditions": "Announced as the replacement for UI-created legacy private apps for in-account integrations; legacy private app creation is disabled on 2026-09-28 (new accounts) and 2026-10-26 (existing accounts). Subject to the same rate limits as privately distributed apps (tiers listed from Free to Enterprise); no separate plan requirement is documented. Separate from project-app static auth tokens (hubspot-3).",
+        "evidence_refs": [
+          "fc-07562392",
+          "fc-hs-legacy-pa",
+          "fc-766956d4"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service keys are account-level and keep working after the creator leaves.",
+          "evidence_refs": [
+            "fc-bb6d856f"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "All keys are listed at Development > Keys > Service Keys (also Settings > Integrations > Service Keys).",
+          "evidence_refs": [
+            "fc-bb6d856f"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Development > Keys > Service keys > {key} > View logs",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-07562392"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "pat-na1-",
+          "notes": "Doc example: 'Bearer pat-na1-*********-****-****-****-************'. 'na1' is likely a region segment (other regions unconfirmed). Same pat- prefix family as HubSpot personal access keys is not confirmed."
+        },
+        "log_sources": [
+          {
+            "name": "HubSpot security activity (Account activity API /account-info/v3/activity/security)",
+            "notes": "Records user actions such as PRIVATE_APP_ACCESS_TOKEN_VIEW and INSTALL_INTEGRATION with IP/location. UI shows 30 days; export covers last year. Scope account-info.security.read."
+          },
+          {
+            "name": "Service key 'View logs'",
+            "notes": "Recent requests for the key from its details page. Retention and fields not documented."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "userId",
+          "actingUser",
+          "ipAddress",
+          "createdAt"
+        ],
+        "anomaly_cues": [
+          "Service key created by a user with Developer tools access who is not on the integrations team",
+          "Scopes added to an existing key (Edit) without a change ticket",
+          "Key used against object types outside its stated purpose (seen in View logs)",
+          "Key older than 6 months without rotation"
+        ],
+        "containment": {
+          "steps": "Development > Keys > Service keys > key > Rotate > 'Rotate and expire now'; or Delete the key.",
+          "kills_existing": "yes",
+          "notes": "'Rotate and expire later' keeps the old key valid for 7 days."
+        },
+        "sample_query": {
+          "language": "HubSpot UI (service key View logs)",
+          "query": "Development > Keys > Service keys > <key> > View logs; filter by date range",
+          "purpose": "Review recent requests made with a suspected key."
+        },
+        "unknown": [
+          "Audit/security events for service key create, view, scope change, rotate, delete",
+          "View logs fields and retention",
+          "Full token regex"
+        ],
+        "evidence_refs": [
+          "fc-07562392",
+          "fc-217cb85b"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /crm/v3/objects/contacts",
+            "reveals": "CRM contact records",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Per-key request log via View logs on the key's details page; retention not stated."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-07562392"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-07562392",
+      "title": "Make API requests using a service key",
+      "url": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/authentication/account-service-keys",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-217cb85b",
+      "title": "HubSpot Account activity API",
+      "url": "https://developers.hubspot.com/docs/api-reference/account-audit-logs-v3/guide",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-766956d4",
+      "title": "HubSpot Service Keys: The Right API Credential for Data Integrations",
+      "url": "https://developers.hubspot.com/blog/hubspot-service-keys-the-right-api-credential-for-data-integrations",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b4d7cd80",
+      "title": "HubSpot user permissions guide",
+      "url": "https://knowledge.hubspot.com/user-management/hubspot-user-permissions-guide",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bb6d856f",
+      "title": "Service Keys enter public beta for system-to-system integrations",
+      "url": "https://developers.hubspot.com/changelog/service-keys",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-hs-legacy-pa",
+      "title": "Legacy Private App Creation Being Disabled - HubSpot Developer Changelog",
+      "url": "https://developers.hubspot.com/changelog/legacy-private-app-creation-sunset",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn11search1",
+      "title": "Manage login and account access settings",
+      "url": "https://knowledge.hubspot.com/account-security/limit-logins-to-trusted-ip-addresses",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

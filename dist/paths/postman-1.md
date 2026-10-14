@@ -1,0 +1,108 @@
+# Postman: Postman API key (user)
+
+`postman-1` · API key / token · person. User generates a key in Account settings > API keys and sends it in the X-API-Key header. It carries everything the user can access.
+
+Sourced from vendor documentation; not an audit of any tenant. "No docs found" means vendor documentation does not say either way.
+
+| Question | Answer | Why | How |
+|---|---|---|---|
+| Identify: Admin can list all of them | Yes | Enterprise Admins see every org-created Postman API key in the Postman API key management dashboard (Organization > Postman Keys). | Enterprise Admins see every org-created Postman API key in the Postman API key management dashboard (Organization > Postman Keys). |
+| Protect: Admin can block or require approval | Yes (requires Enterprise) | Allow anyone in your team to generate API keys | Allow anyone in your team to generate API keys: Organization > Postman Keys > API Key Settings |
+| Protect: SSO and MFA rules apply | No docs found | No vendor documentation found. |  |
+| Protect: IP restriction | No docs found | No Postman doc found describing IP allowlisting for API keys or the Postman API. |  |
+| Protect: Expires automatically | Partial | User-set expiry; Enterprise admins can force an org expiry | Set expiry for API keys: Organization > Postman Keys > API Key Settings |
+| Detect: Usage appears in logs | Yes | data.variables.apiKey, data.actor.id | Audit logs (dashboard and GET /audit/logs): Enterprise; 180 days; CSV export or Postman API for SIEM; events carry actor, IP, userAgent, data.variables · Postman API key management dashboard: Enterprise; creator, created, expiry, last used, revoke reason; Exposed API keys section |
+| Detect: Data reads appear in logs | No docs found | Vendor docs neither confirm nor deny. |  |
+| Respond: Revocation ends active access | No docs found | Docs do not state propagation time; key is checked per request via header. |  |
+| Respond: Stops working when user is removed | No docs found | No vendor documentation found. |  |
+
+## Protect: what an admin can configure
+
+### Admin controls
+- **Allow anyone in your team to generate API keys** (Disable; Enterprise; default on). Turn off to stop users creating new Postman API keys. Where: Organization > Postman Keys > API Key Settings.
+- **Set expiry for API keys** (Limit lifetime; Enterprise; default unknown). Org-wide expiry for all keys, overriding user settings. Where: Organization > Postman Keys > API Key Settings.
+
+- Network: unknown (checked at unknown). No Postman doc found describing IP allowlisting for API keys or the Postman API.
+- Lifetime: User-set expiry; Enterprise admins can force an org expiry. Renewal: Regenerate or create a new key
+- Keyless option: not_verified. No workload identity federation documented for this credential.
+- Conditions: Enterprise plan; Admin or Super Admin
+
+## Detect: what gets logged
+- Token prefix: not established
+
+### Logs
+- Audit logs (dashboard and GET /audit/logs): Enterprise; 180 days; CSV export or Postman API for SIEM; events carry actor, IP, userAgent, data.variables
+- Postman API key management dashboard: Enterprise; creator, created, expiry, last used, revoke reason; Exposed API keys section
+
+### Fields that identify the credential
+- `data.variables.apiKey` (Audit logs): Masked key identifier
+- `data.actor.id` (Audit logs): User who acted
+
+### Lifecycle events
+- create: `user.apikey_create` Created Postman API Key
+- revoke: `user.apikey_revoke` Revoked Postman API Key
+- other: `team.apikey_creation_enabled` Org re-enabled key creation
+
+### Correlate on
+`data.variables.apiKey`, `data.actor.id`, `ip`, `userAgent`
+
+### API calls a holder can make, and whether they are logged
+- recon: `GET /me`. Authenticated user, team, usage Logged: unknown. Audit log docs do not list API read events
+- discovery (bulk): `GET /workspaces`. All accessible workspaces incl. visibility Logged: unknown. Audit log docs do not list API read events
+- collection (bulk): `GET /collections`. All collections the user can see Logged: unknown. Audit log docs do not list API read events
+- enumeration (bulk): `GET /users`. All team users Logged: unknown. Audit log docs do not list API read events
+- collection (bulk): `GET /audit/logs`. Team audit events (admin) Logged: unknown. Audit log docs do not list API read events
+
+### What to look for (analyst guidance)
+- Keys with recent last-used but no expiry
+- New key created from unusual IP/userAgent
+- Keys in the Exposed API keys section
+- Bursts of GET /collections or /workspaces hitting 429
+- user.export_data (Exported Postman Data) events
+- GitHub/GitLab exposure notifications (all plans)
+
+### Sample query (undefined)
+undefined
+
+```
+undefined
+```
+
+## Respond: how to revoke it
+- Admin: **Revoke (API key management dashboard)**. Revoke single or selected keys; owner is emailed. Where: Organization > Postman Keys.
+- Admin: **Revoke all API keys generated by your team**. Revoke every Postman API key the org created. Where: Organization > Postman Keys > API Key Settings.
+- Admin: **Auto revoke exposed Postman API keys**. Auto-revoke keys the Secret Scanner finds in public Postman resources, GitHub or GitLab. Where: Organization > Postman Keys > API Key Settings.
+- Admin: **Delete API key (account settings)**. Key owner can regenerate or delete their own key. Where: Settings > Account settings > API keys.
+
+Revoke in Organization > Postman Keys (or Revoke all); owner can delete in Account settings > API keys. Live access ends on revocation: unknown. Docs do not state propagation time; key is checked per request via header.
+
+## No vendor documentation found
+- SSO and MFA rules apply
+- IP restriction
+- Data reads appear in logs
+- Revocation ends active access
+- Stops working when user is removed
+- Whether API usage per key is in audit logs
+- Whether reads are audited
+- Any IP allowlisting for Postman API keys or the Postman API (none found in docs).
+- Whether API keys or service account tokens are blocked by SSO-only enforcement or IdP conditional access; docs do not say.
+- Whether revoking a service account API key invalidates already-issued short-lived tokens.
+- Whether removing or SCIM-deactivating a user revokes their Postman API keys.
+- Default and allowed expiry values for user API keys and SCIM keys.
+- Exact audit action codes for service account key events and collection access key create/delete.
+- Whether Postman API read calls (GET /collections, /workspaces, etc.) appear in audit logs.
+- How OAuth client_credentials clients (installationAuthId) are registered and administered.
+- Documented prefix for user Postman API keys (OAuth token example shows PMAK-XXX; not stated for API keys).
+
+## Sources
+- [Generate and use Postman API keys](https://learning.postman.com/docs/reference/postman-api/authentication/) (retrieved 2026-10-14)
+- [Postman API Reference Overview](https://learning.postman.com/api-docs/api-reference) (retrieved 2026-10-14)
+- [Manage API keys](https://learning.postman.com/docs/administration/managing-your-team/managing-api-keys/) (retrieved 2026-10-14)
+- [Audit logs](https://learning.postman.com/docs/administration/managing-your-team/audit-logs/) (retrieved 2026-10-14)
+- [Get team audit logs](https://learning.postman.com/api-docs/api-reference/audit-logs/get-audit-logs) (retrieved 2026-10-14)
+- [Get all audit log event actions](https://learning.postman.com/api-docs/api-reference/audit-logs/get-audit-log-event-actions) (retrieved 2026-10-14)
+- [How the Secret Scanner works](https://learning.postman.com/docs/administration/managing-your-team/secret-scanner/how-secret-scanner-works/) (retrieved 2026-10-14)
+- [Get authenticated user](https://learning.postman.com/api-docs/api-reference/users/get-authenticated-user) (retrieved 2026-10-14)
+- [Get all collections](https://learning.postman.com/api-docs/api-reference/collections/get-collections) (retrieved 2026-10-14)
+- [Get all workspaces](https://learning.postman.com/api-docs/api-reference/workspaces/get-workspaces) (retrieved 2026-10-14)
+- [Get all team users](https://learning.postman.com/api-docs/api-reference/users/get-team-users) (retrieved 2026-10-14)

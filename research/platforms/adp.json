@@ -1,0 +1,666 @@
+{
+ "id": "adp",
+ "name": "ADP",
+ "scope_notes": "Covers ADP Workforce Now / ADP API Central / ADP Marketplace APIs. API Central is a paid add-on for client-built integrations; Marketplace data connectors are partner apps; most ADP developer guides are public PDFs, while developers.adp.com is a JS app and admin/audit docs were not publicly readable.",
+ "controls": [
+  {
+   "name": "Credential reset (API Central)",
+   "effect": "revoke",
+   "applies_to": [
+    "adp-1"
+   ],
+   "what": "Reset the project's client credentials at any time.",
+   "setting": "API Central portal > project > credentials",
+   "plan": "ADP API Central",
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-36262c8b"
+   ]
+  },
+  {
+   "name": "Team Access Management",
+   "effect": "limit_scope",
+   "applies_to": [
+    "adp-1"
+   ],
+   "what": "Roles control who can view API credentials and manage certificates; admins can revoke portal access.",
+   "setting": "API Central portal > Members",
+   "plan": "ADP API Central",
+   "default": "varies",
+   "level": "user",
+   "evidence_refs": [
+    "fc-36262c8b"
+   ]
+  },
+  {
+   "name": "Project APIs / use case (API discovery tool)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "adp-1"
+   ],
+   "what": "A project's credentials reach only the APIs added to that project.",
+   "setting": "API Central portal > project > add APIs",
+   "plan": "ADP API Central",
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-36262c8b"
+   ]
+  },
+  {
+   "name": "Mutual TLS certificate",
+   "effect": "other",
+   "applies_to": [
+    "adp-1",
+    "adp-2",
+    "adp-3"
+   ],
+   "what": "Every token and API request must present the registered X.509 certificate, so a leaked secret alone is not enough.",
+   "setting": "API Central / Self Service portal > Certificate",
+   "plan": null,
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-42cb32e2",
+    "fc-ed03d59a",
+    "fc-10679140"
+   ]
+  },
+  {
+   "name": "Consent Manager - Deny",
+   "effect": "revoke",
+   "applies_to": [
+    "adp-2"
+   ],
+   "what": "Client admin denies an allowed app so it no longer has access to the organization's ADP data.",
+   "setting": "https://adpapps.adp.com/consent-manager > Allowed Consents > Deny",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-d21489cf",
+    "fc-27e171a0"
+   ]
+  },
+  {
+   "name": "Consent Manager - Allow/Deny pending request",
+   "effect": "require_approval",
+   "applies_to": [
+    "adp-2"
+   ],
+   "what": "Marketplace apps get no client credentials until the client consents.",
+   "setting": "Consent Manager > Pending Consents",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-24416c25"
+   ]
+  },
+  {
+   "name": "Cancel subscription",
+   "effect": "revoke",
+   "applies_to": [
+    "adp-2"
+   ],
+   "what": "Cancelling the Marketplace subscription stops the app's API calls for that client.",
+   "setting": "ADP Marketplace > My Apps > Manage App > cancel subscription",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-80b01aaa"
+   ]
+  },
+  {
+   "name": "Shorter access token lifetime at registration",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "adp-1",
+    "adp-2",
+    "adp-3"
+   ],
+   "what": "A shorter token expiry can be requested during application registration.",
+   "setting": "Request to ADP during registration",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-42cb32e2"
+   ]
+  },
+  {
+   "name": "Project users role (API Central Members page)",
+   "effect": "disable",
+   "applies_to": [
+    "adp-1"
+   ],
+   "what": "Only members assigned the Project users role can create projects and access API credentials; withholding the role blocks credential creation.",
+   "setting": "API Central > Members > assign roles",
+   "plan": "API Central add-on",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-36262c8b"
+   ]
+  },
+  {
+   "name": "Client consent before subscriber credentials are released",
+   "effect": "require_approval",
+   "applies_to": [
+    "adp-3"
+   ],
+   "what": "The partner gets a client's Client ID and Secret only after that client consents to the partner solution.",
+   "setting": "Consent Manager (client) / Partner credential workflow",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-24416c25"
+   ]
+  }
+ ],
+ "no_control": [],
+ "controls_unknown": [
+  "Whether a customer-configurable IP allowlist exists for API Central credentials (docs only say tokens 'may be' tied to an IP).",
+  "Whether credential reset or consent denial revokes already-issued access tokens immediately.",
+  "What audit/log records exist for credential creation, reset, token issuance and API calls, and how clients access them.",
+  "Whether API Central certificates can be revoked by the client before expiry.",
+  "Whether consumer-application-subscription-credentials.read returns the same or new secrets after re-consent."
+ ],
+ "credentials": [
+  {
+   "id": "adp-1",
+   "name": "API Central project client credentials (client ID/secret + mutual TLS certificate)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Starting an API Central project generates a client ID and secret. The app posts them with grant_type=client_credentials to accounts.adp.com over mTLS using its ADP-signed certificate, then calls api.adp.com with the bearer token and the same certificate.",
+    "evidence_refs": [
+     "fc-36262c8b",
+     "fc-42cb32e2",
+     "fc-ed03d59a"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "No user sign-in is involved; docs do not discuss SSO or conditional access for API calls.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "unknown",
+    "boundary": "ADP may tie tokens to the computing environment (e.g. IP) used at authorization; this is ADP-side, not a customer-configurable allowlist.",
+    "evidence_refs": [
+     "fc-9d8b8098"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "conditional",
+    "summary": "Access token 60 min; secret static until reset; certificate 2 years",
+    "evidence_refs": [
+     "fc-42cb32e2",
+     "fc-36262c8b"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "access token 60 min; certificate expiry",
+    "summary": "App requests a new token with the secret and certificate; certificate renewed via new CSR.",
+    "evidence_refs": [
+     "fc-42cb32e2"
+    ]
+   },
+   "administration": {
+    "summary": "API Central portal: projects, credential reset, certificate management, Team Access Management roles (Project, Certificate, Member users).",
+    "conditions": "Requires API Central subscription.",
+    "evidence_refs": [
+     "fc-36262c8b"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "API Central projects are data connectors; the API actor is a client agent that is not authenticated as a user, so user SSO/MFA does not apply.",
+     "evidence_refs": [
+      "fc-decba556",
+      "fc-114e5462"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The API actor is a pre-assigned system (non-human) user, not the person who created the project.",
+     "evidence_refs": [
+      "fc-decba556",
+      "fc-114e5462"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "API Central Projects page shows project cards; docs describe it as the projects you create, not an org-wide credential list.",
+     "evidence_refs": [
+      "fc-decba556"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "API Central > Certificate > Certificate management card shows expiration date; shorter token lifetime only by request at registration",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-98d7d627",
+      "fc-57f343e3"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Access token is an opaque UUID-like string (example 27b16f3c-...); expires_in 3600."
+    },
+    "log_sources": [],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "client_id",
+     "certificate common name"
+    ],
+    "anomaly_cues": [
+     "New certificate requested/uploaded in API Central",
+     "New team member with Project user role",
+     "High-volume /hr/v2/workers pagination"
+    ],
+    "containment": {
+     "steps": "Reset project credentials in API Central; replace the certificate; remove portal members.",
+     "kills_existing": "unknown",
+     "notes": "Tokens last up to 60 minutes."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Any customer-visible API or audit log"
+    ],
+    "evidence_refs": [
+     "fc-42cb32e2",
+     "fc-36262c8b"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST https://accounts.adp.com/auth/oauth/v2/token (grant_type=client_credentials, mTLS)",
+      "reveals": "Valid token and expires_in",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": null
+     },
+     {
+      "stage": "collection",
+      "call": "GET /hr/v2/workers?$top=&$skip=",
+      "reveals": "All workers in the org (paged)",
+      "bulk": true,
+      "scope": "Project API set",
+      "rate_limit": "10 calls/s with burst (EU ESI)",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No customer-facing API log documented."
+     }
+    ],
+    "unknown": [
+     "No documented whoami endpoint"
+    ],
+    "evidence_refs": [
+     "fc-42cb32e2"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "adp-2",
+   "name": "Marketplace data connector client credentials (held by partner app)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "After a client buys a Marketplace app and consents, the partner retrieves that client's client ID/secret via consumer-application-subscription-credentials.read and uses client credentials over mTLS to call the client's APIs.",
+    "evidence_refs": [
+     "fc-24416c25",
+     "fc-a82cb103"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Consent is given by a client user; API calls afterwards use client credentials with no user session.",
+    "evidence_refs": [
+     "fc-d21489cf"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "unknown",
+    "boundary": "ADP may tie tokens to the IP used at authorization; no customer-configurable allowlist documented.",
+    "evidence_refs": [
+     "fc-9d8b8098"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Access token 60 min; credentials last while consent and subscription are active",
+    "evidence_refs": [
+     "fc-42cb32e2",
+     "fc-27e171a0"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "access token 60 min",
+    "summary": "Partner mints new tokens with stored client credentials.",
+    "evidence_refs": [
+     "fc-42cb32e2"
+    ]
+   },
+   "administration": {
+    "summary": "Client admin controls access through Consent Manager (Allow/Deny) and Marketplace subscription cancellation.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-d21489cf",
+     "fc-80b01aaa"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Data connector API actor is a client agent that is not authenticated as a user.",
+     "evidence_refs": [
+      "fc-114e5462"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Credentials act as a system agent user created for the data connector, not a person.",
+     "evidence_refs": [
+      "fc-114e5462"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Consent Manager (adpapps.adp.com/consent-manager) lists allowed and denied app consents; WFN lists each connector's System Agent User under Marketplace Data Connector Profile > Members.",
+     "evidence_refs": [
+      "fc-adc91d27",
+      "fc-6e806344"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Request a shorter access-token lifetime from ADP at application registration (default 60 min)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-57f343e3"
+     ]
+    },
+    "usage": {
+     "ui": "(Partner) ADP Marketplace > profile > Developer > Integration Events; Show Filters, filter Event Type and date; User/Company column names the client",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-1192065a"
+     ]
+    },
+    "kill": {
+     "ui": "adpapps.adp.com/consent-manager > Allowed Consents > Deny > I'm Sure; and ADP Marketplace > My Apps > app tile cog > Manage App > cancel subscription",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-d21489cf",
+      "fc-80b01aaa"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque bearer token, 60 minutes."
+    },
+    "log_sources": [
+     {
+      "name": "Marketplace event logs",
+      "notes": "Referenced for subscription cancellation; access method and retention not documented."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [
+     {
+      "event": "subscription cancellation",
+      "stage": "revoke",
+      "notes": "Shown in Marketplace event logs per partner checklist; exact event name not given."
+     }
+    ],
+    "correlation_keys": [
+     "consumerApplicationID",
+     "client OOID"
+    ],
+    "anomaly_cues": [
+     "Unknown apps in Consent Manager Allowed Consents"
+    ],
+    "containment": {
+     "steps": "Deny the app in Consent Manager and cancel the Marketplace subscription.",
+     "kills_existing": "partial",
+     "notes": "ADP validates consent before processing API calls, so denial should block calls; immediate effect on live tokens not stated."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Client-visible log of partner API calls"
+    ],
+    "evidence_refs": [
+     "fc-d21489cf",
+     "fc-27e171a0",
+     "fc-80b01aaa"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /hr/v2/workers",
+      "reveals": "Client's worker records",
+      "bulk": true,
+      "scope": "Consented app permissions",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": null
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-42cb32e2",
+     "fc-24416c25"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "adp-3",
+   "name": "Marketplace Partner API / Data Connector credentials (partner-level)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "The partner's own client ID/secret from the Self Service portal, used with the partner mTLS certificate to get a token that can read client credentials for every consented subscriber.",
+    "evidence_refs": [
+     "fc-a82cb103",
+     "fc-24416c25",
+     "fc-0efcbca8"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Held by the partner, not by the customer tenant.",
+    "evidence_refs": [
+     "fc-a82cb103"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "unknown",
+    "boundary": "ADP may tie tokens to the IP used at authorization; no allowlist documented for partner or client.",
+    "evidence_refs": [
+     "fc-9d8b8098"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Access token 60 min; certificate 2 years",
+    "evidence_refs": [
+     "fc-42cb32e2",
+     "fc-0efcbca8"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "access token 60 min",
+    "summary": "Partner re-requests tokens.",
+    "evidence_refs": [
+     "fc-42cb32e2"
+    ]
+   },
+   "administration": {
+    "summary": "Managed by the partner in the ADP Self Service portal; scopes added by ADP ticket. The customer's only lever is consent/subscription.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-ed03d59a",
+     "fc-27e171a0"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Partner-level credentials authenticate an application, with no end-user authentication.",
+     "evidence_refs": [
+      "fc-114e5462"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "ADP issues one set of credentials per application, not per user.",
+     "evidence_refs": [
+      "fc-114e5462"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "The partner sees its projects and credentials in the Partner Self Service Portal; the subscribing client has no view of partner-level credentials.",
+     "evidence_refs": [
+      "fc-083225ee"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "(Partner) Self Service Portal > Projects > {project} > Development API Credentials",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b733a2f6",
+      "fc-10679140"
+     ]
+    },
+    "disable": {
+     "ui": "(Client) adpapps.adp.com/consent-manager > Pending Consents > Manage > Deny",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-d21489cf"
+     ]
+    },
+    "expiry": {
+     "ui": "(Partner) Self Service Portal > Certificate > Request Certificate > Check Status > note Expiration Date; token lifetime per registration (default 60 min)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-10679140",
+      "fc-57f343e3"
+     ]
+    },
+    "kill": {
+     "ui": "(Client) adpapps.adp.com/consent-manager > Allowed Consents > Deny > I'm Sure",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-d21489cf"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque bearer token."
+    },
+    "log_sources": [],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "partner client_id"
+    ],
+    "anomaly_cues": [
+     "Partner credential compromise exposes every consented client; customers cannot see it directly"
+    ],
+    "containment": {
+     "steps": "Customer: deny consent / cancel subscription. Partner: reset credentials in Self Service portal.",
+     "kills_existing": "yes",
+     "notes": "Client side: revoking consent in Consent Manager turns the integration off instantly. Partner credential reset timing not documented."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Partner-side secret reset procedure details"
+    ],
+    "evidence_refs": [
+     "fc-24416c25",
+     "fc-d21489cf",
+     "fc-a82cb103",
+     "fc-6e806344"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "POST /events/core/v1/consumer-application-subscription-credentials.read",
+      "reveals": "Client ID and secret for a consented subscriber (by OOID)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": null
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-24416c25"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

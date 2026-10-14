@@ -1,0 +1,582 @@
+{
+ "id": "crowdstrike",
+ "name": "CrowdStrike Falcon",
+ "scope_notes": "Public developer docs only; Falcon console documentation (IP allowlisting, audit event names, roles) requires login and is marked unknown. Next-Gen SIEM HEC needs a Next-Gen SIEM subscription; member_cid needs Flight Control.",
+ "controls": [
+  {
+   "name": "API scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "crowdstrike-1",
+    "crowdstrike-2"
+   ],
+   "what": "Each API client gets only the scopes selected for it; scopes can be changed later.",
+   "setting": "Support and resources > API Clients & Keys; PATCH /api-clients/entities/api-clients/v1",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-5b6dde7f",
+    "fc-ffb769b7"
+   ]
+  },
+  {
+   "name": "DeleteAPIClients",
+   "effect": "revoke",
+   "applies_to": [
+    "crowdstrike-1",
+    "crowdstrike-2"
+   ],
+   "what": "Deletes API clients by ID.",
+   "setting": "Console or DELETE /api-clients/entities/api-clients/v1",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-ffb769b7"
+   ]
+  },
+  {
+   "name": "ResetAPIClientSecret",
+   "effect": "require_rotation",
+   "applies_to": [
+    "crowdstrike-1",
+    "crowdstrike-2"
+   ],
+   "what": "Issues a new secret for the client.",
+   "setting": "POST /api-clients/entities/api-clients-actions/v1?action_name=reset_secret",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-ffb769b7"
+   ]
+  },
+  {
+   "name": "oauth2RevokeToken",
+   "effect": "revoke",
+   "applies_to": [
+    "crowdstrike-1",
+    "crowdstrike-2"
+   ],
+   "what": "Revokes a specific access token before its 30-minute expiry; needs the client's ID and secret.",
+   "setting": "POST /oauth2/revoke",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-f4a4089a"
+   ]
+  },
+  {
+   "name": "Regenerate Ingest token",
+   "effect": "require_rotation",
+   "applies_to": [
+    "crowdstrike-3"
+   ],
+   "what": "Regenerates the data connection ingest token.",
+   "setting": "POST /ngsiem/entities/connections/token/v1",
+   "plan": "Falcon Next-Gen SIEM",
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-bf6410f1",
+    "fc-ad581e2f"
+   ]
+  }
+ ],
+ "no_control": [],
+ "controls_unknown": [
+  "IP allowlisting for API clients: whether it exists, whether it applies to /oauth2/token or every API request (Falcon docs require login).",
+  "Whether deleting an API client or resetting its secret invalidates already-issued 30-minute tokens.",
+  "Audit event names for API client create/update/delete/secret reset and token issuance, and which field carries the client ID.",
+  "Whether ordinary API read calls are written to the audit log, and audit log retention.",
+  "Which Falcon roles can create API clients, and whether creation can require approval.",
+  "Whether a parent CID can be prevented from issuing member_cid tokens for specific child CIDs.",
+  "HEC ingest key expiry, IP restriction, and whether regeneration invalidates the old key immediately.",
+  "API rate limits (documented only inside Falcon)."
+ ],
+ "credentials": [
+  {
+   "id": "crowdstrike-1",
+   "name": "OAuth2 API client (client ID and secret)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An API client created in Support and resources > API Clients & Keys has a client ID, secret and selected API scopes. The pair is exchanged at POST /oauth2/token (regional base URL) for a 30-minute bearer token.",
+    "evidence_refs": [
+     "fc-b89c7d20",
+     "fc-5b6dde7f"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "No workload identity federation for API clients found in public docs.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Falcon IP allowlisting docs are behind the Falcon console login; not verified.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 1800,
+    "maximum_seconds": 1800,
+    "configurable": "not_verified",
+    "summary": "Access token 30 min; client secret has no documented expiry",
+    "evidence_refs": [
+     "fc-b89c7d20",
+     "fc-f4a4089a"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "30 minutes from issue",
+    "summary": "Client requests a new token with the same ID and secret.",
+    "evidence_refs": [
+     "fc-b89c7d20"
+    ]
+   },
+   "administration": {
+    "summary": "Create, update scopes, reset secret, or delete clients in the console or via /api-clients/entities/api-clients/v1 (Api Client Mgmt scope).",
+    "conditions": "Console role needed to manage API clients is documented only inside Falcon.",
+    "evidence_refs": [
+     "fc-ffb769b7",
+     "fc-5b6dde7f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "API clients are customer (CID)-level credentials created under API Clients & Keys, not user logins; docs do not say what happens if the creating user is removed.",
+     "evidence_refs": [
+      "fc-b89c7d20",
+      "fc-ffb769b7"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /api-clients/queries/api-clients/v1 (GetAllAPIClientIdsForCustomer) plus GetAPIClients; also the console's API Clients & Keys page.",
+     "evidence_refs": [
+      "fc-ffb769b7",
+      "fc-b89c7d20"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented publicly."
+    },
+    "log_sources": [
+     {
+      "name": "Falcon audit logs (Audit API)",
+      "notes": "Query via POST /audit-logs/queries/queryjobs/v1 (scope Audit: READ); filters include actor_id, actor_ip, actor_type, user_agent, action. Retention not public."
+     },
+     {
+      "name": "Event Streams",
+      "notes": "Streaming API (scope Event streams: READ); audit event types not verified from public docs."
+     },
+     {
+      "name": "Real Time Response audit",
+      "notes": "GET /real-time-response-audit/combined/sessions/v1 lists RTR sessions."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor_id",
+      "log": "Audit API",
+      "notes": "Whether this holds the API client ID for API actions is not documented."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "actor_id",
+     "actor_ip",
+     "user_agent"
+    ],
+    "anomaly_cues": [
+     "New API client with write scopes (Real time response (admin), Hosts, API Client Mgmt)",
+     "Secret reset on an existing client",
+     "API calls from unfamiliar actor_ip or user_agent"
+    ],
+    "containment": {
+     "steps": "Delete the API client or reset its secret; revoke known tokens with POST /oauth2/revoke.",
+     "kills_existing": "unknown",
+     "notes": "Tokens last up to 30 min if not revoked."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact audit action names"
+    ],
+    "evidence_refs": [
+     "fc-6e85a8a6",
+     "fc-7d876b95",
+     "fc-bf6410f1",
+     "fc-f4a4089a",
+     "fc-ffb769b7"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /sensors/queries/installers/ccid/v1",
+      "reveals": "Tenant CID with checksum",
+      "bulk": false,
+      "scope": "Sensor Download: READ",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /api-clients/queries/api-clients/v1",
+      "reveals": "All API client IDs",
+      "bulk": true,
+      "scope": "Api Client Mgmt: READ",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /devices/combined/devices/v1",
+      "reveals": "Host inventory",
+      "bulk": true,
+      "scope": "Hosts: READ",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /alerts/combined/alerts/v1",
+      "reveals": "Alerts matching an FQL filter",
+      "bulk": true,
+      "scope": "Alerts: READ",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /sensors/entities/datafeed/v2",
+      "reveals": "Event stream URLs for continuous data",
+      "bulk": true,
+      "scope": "Event streams: READ",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "No documented whoami for the API client itself"
+    ],
+    "evidence_refs": [
+     "fc-bf6410f1",
+     "fc-ffb769b7",
+     "fc-7d876b95"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Crowdstrike API Key Created",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/crowdstrike_rules/event_stream_rules/crowdstrike_api_key_created.yml",
+     "detects": "A Falcon API client (client ID and secret) was created."
+    },
+    {
+     "source": "Panther",
+     "title": "Crowdstrike API Key Deleted",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/crowdstrike_rules/event_stream_rules/crowdstrike_api_key_deleted.yml",
+     "detects": "Falcon API clients were deleted."
+    }
+   ]
+  },
+  {
+   "id": "crowdstrike-2",
+   "name": "Flight Control (MSSP) parent API client acting on a child CID (member_cid)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An API client in a Flight Control parent CID can request a token with member_cid to act on a child CID.",
+    "evidence_refs": [
+     "fc-f4a4089a",
+     "fc-be79fca9"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented publicly.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 1800,
+    "maximum_seconds": 1800,
+    "configurable": "not_verified",
+    "summary": "Same 30-min token as other API clients",
+    "evidence_refs": [
+     "fc-b89c7d20"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "30 minutes",
+    "summary": "New token per child CID with the parent's client credentials.",
+    "evidence_refs": [
+     "fc-f4a4089a"
+    ]
+   },
+   "administration": {
+    "summary": "Managed in the parent CID; parent can list linked child CIDs via /mssp/queries/children/v1.",
+    "conditions": "Falcon Flight Control subscription (documented in console).",
+    "evidence_refs": [
+     "fc-6f818608"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Parent-CID API client credential, not a user login.",
+     "evidence_refs": [
+      "fc-b89c7d20"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Same API client listing (GET /api-clients/queries/api-clients/v1) in the parent CID.",
+     "evidence_refs": [
+      "fc-ffb769b7"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": null,
+     "api": "POST /audit-logs/queries/queryjobs/v1 with cid=[<child CID>] (and actor_id); poll GET /audit-logs/entities/queryjobs/v1?id=; read GET /audit-logs/entities/queryjob-results/v1?id=",
+     "cli": "FalconPy: Audit.create_audit_query_job(cid=[...], actor_id=[...])",
+     "evidence_refs": [
+      "fc-dac246e8",
+      "fc-59d220f2",
+      "fc-5ae0fe6b"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Falcon audit logs (Audit API)",
+      "notes": "Has a cid filter; whether child CID logs show parent client actions is not documented."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "cid",
+      "log": "Audit API",
+      "notes": "Filter field."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "cid",
+     "actor_id"
+    ],
+    "anomaly_cues": [
+     "Parent client tokens minted for many child CIDs"
+    ],
+    "containment": {
+     "steps": "Delete or reset the parent API client.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Child-side visibility of parent API use"
+    ],
+    "evidence_refs": [
+     "fc-6e85a8a6",
+     "fc-f4a4089a"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "GET /mssp/queries/children/v1",
+      "reveals": "Linked child CIDs",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-6f818608"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "crowdstrike-3",
+   "name": "Next-Gen SIEM HEC data connector API key (ingest token)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Creating an HEC/HTTP Event Data Connector produces an API key and URL used by log shippers to send events into Next-Gen SIEM.",
+    "evidence_refs": [
+     "fc-ad581e2f"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static ingest key.",
+    "evidence_refs": [
+     "fc-ad581e2f"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented publicly.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Token has an expires_at timestamp; default and max not documented",
+    "evidence_refs": [
+     "fc-cad0466e"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "unknown",
+    "summary": "Regenerate via POST /ngsiem/entities/connections/token/v1.",
+    "evidence_refs": [
+     "fc-bf6410f1"
+    ]
+   },
+   "administration": {
+    "summary": "Next-Gen SIEM > Data ingestion > Data connectors.",
+    "conditions": "Falcon Next-Gen SIEM subscription; Administrator or Connector Manager.",
+    "evidence_refs": [
+     "fc-ad581e2f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The key belongs to the data connector, shown on the connector's detail page.",
+     "evidence_refs": [
+      "fc-ad581e2f"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /ngsiem/combined/connections/v1 lists data connections; console page Next-Gen SIEM > Data ingestion > Data connectors.",
+     "evidence_refs": [
+      "fc-79df10b9",
+      "fc-ad581e2f"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Next-Gen SIEM > Data ingestion > Data connectors > <connector> > Show events (or Advanced Event Search filtered on the connector's #connector tag)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-ad581e2f"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Next-Gen SIEM events tagged #connector",
+      "notes": "Ingested data can be filtered by the connector tag; key-use audit not documented."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "#connector"
+    ],
+    "anomaly_cues": [
+     "Unexpected events or volume on a connector (log injection)"
+    ],
+    "containment": {
+     "steps": "Regenerate the ingest token or delete the connector.",
+     "kills_existing": "yes",
+     "notes": "Regenerating the ingest token invalidates the previous one; timing not stated."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit events for connector key regeneration"
+    ],
+    "evidence_refs": [
+     "fc-bf6410f1",
+     "fc-cad0466e"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Ingest key is write-only per docs reviewed; read capability not documented"
+    ],
+    "evidence_refs": []
+   },
+   "detections": []
+  }
+ ]
+}

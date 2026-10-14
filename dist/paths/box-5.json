@@ -1,0 +1,399 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "box",
+      "name": "Box",
+      "scope_notes": "Do not substitute Box Shield location/anomaly detection or corporate firewall allowlisting for API source-IP enforcement.",
+      "controls": [
+        {
+          "name": "Enable/disable user authentication app",
+          "effect": "disable",
+          "applies_to": [
+            "box-1",
+            "box-5"
+          ],
+          "what": "Admins enable or disable a custom OAuth 2.0 app for the enterprise by Client ID.",
+          "setting": "Admin Console > Platform > Platform Apps > User Authentication Apps",
+          "plan": null,
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-95b70b60"
+          ],
+          "quote": "enable custom user authentication applications, such as OAuth 2.0 apps, and"
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No admin setting found that blocks developers from generating developer tokens; tokens expire after 60 minutes and inherit the app's scopes and the user's access.",
+        "Whether Box offers API source-IP enforcement for app tokens (no admin doc found; Shield/firewall not counted).",
+        "Whether new Limited Access (App Token) apps can still be created.",
+        "Whether Box SSO requirements constrain OAuth token issuance for managed users (not checked).",
+        "Whether app access level (App only vs App + Enterprise) and scopes can be overridden by the admin at authorization time; docs show them set by the developer in the Developer Console."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "box-5",
+      "provider_id": "box",
+      "name": "Developer token",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Ordinary Box access token generated in the Developer Console for testing. It acts as the user who was signed in to the console when it was generated.",
+        "evidence_refs": [
+          "fc-f445ffdd",
+          "turn3search35"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Generated manually in the console; no external identity exchange applies.",
+        "evidence_refs": [
+          "fc-f445ffdd"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "A Box staff community answer describes an enterprise IP allowlist that narrows both web app and API access. Current official documentation of its coverage for developer-token calls was not found; confirm with Box.",
+        "evidence_refs": [
+          "fc-4465fe85"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 3600,
+        "configurable": "no",
+        "summary": "60 minutes",
+        "evidence_refs": [
+          "fc-f445ffdd",
+          "turn3search35"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not_applicable",
+        "summary": "Cannot be refreshed programmatically; generate a new token in the Developer Console.",
+        "evidence_refs": [
+          "fc-f445ffdd"
+        ]
+      },
+      "administration": {
+        "summary": "Any developer with access to the app's Configuration tab can generate one; it carries that user's access within the app's scopes. Revoking it in the console also deletes all webhooks the app created.",
+        "conditions": "Box says developer tokens are for development and testing only and should not be used in production.",
+        "evidence_refs": [
+          "fc-f445ffdd"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Fixed 60 min, not configurable or refreshable (Developer Console > Configuration > Generate Developer Token)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-38383315"
+          ]
+        },
+        "reads": {
+          "ui": "Admin Console > Reports > Create Report > User Activity; filter Action types to Downloaded",
+          "api": "GET /2.0/events?stream_type=admin_logs&event_type=DOWNLOAD",
+          "cli": null,
+          "evidence_refs": [
+            "fc-d07f45ad",
+            "fc-f47fec09",
+            "fc-ed3981b6",
+            "fc-9fd10892"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Ordinary opaque access token; expires after 60 minutes; cannot be refreshed. Acts as the console user."
+        },
+        "log_sources": [
+          {
+            "name": "Box Enterprise Events (GET /events, stream_type=admin_logs / admin_logs_streaming)",
+            "notes": "Admin/co-admin with reporting permission. admin_logs: 1 year history; admin_logs_streaming: ~2 weeks live. Admin Console reports: 7 years."
+          },
+          {
+            "name": "Box Shield alerts (SHIELD_ALERT in enterprise events)",
+            "notes": "Shield add-on only. Suspicious location/session, anomalous download alerts with ip_info and service_name."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "created_by",
+            "log": "Box Enterprise Events",
+            "notes": "User mini object (id, name, login) acting; id 2 = Unknown User"
+          },
+          {
+            "field": "session_id",
+            "log": "Box Enterprise Events",
+            "notes": "User session; not populated on all events"
+          },
+          {
+            "field": "additional_details",
+            "log": "Box Enterprise Events",
+            "notes": "Event-specific details ('how a user performed an event'); per-event keys not fully documented"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "CONTENT_ACCESS",
+            "stage": "use",
+            "notes": "Programmatic access by a Box application"
+          },
+          {
+            "event": "DOWNLOAD",
+            "stage": "use",
+            "notes": "File download"
+          },
+          {
+            "event": "OAUTH2_ACCESS_TOKEN_REVOKE",
+            "stage": "revoke",
+            "notes": "Access token revoked; coverage for developer tokens not documented"
+          }
+        ],
+        "correlation_keys": [
+          "created_by.id",
+          "created_by.login",
+          "ip_address",
+          "session_id",
+          "event_type",
+          "created_at",
+          "action_by",
+          "additional_details"
+        ],
+        "anomaly_cues": [
+          "Developer's account making API calls from an IP not matching their recent LOGIN events",
+          "Bursts of API-style activity under a human admin/developer account",
+          "Repeated short-lived activity windows (~60 min) suggesting regenerated developer tokens",
+          "Developer tokens generated on an app in production use (webhooks lost on revoke)"
+        ],
+        "containment": {
+          "steps": "Revoke the token in Developer Console or via POST /oauth2/revoke; it also expires on its own after 60 minutes. Disable the developer's account or the app if generation is the problem.",
+          "kills_existing": "yes",
+          "notes": "Revoking a developer token deletes all webhooks created by that app."
+        },
+        "sample_query": {
+          "language": "Box Events API (GET /events)",
+          "query": "GET https://api.box.com/2.0/events?stream_type=admin_logs&event_type=DOWNLOAD,CONTENT_ACCESS&created_after=2026-09-12T00:00:00-00:00&limit=500",
+          "purpose": "Review programmatic access by the developer user; filter created_by.login and compare ip_address to their LOGIN events"
+        },
+        "unknown": [
+          "Event recording developer token generation",
+          "Field distinguishing developer-token use from the user's normal sessions"
+        ],
+        "evidence_refs": [
+          "fc-9fd10892",
+          "fc-ed3981b6",
+          "fc-a4de07e3",
+          "fc-62c7849a",
+          "fc-f445ffdd",
+          "fc-d5097aa0",
+          "fc-b85837df",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /users/me",
+            "reveals": "the user who was logged into the Developer Console when the token was generated",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "1000 API requests/minute per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Read event emission not documented; token expires after 60 minutes"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /folders/0/items",
+            "reveals": "items the console user can reach; traverse tree",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1000/min per user; max 1000/page",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Listing read event not documented"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /files/{file_id}/content",
+            "reveals": "file contents in binary",
+            "bulk": true,
+            "scope": "root_readonly",
+            "rate_limit": "1000/min per user",
+            "logged": "yes",
+            "log_event": "DOWNLOAD",
+            "log_notes": "Enterprise events admin_logs record downloads; actor is the console user"
+          }
+        ],
+        "unknown": [
+          "Whether reads produce events"
+        ],
+        "evidence_refs": [
+          "fc-f445ffdd",
+          "fc-c476955c",
+          "fc-848861d0",
+          "fc-9fd10892"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-38383315",
+      "title": "Developer tokens",
+      "url": "https://developer.box.com/guides/authentication/tokens/developer-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4465fe85",
+      "title": "Limiting access for an app by IP range (Box Community)",
+      "url": "https://support.box.com/hc/en-us/community/posts/1500000391641-Limiting-access-for-an-app-by-IP-range",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62c7849a",
+      "title": "Box: Shield alert events",
+      "url": "https://developer.box.com/guides/events/event-triggers/shield-alert-events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-848861d0",
+      "title": "Download file",
+      "url": "https://developer.box.com/reference/get-files-id-content/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-95b70b60",
+      "title": "Managing platform apps",
+      "url": "https://docs.box.com/en/box-admin-tools/how-to-guides-for-admins/managing-platform-apps",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9fd10892",
+      "title": "Box: Monitor enterprise events",
+      "url": "https://developer.box.com/guides/events/enterprise-events/for-enterprise/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a4de07e3",
+      "title": "Box Java SDK (vendor repo): BoxEvent",
+      "url": "https://github.com/box/box-java-sdk/blob/legacy/src/main/java/com/box/sdk/BoxEvent.java",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b85837df",
+      "title": "Box API: Revoke access token",
+      "url": "https://developer.box.com/reference/post-oauth2-revoke/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c476955c",
+      "title": "Get current user",
+      "url": "https://developer.box.com/reference/get-users-me/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d07f45ad",
+      "title": "Running Reports",
+      "url": "https://support.box.com/hc/en-us/articles/360043696534-Running-Reports",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d5097aa0",
+      "title": "Box: Revoke a token",
+      "url": "https://developer.box.com/guides/authentication/tokens/revoke/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed3981b6",
+      "title": "Box API: List user and enterprise events",
+      "url": "https://developer.box.com/reference/get-events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f445ffdd",
+      "title": "Developer Tokens - Box Dev Docs",
+      "url": "https://developer.box.com/guides/authentication/tokens/developer-tokens",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f47fec09",
+      "title": "User Activity Report",
+      "url": "https://support.box.com/hc/en-us/articles/4415012490387-User-Activity-Report",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search35",
+      "title": "Authentication - Box Dev Docs",
+      "url": "https://developer.box.com/guides/authentication",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

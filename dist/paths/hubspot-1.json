@@ -1,0 +1,390 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "scope_notes": "Private-app and newer developer-platform static authentication coexist. SSO requires eligible Professional/Enterprise subscriptions.",
+      "controls": [
+        {
+          "name": "Legacy private app scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "hubspot-1"
+          ],
+          "what": "Super Admin selects which scopes the private app token can use; editable after creation.",
+          "setting": "Development > Legacy apps > app > Scopes / Edit app",
+          "plan": null,
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "turn12search3"
+          ],
+          "quote": "select the **checkbox** for each scope you want your private app to be able to access."
+        },
+        {
+          "name": "Legacy private app token Rotate",
+          "effect": "other",
+          "applies_to": [
+            "hubspot-1"
+          ],
+          "what": "Issues a new token and expires the old one immediately or after 7 days; Super Admins get a reminder after 180 days without rotation.",
+          "setting": "Development > Legacy apps > app > Auth > Rotate",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "turn12search3"
+          ],
+          "quote": "If your token is compromised and you want to immediately revoke access, click **Rotate and expire now**."
+        },
+        {
+          "name": "Delete legacy private app",
+          "effect": "revoke",
+          "applies_to": [
+            "hubspot-1"
+          ],
+          "what": "Deleting the app permanently revokes its access token.",
+          "setting": "Development > Legacy apps > app > Auth > Delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "turn12search3"
+          ],
+          "quote": "When you delete one of your private apps, its access token will be permanently revoked and you'll no longer be able to use it to make API calls."
+        },
+        {
+          "name": "Super Admin required for private apps",
+          "effect": "other",
+          "applies_to": [
+            "hubspot-1"
+          ],
+          "what": "Only Super Admins can access and create private apps, so withholding Super Admin removes the ability; there is no account-wide off switch.",
+          "setting": "User permissions: Super Admin",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "turn12search3"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No IP allowlist for API calls found; \"Allowed login IPs\" (Settings > Security > Login) is documented only for logins.",
+        "Whether app governance (approval) covers privately distributed OAuth apps and static-auth apps, or only HubSpot Marketplace listings.",
+        "No admin-set token lifetime or mandatory rotation policy found for private app tokens, static tokens, service keys or the developer API key (only manual rotation and reminders).",
+        "No account-wide switch found to block service key creation other than withholding Developer tools access / Super Admin."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "hubspot-1",
+      "provider_id": "hubspot",
+      "name": "Private app token",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "legacy",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Static access token for a legacy (non-project) private app, sent as a Bearer token in the Authorization header. HubSpot implements it on top of OAuth, so client libraries accept it as an access token.",
+        "evidence_refs": [
+          "turn4search6",
+          "turn12search3",
+          "turn4search22"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "turn4search6",
+          "turn12search3",
+          "turn4search22"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "login_only",
+        "boundary": "Trusted-IP documentation restricts account logins; API-call enforcement for private-app/OAuth tokens was not established.",
+        "evidence_refs": [
+          "turn11search1",
+          "turn12search3"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Long-lived; explicit rotation/revocation",
+        "evidence_refs": [
+          "turn4search6",
+          "turn12search3",
+          "turn4search22"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "Rotate the private-app token explicitly, immediately or with a 7-day transition.",
+        "evidence_refs": [
+          "turn4search6",
+          "turn12search3",
+          "turn4search22"
+        ]
+      },
+      "administration": {
+        "summary": "Super admins manage legacy private apps: scope selection, viewing and rotating the token, 30-day API call logs, and deletion (which revokes the token). Super admins get rotation emails and a reminder after 180 days without rotation. Removing the user who created the app can make some calls fail until the token is rotated.",
+        "conditions": "UI creation of new legacy private apps is disabled on 2026-09-28 for accounts created on or after that date and on 2026-10-26 for older accounts; existing legacy private apps keep working. HubSpot points new in-account integrations to service keys (hubspot-5). Migrating a non-project legacy private app to platform 2026.09 is not currently supported. Up to 20 private apps per account.",
+        "evidence_refs": [
+          "turn11search1",
+          "turn12search3",
+          "fc-hs-legacy-pa"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Removing the user who created the private app makes some (not all) API calls with its token fail.",
+          "evidence_refs": [
+            "turn12search3"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Super admins see private apps under Development > Legacy apps; GET /account-info/v3/api-usage/daily/private-apps reports usage for all private apps.",
+          "evidence_refs": [
+            "turn12search3"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Development > Legacy apps > {private app} > Logs tab; Method = GET, search request URL '/crm/v3/objects/contacts'; Export logs (CSV) for 30 days",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "turn12search3"
+          ]
+        },
+        "offboard": {
+          "ui": "Settings > Users & Teams > {user} > Actions > Deactivate user, then Actions > Remove from account",
+          "api": "DELETE /settings/v3/users/{userId}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2e4b4878",
+            "fc-d8797041"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Static bearer token, does not expire unless rotated. Prefix not shown in fetched private-app docs (service keys use pat-na1-). GitHub secret scanning covers 'Hubspot Private Apps User Token'."
+        },
+        "log_sources": [
+          {
+            "name": "HubSpot security activity (Account activity API /account-info/v3/activity/security)",
+            "notes": "Records user actions such as PRIVATE_APP_ACCESS_TOKEN_VIEW and INSTALL_INTEGRATION with IP/location. UI shows 30 days; export covers last year. Scope account-info.security.read."
+          },
+          {
+            "name": "HubSpot centralized audit log (/account-info/v3/activity/audit-logs)",
+            "notes": "Enterprise only. User actions incl. CRITICAL_ACTION subcategories. Records HubSpot-user actions, not API calls."
+          },
+          {
+            "name": "Private app Logs tab (API call logs)",
+            "notes": "Per-app API calls for 30 days; filter by method/response/URL; CSV export. No request body, URL params or response payload for successful calls."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "objectId",
+            "log": "security activity",
+            "notes": "Private app ID on PRIVATE_APP_ACCESS_TOKEN_VIEW (also in infoUrl /private-apps/{hubId}/{appId}/auth)"
+          },
+          {
+            "field": "targetObjectId",
+            "log": "audit log",
+            "notes": "Private app ID on CRITICAL_ACTION / PRIVATE_APP_ACCESS_TOKEN_VIEW"
+          },
+          {
+            "field": "appId",
+            "log": "POST /oauth/v2/private-apps/get/access-token-info",
+            "notes": "Maps a found token to its private app, plus userId (creator), hubId, scopes"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "PRIVATE_APP_ACCESS_TOKEN_VIEW",
+            "stage": "use",
+            "notes": "A user revealed the token in the UI (security activity type / audit subCategory). Possible exfil point."
+          }
+        ],
+        "correlation_keys": [
+          "userId",
+          "actingUser",
+          "objectId",
+          "targetObjectId",
+          "ipAddress",
+          "countryCode",
+          "regionCode",
+          "createdAt",
+          "occurredAt",
+          "appId",
+          "hubId"
+        ],
+        "anomaly_cues": [
+          "PRIVATE_APP_ACCESS_TOKEN_VIEW by a user who does not own the integration, or from a new country/IP",
+          "Token view followed within hours by API calls in the Logs tab from new patterns (new endpoints, export-heavy reads)",
+          "Private app whose creator was removed (calls failing with USER_DOES_NOT_HAVE_PERMISSIONS) yet still active",
+          "Token not rotated in 180+ days (HubSpot reminder emails)",
+          "Scopes broadened on a private app with no change ticket"
+        ],
+        "containment": {
+          "steps": "Private app > Auth > Rotate > 'Rotate and expire now'; or delete the private app (token permanently revoked). Then update the integration with the new token.",
+          "kills_existing": "yes",
+          "notes": "'Rotate and expire later' leaves the old token valid for 7 days; use expire now for incidents."
+        },
+        "sample_query": {
+          "language": "HubSpot Account activity API (query parameters)",
+          "query": "GET /account-info/v3/activity/security?fromTimestamp=2026-09-01T00:00:00Z&toTimestamp=2026-10-12T00:00:00Z  -- filter results where type == 'PRIVATE_APP_ACCESS_TOKEN_VIEW'",
+          "purpose": "Find who revealed private app tokens, from where, before a suspected leak."
+        },
+        "unknown": [
+          "Token prefix/regex",
+          "Event names for private app create, scope change, rotation and deletion",
+          "Whether private app API calls appear in account audit log",
+          "Client IP of API calls in Logs tab"
+        ],
+        "evidence_refs": [
+          "fc-217cb85b",
+          "fc-2a578af9",
+          "turn12search3",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /crm/v3/objects/contacts",
+            "reveals": "CRM contact records",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Shown in the private app's Logs tab for 30 days; request body, URL parameters and response payload are not stored; rate-limit-exempt calls are not logged."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "turn12search3",
+          "fc-ac3691ef"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-217cb85b",
+      "title": "HubSpot Account activity API",
+      "url": "https://developers.hubspot.com/docs/api-reference/account-audit-logs-v3/guide",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2a578af9",
+      "title": "HubSpot KB: View and export account activity history",
+      "url": "https://knowledge.hubspot.com/account-management/view-and-export-account-activity-history",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2e4b4878",
+      "title": "Deactivate and remove HubSpot users",
+      "url": "https://knowledge.hubspot.com/user-management/remove-hubspot-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac3691ef",
+      "title": "API usage guidelines and limits - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/developer-tooling/platform/usage-guidelines",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d8797041",
+      "title": "HubSpot User Provisioning API v3 (official OpenAPI spec)",
+      "url": "https://github.com/HubSpot/HubSpot-public-api-spec-collection/blob/main/PublicApiSpecs/Settings/User%20Provisioning/Rollouts/144927/v3/userProvisioning.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-hs-legacy-pa",
+      "title": "Legacy Private App Creation Being Disabled - HubSpot Developer Changelog",
+      "url": "https://developers.hubspot.com/changelog/legacy-private-app-creation-sunset",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn11search1",
+      "title": "Manage login and account access settings",
+      "url": "https://knowledge.hubspot.com/account-security/limit-logins-to-trusted-ip-addresses",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn12search3",
+      "title": "Legacy private apps - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/apps/legacy-apps/private-apps/overview",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn4search22",
+      "title": "Authentication overview - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/authentication/overview",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn4search6",
+      "title": "Manage OAuth access tokens (latest API) - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/api-reference/latest/authentication/manage-oauth-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

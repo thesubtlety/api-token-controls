@@ -1,0 +1,311 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "sap",
+      "name": "SAP BTP and S/4HANA Cloud",
+      "scope_notes": "Covers SAP Business Technology Platform (XSUAA, Cloud Management service, btp CLI), SAP Cloud Identity Services, and SAP S/4HANA Cloud Public Edition. Covers BTP Cloud Foundry/multi-environment subaccounts, Identity Authentication tenants, and S/4HANA Cloud Public Edition communication management; BTP docs cited from SAP's official SAP-docs GitHub source of help.sap.com.",
+      "controls": [
+        {
+          "name": "token-validity / refresh-token-validity",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "sap-1",
+            "sap-2",
+            "sap-3"
+          ],
+          "what": "Sets access/refresh token lifetime per XSUAA instance.",
+          "setting": "xs-security.json oauth2-configuration",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-763e16d9"
+          ]
+        },
+        {
+          "name": "Token Validity (subaccount security settings)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "sap-1",
+            "sap-2",
+            "sap-3"
+          ],
+          "what": "Sets default token lifetimes for all instances in a subaccount that don't set their own.",
+          "setting": "BTP cockpit > Subaccount > Security > Settings > Token Validity; Security Settings API",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-37a60c08"
+          ]
+        },
+        {
+          "name": "Token revoke endpoint",
+          "effect": "revoke",
+          "applies_to": [
+            "sap-1",
+            "sap-2",
+            "sap-3"
+          ],
+          "what": "Revokes an issued token, but apps validating offline keep accepting it until expiry.",
+          "setting": "Cloud Foundry UAA revoke endpoint",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-07f59e19"
+          ]
+        },
+        {
+          "name": "btp delete security/api-credential",
+          "effect": "revoke",
+          "applies_to": [
+            "sap-2"
+          ],
+          "what": "Deletes XSUAA API credentials.",
+          "setting": "btp CLI",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-846d347a"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP/network allowlist for XSUAA clients, btp API credentials, IAS API secrets or S/4HANA communication users.",
+        "Whether XSUAA password-grant tokens (cis service keys) honor IAS/corporate IdP MFA or conditional access.",
+        "Exact audit message for service key deletion and for API credential create/delete in XSUAA audit log.",
+        "Whether communication user passwords expire.",
+        "Org-wide switch to block creation of service keys or API credentials (none found).",
+        "IAS audit event emitted on client secret creation/deletion (change log covers admin CREATE/UPDATE/DELETE generally)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "sap-2",
+      "provider_id": "sap",
+      "name": "XSUAA API credentials (btp security/api-credential)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An admin runs `btp create security/api-credential` to get a client ID with secret or certificate for the XSUAA REST APIs (users, role collections, trust) at global account, directory or subaccount level.",
+        "evidence_refs": [
+          "fc-846d347a",
+          "fc-40d59d08"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "OAuth client credential; no user/IdP step. No explicit doc statement on conditional access.",
+        "evidence_refs": [
+          "fc-b76f0ff6"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No IP allowlist for OAuth clients/tokens found in the XSUAA docs reviewed.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No documented expiry for the credential itself",
+        "evidence_refs": [
+          "fc-846d347a"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "XSUAA access token validity",
+        "summary": "Secret shown once; create a new credential and delete the old one to rotate.",
+        "evidence_refs": [
+          "fc-846d347a"
+        ]
+      },
+      "administration": {
+        "summary": "Created, listed and deleted with btp CLI (`btp list|get|delete security/api-credential`). Sample output shows a Read-only flag.",
+        "conditions": "Requires admin of the targeted global account/directory/subaccount.",
+        "evidence_refs": [
+          "fc-846d347a",
+          "fc-40d59d08"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "API credentials are a client ID with secret or certificate scoped to an account, not a user.",
+          "evidence_refs": [
+            "fc-40d59d08"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "btp list security/api-credential shows all API credentials in the targeted global account, directory, or subaccount.",
+          "evidence_refs": [
+            "fc-846d347a"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Sample client ID sb-full-access!a76125"
+        },
+        "log_sources": [
+          {
+            "name": "SAP Audit Log service (BTP subaccount)",
+            "notes": "Audit Log Viewer or Retrieval API GET <url>/auditlog/v2/auditlogrecords; 90 days free, longer with Audit Log service premium edition (support ticket)."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Client ID",
+            "log": "UAA ClientAuthenticationSuccess",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "TokenIssuedEvent",
+            "stage": "use",
+            "notes": "UAA"
+          },
+          {
+            "event": "tableName \"xs_rolecollection2user\", crudType \"CREATE\"",
+            "stage": "use",
+            "notes": "Role collection assignment done with the credential"
+          }
+        ],
+        "correlation_keys": [
+          "client ID",
+          "zone ID"
+        ],
+        "anomaly_cues": [
+          "Role collection assignments or trust changes logged with UNKNOWN_USER"
+        ],
+        "containment": {
+          "steps": "btp delete security/api-credential",
+          "kills_existing": "unknown",
+          "notes": "Issued tokens follow XSUAA token validity."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit event for API credential creation/deletion"
+        ],
+        "evidence_refs": [
+          "fc-846d347a",
+          "fc-b76f0ff6",
+          "fc-f217d031"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "enumeration",
+            "call": "GET /sap/rest/authorization/v2/roles",
+            "reveals": "Roles in the subaccount",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Read events not listed in XSUAA audit page"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-b76f0ff6",
+          "fc-5161b1c9"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-07f59e19",
+      "title": "Validation and Revocation of Access Tokens",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/30-development/validation-and-revocation-of-access-tokens-8eb23a1.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-37a60c08",
+      "title": "Configure Token Policy for SAP Authorization and Trust Management Service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/configure-token-policy-for-sap-authorization-and-trust-management-service-40290a9.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-40d59d08",
+      "title": "Get Access to the APIs",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/get-access-to-the-apis-fda1027.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5161b1c9",
+      "title": "Call an API (SAP Authorization and Trust Management service)",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/call-an-api-764abf2.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-763e16d9",
+      "title": "Security Considerations for the SAP Authorization and Trust Management Service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/60-security/security-considerations-for-the-sap-authorization-and-trust-management-service-f117cab.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846d347a",
+      "title": "Managing API Credentials for Calling REST APIs of SAP Authorization and Trust Management Service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/managing-api-credentials-for-calling-rest-apis-of-sap-authorization-and-trust-managemen-ce43eb5.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b76f0ff6",
+      "title": "Auditing and Logging Information for SAP Authorization and Trust Management Service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/60-security/auditing-and-logging-information-for-sap-authorization-and-trust-management-service-d8f4b7c.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f217d031",
+      "title": "UAA Audit Requirements (Cloud Foundry docs, linked from SAP XSUAA audit page)",
+      "url": "https://docs.cloudfoundry.org/running/managing-cf/uaa-audit-requirements.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

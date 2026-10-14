@@ -1,0 +1,434 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "pagerduty",
+      "name": "PagerDuty",
+      "scope_notes": "SaaS; REST API on current plans, user token keys need Advanced Permissions, Audit Trail on Business/Enterprise for Incident Management/Digital Operations (legacy); SCIM uses general access keys or app OAuth tokens.",
+      "controls": [
+        {
+          "name": "Install (admin approval) of public OAuth apps",
+          "effect": "require_approval",
+          "applies_to": [
+            "pagerduty-4"
+          ],
+          "what": "A public Scoped OAuth app cannot access the account until an Admin installs it and approves its scopes.",
+          "setting": "App installation page > Install on your account",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-fe7d09ba"
+          ]
+        },
+        {
+          "name": "Revoke All User Tokens",
+          "effect": "revoke",
+          "applies_to": [
+            "pagerduty-4"
+          ],
+          "what": "Admin revokes every user token issued for an installed app; runs in the background.",
+          "setting": "Integrations > OAuth Apps > (app) > Revoke All User Tokens",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-fe7d09ba"
+          ]
+        },
+        {
+          "name": "Uninstall",
+          "effect": "revoke",
+          "applies_to": [
+            "pagerduty-4"
+          ],
+          "what": "Revokes all user tokens for the app and blocks reauthorization until reinstalled.",
+          "setting": "Integrations > OAuth Apps > (app) > Uninstall",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-fe7d09ba"
+          ]
+        },
+        {
+          "name": "Revoke All Tokens (App Registration)",
+          "effect": "revoke",
+          "applies_to": [
+            "pagerduty-3",
+            "pagerduty-4"
+          ],
+          "what": "App owner invalidates all OAuth tokens issued to the app.",
+          "setting": "Integrations > Developer Tools > App Registration > app > OAuth Client > Revoke All Tokens",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-583edb81"
+          ]
+        },
+        {
+          "name": "Scoped OAuth scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "pagerduty-3",
+            "pagerduty-4"
+          ],
+          "what": "Per-resource read/write scopes (e.g. incidents.read) limit what the token can call.",
+          "setting": "App Registration > OAuth > Scoped OAuth",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-51494aac"
+          ]
+        },
+        {
+          "name": "Delete all OAuth delegations",
+          "effect": "revoke",
+          "applies_to": [
+            "pagerduty-4"
+          ],
+          "what": "Revokes a user's mobile or web delegations (signs them out).",
+          "setting": "DELETE /oauth_delegations?user_id=..&type=mobile,web",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-47e47aba"
+          ]
+        },
+        {
+          "name": "Change Another User's Password",
+          "effect": "revoke",
+          "applies_to": [
+            "pagerduty-4"
+          ],
+          "what": "Admin password change also revokes the user's OAuth tokens.",
+          "setting": "People > Users > user > User Settings > Change Password",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-03f349c8"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "pagerduty-4",
+          "what": "No IP/network restriction for OAuth user tokens.",
+          "kind": "network",
+          "evidence_refs": [
+            "fc-67bc3044"
+          ]
+        },
+        {
+          "path_id": "pagerduty-4",
+          "what": "Deleting an app's OAuth functionality does not revoke tokens already issued.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-6ba98dee"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether general access or user token keys can be given an expiry, or ever expire.",
+        "Whether SSO enforcement or deprovisioning in the IdP affects existing API keys (only \"user leaves the account\" disables user keys).",
+        "Any admin setting to block users from creating user token keys or to block Classic User OAuth app authorization.",
+        "Whether API key create/disable/delete events appear in the Audit Trail (the tracked resource list does not include API keys).",
+        "Whether disabling/deleting a key or Revoke All User Tokens ends in-flight access immediately (Revoke All runs in the background).",
+        "Whether private app (client credentials) tokens can be revoked by admins other than the app owner; client secret expiry/rotation.",
+        "Whether read (GET) API calls are logged anywhere customer-visible.",
+        "Whether integration key creation/rotation appears in audit records (support page says integration add/remove is not captured; Audit API lists Integrations as an associated resource of Services)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "pagerduty-4",
+      "provider_id": "pagerduty",
+      "name": "User OAuth token (Scoped OAuth and Classic User OAuth apps)",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Authorization-code + PKCE flow; the user logs in and consents, and the app gets a Bearer token acting as that user, limited to the intersection of app scopes and user permissions. Classic apps use coarse read/write scopes.",
+        "evidence_refs": [
+          "fc-583edb81",
+          "fc-51494aac"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "The grant requires an interactive user login, which goes through the account login (SSO if configured); whether SSO policy is rechecked on refresh is not documented.",
+        "evidence_refs": [
+          "fc-583edb81"
+        ]
+      },
+      "ip_restriction": {
+        "status": "excluded",
+        "enforcement_stage": "login_only",
+        "boundary": "IP allow list applies to web/mobile sessions, not REST API calls or integrations.",
+        "evidence_refs": [
+          "fc-67bc3044"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 86400,
+        "maximum_seconds": 2592000,
+        "configurable": "no",
+        "summary": "Scoped: 1-day access, 30-day refresh, 1-year window. Classic: 30-day access, 210-day refresh, 3-year window.",
+        "evidence_refs": [
+          "fc-51494aac",
+          "fc-583edb81"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "Refresh token inactivity (30 d scoped / 210 d classic) within a rolling window (1 y / 3 y).",
+        "summary": "Refresh grant returns new access and refresh tokens.",
+        "evidence_refs": [
+          "fc-583edb81",
+          "fc-51494aac"
+        ]
+      },
+      "administration": {
+        "summary": "Public Scoped OAuth apps must be installed by an Admin, who approves scopes; Admins see who authorized, revoke all tokens, or uninstall. Classic apps work across accounts once created and appear in the installed list once authorized.",
+        "conditions": "Admin install gate applies to public Scoped OAuth apps; Classic app gating not stated.",
+        "evidence_refs": [
+          "fc-fe7d09ba",
+          "fc-583edb81"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Integrations > OAuth Apps: for each installed app admins see everyone who authorized it and when. Private apps are managed on a separate page.",
+          "evidence_refs": [
+            "fc-fe7d09ba"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "Fixed lifetimes (Scoped 1 day/30 days/1 year; Classic 30 days/210 days/3 years); token response from https://identity.pagerduty.com/oauth/token field expires_in",
+          "cli": null,
+          "evidence_refs": [
+            "fc-51494aac",
+            "fc-583edb81"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "pdus+",
+          "notes": "Example tokens \"pdus+_EXAMPLE_KEY_ID_EXAMPLE_TOKEN\"; an id_token JWT is also returned."
+        },
+        "log_sources": [
+          {
+            "name": "Audit Trail (UI + GET /audit/records)",
+            "notes": "Business, Enterprise for Incident Management, Digital Operations (legacy); 12-month retention; config changes on users, teams, schedules, escalation policies, services, IP allow lists only. Admin / global API token, scope audit_records.read."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "method.truncated_token",
+            "log": "Audit record",
+            "notes": "Last 4 chars when method.type=oauth."
+          },
+          {
+            "field": "actors[]",
+            "log": "Audit record",
+            "notes": "Authorizing user and/or app reference."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "App install (audit trail event)",
+            "stage": "create",
+            "notes": "Installing an app creates an audit trail event; exact name not documented."
+          },
+          {
+            "event": "action=create|update|delete with method.type=oauth",
+            "stage": "use",
+            "notes": "Config changes."
+          }
+        ],
+        "correlation_keys": [
+          "method.type",
+          "method.truncated_token",
+          "actors[].type/id",
+          "execution_context.request_id",
+          "execution_context.remote_address"
+        ],
+        "anomaly_cues": [
+          "New installs or unknown authorizers on OAuth Apps page",
+          "Classic apps with write scope"
+        ],
+        "containment": {
+          "steps": "Integrations > OAuth Apps > app > Revoke All User Tokens or Uninstall; per-user: DELETE /oauth_delegations or admin password change.",
+          "kills_existing": "partial",
+          "notes": "Revoke All runs in the background; delegation deletion is synchronous."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact audit event names for install/uninstall/revoke"
+        ],
+        "evidence_refs": [
+          "fc-62771079",
+          "fc-f760aba4",
+          "fc-47e47aba",
+          "fc-fe7d09ba",
+          "fc-03f349c8"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /users/me",
+            "reveals": "Authorizing user",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "960 req/min per app per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /incidents",
+            "reveals": "Incidents visible to user within scopes",
+            "bulk": true,
+            "scope": "incidents.read",
+            "rate_limit": "960 req/min per app per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /users",
+            "reveals": "Users the authorizing person can see (needs users.read scope)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Audit records cover configuration changes only."
+          }
+        ],
+        "unknown": [
+          "Scope required for GET /users/me under Scoped OAuth."
+        ],
+        "evidence_refs": [
+          "fc-47e47aba",
+          "fc-51494aac",
+          "fc-079a8df5",
+          "fc-f760aba4"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-03f349c8",
+      "title": "User Settings",
+      "url": "https://support.pagerduty.com/main/docs/user-settings",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-079a8df5",
+      "title": "PagerDuty REST API OpenAPI v3 spec - List users",
+      "url": "https://github.com/PagerDuty/api-schema/blob/main/reference/REST/openapiv3.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-47e47aba",
+      "title": "REST API OpenAPI spec — List audit records",
+      "url": "https://docs.pagerduty.com/api-specs/rest.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-51494aac",
+      "title": "Private Apps",
+      "url": "https://docs.pagerduty.com/developer/private-apps",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-583edb81",
+      "title": "OAuth Functionality",
+      "url": "https://docs.pagerduty.com/developer/oauth-functionality",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62771079",
+      "title": "Audit Trail Reporting",
+      "url": "https://support.pagerduty.com/main/docs/audit-trail-reporting",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-67bc3044",
+      "title": "IP Allow List for User Sessions",
+      "url": "https://support.pagerduty.com/main/docs/ip-allow-list-for-user-sessions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6ba98dee",
+      "title": "Register an App",
+      "url": "https://docs.pagerduty.com/developer/register-an-app",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f760aba4",
+      "title": "Audit Records API",
+      "url": "https://docs.pagerduty.com/developer/audit-records-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fe7d09ba",
+      "title": "Scoped OAuth Apps",
+      "url": "https://support.pagerduty.com/main/docs/scoped-oauth-apps",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

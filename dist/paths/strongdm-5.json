@@ -1,0 +1,256 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "strongdm",
+      "name": "StrongDM",
+      "scope_notes": "SaaS control plane (US/UK/EU); Log Stream and 13-month log viewing require the Enterprise plan, other plans see 30 days in the Admin UI.",
+      "controls": [
+        {
+          "name": "Permission level: Manage relays and gateways",
+          "effect": "other",
+          "applies_to": [
+            "strongdm-5"
+          ],
+          "what": "Only Administrators can create gateways/relays and so obtain node tokens.",
+          "setting": "Principals > Users > (user) > Settings > Permission Level",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-087adfd5"
+          ]
+        },
+        {
+          "name": "sdm admin nodes delete",
+          "effect": "revoke",
+          "applies_to": [
+            "strongdm-5"
+          ],
+          "what": "Deletes a gateway or relay node.",
+          "setting": "CLI: sdm admin nodes delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6f78f84e"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP allowlist for admin tokens, API keys, service accounts, or SCIM tokens (docs silent).",
+        "Any org-wide switch to block creation of admin tokens or API keys, or a maximum expiry policy.",
+        "Whether SSO-required or MFA settings apply to service account token logins.",
+        "SCIM token rotation, revocation, and lifetime.",
+        "Service account token lifetime and rekey procedure.",
+        "Whether read-only SDK/API calls (e.g. listing accounts or resources) are recorded as Activities.",
+        "Whether API key creation logs as 'Admin token created' or a separate event."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "strongdm-5",
+      "provider_id": "strongdm",
+      "name": "Gateway / relay token",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Token generated when creating a gateway or relay node; installed on the host (SDM_RELAY_TOKEN) so the node can join the organization's network.",
+        "evidence_refs": [
+          "fc-7ca83ac2"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static node token.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Docs say a node's IP cannot be changed after creation, but do not describe this as a token IP restriction.",
+        "evidence_refs": [
+          "fc-7ca83ac2"
+        ]
+      },
+      "lifetime": {
+        "basis": "inactivity",
+        "default_seconds": 2592000,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Node removed after 30 days with no heartbeat",
+        "evidence_refs": [
+          "fc-7ca83ac2"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "unknown",
+        "summary": "Replace by creating a new node and putting its token on the host.",
+        "evidence_refs": [
+          "fc-7ca83ac2"
+        ]
+      },
+      "administration": {
+        "summary": "Created and deleted under Networking > Gateways/Relays; Activities record Relay created/deleted.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-7ca83ac2",
+          "fc-7b10eb9f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Gateway/relay tokens belong to a node, not a user.",
+          "evidence_refs": [
+            "fc-7ca83ac2"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admin UI Gateways and Relays pages and `sdm admin nodes list` list all nodes.",
+          "evidence_refs": [
+            "fc-7ca83ac2",
+            "fc-f0ec5231"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Logs > Activities (relay/gateway lifecycle events such as 'Relay created')",
+          "api": null,
+          "cli": "sdm audit activities --from <date> --to <date>",
+          "evidence_refs": [
+            "fc-7b10eb9f",
+            "fc-ed22169d"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Activities",
+            "notes": "Node lifecycle events."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [
+          {
+            "event": "Relay created",
+            "stage": "create",
+            "notes": null
+          },
+          {
+            "event": "Installation created for relay",
+            "stage": "use",
+            "notes": null
+          },
+          {
+            "event": "Relay deleted",
+            "stage": "revoke",
+            "notes": null
+          }
+        ],
+        "correlation_keys": [
+          "node name"
+        ],
+        "anomaly_cues": [
+          "New relays or gateways not created by infrastructure automation"
+        ],
+        "containment": {
+          "steps": "Delete the node in Networking and create a new one with a new token.",
+          "kills_existing": "unknown",
+          "notes": null
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether deleting a node disconnects it immediately"
+        ],
+        "evidence_refs": [
+          "fc-7b10eb9f",
+          "fc-7ca83ac2"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "What a stolen node token can do beyond registering a node is not documented"
+        ],
+        "evidence_refs": []
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-087adfd5",
+      "title": "Permission Level",
+      "url": "https://docs.strongdm.com/admin/access/permission-level",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6f78f84e",
+      "title": "sdm admin nodes delete",
+      "url": "https://docs.strongdm.com/references/cli/admin/nodes/delete",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7b10eb9f",
+      "title": "View Logs from the Admin UI",
+      "url": "https://docs.strongdm.com/admin/audit/logs/view-adminui",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7ca83ac2",
+      "title": "Gateways and Relays",
+      "url": "https://docs.strongdm.com/admin/networking/gateways-and-relays",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed22169d",
+      "title": "View Logs from the CLI",
+      "url": "https://docs.strongdm.com/admin/audit/logs/view-cli",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f0ec5231",
+      "title": "sdm admin nodes list",
+      "url": "https://docs.strongdm.com/references/cli/admin/nodes/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

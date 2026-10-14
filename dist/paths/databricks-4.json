@@ -1,0 +1,478 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "databricks",
+      "name": "Databricks (AWS baseline)",
+      "scope_notes": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+      "controls": [
+        {
+          "name": "IP access lists",
+          "effect": "limit_network",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2",
+            "databricks-3",
+            "databricks-4"
+          ],
+          "what": "Restrict account console/account APIs and workspace/workspace APIs to approved IPs.",
+          "setting": "Account console IP access lists; workspace IP Access List API",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "workspace",
+          "evidence_refs": [
+            "turn5search18"
+          ],
+          "quote": "The default allows connections from any IP address."
+        },
+        {
+          "name": "Context-based ingress policies",
+          "effect": "limit_network",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2",
+            "databricks-3",
+            "databricks-4"
+          ],
+          "what": "Account-level allow/deny rules combining identity, network source and request scope, e.g. pinning service principals to trusted networks.",
+          "setting": "Account console network policies (account admin)",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-d0d16207"
+          ],
+          "quote": "allow and deny rules that combine who is calling, from where they are calling, and what they can reach"
+        },
+        {
+          "name": "App connections (disable published or custom OAuth apps)",
+          "effect": "disable",
+          "applies_to": [
+            "databricks-4"
+          ],
+          "what": "Removing an app connection disables it and breaks existing connections.",
+          "setting": "Account console > Settings > App connections > Remove; published-app-integration / custom-app-integration CLI",
+          "plan": null,
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-fa8c9e15"
+          ],
+          "quote": "Disabling an application breaks the application connection, so use caution when disabling OAuth applications."
+        },
+        {
+          "name": "App connection token TTLs",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "databricks-4"
+          ],
+          "what": "Sets access token (default 60 min) and refresh token (default 10080 min) lifetimes for custom apps.",
+          "setting": "Account console > Settings > App connections > edit app",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-fa8c9e15"
+          ],
+          "quote": "The refresh token time-to-live (TTL) in minutes. Default: `10080`."
+        },
+        {
+          "name": "Single-use refresh tokens",
+          "effect": "require_rotation",
+          "applies_to": [
+            "databricks-4"
+          ],
+          "what": "Makes refresh tokens single-use for an app integration; API only.",
+          "setting": "Custom/published app integration API",
+          "plan": null,
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-fa8c9e15"
+          ],
+          "quote": "You can only configure additional OAuth security features (such as single-use refresh tokens) through the API."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No account-wide switch to disable PATs across all workspaces was found; the toggle is per workspace.",
+        "Whether IP access lists explicitly cover PAT/OAuth API calls is implied (workspace-level APIs) but not stated.",
+        "Whether context-based ingress rules can distinguish auth method (PAT vs OAuth) is not stated.",
+        "How to update or delete federation policies, and how to revoke an individual OAuth secret, were not covered on the fetched pages.",
+        "TTL min/max ranges, and whether built-in databricks-cli app follows app-connection TTL defaults, not confirmed.",
+        "Single-use refresh token details page returned 404; defaults per app not confirmed.",
+        "Azure/GCP capabilities and tiers not checked."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "databricks-4",
+      "provider_id": "databricks",
+      "name": "OAuth U2M",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A user signs in through the browser and consents; the CLI, SDK or app then receives a Databricks OAuth access token (and refresh token) and sends it as a bearer token. Works at account level or for one workspace; the CLI caches tokens in ~/.databricks/token-cache.json.",
+        "evidence_refs": [
+          "fc-33dad94b"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "The user signs in interactively (which can go through the account's SSO); no external token is exchanged on this path. Token exchange of external IdP tokens is the separate external token federation path.",
+        "evidence_refs": [
+          "fc-33dad94b"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Account and workspace IP access lists cover the UI and REST APIs at each level and require the Enterprise tier. Private IPs from PrivateLink traffic are not filtered by them.",
+        "evidence_refs": [
+          "turn5search18"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 86400,
+        "configurable": "conditional",
+        "summary": "Default 1 h; app integrations accept 5 min–24 h",
+        "evidence_refs": [
+          "fc-33dad94b",
+          "fc-fa8c9e15",
+          "fc-d3229e31"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "absolute",
+        "summary": "Refresh tokens get new access tokens; app-connection default refresh TTL is 10080 min (7 days), configurable 5 min–90 days. With single-use refresh tokens (rotation) each new refresh token gets a fresh TTL, optionally capped by an absolute session lifetime (Beta).",
+        "evidence_refs": [
+          "fc-fa8c9e15",
+          "fc-d3229e31",
+          "fc-1bb66217"
+        ]
+      },
+      "administration": {
+        "summary": "Account admins manage OAuth app connections (custom and published apps), their token TTLs and single-use refresh tokens; disabling an app breaks its connections. Revoking user consent does not invalidate existing refresh tokens. Workspace permissions/ACLs govern what the user can do.",
+        "conditions": "TTL defaults and ranges are documented for app connections generally; whether the built-in databricks-cli app uses the same defaults was not confirmed. Single-use refresh tokens are on by default only for some partner apps.",
+        "evidence_refs": [
+          "fc-33dad94b",
+          "fc-fa8c9e15"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Issuance needs a browser sign-in, which uses SSO when account SSO is on; existing refresh tokens keep working.",
+          "evidence_refs": [
+            "turn16search29",
+            "fc-33dad94b"
+          ]
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Tokens of a deactivated user cannot authenticate; SCIM removal deactivates the user.",
+          "evidence_refs": [
+            "fc-2c40808e",
+            "fc-b6acac67"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Users can view their own consent per app (/api/2.0/oauth-app-integrations/<id>/user-consent/me); no admin-wide token list found.",
+          "evidence_refs": [
+            "fc-33dad94b"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Account console > Security > Identity provider setup > Authentication > single sign-on",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-1bcf2a77",
+            "turn16search29"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "SQL: SELECT * FROM system.access.audit WHERE service_name='workspace' AND action_name='workspaceExport' (filter user_identity.email)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ae5ed64d",
+            "fc-1f6728c3"
+          ]
+        },
+        "offboard": {
+          "ui": "Remove the user from the IdP account-level SCIM connector (deactivates the user)",
+          "api": "PATCH /api/2.1/accounts/{account_id}/scim/v2/Users/{id} with active=false",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2c40808e",
+            "fc-b6acac67"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Access/refresh token format not documented. GitHub types: databricks_oauth_refresh_token, databricks_oauth_single_use_refresh_token_parent/child, databricks_oauth_code, databricks_workspace_session_token. CLI caches in ~/.databricks/token-cache.json."
+        },
+        "log_sources": [
+          {
+            "name": "Databricks audit logs (system.access.audit system table / audit log delivery)",
+            "notes": "Account- and workspace-level events; account-level rows have workspace_id 0. No general retention stated on the table page; events of a deleted workspace older than 14 days are removed."
+          },
+          {
+            "name": "Endpoint file ~/.databricks/token-cache.json",
+            "notes": "Cached access/refresh tokens on the user's machine; theft target."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "request_params.client_id",
+            "log": "system.access.audit (mintOAuthAuthorizationCode/mintOAuthToken)",
+            "notes": "OAuth app, e.g. databricks-cli"
+          },
+          {
+            "field": "request_params.integration_id",
+            "log": "system.access.audit (oauth2.deleteCustomAppIntegration)",
+            "notes": "App integration"
+          },
+          {
+            "field": "identity_metadata.acting_resource_display_name",
+            "log": "system.access.audit",
+            "notes": "For an OAuth app, the app name"
+          },
+          {
+            "field": "user_identity.email",
+            "log": "system.access.audit",
+            "notes": "Signed-in user"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "accounts.mintOAuthAuthorizationCode",
+            "stage": "create",
+            "notes": "Authorization code minted; param client_id"
+          },
+          {
+            "event": "accounts.mintOAuthToken",
+            "stage": "create",
+            "notes": "Token minted; grant_type, scope, expires_in, client_id"
+          },
+          {
+            "event": "accounts.oidcBrowserLogin",
+            "stage": "use",
+            "notes": "Browser login step"
+          },
+          {
+            "event": "accounts.oidcTokenAuthorization",
+            "stage": "use",
+            "notes": "API call authorized via OAuth token"
+          },
+          {
+            "event": "oauth2.createCustomAppIntegration",
+            "stage": "create",
+            "notes": "Custom OAuth app (redirect_url, token_access_policy)"
+          },
+          {
+            "event": "oauth2.updateCustomAppIntegration",
+            "stage": "change",
+            "notes": "Redirect URL or TTL change"
+          },
+          {
+            "event": "oauth2.deleteCustomAppIntegration",
+            "stage": "revoke",
+            "notes": "App removed"
+          }
+        ],
+        "correlation_keys": [
+          "user_identity.email",
+          "identity_metadata.run_by",
+          "identity_metadata.run_as",
+          "source_ip_address",
+          "user_agent",
+          "session_id",
+          "workspace_id",
+          "request_params",
+          "request_params.client_id",
+          "identity_metadata.acting_resource_display_name"
+        ],
+        "anomaly_cues": [
+          "mintOAuthToken (refresh) for a user from an IP never seen in that user's oidcBrowserLogin events (stolen token-cache.json)",
+          "refresh grants continuing long after the user's last interactive login",
+          "updateCustomAppIntegration changing redirect_url to an unknown host",
+          "new custom app integration with long refresh_token_ttl_in_minutes",
+          "user_agent mismatch between login and later API calls"
+        ],
+        "containment": {
+          "steps": "Deactivate the user (account level); delete or disable the OAuth app integration; shorten refresh_token_ttl_in_minutes / enable single-use refresh tokens and absolute_session_lifetime_in_minutes; delete local token-cache.json.",
+          "kills_existing": "partial",
+          "notes": "Revoking consent doesn't invalidate existing tokens; refresh tokens work until expiry. No documented per-token revoke for OAuth tokens. Access tokens last one hour."
+        },
+        "sample_query": {
+          "language": "Databricks SQL (system.access.audit)",
+          "query": "SELECT user_identity.email, request_params['client_id'] AS client_id, request_params['grant_type'] AS grant_type, source_ip_address, user_agent, count(*) AS n FROM system.access.audit WHERE service_name = 'accounts' AND action_name IN ('mintOAuthToken','oidcBrowserLogin') AND event_date >= current_date() - INTERVAL 14 DAYS GROUP BY ALL ORDER BY user_identity.email",
+          "purpose": "Compare token-mint IPs to browser-login IPs per user"
+        },
+        "unknown": [
+          "token format/prefix",
+          "grant_type values logged for refresh (sample uses refresh_token as illustration)",
+          "per-token revocation API for U2M tokens",
+          "whether deactivating a user immediately blocks existing OAuth access tokens (documented only for SPs)",
+          "whether deleting an app integration invalidates its tokens"
+        ],
+        "evidence_refs": [
+          "fc-1f6728c3",
+          "fc-ae5ed64d",
+          "fc-33dad94b",
+          "fc-1bb66217",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /api/2.0/workspace/export",
+            "reveals": "Notebook or whole-directory contents (source code, sometimes embedded secrets/results)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "workspace.workspaceExport",
+            "log_notes": "Audit log / system.access.audit; user_identity shows the caller. Docs describe the event as a notebook export."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-0c3101b7",
+          "fc-1f6728c3",
+          "fc-ae5ed64d"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0c3101b7",
+      "title": "Export a workspace object | Databricks API Reference",
+      "url": "https://docs.databricks.com/api/workspace/workspace/export",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1bb66217",
+      "title": "Single-use refresh tokens | Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/integrations/single-use-tokens",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1bcf2a77",
+      "title": "Configure SSO using SAML",
+      "url": "https://docs.databricks.com/aws/en/security/auth/single-sign-on/saml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1f6728c3",
+      "title": "Audit log reference (Account-level authentication events)",
+      "url": "https://docs.databricks.com/aws/en/admin/account-settings/audit-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2c40808e",
+      "title": "Manage users | Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/admin/users-groups/users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-33dad94b",
+      "title": "Authorize user access to Databricks with OAuth | Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-u2m",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae5ed64d",
+      "title": "Audit log system table reference",
+      "url": "https://docs.databricks.com/aws/en/admin/system-tables/audit-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b6acac67",
+      "title": "Sync users and groups from your identity provider using SCIM | Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/admin/users-groups/scim/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d0d16207",
+      "title": "Context-based ingress control - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/network/front-end/context-based-ingress",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d3229e31",
+      "title": "Create Custom OAuth App Integration | Databricks REST API",
+      "url": "https://docs.databricks.com/api/o-auth/v1/create-custom-o-auth-app-integration.md",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fa8c9e15",
+      "title": "Enable or disable partner OAuth applications | Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/integrations/enable-disable-oauth",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn16search29",
+      "title": "Configure SSO in - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/auth/single-sign-on/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search18",
+      "title": "Manage IP access lists - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/network/front-end/ip-access-list",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

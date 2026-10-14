@@ -1,0 +1,232 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "portkey",
+      "name": "Portkey",
+      "scope_notes": "Covers Portkey (Prisma AIRS AI Gateway). SaaS control plane with hybrid/air-gapped self-hosted options; JWT auth, audit logs and key-permission settings are Enterprise, rotation is on all plans.",
+      "controls": [
+        {
+          "name": "Integration workspace provisioning",
+          "effect": "limit_resources",
+          "applies_to": [
+            "portkey-6"
+          ],
+          "what": "Choose which workspaces and models can use stored provider credentials.",
+          "setting": "Integrations page",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-9cbf23a7"
+          ]
+        },
+        {
+          "name": "Managers Write Workspace Integrations",
+          "effect": "disable",
+          "applies_to": [
+            "portkey-6"
+          ],
+          "what": "Org admins can stop workspace managers from creating, updating or deleting AI integrations; owners and admins keep full access.",
+          "setting": "Admin Settings > Security > Integration Management (workspace-level overrides possible)",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-dd099053"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for API keys or JWTs",
+        "Name of the org/workspace maximum key TTL setting",
+        "Whether user API keys are disabled when the user is removed or deprovisioned via SCIM",
+        "Whether SSO enforcement affects API keys",
+        "Whether GET (read) API calls appear in audit logs (filter lists only POST/PUT/DELETE)",
+        "Auth cache delay after key deletion",
+        "SCIM token expiry and revocation",
+        "API key token prefix"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "portkey-6",
+      "provider_id": "portkey",
+      "name": "Integrations / Virtual Keys (stored provider credentials)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Upstream provider keys (OpenAI, Bedrock, etc.) stored encrypted in Portkey and used by the gateway on behalf of a Portkey API key; not returned to users. Virtual Keys are deprecated in favour of Model Catalog/Integrations.",
+        "evidence_refs": [
+          "fc-9cbf23a7",
+          "fc-3ad9141b"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Holder needs a Portkey API key or JWT to use them.",
+        "evidence_refs": [
+          "fc-3ad9141b"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Lifetime is the upstream provider's",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "upstream",
+        "summary": "Update the integration with a new provider key.",
+        "evidence_refs": [
+          "fc-9cbf23a7"
+        ]
+      },
+      "administration": {
+        "summary": "Org admins choose which workspaces and models can use each integration and set budgets/rate limits.",
+        "conditions": "",
+        "evidence_refs": [
+          "fc-9cbf23a7"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Integrations are org/workspace-level stored provider credentials, not user credentials.",
+          "evidence_refs": [
+            "fc-9cbf23a7"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Integrations page (Connected and Workspace-Created tabs) and the List Integrations admin API.",
+          "evidence_refs": [
+            "fc-9cbf23a7",
+            "fc-cee9e019"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Upstream provider format"
+        },
+        "log_sources": [
+          {
+            "name": "Audit Logs",
+            "notes": "Enterprise; Admin Settings > Audit Logs or GET /audit-logs (admin key with audit_logs.list); indefinite retention; filter by user_type=api_key."
+          },
+          {
+            "name": "Request Logs",
+            "notes": "Gateway request logs with full request/response; retention 3 days Developer, 30 days Production, unlimited Enterprise."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [
+          {
+            "event": "Create/Update/Delete (resource type Integrations)",
+            "stage": "modify",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "integration slug"
+        ],
+        "anomaly_cues": [
+          "Integration shared to new workspaces"
+        ],
+        "containment": {
+          "steps": "Rotate the key at the upstream provider and update/delete the integration.",
+          "kills_existing": "yes",
+          "notes": "Upstream rotation ends use."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-02f7691c",
+          "fc-9cbf23a7"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Not a standalone bearer credential"
+        ],
+        "evidence_refs": [
+          "fc-9cbf23a7"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-02f7691c",
+      "title": "Audit Logs",
+      "url": "https://docs.portkey.ai/docs/product/enterprise-offering/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3ad9141b",
+      "title": "Virtual Keys",
+      "url": "https://docs.portkey.ai/docs/product/ai-gateway/virtual-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9cbf23a7",
+      "title": "Integrations",
+      "url": "https://docs.portkey.ai/docs/product/model-catalog/integrations",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cee9e019",
+      "title": "List Integrations",
+      "url": "https://docs.portkey.ai/docs/api-reference/admin-api/control-plane/integrations/list-integrations",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dd099053",
+      "title": "Configure Integration Access Permissions for Workspaces",
+      "url": "https://docs.portkey.ai/docs/product/administration/configure-integration-access-permissions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

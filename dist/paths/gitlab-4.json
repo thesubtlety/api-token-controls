@@ -1,0 +1,525 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "gitlab",
+      "name": "GitLab.com",
+      "scope_notes": "Group IP controls require Premium/Ultimate. Do not transfer Self-Managed 400-day/configuration options to GitLab.com.",
+      "controls": [
+        {
+          "name": "Require fine-grained personal access tokens after a specific date",
+          "effect": "disable",
+          "applies_to": [
+            "gitlab-1",
+            "gitlab-4"
+          ],
+          "what": "After the date, legacy PATs cannot access the top-level group, subgroups or projects; group/project/service-account tokens are exempt.",
+          "setting": "Top-level group > Settings > General > Permissions and group features",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8f2adc67"
+          ],
+          "quote": "On GitLab.com, enforcement applies to the group and its subgroups and projects, and blocks legacy personal access tokens from accessing those resources after the enforcement date."
+        },
+        {
+          "name": "Disable personal access tokens (enterprise users)",
+          "effect": "disable",
+          "applies_to": [
+            "gitlab-1",
+            "gitlab-4"
+          ],
+          "what": "Stops the group's enterprise users from creating PATs and disables their existing PATs; service account PATs unaffected.",
+          "setting": "Group > Settings > General > Permissions and group features > Enterprise users",
+          "plan": "Premium or Ultimate",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn3search1"
+          ],
+          "quote": "Stops the enterprise users from creating new personal access tokens. This behavior applies even if an enterprise user is also an administrator of the group. Disables the existing personal access tokens of the enterprise users."
+        },
+        {
+          "name": "Restrict access by IP address",
+          "effect": "limit_network",
+          "applies_to": [
+            "gitlab-1",
+            "gitlab-2",
+            "gitlab-3",
+            "gitlab-4"
+          ],
+          "what": "Limits UI and API access to the group to listed CIDRs, including group/project tokens, deploy keys and CI clone operations.",
+          "setting": "Top-level group > Settings > General > Permissions and group features",
+          "plan": "Premium or Ultimate",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn11search0"
+          ],
+          "quote": "IP restrictions apply to project and group access tokens, service accounts, deploy keys, and deploy tokens."
+        },
+        {
+          "name": "Enforce SSO-only authentication for Git and Dependency Proxy activity",
+          "effect": "require_sso",
+          "applies_to": [
+            "gitlab-1",
+            "gitlab-2",
+            "gitlab-4"
+          ],
+          "what": "Git over HTTPS/SSH and Git-related API calls by users need an active SSO session; not enforced for bot tokens or CI jobs.",
+          "setting": "Group > Settings > SAML SSO",
+          "plan": "Premium or Ultimate",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-da8222d3"
+          ],
+          "quote": "For Git activity over SSH and HTTPS, users must have at least one active session signed-in through SSO before they can push to or pull from a GitLab repository."
+        },
+        {
+          "name": "Credentials inventory (revoke tokens)",
+          "effect": "other",
+          "applies_to": [
+            "gitlab-1",
+            "gitlab-4"
+          ],
+          "what": "Top-level group owners view and revoke enterprise users' PATs and group/project access tokens.",
+          "setting": "Group > Secure > Credentials inventory",
+          "plan": "Ultimate",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-a8fd30a2"
+          ],
+          "quote": "On GitLab.com, the credentials inventory monitors enterprise users and service accounts in a top-level group."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "gitlab-4",
+          "what": "Fine-grained token enforcement does not cover service account, group or project access tokens.",
+          "evidence_refs": [
+            "fc-8f2adc67"
+          ],
+          "quote": "Enforcement does not apply to tokens for service accounts, group access tokens, or project access tokens.",
+          "kind": "other"
+        }
+      ],
+      "controls_unknown": [
+        "Whether a GitLab.com group owner can block or allowlist third-party OAuth applications that members authorize (no group-level control found).",
+        "Whether a GitLab.com group owner can set a shorter maximum token lifetime than the 365-day default (docs describe this only for administrators/Self-Managed)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "gitlab-4",
+      "provider_id": "gitlab",
+      "name": "Fine-grained personal access token",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A personal access token limited to selected resources (groups/projects, user, global) and specific permissions. It is sent like other PATs, for example in the PRIVATE-TOKEN header.",
+        "evidence_refs": [
+          "fc-8f2adc67",
+          "turn3search1"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This is a static user-created token. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "fc-8f2adc67"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Top-level group IP restriction (Premium/Ultimate) covers the UI and API for that group's resources. The page does not name personal access tokens explicitly; runner job requests and other listed exceptions are excluded.",
+        "evidence_refs": [
+          "turn11search0"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 31536000,
+        "maximum_seconds": 31536000,
+        "configurable": "yes",
+        "summary": "Default 365 days; ≤365 days unless admin changes the maximum",
+        "evidence_refs": [
+          "fc-8f2adc67"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not_applicable",
+        "summary": "No refresh token. The user rotates the token (new token, old one becomes inactive immediately) or creates a new one before expiry.",
+        "evidence_refs": [
+          "turn3search1"
+        ]
+      },
+      "administration": {
+        "summary": "Any user can create one; requests must pass both the token's permissions and the owner's own access. On GitLab.com a top-level group Owner can require fine-grained tokens after a date; on Self-Managed an administrator sets this instance-wide. Tokens can be revoked immediately.",
+        "conditions": "Beta in 18.10, GA in 19.2 (all tiers). Full REST coverage; GraphQL covers the most common types and mutations. Enforcement does not apply to service account, group or project access tokens, and existing legacy PATs keep working until they expire.",
+        "evidence_refs": [
+          "fc-8f2adc67",
+          "fc-da24dd40"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Same as PATs: API not SSO-checked except Git-related endpoints under the Git/Dependency Proxy option.",
+          "evidence_refs": [
+            "fc-da8222d3"
+          ]
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Enterprise users' PATs are revoked when the account is deleted or blocked; other users not covered.",
+          "evidence_refs": [
+            "turn3search1"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Credentials inventory lists PATs of enterprise users only on GitLab.com (Ultimate).",
+          "evidence_refs": [
+            "fc-a8fd30a2"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Group > Secure > Credentials",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-a8fd30a2"
+          ]
+        },
+        "sso": {
+          "ui": "Group > Settings > SAML SSO > Disable password and passkey authentication for enterprise users; Enforce SSO-only authentication for Git and Dependency Proxy activity for this group",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-da8222d3"
+          ]
+        },
+        "expiry": {
+          "ui": "User avatar > Edit profile > Access > Personal access tokens > Generate token > Fine-grained token > Expiration date; view: Group > Secure > Credentials",
+          "api": "GET /personal_access_tokens/:id (expires_at)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-8f2adc67",
+            "fc-a8fd30a2",
+            "fc-5c5fddd1"
+          ]
+        },
+        "usage": {
+          "ui": "Group > Secure > Credentials (usage patterns); user: Access > Personal access tokens > token details panel",
+          "api": "GET /personal_access_tokens?user_id=<id> (last_used_at, last_used_ips, granular_scopes)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-a8fd30a2",
+            "turn3search1",
+            "fc-5c5fddd1"
+          ]
+        },
+        "reads": {
+          "ui": "Project > Secure > Audit events; filter by user and date, look for repository_download_operation",
+          "api": "GET /projects/:id/audit_events",
+          "cli": null,
+          "evidence_refs": [
+            "fc-7131da7c",
+            "fc-23a2e1e0",
+            "fc-56c8a759"
+          ]
+        },
+        "offboard": {
+          "ui": null,
+          "api": "DELETE /groups/:id/enterprise_users/:user_id (deleting or blocking an enterprise user revokes their PATs)",
+          "cli": null,
+          "evidence_refs": [
+            "turn3search1",
+            "fc-abd209bd"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "glpat-",
+          "notes": "No distinct fine-grained prefix documented; shares PAT prefix. Default expiry 365 days."
+        },
+        "log_sources": [
+          {
+            "name": "GitLab audit events (group/project/instance)",
+            "notes": "Retained indefinitely. Group/project events need Premium/Ultimate; API date range max 30 days per query. Streaming needs Ultimate."
+          },
+          {
+            "name": "Token API usage fields (last_used_at, last_used_ips)",
+            "notes": "Last five distinct IPs per token; usage time updates every 10 min, IPs every minute."
+          },
+          {
+            "name": "api_json.log / production_json.log",
+            "notes": "Self-Managed only. Per-request remote_ip, ua, user_id, username, route/path; correlation_id in production_json.log."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "id",
+            "log": "Personal access tokens API",
+            "notes": "Token ID"
+          },
+          {
+            "field": "granular_scopes",
+            "log": "Personal access tokens API",
+            "notes": "Present only for fine-grained tokens; identifies the type"
+          },
+          {
+            "field": "last_used_ips",
+            "log": "Personal access tokens API",
+            "notes": "Last five distinct IPs"
+          },
+          {
+            "field": "user_id",
+            "log": "Personal access tokens API",
+            "notes": "Owner"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "personal_access_token_created",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "personal_access_token_used_from_unseen_ip",
+            "stage": "use",
+            "notes": ""
+          },
+          {
+            "event": "personal_access_token_settings_updated",
+            "stage": "change",
+            "notes": "Namespace fine-grained PAT settings changed"
+          },
+          {
+            "event": "personal_access_token_revoked",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "author_id",
+          "details.ip_address",
+          "user_id",
+          "last_used_ips",
+          "remote_ip",
+          "ua",
+          "route"
+        ],
+        "anomaly_cues": [
+          "token with granular_scopes used from an unseen IP",
+          "fine-grained token with sudo capability created by an admin outside change window",
+          "personal_access_token_settings_updated relaxing enforcement before legacy-token activity",
+          "token used against projects outside its granted boundary (should 403; repeated 403s = probing)",
+          "instance on a version affected by the 19.x scope-bypass fix"
+        ],
+        "containment": {
+          "steps": "DELETE /personal_access_tokens/:id or revoke in UI; admins can revoke any user's token.",
+          "kills_existing": "yes",
+          "notes": "Revocation is immediate; rotation revokes the previous token."
+        },
+        "sample_query": {
+          "language": "GitLab REST API (personal access tokens list)",
+          "query": "GET /api/v4/personal_access_tokens?state=active&created_after=2026-10-01T00:00:00Z",
+          "purpose": "List new tokens; check granular_scopes and last_used_ips"
+        },
+        "unknown": [
+          "distinct prefix or format for fine-grained tokens",
+          "audit event distinguishing fine-grained token creation"
+        ],
+        "evidence_refs": [
+          "fc-8f2adc67",
+          "fc-5c5fddd1",
+          "turn3search1",
+          "fc-7131da7c",
+          "fc-9077f334",
+          "fc-c9fe6e27",
+          "fc-56c8a759",
+          "fc-d9934bca"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /personal_access_tokens/self",
+            "reveals": "scopes, granular_scopes, expires_at, active for the calling fine-grained token",
+            "bulk": false,
+            "scope": "api or read_api",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No documented audit event for self-introspection"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /personal_access_tokens/self/associations",
+            "reveals": "groups and projects the token can access (reflects its selected resources)",
+            "bulk": false,
+            "scope": "api or read_api",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No documented read event"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /projects/:id/repository/archive[.format]",
+            "reveals": "full repository file archive within the token's selected resources",
+            "bulk": true,
+            "scope": "read_repository or api",
+            "rate_limit": "5 requests per minute (GitLab.com)",
+            "logged": "yes",
+            "log_event": "repository_download_operation",
+            "log_notes": "Premium/Ultimate to save to DB; Ultimate to stream"
+          }
+        ],
+        "unknown": [
+          "Whether audit event details record which token (fine-grained vs classic) performed the download"
+        ],
+        "evidence_refs": [
+          "fc-5c5fddd1",
+          "fc-d1a48cb3",
+          "fc-7131da7c"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-23a2e1e0",
+      "title": "Audit events",
+      "url": "https://docs.gitlab.com/user/compliance/audit_events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-56c8a759",
+      "title": "Audit events API",
+      "url": "https://docs.gitlab.com/api/audit_events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5c5fddd1",
+      "title": "Personal access tokens API",
+      "url": "https://docs.gitlab.com/api/personal_access_tokens/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7131da7c",
+      "title": "Audit event types",
+      "url": "https://docs.gitlab.com/user/compliance/audit_event_types/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8f2adc67",
+      "title": "Fine-grained personal access tokens",
+      "url": "https://docs.gitlab.com/auth/tokens/fine_grained_access_tokens/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9077f334",
+      "title": "GitLab token overview",
+      "url": "https://docs.gitlab.com/security/tokens/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8fd30a2",
+      "title": "Credentials inventory",
+      "url": "https://docs.gitlab.com/user/group/credentials_inventory/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-abd209bd",
+      "title": "Group enterprise users API",
+      "url": "https://docs.gitlab.com/api/group_enterprise_users/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c9fe6e27",
+      "title": "Customize pipeline secret detection",
+      "url": "https://docs.gitlab.com/user/application_security/secret_detection/pipeline/configure/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d1a48cb3",
+      "title": "Repositories API",
+      "url": "https://docs.gitlab.com/api/repositories/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d9934bca",
+      "title": "Log system",
+      "url": "https://docs.gitlab.com/administration/logs/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-da24dd40",
+      "title": "GitLab 19.2 release notes",
+      "url": "https://docs.gitlab.com/releases/19/gitlab-19-2-released/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-da8222d3",
+      "title": "SAML SSO for GitLab.com groups",
+      "url": "https://docs.gitlab.com/user/group/saml_sso/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn11search0",
+      "title": "Group access and permissions | GitLab Docs",
+      "url": "https://docs.gitlab.com/user/group/access_and_permissions/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search1",
+      "title": "Personal access tokens | GitLab Docs",
+      "url": "https://docs.gitlab.com/user/profile/personal_access_tokens/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

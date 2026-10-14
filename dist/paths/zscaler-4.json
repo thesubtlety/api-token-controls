@@ -1,0 +1,310 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "zscaler",
+      "name": "Zscaler",
+      "scope_notes": "Covers Zscaler (ZIA, ZPA, OneAPI via Authentication Service / ZIdentity). SaaS; OneAPI needs services linked to Authentication Service; legacy ZIA API needs an API subscription; Workflow Automation, Client Connector and ZDX API keys not covered.",
+      "controls": [
+        {
+          "name": "OAuth 2.0 Authorization Server status / delete",
+          "effect": "disable",
+          "applies_to": [
+            "zscaler-4"
+          ],
+          "what": "Disable or delete a trusted external authorization server.",
+          "setting": "Administration > API > Internet & SaaS API > OAuth 2.0 Authorization Servers",
+          "plan": "API subscription",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-79d90bfe"
+          ]
+        },
+        {
+          "name": "Required JWT claims (audience, issuer, client ID)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "zscaler-4"
+          ],
+          "what": "Mandate claim checks on external tokens.",
+          "setting": "OAuth 2.0 Authorization Servers > Add/Edit",
+          "plan": "API subscription",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-79d90bfe"
+          ]
+        },
+        {
+          "name": "API Roles",
+          "effect": "limit_scope",
+          "applies_to": [
+            "zscaler-4"
+          ],
+          "what": "Per-category Full/View Only/None permissions; cannot modify admins.",
+          "setting": "Administration > Role Management > Internet & SaaS > Add API Role",
+          "plan": "API subscription",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-73c26698"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Source-IP restriction for OneAPI clients, ZPA keys or legacy ZIA sessions (Admin Sign-On Policy and ZIA restricted admin access pages do not state API coverage)",
+        "Whether the Authentication Service Admin Sign-On Policy or MFA applies to legacy ZIA API password logins",
+        "Whether deleting/disabling a ZPA API key or ZIA authorization server ends already-issued bearer tokens",
+        "Whether API client create/delete and token revoke appear as named actions in Authentication Service audit logs (documented actions are generic Create/Update/Delete)",
+        "Whether read-only (GET) API calls are recorded in any audit log",
+        "Expiry of JWT key pairs (zscaler-2) and Sandbox tokens",
+        "OneAPI rate limits (only legacy limits fetched)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "zscaler-4",
+      "provider_id": "zscaler",
+      "name": "ZIA OAuth 2.0 with external authorization server (PingFederate, Okta, Entra ID)",
+      "family": "federation",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A client app registered in the customer's IdP gets a client-credentials JWT with scope <cloud>::<orgid>::<API role>; ZIA validates the signature via the server's JWKS and the scope claim.",
+        "evidence_refs": [
+          "fc-9551bdd1",
+          "fc-79d90bfe"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "ZIA trusts tokens issued by the customer's PingFederate, Okta or Entra ID; audience, issuer and client ID claims can be required.",
+        "evidence_refs": [
+          "fc-79d90bfe"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented on the ZIA side; any IP policy would be the external IdP's.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Token lifetime set in the external OAuth service",
+        "evidence_refs": [
+          "fc-9551bdd1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "IdP token lifetime",
+        "summary": "Client requests a new token from its IdP.",
+        "evidence_refs": [
+          "fc-9551bdd1"
+        ]
+      },
+      "administration": {
+        "summary": "Admins add, edit, enable/disable or delete authorization servers; API roles (up to 16, rank 7, cannot modify admins) set what the client can do.",
+        "conditions": "Requires API subscription and API roles; cloud service API only.",
+        "evidence_refs": [
+          "fc-9551bdd1",
+          "fc-79d90bfe",
+          "fc-73c26698"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Client-credentials grant works outside the context of users.",
+          "evidence_refs": [
+            "fc-9551bdd1"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Zscaler lists configured authorization servers; the individual OAuth clients live in the external IdP.",
+          "evidence_refs": [
+            "fc-79d90bfe"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "ZIA Admin Portal > Administration > Cloud Service API Security > OAuth 2.0 Authorization Servers tab (servers only; list OAuth clients in the external IdP)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-d3dae351"
+          ]
+        },
+        "expiry": {
+          "ui": "Set in the external OAuth service, e.g. Okta: authorization server > Access Policies > rule > Access token lifetime is. Check expires_in in the token response",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-d3dae351",
+            "fc-e41f3fdd"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "JWT issued by the customer's IdP."
+        },
+        "log_sources": [
+          {
+            "name": "ZIA audit logs",
+            "notes": "Data Explorer > Audit Logs > Internet & SaaS; records Admin UI and API actions; 6-month retention; NSS admin audit feed."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Admin ID",
+            "log": "ZIA audit logs",
+            "notes": "Internal API user oauth-<rolename>$@<orgid>.<cloud-domain>"
+          },
+          {
+            "field": "Client IP",
+            "log": "ZIA audit logs",
+            "notes": "Client application's IP"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "OAuth 2.0 Authorization Servers",
+            "stage": "create",
+            "notes": "Audit sub-category for server changes"
+          }
+        ],
+        "correlation_keys": [
+          "Admin ID (oauth-<rolename>)",
+          "Client IP"
+        ],
+        "anomaly_cues": [
+          "API changes by oauth-<role> user from unknown IPs",
+          "New authorization server added"
+        ],
+        "containment": {
+          "steps": "Disable or delete the authorization server in ZIA; disable the client in the IdP; tighten the API role.",
+          "kills_existing": "unknown",
+          "notes": "Docs do not say whether ZIA rejects already-issued, unexpired JWTs after IdP-side revocation."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Effect of disabling the server on live tokens",
+          "Which IdP client made a call (only role user is logged)"
+        ],
+        "evidence_refs": [
+          "fc-79d90bfe",
+          "fc-3af5385d"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/v1/status",
+            "reveals": "Activation status",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit logs record actions; GETs not confirmed"
+          },
+          {
+            "stage": "collection",
+            "call": "POST /api/v1/urlLookup",
+            "reveals": "URL categories (up to 100 URLs per request)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "Whether GET calls are audited"
+        ],
+        "evidence_refs": [
+          "fc-9551bdd1",
+          "fc-3af5385d"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-3af5385d",
+      "title": "About Audit Logs (Internet & SaaS)",
+      "url": "https://help.zscaler.com/zia/about-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-73c26698",
+      "title": "Adding API Roles",
+      "url": "https://help.zscaler.com/zia/adding-api-roles",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-79d90bfe",
+      "title": "About OAuth 2.0 Authorization Servers",
+      "url": "https://help.zscaler.com/zia/about-oauth-2.0-authorization-servers",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9551bdd1",
+      "title": "Getting Started (ZIA API)",
+      "url": "https://help.zscaler.com/legacy-apis/getting-started-zia-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d3dae351",
+      "title": "Getting Started (ZIA API)",
+      "url": "https://help.zscaler.com/zia/api-getting-started",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e41f3fdd",
+      "title": "Create access policies (Okta)",
+      "url": "https://help.okta.com/en-us/content/topics/security/api-config-access-policies.htm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,1379 @@
+{
+ "id": "glean",
+ "name": "Glean",
+ "scope_notes": "Glean-hosted enterprise SaaS (single tenant, <instance>-be.glean.com); plan tiers are not documented for these controls, and log delivery to customer storage needs Glean account team setup.",
+ "controls": [
+  {
+   "name": "Revoke API token",
+   "effect": "revoke",
+   "applies_to": [
+    "glean-1",
+    "glean-2",
+    "glean-3"
+   ],
+   "what": "Revokes a Glean-issued token.",
+   "setting": "Admin console > Platform > API tokens",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-d67398fb"
+   ]
+  },
+  {
+   "name": "Token scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "glean-1",
+    "glean-2"
+   ],
+   "what": "Token is limited to chosen Client API scopes, fixed at creation.",
+   "setting": "Add New Token > Scopes",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-cd8ae899"
+   ]
+  },
+  {
+   "name": "Agent-scoped Client API token",
+   "effect": "limit_resources",
+   "applies_to": [
+    "glean-1"
+   ],
+   "what": "Token only works for the assigned agents and expires after one year.",
+   "setting": "API tokens page or agent Share > API",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-d67398fb"
+   ]
+  },
+  {
+   "name": "Token creation roles",
+   "effect": "require_approval",
+   "applies_to": [
+    "glean-1",
+    "glean-2",
+    "glean-3"
+   ],
+   "what": "Only admin roles or API Token Creator can create tokens; global scope needs Super Admin.",
+   "setting": "Admin console > User roles",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-cd8ae899",
+    "fc-d7429b32",
+    "fc-765e2605"
+   ]
+  },
+  {
+   "name": "Greenlisted IPs",
+   "effect": "limit_network",
+   "applies_to": [
+    "glean-3"
+   ],
+   "what": "Per-token CIDR allowlist enforced on Indexing API requests.",
+   "setting": "Indexing token creation > Greenlisted IPs",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-d7429b32"
+   ]
+  },
+  {
+   "name": "Expires On (required)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "glean-3"
+   ],
+   "what": "Indexing tokens must have an expiry date.",
+   "setting": "Indexing token creation",
+   "plan": null,
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-d7429b32"
+   ]
+  },
+  {
+   "name": "Rotation Period",
+   "effect": "require_rotation",
+   "applies_to": [
+    "glean-3"
+   ],
+   "what": "Token must be rotated via /rotatetoken within the set period (min 24h).",
+   "setting": "Indexing token creation > Rotation Settings",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-d7429b32",
+    "fc-93fd96da"
+   ]
+  },
+  {
+   "name": "Tenant-wide IP greenlist",
+   "effect": "limit_network",
+   "applies_to": [
+    "glean-1",
+    "glean-2",
+    "glean-4",
+    "glean-5",
+    "glean-6"
+   ],
+   "what": "VPC firewall allowlist for the tenant; MCP also checks at app layer.",
+   "setting": "Not documented (Glean-managed)",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ac27dc28"
+   ]
+  },
+  {
+   "name": "Enable Glean OAuth Server",
+   "effect": "disable",
+   "applies_to": [
+    "glean-4",
+    "glean-6"
+   ],
+   "what": "Turns Glean-issued OAuth on or off.",
+   "setting": "Admin console > Settings > Third-party access (OAuth)",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-1d735752",
+    "fc-d0c3bb63"
+   ]
+  },
+  {
+   "name": "Dynamic client registration settings",
+   "effect": "require_approval",
+   "applies_to": [
+    "glean-4"
+   ],
+   "what": "Allow any app, only approved apps/redirect URIs, or no DCR.",
+   "setting": "Settings > Third-party access (OAuth) > DCR > Manage settings",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5087f03b"
+   ]
+  },
+  {
+   "name": "Delete static client / Revoke client",
+   "effect": "revoke",
+   "applies_to": [
+    "glean-4"
+   ],
+   "what": "Ends access for all users of that client after config propagation.",
+   "setting": "Users & permissions > Third-party access (OAuth) > Delete client",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-ac27dc28",
+    "fc-a61fd21d"
+   ]
+  },
+  {
+   "name": "Rotate secret (static client)",
+   "effect": "revoke",
+   "applies_to": [
+    "glean-4"
+   ],
+   "what": "Old client secret stops working immediately.",
+   "setting": "Edit client > Rotate secret",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-a61fd21d"
+   ]
+  },
+  {
+   "name": "OAuth token TTL",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "glean-4"
+   ],
+   "what": "Admins can change access (7d) and refresh (180d) TTLs.",
+   "setting": "Not documented",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ac27dc28"
+   ]
+  },
+  {
+   "name": "Sign out of all sessions",
+   "effect": "revoke",
+   "applies_to": [
+    "glean-4"
+   ],
+   "what": "Invalidates a user's Glean-issued OAuth tokens (cache refresh ~10 min).",
+   "setting": "Admin console (user)",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-ac27dc28"
+   ]
+  },
+  {
+   "name": "Enable IDP OAuth for API access",
+   "effect": "disable",
+   "applies_to": [
+    "glean-5"
+   ],
+   "what": "Turns on acceptance of IdP tokens for listed client IDs.",
+   "setting": "Settings > Third-party access (OAuth)",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5df4608c"
+   ]
+  },
+  {
+   "name": "Enterprise Managed Auth (trusted issuer, allowed scopes)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "glean-6"
+   ],
+   "what": "EMA tokens limited to selected scopes; rejected without a trusted issuer.",
+   "setting": "Users & permissions > Third-party access (OAuth) > Enterprise Managed Auth",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-818ab68e"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "glean-1",
+   "what": "Token scopes and permission type cannot be edited after creation; must reissue.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-cd8ae899"
+   ]
+  },
+  {
+   "path_id": "glean-3",
+   "what": "OAuth/federated auth is not available for the Indexing API; only static Glean-issued tokens.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-d7429b32"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether revoking a Glean-issued API token takes effect immediately",
+  "Whether user deprovisioning revokes that user's Glean-issued API tokens",
+  "Whether admin audit logs record API token create/revoke (coverage list does not mention tokens)",
+  "Per-token IP allowlist for Client API tokens",
+  "Default OAuth server state (admin docs: off; developer docs: on)",
+  "Where the tenant-wide IP greenlist is configured and whether customers manage it",
+  "EMA token lifetime"
+ ],
+ "credentials": [
+  {
+   "id": "glean-1",
+   "name": "Client API token (USER permission)",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Glean-issued bearer token created in Admin console > Platform > API tokens, tied to one user and a fixed set of scopes (SEARCH, CHAT, DOCUMENTS, MCP, etc.). Can also be scoped to specific agents.",
+    "evidence_refs": [
+     "fc-cd8ae899",
+     "fc-d67398fb"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static token. Docs say it works without the identity provider, so it does not pass through SSO or IdP conditional access.",
+    "evidence_refs": [
+     "fc-cd8ae899"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Only the tenant-wide IP greenlist at the VPC firewall; no per-token IP list documented for Client API tokens.",
+    "evidence_refs": [
+     "fc-ac27dc28"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional expiry date; agent-scoped tokens expire after 1 year",
+    "evidence_refs": [
+     "fc-cd8ae899",
+     "fc-d67398fb"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "fixed date",
+    "summary": "Create a new token; scopes cannot be edited.",
+    "evidence_refs": [
+     "fc-cd8ae899"
+    ]
+   },
+   "administration": {
+    "summary": "Admins and API Token Creators can make tokens for themselves; Super Admins for any user. Admins revoke from the API tokens page.",
+    "conditions": "No approval workflow or org-wide disable switch documented.",
+    "evidence_refs": [
+     "fc-cd8ae899",
+     "fc-d67398fb",
+     "fc-765e2605"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin console > Platform > API tokens lists Client API tokens.",
+     "evidence_refs": [
+      "fc-d67398fb"
+     ]
+    }
+   },
+   "how": {
+    "network": {
+     "ui": "No self-serve setting; send Glean the allowed CIDRs and Glean enables IP green listing (tenant-wide)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-000bc4ba",
+      "fc-ac27dc28"
+     ]
+    },
+    "expiry": {
+     "ui": "Admin console → Client API Token Settings → Add New Token → Expires (set at creation)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-cd8ae899"
+     ]
+    },
+    "usage": {
+     "ui": "Query the glean-customer-event log (bucket/warehouse; ask account team for location); filter IsRestClientApi = true",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b9e88402",
+      "fc-4b0dcb82",
+      "fc-94c8cbbf"
+     ]
+    },
+    "reads": {
+     "ui": "In glean-customer-event log, filter jsonPayload.type = SEARCH and IsRestClientApi = true",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b9e88402",
+      "fc-4b0dcb82"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "glean_",
+     "notes": "Only seen in an example header value; not a documented format."
+    },
+    "log_sources": [
+     {
+      "name": "Glean Customer Event (GCE) logs",
+      "notes": "On by default; delivered to object storage/warehouse; customer export needs account team."
+     },
+     {
+      "name": "Admin audit logs",
+      "notes": "Config changes only; 30-day default retention; CSV export."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "IsRestClientApi",
+      "log": "GCE SEARCH/CHAT",
+      "notes": "Flags API calls; no token ID field documented."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "user identity",
+     "TrackingToken",
+     "SessionTrackingToken"
+    ],
+    "anomaly_cues": [
+     "IsRestClientApi=true searches for a user who never used the API",
+     "High-volume search or getdocuments"
+    ],
+    "containment": {
+     "steps": "Revoke the token in Admin console > Platform > API tokens.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Event names for token create/revoke"
+    ],
+    "evidence_refs": [
+     "fc-d67398fb",
+     "fc-2ca66beb",
+     "fc-4b0dcb82",
+     "fc-b9e88402",
+     "fc-cd8ae899"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "POST /rest/api/v1/search",
+      "reveals": "Documents the user can see",
+      "bulk": true,
+      "scope": "SEARCH",
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "SEARCH",
+      "log_notes": "GCE log; IsRestClientApi field"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /rest/api/v1/chat",
+      "reveals": "AI answers over user's data",
+      "bulk": false,
+      "scope": "CHAT",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "GCE CHAT event has IsRestClientApi"
+     }
+    ],
+    "unknown": [
+     "whoami endpoint"
+    ],
+    "evidence_refs": [
+     "fc-4b0dcb82",
+     "fc-a7e71f9b"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "glean-2",
+   "name": "Client API token (GLOBAL permission, X-Glean-ActAs)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Glean-issued bearer token that can act as any user by sending X-Glean-ActAs: <email>.",
+    "evidence_refs": [
+     "fc-cd8ae899"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static token; independent of the IdP.",
+    "evidence_refs": [
+     "fc-cd8ae899"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Tenant-wide VPC firewall greenlist only.",
+    "evidence_refs": [
+     "fc-ac27dc28"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional expiry date",
+    "evidence_refs": [
+     "fc-cd8ae899"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "fixed date",
+    "summary": "Create a new token.",
+    "evidence_refs": [
+     "fc-cd8ae899"
+    ]
+   },
+   "administration": {
+    "summary": "Only Super Admins can create global tokens.",
+    "conditions": "Highest-impact Glean credential: impersonates any user.",
+    "evidence_refs": [
+     "fc-cd8ae899",
+     "fc-765e2605"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "GLOBAL tokens are not tied to one user; they can act as any user via X-Glean-ActAs.",
+     "evidence_refs": [
+      "fc-cd8ae899"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin console > Platform > API tokens.",
+     "evidence_refs": [
+      "fc-d67398fb"
+     ]
+    }
+   },
+   "how": {
+    "network": {
+     "ui": "No self-serve setting; send Glean the allowed CIDRs and Glean enables IP green listing (tenant-wide)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-000bc4ba",
+      "fc-ac27dc28"
+     ]
+    },
+    "expiry": {
+     "ui": "Admin console → Client API Token Settings → Add New Token → Expires (set at creation)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-cd8ae899"
+     ]
+    },
+    "usage": {
+     "ui": "Query the glean-customer-event log (bucket/warehouse; ask account team for location); filter IsRestClientApi = true",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b9e88402",
+      "fc-4b0dcb82",
+      "fc-94c8cbbf"
+     ]
+    },
+    "reads": {
+     "ui": "In glean-customer-event log, filter jsonPayload.type = SEARCH and IsRestClientApi = true",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b9e88402",
+      "fc-4b0dcb82"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "glean_",
+     "notes": "Example only."
+    },
+    "log_sources": [
+     {
+      "name": "GCE logs",
+      "notes": "Events are attributed to the impersonated user."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "IsRestClientApi",
+      "log": "GCE SEARCH",
+      "notes": "No token ID documented."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "user identity"
+    ],
+    "anomaly_cues": [
+     "API activity spread across many users at once (ActAs fan-out)"
+    ],
+    "containment": {
+     "steps": "Revoke the global token in the API tokens page.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether logs record the ActAs caller vs. impersonated user"
+    ],
+    "evidence_refs": [
+     "fc-cd8ae899",
+     "fc-d67398fb",
+     "fc-4b0dcb82"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "POST /rest/api/v1/adminsearch",
+      "reveals": "Search results without permission checks (privileged users)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /rest/api/v1/search with X-Glean-ActAs",
+      "reveals": "Any user's visible documents",
+      "bulk": true,
+      "scope": "SEARCH",
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "SEARCH",
+      "log_notes": "GCE"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-8546e7ff",
+     "fc-4b0dcb82"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "glean-3",
+   "name": "Indexing API token",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Glean-issued bearer token for /api/index/v1 (push documents, permissions, datasources). Global or limited to selected datasources. OAuth is not accepted.",
+    "evidence_refs": [
+     "fc-d7429b32"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Glean-issued only.",
+    "evidence_refs": [
+     "fc-d7429b32"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Optional per-token Greenlisted IPs (CIDR); requests from other IPs get 403.",
+    "evidence_refs": [
+     "fc-d7429b32"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Expiry date required at creation",
+    "evidence_refs": [
+     "fc-d7429b32"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "fixed date; rotation does not extend it",
+    "summary": "Optional rotation via /rotatetoken (min period 24h); old secret works 10 more minutes.",
+    "evidence_refs": [
+     "fc-ed7d1e9e",
+     "fc-d7429b32",
+     "fc-93fd96da"
+    ]
+   },
+   "administration": {
+    "summary": "Setup Admins, Admins and Super Admins create tokens; only Super Admins grant global scope.",
+    "conditions": "Revoke from the API tokens page.",
+    "evidence_refs": [
+     "fc-d7429b32",
+     "fc-d67398fb"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Indexing tokens give service-level access, not user access.",
+     "evidence_refs": [
+      "fc-d7429b32"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin console > Platform > API tokens (Indexing Tokens tab).",
+     "evidence_refs": [
+      "fc-d67398fb"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Admin console → Users & permissions → Audit logs; filter, Export to CSV (config changes only)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-2ca66beb"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "glean_",
+     "notes": "Example only."
+    },
+    "log_sources": [
+     {
+      "name": "Admin audit logs",
+      "notes": "Config changes; 30 days default."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "datasource name"
+    ],
+    "anomaly_cues": [
+     "403 IP not allowed errors",
+     "Unexpected permission or document updates in a datasource"
+    ],
+    "containment": {
+     "steps": "Revoke the token in API tokens (Indexing tab).",
+     "kills_existing": "unknown",
+     "notes": "After a rotation the old secret works for 10 more minutes."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Logging of indexing API calls"
+    ],
+    "evidence_refs": [
+     "fc-d67398fb",
+     "fc-d7429b32",
+     "fc-ed7d1e9e",
+     "fc-2ca66beb"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST /api/index/v1/getdatasourceconfig",
+      "reveals": "Datasource config",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-df39305e",
+     "fc-93fd96da"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "glean-4",
+   "name": "Glean OAuth Authorization Server token (static and DCR clients, MCP)",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "OAuth 2.1 authorization code + PKCE. User signs in through the tenant's SSO IdP; Glean issues a JWT access token with Glean scopes. Used by MCP hosts and Client/Platform API apps.",
+    "evidence_refs": [
+     "fc-1d735752"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "User sign-in goes through the existing SSO IdP; tokens are then Glean-issued.",
+    "evidence_refs": [
+     "fc-1d735752"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Tenant VPC firewall greenlist; MCP endpoints enforce greenlisting at the app layer. OAuth metadata discovery may be exempt.",
+    "evidence_refs": [
+     "fc-ac27dc28"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 604800,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Access 7 days, refresh 180 days by default; admin-configurable",
+    "evidence_refs": [
+     "fc-ac27dc28"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "refresh token TTL",
+    "summary": "Refresh with offline_access.",
+    "evidence_refs": [
+     "fc-fdeada82",
+     "fc-ac27dc28"
+    ]
+   },
+   "administration": {
+    "summary": "Admin toggle under Settings > Third-party access (OAuth). DCR defaults to allowing any application; admins can restrict to approved redirect URIs or block DCR. Static clients have admin-set scopes.",
+    "conditions": "Docs disagree on default: admin docs say off, developer docs say on.",
+    "evidence_refs": [
+     "fc-1d735752",
+     "fc-d0c3bb63",
+     "fc-5087f03b",
+     "fc-fdeada82"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "Users sign in through the org's existing SSO IdP before Glean issues the OAuth token.",
+     "evidence_refs": [
+      "fc-1d735752"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Users see their own authorized applications. Admins manage clients in the Admin console but have no documented per-token list.",
+     "evidence_refs": [
+      "fc-1d735752"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Admin console → Settings → Third‑party access (OAuth) → Enable Glean OAuth Server; sign-in uses the existing SSO IdP, so set MFA/conditional access in the IdP",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-1d735752",
+      "fc-99af34b9"
+     ]
+    },
+    "network": {
+     "ui": "No self-serve setting; send Glean the allowed CIDRs and Glean enables IP green listing (tenant-wide)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-000bc4ba",
+      "fc-ac27dc28"
+     ]
+    },
+    "usage": {
+     "ui": "MCP activity logs (filter by server, tool, user, date; shows OAuth client name); GCE log: type = MCP_USAGE, McpUsage.Application / AuthMethod",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-94c8cbbf",
+      "fc-b9e88402",
+      "fc-4b0dcb82"
+     ]
+    },
+    "reads": {
+     "ui": "In glean-customer-event log, filter jsonPayload.type = MCP_USAGE (EventType TOOL_CALL, ToolName)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b9e88402",
+      "fc-4b0dcb82"
+     ]
+    },
+    "kill": {
+     "ui": "Users & permissions → Third‑party access (OAuth) → ⋮ next to client → Delete client; per user: User roles → ⋮ → Sign out of all sessions",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a61fd21d",
+      "fc-cfa35c05",
+      "fc-ac27dc28"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "RS256 JWT with kid; verifiable via /api/oauth/jwks."
+    },
+    "log_sources": [
+     {
+      "name": "Admin audit logs",
+      "notes": "Client create/revoke and OAuth setting changes."
+     },
+     {
+      "name": "GCE MCP_USAGE",
+      "notes": "Tool, server, client, authentication."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "client",
+      "log": "MCP_USAGE",
+      "notes": "OAuth client metadata."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "client",
+     "user identity"
+    ],
+    "anomaly_cues": [
+     "New DCR client while DCR is set to Allow any application"
+    ],
+    "containment": {
+     "steps": "Delete/revoke the client; sign the user out of all sessions.",
+     "kills_existing": "yes",
+     "notes": "Takes effect after ~5-10 min propagation / 10 min cache. Users can also revoke an app themselves, which deletes its consents and refresh tokens. Admins can list a static client's users via View users."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact audit event names"
+    ],
+    "evidence_refs": [
+     "fc-ac27dc28",
+     "fc-a61fd21d",
+     "fc-b9e88402",
+     "fc-1d735752"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "MCP tool calls on /mcp/<server>",
+      "reveals": "Search, chat, documents per scopes",
+      "bulk": true,
+      "scope": "MCP",
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "MCP_USAGE",
+      "log_notes": "GCE"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-b9e88402"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "glean-5",
+   "name": "External IdP OAuth token (X-Glean-Auth-Type: OAUTH)",
+   "family": "federation",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Access tokens issued by the customer's IdP (Google, Entra ID, Okta, OneLogin) and sent with X-Glean-Auth-Type: OAUTH. Glean checks issuer and client_id.",
+    "evidence_refs": [
+     "fc-5df4608c"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "Admin registers issuer and allowed client IDs; IdP policy governs issuance.",
+    "evidence_refs": [
+     "fc-5df4608c"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Tenant VPC firewall greenlist plus whatever the IdP enforces at issuance.",
+    "evidence_refs": [
+     "fc-ac27dc28"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Set by the IdP",
+    "evidence_refs": [
+     "fc-5df4608c"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "IdP policy",
+    "summary": "IdP refresh tokens.",
+    "evidence_refs": [
+     "fc-5df4608c"
+    ]
+   },
+   "administration": {
+    "summary": "Off until an admin toggles Enable IDP OAuth for API access and lists allowed client IDs.",
+    "conditions": "Revocation follows the IdP.",
+    "evidence_refs": [
+     "fc-5df4608c"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "The customer's IdP issues these tokens, so IdP assignments and policies decide whether a user gets one.",
+     "evidence_refs": [
+      "fc-5df4608c"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Register the OAuth app in the IdP and assign users/policies there; Admin console → Settings → Third‑party access (OAuth) → Enable IDP OAuth for API access → Manage Settings",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-5df4608c",
+      "fc-99af34b9"
+     ]
+    },
+    "network": {
+     "ui": "No self-serve setting; send Glean the allowed CIDRs and Glean enables IP green listing (tenant-wide)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-000bc4ba",
+      "fc-ac27dc28"
+     ]
+    },
+    "expiry": {
+     "ui": "Set access/refresh token lifetime in the IdP's OAuth app policy (not in Glean)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-5df4608c"
+     ]
+    },
+    "usage": {
+     "ui": "Query the glean-customer-event log (bucket/warehouse; ask account team for location); filter IsRestClientApi = true",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b9e88402",
+      "fc-4b0dcb82",
+      "fc-94c8cbbf"
+     ]
+    },
+    "reads": {
+     "ui": "In glean-customer-event log, filter jsonPayload.type = SEARCH and IsRestClientApi = true",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b9e88402",
+      "fc-4b0dcb82"
+     ]
+    },
+    "kill": {
+     "ui": "Revoke in the IdP; or Admin console → Settings → Third‑party access (OAuth) → Manage Settings → remove client ID from Allowed clientID(s), or toggle off Enable IDP OAuth for API access",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-5df4608c"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "IdP JWT."
+    },
+    "log_sources": [
+     {
+      "name": "IdP sign-in/token logs",
+      "notes": "Issuance logged by IdP."
+     },
+     {
+      "name": "GCE logs",
+      "notes": "Usage."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "client_id",
+     "user identity"
+    ],
+    "anomaly_cues": [
+     "Tokens from a client ID not on the allowed list (rejected)"
+    ],
+    "containment": {
+     "steps": "Revoke in IdP; remove client ID or disable IdP OAuth in Glean.",
+     "kills_existing": "partial",
+     "notes": "Revocation follows the IdP's policies. Docs do not say whether Glean checks revocation for each request or accepts tokens until they expire."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-5df4608c",
+     "fc-ac27dc28"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "POST /rest/api/v1/search",
+      "reveals": "User-visible documents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "SEARCH",
+      "log_notes": "GCE"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-4b0dcb82"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "glean-6",
+   "name": "Enterprise Managed Auth (JWT bearer assertion for MCP)",
+   "family": "federation",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An AI app sends an IdP-signed identity assertion to /oauth/token with the JWT bearer grant; Glean returns an MCP access token without a consent screen.",
+    "evidence_refs": [
+     "fc-818ab68e"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "Trusted issuer must be configured; currently Claude with Okta only.",
+    "evidence_refs": [
+     "fc-818ab68e"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "MCP app-layer IP greenlisting.",
+    "evidence_refs": [
+     "fc-ac27dc28"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Not stated for EMA",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "IdP assertion",
+    "summary": "App obtains a new assertion from the IdP.",
+    "evidence_refs": [
+     "fc-818ab68e"
+    ]
+   },
+   "administration": {
+    "summary": "Off unless the EMA toggle is on and a trusted issuer is set; allowed scopes limit tokens.",
+    "conditions": "Admin role required.",
+    "evidence_refs": [
+     "fc-818ab68e"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "Each token comes from an IdP identity assertion, and admins control which users and apps can connect in the IdP.",
+     "evidence_refs": [
+      "fc-818ab68e"
+     ]
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "No refresh tokens are issued, so once the IdP stops issuing assertions no new tokens are minted. Existing access tokens run until they expire.",
+     "evidence_refs": [
+      "fc-818ab68e"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "In the IdP, register Glean as a Cross App Access resource server and assign users; in Glean: Users & permissions → Third-party access (OAuth) → Enterprise Managed Auth → Trusted issuer",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-818ab68e"
+     ]
+    },
+    "network": {
+     "ui": "No self-serve setting; send Glean the allowed CIDRs and Glean enables IP green listing (tenant-wide)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-000bc4ba",
+      "fc-ac27dc28"
+     ]
+    },
+    "usage": {
+     "ui": "MCP activity logs (filter by server, tool, user, date; shows OAuth client name); GCE log: type = MCP_USAGE, McpUsage.Application / AuthMethod",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-94c8cbbf",
+      "fc-b9e88402",
+      "fc-4b0dcb82"
+     ]
+    },
+    "reads": {
+     "ui": "In glean-customer-event log, filter jsonPayload.type = MCP_USAGE (EventType TOOL_CALL, ToolName)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-b9e88402",
+      "fc-4b0dcb82"
+     ]
+    },
+    "kill": {
+     "ui": "Users & permissions → Third-party access (OAuth) → turn off Enterprise Managed Auth, or delete the app's static client; then User roles → ⋮ → Sign out of all sessions to cut existing tokens",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-818ab68e",
+      "fc-cfa35c05"
+     ]
+    },
+    "offboard": {
+     "ui": "Unassign the user in the IdP Cross App Access connection; Admin console → Users & permissions → User roles → ⋮ → Sign out of all sessions",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-818ab68e",
+      "fc-cfa35c05"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Glean access token."
+    },
+    "log_sources": [
+     {
+      "name": "GCE MCP_USAGE",
+      "notes": ""
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "user identity"
+    ],
+    "anomaly_cues": [],
+    "containment": {
+     "steps": "Turn off EMA or remove the trusted issuer; unassign the user in the IdP.",
+     "kills_existing": "partial",
+     "notes": "Turning off EMA or removing the issuer leaves existing tokens valid until expiry. Admin 'sign out of all sessions' invalidates them after the revocation cache refreshes (~10 minutes)."
+    },
+    "sample_query": null,
+    "unknown": [
+     "EMA-specific log fields"
+    ],
+    "evidence_refs": [
+     "fc-818ab68e",
+     "fc-b9e88402",
+     "fc-ac27dc28"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "MCP tool calls",
+      "reveals": "Per allowed scopes",
+      "bulk": true,
+      "scope": "MCP",
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "MCP_USAGE",
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-b9e88402"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

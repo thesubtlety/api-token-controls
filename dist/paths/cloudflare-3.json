@@ -1,0 +1,389 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "scope_notes": "Covers Cloudflare (API, Zero Trust Access, R2). All plans have API tokens and 18-month Audit Logs v2; Logpush beyond 18 months is Enterprise; Access service tokens need Cloudflare Zero Trust; R2 credentials need R2.",
+      "controls": [
+        {
+          "name": "Leaked token detection (GitHub Secret Scanning)",
+          "effect": "revoke",
+          "applies_to": [
+            "cloudflare-1",
+            "cloudflare-2",
+            "cloudflare-3"
+          ],
+          "what": "Tokens leaked in public GitHub repos are auto-revoked; private-repo leaks only notify.",
+          "setting": "Automatic",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-56457d26"
+          ]
+        },
+        {
+          "name": "Change Global API Key",
+          "effect": "revoke",
+          "applies_to": [
+            "cloudflare-3"
+          ],
+          "what": "Replaces the user's Global API Key.",
+          "setting": "My Profile > API Tokens > API Keys > Change",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-04794e45"
+          ]
+        },
+        {
+          "name": "Enable API Access / API Access (member-level)",
+          "effect": "disable",
+          "applies_to": [
+            "cloudflare-1",
+            "cloudflare-3"
+          ],
+          "what": "Enterprise Super Administrators can turn off API access for the whole account or for specific members; member settings override the account setting.",
+          "setting": "Members page > Enable API Access; per member: API Access",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-a5a16d07"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "cloudflare-3",
+          "what": "No IP restriction or expiry for the Global API Key.",
+          "kind": "network",
+          "evidence_refs": [
+            "fc-04794e45"
+          ]
+        },
+        {
+          "path_id": "cloudflare-3",
+          "what": "Global API Key cannot be limited to specific resources or permissions.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-04794e45"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Any account-level setting to block members from creating user API tokens or using the Global API Key.",
+        "Any account-wide policy forcing token expiry or IP filters.",
+        "Whether Super Administrators can list or revoke other members' user API tokens.",
+        "Whether dashboard SSO or Access policies are checked on API token / Global API Key requests (no explicit statement).",
+        "Exact Audit Logs v2 action names for token create/delete/roll.",
+        "Whether Origin CA keys still authenticate after the 2026-09-30 removal date.",
+        "IP restrictions for Access service tokens and for R2 S3 requests.",
+        "Cloudflare OAuth tokens (actor context 'oauth', e.g. Wrangler) were not researched."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "cloudflare-3",
+      "provider_id": "cloudflare",
+      "name": "Global API Key (legacy)",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "One key per user (cfk_ prefix for new/rolled keys), sent with X-Auth-Email and X-Auth-Key headers; has every permission the user has on every resource.",
+        "evidence_refs": [
+          "fc-04794e45",
+          "fc-4da187c1"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "No doc ties Global API Key use to dashboard SSO.",
+        "evidence_refs": [
+          "fc-41e5245a"
+        ]
+      },
+      "ip_restriction": {
+        "status": "not_supported",
+        "enforcement_stage": "unknown",
+        "boundary": "Docs list lack of IP and time limits as a Global API key limitation.",
+        "evidence_refs": [
+          "fc-04794e45"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "No expiry option",
+        "evidence_refs": [
+          "fc-04794e45"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Valid until changed",
+        "summary": "Change (roll) the key under My Profile > API Tokens > API Keys.",
+        "evidence_refs": [
+          "fc-04794e45"
+        ]
+      },
+      "administration": {
+        "summary": "Available once the account email is verified. No documented admin setting to disable Global API Keys for members.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-04794e45"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "The key has exactly the user's permissions, so removing the member's account access removes the key's access to that account.",
+          "evidence_refs": [
+            "fc-04794e45"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "No admin list of Global API Keys found; key use shows in audit logs with actor.context api_key.",
+          "evidence_refs": [
+            "fc-e9870043"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": null,
+          "api": "GET /accounts/{account_id}/logs/audit?actor_context=api_key (lists users whose Global API Key was used; no key list exists)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e9870043",
+            "fc-19960253"
+          ]
+        },
+        "usage": {
+          "ui": "Manage Account > Audit Logs",
+          "api": "GET /accounts/{account_id}/logs/audit?actor_context=api_key&actor_email={email}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e9870043",
+            "fc-19960253"
+          ]
+        },
+        "reads": {
+          "ui": "Manage Account > Audit Logs > set Action type = view",
+          "api": "GET /accounts/{account_id}/logs/audit?action_type=view&actor_context=api_key",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e9870043",
+            "fc-19960253"
+          ]
+        },
+        "offboard": {
+          "ui": "Manage Account > Members > expand member > Revoke > Yes, revoke access",
+          "api": "DELETE /accounts/{account_id}/members/{member_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-db6610b5",
+            "fc-04794e45"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "cfk_",
+          "notes": "New/rolled keys cfk_; older keys 37-45 char lowercase hex."
+        },
+        "log_sources": [
+          {
+            "name": "Audit Logs v2",
+            "notes": "actor.context = api_key"
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.context",
+            "log": "Audit Logs v2",
+            "notes": "api_key; no token_id (field only set for api_token/oauth)"
+          },
+          {
+            "field": "actor.email",
+            "log": "Audit Logs v2",
+            "notes": "Owning user"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "unknown",
+            "stage": "revoke",
+            "notes": "Key change event name not documented"
+          }
+        ],
+        "correlation_keys": [
+          "actor.email",
+          "actor.ip_address",
+          "actor.context"
+        ],
+        "anomaly_cues": [
+          "Any api_key context activity if you have migrated to tokens"
+        ],
+        "containment": {
+          "steps": "Change the Global API Key in My Profile > API Tokens.",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether key change is audit logged"
+        ],
+        "evidence_refs": [
+          "fc-04794e45",
+          "fc-19960253"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /user",
+            "reveals": "Email, name, account memberships",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "/user endpoints are in v2 coverage"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /zones",
+            "reveals": "All zones of the user",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "actor.context api_key"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /accounts/{account_id}/members",
+            "reveals": "All account members",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Logged as a view action in Audit Logs v2; actor.context is api_key with the user's actor.email/id (no per-key ID)."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-4da187c1",
+          "fc-20d2a9be",
+          "fc-e9870043",
+          "fc-19960253",
+          "fc-06b63f43"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-04794e45",
+      "title": "Get Global API key (legacy)",
+      "url": "https://developers.cloudflare.com/fundamentals/api/get-started/keys/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-06b63f43",
+      "title": "List Members",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/members/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-19960253",
+      "title": "Get account audit logs (Version 2)",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/logs/subresources/audit/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-20d2a9be",
+      "title": "List Zones",
+      "url": "https://developers.cloudflare.com/api/resources/zones/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-41e5245a",
+      "title": "Set up dashboard SSO",
+      "url": "https://developers.cloudflare.com/fundamentals/manage-members/dashboard-sso/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4da187c1",
+      "title": "User Details",
+      "url": "https://developers.cloudflare.com/api/resources/user/methods/get/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-56457d26",
+      "title": "Token formats",
+      "url": "https://developers.cloudflare.com/fundamentals/api/get-started/token-formats/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a5a16d07",
+      "title": "Control API Access",
+      "url": "https://developers.cloudflare.com/fundamentals/api/how-to/control-api-access/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-db6610b5",
+      "title": "Manage (account members)",
+      "url": "https://developers.cloudflare.com/fundamentals/manage-members/manage/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9870043",
+      "title": "Audit Logs - version 2",
+      "url": "https://developers.cloudflare.com/fundamentals/account/account-security/audit-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

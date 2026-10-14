@@ -1,0 +1,453 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "strongdm",
+      "name": "StrongDM",
+      "scope_notes": "SaaS control plane (US/UK/EU); Log Stream and 13-month log viewing require the Enterprise plan, other plans see 30 days in the Admin UI.",
+      "controls": [
+        {
+          "name": "Delete token",
+          "effect": "revoke",
+          "applies_to": [
+            "strongdm-1"
+          ],
+          "what": "Deleting an admin token stops it authenticating immediately.",
+          "setting": "Principals > Tokens; sdm admin tokens delete",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-97954b59",
+            "fc-bbfe142e"
+          ]
+        },
+        {
+          "name": "Rotate",
+          "effect": "require_rotation",
+          "applies_to": [
+            "strongdm-1"
+          ],
+          "what": "Generates a new secret with the same permissions; existing authentications expire after 24 hours.",
+          "setting": "Principals > Tokens > Rotate",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-97954b59"
+          ]
+        },
+        {
+          "name": "Token permissions",
+          "effect": "limit_scope",
+          "applies_to": [
+            "strongdm-1",
+            "strongdm-2"
+          ],
+          "what": "Each admin token or API key gets only the admin permissions chosen at creation.",
+          "setting": "Create Admin Token / Create API Key page; --permissions",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-97954b59",
+            "fc-7f30f72d",
+            "fc-494307d6",
+            "fc-8ffe802d"
+          ]
+        },
+        {
+          "name": "Token expiry",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "strongdm-1",
+            "strongdm-2"
+          ],
+          "what": "Set an expiry at creation; 'never' is an allowed choice.",
+          "setting": "Create page expiry selector; --duration",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-97954b59",
+            "fc-7f30f72d",
+            "fc-8ffe802d"
+          ]
+        },
+        {
+          "name": "Delete tokens on user suspension",
+          "effect": "revoke",
+          "applies_to": [
+            "strongdm-1",
+            "strongdm-2"
+          ],
+          "what": "When suspending a user, the Admin UI lists their tokens and keys and asks whether to delete them.",
+          "setting": "Users > Suspend user",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-97954b59",
+            "fc-7f30f72d"
+          ]
+        },
+        {
+          "name": "Permission level: Manage service accounts, admin tokens, and API keys",
+          "effect": "other",
+          "applies_to": [
+            "strongdm-1",
+            "strongdm-2",
+            "strongdm-3"
+          ],
+          "what": "Only the Administrator permission level can create or manage admin tokens, API keys, and service accounts; other levels cannot.",
+          "setting": "Principals > Users > (user) > Settings > Permission Level",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-087adfd5"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "strongdm-1",
+          "what": "Suspending the creating user does not disable admin tokens.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-97954b59"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Any IP allowlist for admin tokens, API keys, service accounts, or SCIM tokens (docs silent).",
+        "Any org-wide switch to block creation of admin tokens or API keys, or a maximum expiry policy.",
+        "Whether SSO-required or MFA settings apply to service account token logins.",
+        "SCIM token rotation, revocation, and lifetime.",
+        "Service account token lifetime and rekey procedure.",
+        "Whether read-only SDK/API calls (e.g. listing accounts or resources) are recorded as Activities.",
+        "Whether API key creation logs as 'Admin token created' or a separate event."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "strongdm-1",
+      "provider_id": "strongdm",
+      "name": "Admin token",
+      "family": "pat",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Single secret string used with the sdm CLI via SDM_ADMIN_TOKEN or sdm login --admin-token. It can only run the sdm admin commands granted to it, and use skips the interactive login.",
+        "evidence_refs": [
+          "fc-97954b59"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static secret; no documented workload identity federation.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Docs do not describe any IP allowlist for admin tokens.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "1 week, 1 month, 1 year, or never (CLI duration default 0)",
+        "evidence_refs": [
+          "fc-97954b59",
+          "fc-8ffe802d"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "absolute expiry set at creation",
+        "summary": "Rotate regenerates the secret with same name and permissions; old authentications expire after 24 hours.",
+        "evidence_refs": [
+          "fc-97954b59"
+        ]
+      },
+      "administration": {
+        "summary": "Admins create, list, rotate and delete in Principals > Tokens or sdm admin tokens. Tokens survive suspension of the creating user unless deleted.",
+        "conditions": "Administrator permission level needed to create via CLI.",
+        "evidence_refs": [
+          "fc-bbfe142e",
+          "fc-97954b59"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Docs say a CLI session using an admin token does not need a CLI or GUI login, so the SSO login flow is not involved.",
+          "evidence_refs": [
+            "fc-97954b59"
+          ]
+        },
+        "offboard": {
+          "status": "no",
+          "details": "Admin tokens keep working after the creating user is suspended unless the admin chooses to delete them in the suspension prompt.",
+          "evidence_refs": [
+            "fc-97954b59"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admin UI Principals > Tokens and `sdm admin tokens list` list all tokens in the org; `sdm audit tokens` gives a point-in-time listing.",
+          "evidence_refs": [
+            "fc-7b0a83a8",
+            "fc-d1933dd7"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Opaque string shown once; prefix not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Activities (Admin UI Logs > Activities, sdm audit activities, API Activities)",
+            "notes": "30 days in Admin UI without Enterprise, 13 months with Enterprise."
+          },
+          {
+            "name": "Log Stream - Activities",
+            "notes": "Enterprise; streams to customer object storage."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actorAccountID",
+            "log": "Activities",
+            "notes": "Account that performed the activity; whether token ID is separately recorded is not documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Admin token created",
+            "stage": "create",
+            "notes": null
+          },
+          {
+            "event": "Admin token cloned",
+            "stage": "create",
+            "notes": null
+          },
+          {
+            "event": "Admin token rekeyed",
+            "stage": "rotate",
+            "notes": null
+          },
+          {
+            "event": "Admin token suspended",
+            "stage": "disable",
+            "notes": null
+          },
+          {
+            "event": "Admin token reinstated",
+            "stage": "enable",
+            "notes": null
+          },
+          {
+            "event": "Admin token expired",
+            "stage": "expire",
+            "notes": null
+          },
+          {
+            "event": "Admin token deleted",
+            "stage": "revoke",
+            "notes": null
+          }
+        ],
+        "correlation_keys": [
+          "actorAccountID",
+          "ipAddress",
+          "userAgent",
+          "entities"
+        ],
+        "anomaly_cues": [
+          "Tokens with expiry 'never'",
+          "Tokens owned by suspended users",
+          "Admin activity from unfamiliar ipAddress or userAgent"
+        ],
+        "containment": {
+          "steps": "Delete the token in Principals > Tokens or with sdm admin tokens delete. Prefer delete over rotate: rotation lets existing authentications live up to 24 hours.",
+          "kills_existing": "partial",
+          "notes": "Docs say delete is immediate, but the rotate tooltip says existing authentications expire after 24 hours."
+        },
+        "sample_query": "sdm audit activities --from <start> --json",
+        "unknown": [
+          "Whether each admin command run with the token is an Activity"
+        ],
+        "evidence_refs": [
+          "fc-97954b59",
+          "fc-7b10eb9f",
+          "fc-e9949e2c",
+          "fc-88dfb281",
+          "fc-6a5304b4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "sdm admin users list",
+            "reveals": "Users and service accounts",
+            "bulk": true,
+            "scope": "token permission for user list",
+            "rate_limit": "5,000 reads/min per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Activities cover administrative changes; reads not stated."
+          },
+          {
+            "stage": "enumeration",
+            "call": "sdm admin datasources list / sdm admin servers list",
+            "reveals": "Resources, hosts, ports",
+            "bulk": true,
+            "scope": "token permission for datasource/server list",
+            "rate_limit": "5,000 reads/min per user",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "sdm audit activities",
+            "reveals": "Organization activity history",
+            "bulk": true,
+            "scope": "token permission (auditing)",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          }
+        ],
+        "unknown": [
+          "No documented whoami for admin tokens"
+        ],
+        "evidence_refs": [
+          "fc-97954b59",
+          "fc-6a5304b4",
+          "fc-76b367b4"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-087adfd5",
+      "title": "Permission Level",
+      "url": "https://docs.strongdm.com/admin/access/permission-level",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-494307d6",
+      "title": "API Reference",
+      "url": "https://docs.strongdm.com/references/api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6a5304b4",
+      "title": "sdm audit activities",
+      "url": "https://docs.strongdm.com/references/cli/audit/activities",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-76b367b4",
+      "title": "Rate Limits",
+      "url": "https://docs.strongdm.com/concepts/security/rate-limits",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7b0a83a8",
+      "title": "sdm admin tokens list",
+      "url": "https://docs.strongdm.com/references/cli/admin/tokens/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7b10eb9f",
+      "title": "View Logs from the Admin UI",
+      "url": "https://docs.strongdm.com/admin/audit/logs/view-adminui",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7f30f72d",
+      "title": "Generate API Keys",
+      "url": "https://docs.strongdm.com/references/api/api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-88dfb281",
+      "title": "Log Stream - Activities",
+      "url": "https://docs.strongdm.com/admin/audit/logs/references/logstream-activities",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8ffe802d",
+      "title": "sdm admin tokens add",
+      "url": "https://docs.strongdm.com/references/cli/admin/tokens/add",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-97954b59",
+      "title": "Admin Tokens",
+      "url": "https://docs.strongdm.com/admin/principals/admin-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bbfe142e",
+      "title": "sdm admin tokens",
+      "url": "https://docs.strongdm.com/references/cli/admin/tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d1933dd7",
+      "title": "sdm audit tokens",
+      "url": "https://docs.strongdm.com/references/cli/audit/tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9949e2c",
+      "title": "Logs",
+      "url": "https://docs.strongdm.com/admin/audit/logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

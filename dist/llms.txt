@@ -1,0 +1,372 @@
+# API Token Controls
+
+> Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.
+
+Nine questions per credential, grouped by NIST CSF 2.0 function. Identify: an admin can list all of them. Protect: an admin can block it or require approval; SSO and MFA rules apply; IP restriction; expires automatically. Detect: usage appears in logs; data reads appear in logs. Respond: revocation ends active access; stops working when the user is removed. Values: yes (overview.csv requires_license names the paid plan when every control behind a yes needs one); conditional (depends on configuration, an add-on or a narrower case); partial; not available (vendor documentation states it, with a source); no docs found (vendor documentation does not say either way; not a negative finding). Every fact cites vendor documentation; hunting cues are analyst guidance.
+
+## Data
+- [overview.csv](overview.csv): the nine answers for every credential, fewest controls first. Each column ending in _how gives the step to act on the answer: where in the admin console, the API call and the command.
+- [controls.csv](controls.csv): every admin control, where to set it, plan and default.
+- [containment.csv](containment.csv): how to revoke each credential and whether live access ends.
+- [post-use.csv](post-use.csv): calls a credential holder can make, from whoami to bulk export, and whether each is logged.
+- [catalog.json](catalog.json): everything, with sources. Schema: [catalog.schema.json](catalog.schema.json).
+
+## Credentials
+### ADP
+- [API Central project client credentials (client ID/secret + mutual TLS certificate)](paths/adp-1.md) `adp-1`
+- [Marketplace data connector client credentials (held by partner app)](paths/adp-2.md) `adp-2`
+- [Marketplace Partner API / Data Connector credentials (partner-level)](paths/adp-3.md) `adp-3`
+
+### Anthropic API
+- [Personal API key](paths/anthropic-1.md) `anthropic-1`
+- [Service account API key](paths/anthropic-2.md) `anthropic-2`
+- [Workspace API key (legacy)](paths/anthropic-3.md) `anthropic-3`
+- [Admin API key](paths/anthropic-4.md) `anthropic-4`
+- [Workload Identity Federation access token](paths/anthropic-5.md) `anthropic-5`
+- [OAuth bearer token (ant CLI login, incl. org:admin)](paths/anthropic-6.md) `anthropic-6`
+
+### Atlassian Jira / Confluence Cloud
+- [API token (product REST)](paths/atlassian-1.md) `atlassian-1`
+- [OAuth 3LO](paths/atlassian-2.md) `atlassian-2`
+- [Service account OAuth 2.0 (client credentials)](paths/atlassian-3.md) `atlassian-3`
+- [Service account API token (scoped)](paths/atlassian-4.md) `atlassian-4`
+
+### AWS
+- [IAM user access keys](paths/aws-1.md) `aws-1`
+- [Root user access keys](paths/aws-2.md) `aws-2`
+- [IAM role temporary credentials (AWS STS AssumeRole)](paths/aws-3.md) `aws-3`
+- [OIDC / SAML federation to IAM roles (AssumeRoleWithWebIdentity, AssumeRoleWithSAML)](paths/aws-4.md) `aws-4`
+- [IAM Identity Center credentials for AWS CLI/SDK](paths/aws-5.md) `aws-5`
+- [IAM Roles Anywhere (X.509 certificate to role session)](paths/aws-6.md) `aws-6`
+- [Amazon Bedrock API keys (long-term)](paths/aws-7.md) `aws-7`
+- [Amazon Bedrock API keys (short-term)](paths/aws-8.md) `aws-8`
+
+### Microsoft Azure
+- [Storage account access keys (Shared Key)](paths/azure-1.md) `azure-1`
+- [Shared access signatures (SAS): account SAS, service SAS, user delegation SAS](paths/azure-2.md) `azure-2`
+- [Service principal client secrets and certificates (used against Azure Resource Manager)](paths/azure-3.md) `azure-3`
+- [Workload identity federation (federated identity credentials)](paths/azure-4.md) `azure-4`
+- [Azure DevOps personal access tokens (PATs)](paths/azure-5.md) `azure-5`
+
+### Bitbucket Cloud
+- [API tokens (Atlassian account API tokens with Bitbucket scopes)](paths/bitbucket-1.md) `bitbucket-1`
+- [App passwords (deprecated)](paths/bitbucket-2.md) `bitbucket-2`
+- [Access tokens (repository, project, workspace)](paths/bitbucket-3.md) `bitbucket-3`
+- [OAuth consumers (OAuth 2.0)](paths/bitbucket-4.md) `bitbucket-4`
+- [SSH keys (personal SSH keys and repository/project access keys)](paths/bitbucket-5.md) `bitbucket-5`
+- [Bitbucket Pipelines OpenID Connect (OIDC) tokens](paths/bitbucket-6.md) `bitbucket-6`
+
+### Box
+- [OAuth](paths/box-1.md) `box-1`
+- [Client Credentials Grant](paths/box-2.md) `box-2`
+- [JWT server authentication](paths/box-3.md) `box-3`
+- [App Token (Limited Access App)](paths/box-4.md) `box-4`
+- [Developer token](paths/box-5.md) `box-5`
+
+### CircleCI
+- [Personal API tokens (incl. tokens from OAuth 2.0 Dynamic Client Registration)](paths/circleci-1.md) `circleci-1`
+- [Project API tokens (deprecated)](paths/circleci-2.md) `circleci-2`
+- [OpenID Connect ID tokens (jobs)](paths/circleci-3.md) `circleci-3`
+- [Contexts and project environment variables (stored secrets)](paths/circleci-4.md) `circleci-4`
+- [Checkout keys (deploy keys and user keys) and additional SSH keys](paths/circleci-5.md) `circleci-5`
+
+### Cloudflare
+- [User API tokens](paths/cloudflare-1.md) `cloudflare-1`
+- [Account API tokens](paths/cloudflare-2.md) `cloudflare-2`
+- [Global API Key (legacy)](paths/cloudflare-3.md) `cloudflare-3`
+- [Origin CA key (Service Key, deprecated)](paths/cloudflare-4.md) `cloudflare-4`
+- [Access service tokens](paths/cloudflare-5.md) `cloudflare-5`
+- [R2 S3 API credentials (Access Key ID / Secret Access Key)](paths/cloudflare-6.md) `cloudflare-6`
+
+### Coupa
+- [OAuth2/OpenID Connect Client - Client Credentials grant](paths/coupa-1.md) `coupa-1`
+- [OAuth2/OpenID Connect Client - Authorization Code / Device Code grant (user-delegated)](paths/coupa-2.md) `coupa-2`
+- [API Key (legacy, X-COUPA-API-KEY)](paths/coupa-3.md) `coupa-3`
+
+### CrowdStrike Falcon
+- [OAuth2 API client (client ID and secret)](paths/crowdstrike-1.md) `crowdstrike-1`
+- [Flight Control (MSSP) parent API client acting on a child CID (member_cid)](paths/crowdstrike-2.md) `crowdstrike-2`
+- [Next-Gen SIEM HEC data connector API key (ingest token)](paths/crowdstrike-3.md) `crowdstrike-3`
+
+### Databricks (AWS baseline)
+- [OAuth M2M](paths/databricks-1.md) `databricks-1`
+- [External token federation](paths/databricks-2.md) `databricks-2`
+- [Legacy PAT](paths/databricks-3.md) `databricks-3`
+- [OAuth U2M](paths/databricks-4.md) `databricks-4`
+
+### Datadog
+- [API + application keys](paths/datadog-1.md) `datadog-1`
+- [OAuth app](paths/datadog-2.md) `datadog-2`
+- [AWS workload federation](paths/datadog-3.md) `datadog-3`
+- [Client token](paths/datadog-4.md) `datadog-4`
+- [Personal Access Token (PAT)](paths/datadog-5.md) `datadog-5`
+- [Service Access Token (SAT)](paths/datadog-6.md) `datadog-6`
+
+### Devin
+- [Service User API Key](paths/devin-1.md) `devin-1`
+- [Personal Access Token (PAT)](paths/devin-2.md) `devin-2`
+- [Legacy API keys (Personal apk_user_ / Service apk_)](paths/devin-3.md) `devin-3`
+
+### DocuSign eSignature
+- [OAuth authorization code](paths/docusign-1.md) `docusign-1`
+- [JWT impersonation grant](paths/docusign-2.md) `docusign-2`
+
+### Dropbox
+- [User / team OAuth](paths/dropbox-1.md) `dropbox-1`
+
+### Elastic Cloud
+- [Elastic Cloud API key](paths/elastic-1.md) `elastic-1`
+- [Elasticsearch API key (personal/user API key, incl. Serverless project API keys)](paths/elastic-2.md) `elastic-2`
+- [Cross-cluster API key](paths/elastic-3.md) `elastic-3`
+- [Service account token](paths/elastic-4.md) `elastic-4`
+
+### Google Cloud
+- [Service account keys (user-managed)](paths/gcp-1.md) `gcp-1`
+- [Short-lived service account credentials (service account impersonation)](paths/gcp-2.md) `gcp-2`
+- [Workload Identity Federation](paths/gcp-3.md) `gcp-3`
+- [API keys (standard keys and authorization keys bound to a service account)](paths/gcp-4.md) `gcp-4`
+- [Cloud Storage HMAC keys](paths/gcp-5.md) `gcp-5`
+
+### GitHub Enterprise Cloud
+- [Classic PAT](paths/github-1.md) `github-1`
+- [Fine-grained PAT](paths/github-2.md) `github-2`
+- [GitHub App installation](paths/github-3.md) `github-3`
+- [GitHub App user token](paths/github-4.md) `github-4`
+- [Actions GITHUB_TOKEN](paths/github-5.md) `github-5`
+- [OAuth app user access token](paths/github-6.md) `github-6`
+- [Deploy key](paths/github-7.md) `github-7`
+
+### GitLab.com
+- [Personal / project / group token](paths/gitlab-1.md) `gitlab-1`
+- [OAuth](paths/gitlab-2.md) `gitlab-2`
+- [CI_JOB_TOKEN](paths/gitlab-3.md) `gitlab-3`
+- [Fine-grained personal access token](paths/gitlab-4.md) `gitlab-4`
+
+### Glean
+- [Client API token (USER permission)](paths/glean-1.md) `glean-1`
+- [Client API token (GLOBAL permission, X-Glean-ActAs)](paths/glean-2.md) `glean-2`
+- [Indexing API token](paths/glean-3.md) `glean-3`
+- [Glean OAuth Authorization Server token (static and DCR clients, MCP)](paths/glean-4.md) `glean-4`
+- [External IdP OAuth token (X-Glean-Auth-Type: OAUTH)](paths/glean-5.md) `glean-5`
+- [Enterprise Managed Auth (JWT bearer assertion for MCP)](paths/glean-6.md) `glean-6`
+
+### Google Workspace
+- [User OAuth](paths/google-1.md) `google-1`
+- [Service account / domain-wide delegation](paths/google-2.md) `google-2`
+
+### HubSpot
+- [Private app token](paths/hubspot-1.md) `hubspot-1`
+- [OAuth](paths/hubspot-2.md) `hubspot-2`
+- [Static auth token (developer platform)](paths/hubspot-3.md) `hubspot-3`
+- [Developer API key](paths/hubspot-4.md) `hubspot-4`
+- [Service key](paths/hubspot-5.md) `hubspot-5`
+
+### Hugging Face
+- [User access token (fine-grained)](paths/huggingface-1.md) `huggingface-1`
+- [User access token (read / write)](paths/huggingface-2.md) `huggingface-2`
+- [Service account access token](paths/huggingface-3.md) `huggingface-3`
+- [OAuth app access token (Sign in with HF)](paths/huggingface-4.md) `huggingface-4`
+- [OAuth Token Exchange (org-bound app, RFC 8693)](paths/huggingface-5.md) `huggingface-5`
+- [Trusted Publisher / CI/CD identity token](paths/huggingface-6.md) `huggingface-6`
+
+### Jamf
+- [Jamf Pro API client (API Roles and Clients, client credentials)](paths/jamf-1.md) `jamf-1`
+- [Jamf Pro user account bearer token (username/password via /v1/auth/token)](paths/jamf-2.md) `jamf-2`
+- [Jamf Platform API Gateway integration (Jamf Account client credentials)](paths/jamf-3.md) `jamf-3`
+- [Jamf Protect API client (client ID + API client password)](paths/jamf-4.md) `jamf-4`
+- [Jamf School API key](paths/jamf-5.md) `jamf-5`
+
+### JFrog
+- [Access tokens (scoped tokens: admin, user, group and project scopes; reference token form)](paths/jfrog-1.md) `jfrog-1`
+- [Identity tokens (user-scoped reference tokens)](paths/jfrog-2.md) `jfrog-2`
+- [API keys (deprecated)](paths/jfrog-3.md) `jfrog-3`
+- [OpenID Connect integrations (OIDC token exchange)](paths/jfrog-4.md) `jfrog-4`
+- [MyJFrog API token](paths/jfrog-5.md) `jfrog-5`
+
+### LangSmith
+- [Personal Access Tokens (PATs)](paths/langsmith-1.md) `langsmith-1`
+- [Service keys (service accounts)](paths/langsmith-2.md) `langsmith-2`
+- [SCIM bearer token](paths/langsmith-3.md) `langsmith-3`
+
+### LiteLLM
+- [Master key (LITELLM_MASTER_KEY)](paths/litellm-1.md) `litellm-1`
+- [Virtual keys (user and team keys)](paths/litellm-2.md) `litellm-2`
+- [Service account keys](paths/litellm-3.md) `litellm-3`
+- [OIDC / JWT-based auth (incl. Kubernetes ServiceAccount tokens)](paths/litellm-4.md) `litellm-4`
+- [SCIM token](paths/litellm-5.md) `litellm-5`
+
+### Microsoft 365 / Entra / Graph
+- [Delegated OAuth](paths/microsoft-1.md) `microsoft-1`
+- [App-only OAuth](paths/microsoft-2.md) `microsoft-2`
+- [Managed identity](paths/microsoft-3.md) `microsoft-3`
+
+### MongoDB Atlas
+- [Service account (Atlas Administration API, OAuth 2.0 client credentials)](paths/mongodb-1.md) `mongodb-1`
+- [Programmatic API key (legacy, HTTP Digest)](paths/mongodb-2.md) `mongodb-2`
+- [Database user with password (SCRAM)](paths/mongodb-3.md) `mongodb-3`
+- [Database user with X.509 certificate](paths/mongodb-4.md) `mongodb-4`
+- [Database user with AWS IAM](paths/mongodb-5.md) `mongodb-5`
+- [Workload Identity Federation (OIDC/OAuth 2.0)](paths/mongodb-6.md) `mongodb-6`
+
+### MuleSoft Anypoint
+- [Connected app that acts on its own behalf (client credentials)](paths/mulesoft-1.md) `mulesoft-1`
+- [Connected app that acts on behalf of a user (authorization code, refresh token, password, JWT bearer)](paths/mulesoft-2.md) `mulesoft-2`
+- [Anypoint Platform bearer token (user token from /accounts/login or SAML assertion)](paths/mulesoft-3.md) `mulesoft-3`
+- [Environment / business group client ID and client secret](paths/mulesoft-4.md) `mulesoft-4`
+- [API client application credentials (client ID / secret for API instances)](paths/mulesoft-5.md) `mulesoft-5`
+
+### n8n
+- [n8n API key (public REST API)](paths/n8n-1.md) `n8n-1`
+- [MCP access token (instance-level MCP, API key tab)](paths/n8n-2.md) `n8n-2`
+- [MCP OAuth client connection](paths/n8n-3.md) `n8n-3`
+- [Token exchange access token (OEM embedding, preview)](paths/n8n-4.md) `n8n-4`
+- [Stored credentials (third-party secrets held by n8n)](paths/n8n-5.md) `n8n-5`
+
+### Notion
+- [Internal connection token](paths/notion-1.md) `notion-1`
+- [Personal access token](paths/notion-2.md) `notion-2`
+- [Public connection OAuth](paths/notion-3.md) `notion-3`
+- [Admin API token](paths/notion-4.md) `notion-4`
+
+### Okta (management API)
+- [SSWS API token](paths/okta-1.md) `okta-1`
+- [OAuth service app](paths/okta-2.md) `okta-2`
+
+### 1Password
+- [Service account token](paths/onepassword-1.md) `onepassword-1`
+- [Connect server access token](paths/onepassword-2.md) `onepassword-2`
+- [SCIM bridge / automated provisioning bearer token](paths/onepassword-3.md) `onepassword-3`
+- [Events API bearer token (Events Reporting)](paths/onepassword-4.md) `onepassword-4`
+- [Users API OAuth application (client credentials)](paths/onepassword-5.md) `onepassword-5`
+
+### OpenAI API
+- [Project API key (user-owned)](paths/openai-1.md) `openai-1`
+- [Service account API key](paths/openai-2.md) `openai-2`
+- [Admin API key](paths/openai-3.md) `openai-3`
+- [Workload identity federation access token](paths/openai-4.md) `openai-4`
+- [Legacy user API key](paths/openai-5.md) `openai-5`
+
+### OpenText Cloud Platform
+- [Confidential service client (organization, extension app, tenant-level or app-level) - client credentials](paths/opentext-1.md) `opentext-1`
+- [Resource owner password grant (confidential client + user name/password)](paths/opentext-2.md) `opentext-2`
+- [User access/refresh tokens via authorization code (confidential) or PKCE (public client)](paths/opentext-3.md) `opentext-3`
+
+### PagerDuty
+- [General Access REST API Key (account API key)](paths/pagerduty-1.md) `pagerduty-1`
+- [User Token REST API Key (personal REST API key)](paths/pagerduty-2.md) `pagerduty-2`
+- [Scoped OAuth app token (private app, client credentials)](paths/pagerduty-3.md) `pagerduty-3`
+- [User OAuth token (Scoped OAuth and Classic User OAuth apps)](paths/pagerduty-4.md) `pagerduty-4`
+- [Events API integration key (routing key)](paths/pagerduty-5.md) `pagerduty-5`
+
+### PingOne
+- [Worker application (client_credentials)](paths/pingone-1.md) `pingone-1`
+- [Worker application (user-based grant: authorization_code / implicit)](paths/pingone-2.md) `pingone-2`
+- [Gateway credential](paths/pingone-3.md) `pingone-3`
+
+### Portkey
+- [Admin API Keys (organisation API keys)](paths/portkey-1.md) `portkey-1`
+- [Workspace Service API Keys](paths/portkey-2.md) `portkey-2`
+- [Workspace User API Keys](paths/portkey-3.md) `portkey-3`
+- [JWT Authentication](paths/portkey-4.md) `portkey-4`
+- [SCIM API token](paths/portkey-5.md) `portkey-5`
+- [Integrations / Virtual Keys (stored provider credentials)](paths/portkey-6.md) `portkey-6`
+
+### Postman
+- [Postman API key (user)](paths/postman-1.md) `postman-1`
+- [System service account API key and access token](paths/postman-2.md) `postman-2`
+- [SCIM API key](paths/postman-3.md) `postman-3`
+- [Collection access key](paths/postman-4.md) `postman-4`
+- [OAuth 2.0 client credentials token](paths/postman-5.md) `postman-5`
+
+### SailPoint Identity Security Cloud
+- [Personal access token (PAT)](paths/sailpoint-1.md) `sailpoint-1`
+- [API client (API key) - client credentials](paths/sailpoint-2.md) `sailpoint-2`
+- [API client - authorization code / refresh token](paths/sailpoint-3.md) `sailpoint-3`
+- [Virtual appliance (VA) key and keyPassphrase](paths/sailpoint-4.md) `sailpoint-4`
+
+### Salesforce (core platform)
+- [OAuth code / client credentials](paths/salesforce-1.md) `salesforce-1`
+- [JWT bearer](paths/salesforce-2.md) `salesforce-2`
+- [SAML assertion](paths/salesforce-3.md) `salesforce-3`
+- [OAuth token exchange](paths/salesforce-4.md) `salesforce-4`
+
+### SAP BTP and S/4HANA Cloud
+- [XSUAA service key / service binding (OAuth client credentials: binding-secret or X.509)](paths/sap-1.md) `sap-1`
+- [XSUAA API credentials (btp security/api-credential)](paths/sap-2.md) `sap-2`
+- [SAP Cloud Management service (cis) service key](paths/sap-3.md) `sap-3`
+- [btp CLI session token](paths/sap-4.md) `sap-4`
+- [SAP Cloud Identity Services client ID/secret or certificate (applications, systems as administrators, technical users)](paths/sap-5.md) `sap-5`
+- [S/4HANA Cloud Public Edition communication user (basic auth or X.509) in a communication arrangement](paths/sap-6.md) `sap-6`
+
+### ServiceNow
+- [OAuth](paths/servicenow-1.md) `servicenow-1`
+- [Third-party ID token](paths/servicenow-2.md) `servicenow-2`
+- [API key](paths/servicenow-3.md) `servicenow-3`
+- [Basic credentials](paths/servicenow-4.md) `servicenow-4`
+- [HMAC authentication](paths/servicenow-5.md) `servicenow-5`
+
+### Slack
+- [Bot / user OAuth token](paths/slack-1.md) `slack-1`
+- [Rotating OAuth token](paths/slack-2.md) `slack-2`
+- [MCP enterprise-managed authorization](paths/slack-3.md) `slack-3`
+
+### Smartsheet
+- [Personal API access token](paths/smartsheet-1.md) `smartsheet-1`
+- [OAuth 2.0 app (authorization code; access + refresh tokens)](paths/smartsheet-2.md) `smartsheet-2`
+
+### Snowflake
+- [Programmatic access token](paths/snowflake-1.md) `snowflake-1`
+- [Snowflake OAuth](paths/snowflake-2.md) `snowflake-2`
+- [Key-pair JWT](paths/snowflake-3.md) `snowflake-3`
+- [Workload identity federation](paths/snowflake-4.md) `snowflake-4`
+- [External OAuth](paths/snowflake-5.md) `snowflake-5`
+
+### Snyk
+- [Personal Access Token (PAT)](paths/snyk-1.md) `snyk-1`
+- [Snyk API token (legacy personal API token)](paths/snyk-2.md) `snyk-2`
+- [Service account token (auth_type access_token or legacy api_key)](paths/snyk-3.md) `snyk-3`
+- [Service account using OAuth 2.0 (oauth_client_secret / oauth_private_key_jwt)](paths/snyk-4.md) `snyk-4`
+- [Snyk Apps (OAuth 2.0 apps: user or tenant context)](paths/snyk-5.md) `snyk-5`
+
+### Stripe
+- [Secret / restricted API key](paths/stripe-1.md) `stripe-1`
+- [Stripe Apps OAuth (Connect OAuth tokens deprecated)](paths/stripe-2.md) `stripe-2`
+- [Organization API key](paths/stripe-3.md) `stripe-3`
+- [Workload Identity Federation (service principal)](paths/stripe-4.md) `stripe-4`
+
+### StrongDM
+- [Admin token](paths/strongdm-1.md) `strongdm-1`
+- [API key (access key + secret key)](paths/strongdm-2.md) `strongdm-2`
+- [Service account token](paths/strongdm-3.md) `strongdm-3`
+- [SCIM token](paths/strongdm-4.md) `strongdm-4`
+- [Gateway / relay token](paths/strongdm-5.md) `strongdm-5`
+
+### Twilio
+- [Account SID + Auth Token](paths/twilio-1.md) `twilio-1`
+- [API key (Main, Standard, Restricted)](paths/twilio-2.md) `twilio-2`
+- [Account-level OAuth app (Client Credentials)](paths/twilio-3.md) `twilio-3`
+- [Organization OAuth app (Client Credentials / Authorization Code)](paths/twilio-4.md) `twilio-4`
+- [Public Key Client Validation (signed request JWT)](paths/twilio-5.md) `twilio-5`
+- [Access Token (client SDK JWT)](paths/twilio-6.md) `twilio-6`
+
+### Workday
+- [Integration System User (ISU) user name and password](paths/workday-1.md) `workday-1`
+- [API Client for Integrations with refresh token (Manage Refresh Tokens for Integrations)](paths/workday-2.md) `workday-2`
+- [API Client with JWT Bearer Grant (x509 public key)](paths/workday-3.md) `workday-3`
+- [API Client (Authorization Code Grant, user-delegated)](paths/workday-4.md) `workday-4`
+
+### Zendesk Support
+- [OAuth](paths/zendesk-1.md) `zendesk-1`
+- [Legacy Support API token](paths/zendesk-2.md) `zendesk-2`
+
+### Zoom
+- [Delegated OAuth](paths/zoom-1.md) `zoom-1`
+- [Server-to-Server OAuth](paths/zoom-2.md) `zoom-2`
+
+### Zscaler
+- [OneAPI API client (client secret)](paths/zscaler-1.md) `zscaler-1`
+- [OneAPI API client (JWKS URL or certificate/public key)](paths/zscaler-2.md) `zscaler-2`
+- [Cloud Service API Key with ZIA admin credentials (legacy ZIA API)](paths/zscaler-3.md) `zscaler-3`
+- [ZIA OAuth 2.0 with external authorization server (PingFederate, Okta, Entra ID)](paths/zscaler-4.md) `zscaler-4`
+- [ZPA API key (client ID and client secret, legacy ZPA API)](paths/zscaler-5.md) `zscaler-5`
+- [Sandbox API Token with ZIA admin credentials](paths/zscaler-6.md) `zscaler-6`

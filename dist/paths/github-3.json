@@ -1,0 +1,716 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "github",
+      "name": "GitHub Enterprise Cloud",
+      "scope_notes": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+      "controls": [
+        {
+          "name": "IP allow list",
+          "effect": "limit_network",
+          "applies_to": [
+            "github-1",
+            "github-2",
+            "github-3",
+            "github-4",
+            "github-5",
+            "github-6",
+            "github-7"
+          ],
+          "what": "Blocks PATs, OAuth app tokens, SSH/deploy keys, GitHub App tokens and GITHUB_TOKEN from non-allowed IPs (not user-installed apps' installation tokens).",
+          "setting": "Org settings > Authentication security > IP allow list; Enterprise settings > Authentication security",
+          "plan": "GitHub Enterprise Cloud",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-62eef186"
+          ],
+          "quote": "IP allow lists don't currently restrict access when a GitHub App is installed on a user account and uses server-to-server installation tokens to access an organization or enterprise."
+        },
+        {
+          "name": "Enable IP allow list configuration for installed GitHub Apps",
+          "effect": "limit_network",
+          "applies_to": [
+            "github-3",
+            "github-4"
+          ],
+          "what": "Adds IPs declared by installed GitHub Apps to the org allow list so app requests from those IPs are permitted.",
+          "setting": "Org settings > Authentication security > IP allow list",
+          "plan": "GitHub Enterprise Cloud",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-62eef186"
+          ],
+          "quote": "If you select Enable IP allow list configuration for installed GitHub Apps in your allow list settings, then IP addresses from installed GitHub Apps are added to your allow list."
+        },
+        {
+          "name": "App access requests",
+          "effect": "require_approval",
+          "applies_to": [
+            "github-3",
+            "github-6"
+          ],
+          "what": "Controls whether members/outside collaborators may request installation or approval of unapproved apps.",
+          "setting": "Org settings > Third-party Access",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-3d73f0ba"
+          ],
+          "quote": "By default, app access requests are enabled. If your organization has a large number of members or outside collaborators, you may want to disable app access requests to reduce the number of requests you have to review."
+        },
+        {
+          "name": "Restrict GitHub App installation to organization owners",
+          "effect": "require_approval",
+          "applies_to": [
+            "github-3",
+            "github-4"
+          ],
+          "what": "Repository admins cannot install GitHub Apps or add repos to existing installations; they must request it.",
+          "setting": "Org settings > Third-party Access",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-3d73f0ba"
+          ],
+          "quote": "As an organization owner, you can restrict GitHub App installations to only organization owners."
+        },
+        {
+          "name": "GitHub App installation repository access",
+          "effect": "limit_resources",
+          "applies_to": [
+            "github-3",
+            "github-4"
+          ],
+          "what": "Owners limit an installed app to all or selected repositories.",
+          "setting": "Org settings > GitHub Apps > Configure > Repository access",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f7af9022"
+          ],
+          "quote": "Organization owners can change the repository access for an app installed on their organization."
+        },
+        {
+          "name": "Suspend / Uninstall GitHub App",
+          "effect": "revoke",
+          "applies_to": [
+            "github-3",
+            "github-4"
+          ],
+          "what": "Temporarily or permanently blocks an installed app from org resources.",
+          "setting": "Org settings > GitHub Apps > Configure > Suspend or Uninstall; enterprise owners also",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f7af9022"
+          ],
+          "quote": "You can also temporarily or permanently prevent a GitHub App from accessing resources owned by your account or organization."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "github-3",
+          "what": "Enterprise revoke/delete credential actions do not cover GitHub App installation tokens, deploy keys or GITHUB_TOKEN.",
+          "evidence_refs": [
+            "fc-636a4131"
+          ],
+          "quote": "The following credential types are not affected by either action: GitHub App installation tokens (ghs_) Deploy keys GitHub Actions GITHUB_TOKEN access",
+          "kind": "kill"
+        },
+        {
+          "path_id": "github-3",
+          "what": "GitHub Apps are not subject to the OAuth app access policy.",
+          "evidence_refs": [
+            "fc-1fe99634"
+          ],
+          "quote": "GitHub Apps aren't subject to organization application policies. A GitHub App only has access to the repositories an organization owner has granted.",
+          "kind": "other"
+        }
+      ],
+      "controls_unknown": [
+        "Whether admins can set a maximum lifetime for GitHub App user access tokens or OAuth app tokens (only app-developer settings found).",
+        "Whether GITHUB_TOKEN workflow permission defaults can be made non-overridable."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "github-3",
+      "provider_id": "github",
+      "name": "GitHub App installation",
+      "family": "jwt",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Classic/fine-grained PATs, OAuth app tokens, GitHub App installation/user tokens, and Actions GITHUB_TOKEN.",
+        "evidence_refs": [
+          "turn3search28",
+          "turn19search0"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "GitHub Apps mint installation tokens using a private key. Actions OIDC is outbound federation to other platforms, not inbound GitHub API federation.",
+        "evidence_refs": [
+          "turn3search28",
+          "turn19search0"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "GitHub IP allow list covers installation tokens, except for apps installed on a personal user account. If the enterprise uses the IdP (Entra OIDC CAP) allow list instead, requests made as the app or installation are not validated and are always allowed.",
+        "evidence_refs": [
+          "turn3search8",
+          "turn3search0",
+          "turn3search28",
+          "fc-893dd68a"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "1 hour",
+        "evidence_refs": [
+          "turn3search28",
+          "turn19search0"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not_applicable",
+        "summary": "Mint another installation token using the GitHub App private key.",
+        "evidence_refs": [
+          "turn3search28",
+          "turn19search0"
+        ]
+      },
+      "administration": {
+        "summary": "Repository/permission-scoped apps and PATs; PAT approval/restriction and lifetime policy; SAML authorization; revoke tokens or suspend/uninstall apps.",
+        "conditions": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+        "evidence_refs": [
+          "turn3search8",
+          "turn3search0",
+          "turn3search28"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Installation tokens do not need SSO authorization, and app-as-installation requests bypass IdP CAP.",
+          "evidence_refs": [
+            "fc-70eb24e3",
+            "fc-893dd68a"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Installation tokens are tied to the app installation, not a user.",
+          "evidence_refs": [
+            "fc-69a967b6"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Enterprise credential inventory CSV lists github_app_installation rows (the installation, not each 1-hour token).",
+          "evidence_refs": [
+            "fc-71c3f719"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Enterprise Settings > Authentication security > Credentials > Export CSV; filter credential_type",
+          "api": "POST /enterprises/{enterprise}/credentials/exports; per org: GET /orgs/{org}/installations",
+          "cli": null,
+          "evidence_refs": [
+            "fc-71c3f719",
+            "fc-4aef0a67",
+            "fc-b7b52aed"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "POST /app/installations/{installation_id}/access_tokens returns expires_at (fixed 1 hour)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-46935230"
+          ]
+        },
+        "reads": {
+          "ui": "Enterprise Settings > Audit log > Export Git Events > pick date range > Download Results; filter JSON on action git.clone and hashed_token",
+          "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+          "cli": null,
+          "evidence_refs": [
+            "fc-aa029406",
+            "fc-ce6df4bc",
+            "fc-19c68525",
+            "fc-69839963"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "ghs_",
+          "notes": "Installation token ghs_; since 2026-04-27 staged rollout of stateless ghs_APPID_JWT (not 40 chars). Minted with app JWT; expires 1 hour. Secret type github_app_installation_access_token."
+        },
+        "log_sources": [
+          {
+            "name": "GitHub organization/enterprise audit log",
+            "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+          },
+          {
+            "name": "Audit log streaming (enterprise)",
+            "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+          },
+          {
+            "name": "App webhook/installation list (REST)",
+            "notes": "GET /orgs/{org}/installations lists installed apps, app_id, permissions, suspended_at."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "hashed_token",
+            "log": "audit log",
+            "notes": "Base64 SHA-256 of the token; search with hashed_token:\"...\""
+          },
+          {
+            "field": "programmatic_access_type",
+            "log": "audit log",
+            "notes": "How the actor authenticated"
+          },
+          {
+            "field": "token_id",
+            "log": "audit log",
+            "notes": "Common field; mapping to REST ids not documented"
+          },
+          {
+            "field": "token_scopes",
+            "log": "audit log",
+            "notes": "Scopes of the token, if any"
+          },
+          {
+            "field": "integration",
+            "log": "audit log (integration_installation.*)",
+            "notes": "App name"
+          },
+          {
+            "field": "application_client_id",
+            "log": "audit log",
+            "notes": "App client ID"
+          },
+          {
+            "field": "oauth_application_id",
+            "log": "audit log",
+            "notes": "Associated app id"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "integration_installation.create",
+            "stage": "create",
+            "notes": "App installed"
+          },
+          {
+            "event": "integration_installation.repositories_added",
+            "stage": "change",
+            "notes": "Scope widened"
+          },
+          {
+            "event": "integration_installation.version_updated",
+            "stage": "change",
+            "notes": "Permissions updated"
+          },
+          {
+            "event": "integration.update",
+            "stage": "change",
+            "notes": "App registration changed"
+          },
+          {
+            "event": "integration_installation.suspend",
+            "stage": "revoke",
+            "notes": "Stops tokens"
+          },
+          {
+            "event": "integration_installation.destroy",
+            "stage": "revoke",
+            "notes": "Uninstall deactivates tokens"
+          },
+          {
+            "event": "integration.remove_client_secret",
+            "stage": "change",
+            "notes": "Client secret removed"
+          }
+        ],
+        "correlation_keys": [
+          "actor",
+          "hashed_token",
+          "programmatic_access_type",
+          "integration",
+          "application_client_id",
+          "oauth_application_id",
+          "user_agent",
+          "repo",
+          "created_at"
+        ],
+        "anomaly_cues": [
+          "installation token activity on repos outside the app's normal set",
+          "repositories_added or version_updated followed quickly by bulk clone",
+          "new integration_installation.create by a non-admin actor",
+          "app activity from IPs outside the app's IP allow list",
+          "spike in token minting (many distinct hashed_token values per hour)"
+        ],
+        "containment": {
+          "steps": "App owner calls DELETE /installation/token; org owner suspends or uninstalls the app; rotate the app private key so no new tokens can be minted.",
+          "kills_existing": "yes",
+          "notes": "Uninstall deactivates all installation tokens; tokens expire in 1 hour anyway. Not covered by enterprise bulk SSO/credential actions. Private-key rotation event name not established."
+        },
+        "sample_query": {
+          "language": "GitHub audit log search",
+          "query": "action:integration_installation.repositories_added action:integration_installation.version_updated created:>=2026-09-01",
+          "purpose": "Find installations whose scope or permissions grew."
+        },
+        "unknown": [
+          "regex for ghs_APPID_JWT",
+          "audit event for app private key creation/deletion",
+          "whether audit actor for installation token is app bot name",
+          "installation_id field name in audit events"
+        ],
+        "evidence_refs": [
+          "fc-581baa8e",
+          "fc-4869207c",
+          "turn3search28",
+          "fc-69839963",
+          "fc-b07fe78b",
+          "fc-99bddc62",
+          "fc-6784f9ba",
+          "fc-934632aa",
+          "fc-1acc9cca",
+          "fc-58ac0db8",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /app",
+            "reveals": "app identity associated with the credentials (requires app JWT)",
+            "bulk": false,
+            "scope": "app JWT",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Reads not in standard audit log"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /app/installations",
+            "reveals": "every org/account that installed the app",
+            "bulk": false,
+            "scope": "app JWT",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Reads not in standard audit log"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /installation/repositories",
+            "reveals": "repos the installation access token can reach",
+            "bulk": false,
+            "scope": "installation access token",
+            "rate_limit": "5,000/hour minimum per installation",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Reads not in standard audit log"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /repos/{owner}/{repo}/tarball/{ref}",
+            "reveals": "full source archive of an accessible repo",
+            "bulk": true,
+            "scope": "Contents: read",
+            "rate_limit": "5,000/hour minimum per installation",
+            "logged": "unknown",
+            "log_event": "repo.download_zip (candidate)",
+            "log_notes": "API emission of repo.download_zip not stated"
+          },
+          {
+            "stage": "collection",
+            "call": "git clone with installation token",
+            "reveals": "full repository history",
+            "bulk": true,
+            "scope": "Contents: read",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "git.clone",
+            "log_notes": "Enterprise Cloud only; actor appears as hashed_token"
+          }
+        ],
+        "unknown": [
+          "Whether minting POST /app/installations/{id}/access_tokens is audit-logged",
+          "Whether reads appear in api.request streaming events"
+        ],
+        "evidence_refs": [
+          "fc-2704d3be",
+          "fc-934632aa",
+          "fc-35204b4b",
+          "fc-19c68525",
+          "fc-69839963"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Github Organization App Integration Installed",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_organization_app_integration_installed.yml",
+          "detects": "A GitHub App was installed on the organization."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-19c68525",
+      "title": "Audit log events for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/audit-log-events-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1acc9cca",
+      "title": "REST API endpoints for organizations (Get the audit log for an organization)",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/orgs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1fe99634",
+      "title": "https://docs.github.com/en/enterprise-cloud@latest/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2704d3be",
+      "title": "REST API endpoints for GitHub Apps",
+      "url": "https://docs.github.com/en/rest/apps/apps",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-35204b4b",
+      "title": "Rate limits for the REST API",
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3d73f0ba",
+      "title": "Limiting OAuth app and GitHub App access requests and installations",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-programmatic-access-to-your-organization/limiting-oauth-app-and-github-app-access-requests-and-installations",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-46935230",
+      "title": "Generating an installation access token for a GitHub App",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4869207c",
+      "title": "Generating an installation access token for a GitHub App",
+      "url": "https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4aef0a67",
+      "title": "REST API endpoints for enterprise credential inventory",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/enterprise-admin/token-inventory",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-581baa8e",
+      "title": "About authentication to GitHub",
+      "url": "https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/about-authentication-to-github",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-58ac0db8",
+      "title": "Common security incident investigation areas",
+      "url": "https://docs.github.com/en/code-security/reference/security-incident-response/investigation-areas",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62eef186",
+      "title": "Managing allowed IP addresses for your organization - GitHub Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/managing-allowed-ip-addresses-for-your-organization",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-636a4131",
+      "title": "Revoking authorizations or deleting credentials in your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/respond-to-incidents/revoke-authorizations-or-tokens",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6784f9ba",
+      "title": "Searching the audit log for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/searching-the-audit-log-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69839963",
+      "title": "Identifying audit log events performed by an access token",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/identifying-audit-log-events-performed-by-an-access-token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69a967b6",
+      "title": "Managing deploy keys",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/authentication/connecting-to-github-with-ssh/managing-deploy-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-70eb24e3",
+      "title": "GitHub credential types reference",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-programmatic-access-to-your-organization/github-credential-types",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-71c3f719",
+      "title": "Reviewing credentials in your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/respond-to-incidents/reviewing-credentials-in-your-enterprise",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-893dd68a",
+      "title": "About support for your IdP's Conditional Access Policy - GitHub Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/configuring-authentication-for-enterprise-managed-users/about-support-for-your-idps-conditional-access-policy",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-934632aa",
+      "title": "REST API endpoints for GitHub App installations",
+      "url": "https://docs.github.com/en/rest/apps/installations",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-99bddc62",
+      "title": "Audit log for an enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/about-the-audit-log-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aa029406",
+      "title": "Exporting audit log activity for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/exporting-audit-log-activity-for-your-enterprise",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b07fe78b",
+      "title": "Audit log events for your organization",
+      "url": "https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/audit-log-events-for-your-organization",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b7b52aed",
+      "title": "List app installations for an organization",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/orgs#list-app-installations-for-an-organization",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ce6df4bc",
+      "title": "Using the audit log API for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/using-the-audit-log-api-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f7af9022",
+      "title": "Reviewing and modifying installed GitHub Apps",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/apps/using-github-apps/reviewing-and-modifying-installed-github-apps",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn19search0",
+      "title": "Configuring OpenID Connect in cloud providers - GitHub Docs",
+      "url": "https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-cloud-providers",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search0",
+      "title": "Enforcing policies for personal access tokens in your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud%40latest/admin/enforcing-policies/enforcing-policies-for-your-enterprise/enforcing-policies-for-personal-access-tokens-in-your-enterprise",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search28",
+      "title": "GitHub credential types reference",
+      "url": "https://docs.github.com/en/organizations/managing-programmatic-access-to-your-organization/github-credential-types",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search8",
+      "title": "Managing allowed IP addresses for your organization - GitHub Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud%40latest/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/managing-allowed-ip-addresses-for-your-organization",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

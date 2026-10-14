@@ -1,0 +1,225 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "scope_notes": "Covers Hugging Face Hub (Team / Enterprise / Enterprise Plus). Hosted Hub; token management needs Team or Enterprise, org revoke and service accounts need Enterprise, IP ranges need Enterprise Plus. Inference Endpoints use the same user access tokens.",
+      "controls": [
+        {
+          "name": "Write role required to manage trusted publishers",
+          "effect": "disable",
+          "applies_to": [
+            "huggingface-6"
+          ],
+          "what": "Only users with the Write role on a repo can add or remove its trusted publishers.",
+          "setting": "Repo Settings > Trusted Publishers",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-b439e6e1"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Admin-enforced expiry for user access tokens or service account tokens (no setting found; PATs are valid until revoked).",
+        "Whether access tokens require or bypass an SSO session under Basic or Managed SSO.",
+        "Org-level allowlist or block for third-party OAuth apps.",
+        "Org-level control over who can configure Trusted Publishers on org repos.",
+        "Exact audit event name for OAuth Token Exchange issuance (docs say exchanges are logged).",
+        "Whether IP ranges apply to OAuth, Token Exchange and Trusted Publisher tokens."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "huggingface-6",
+      "provider_id": "huggingface",
+      "name": "Trusted Publisher / CI/CD identity token",
+      "family": "federation",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "CI job exchanges its OIDC ID token at /oauth/token for a 1-hour hf_jwt_ (repo write) or hf_oauth_ (user read-only) token.",
+        "evidence_refs": [
+          "fc-b439e6e1"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "GitHub Actions, GitLab CI, CircleCI, Bitbucket, any OIDC provider; exact claim matching.",
+        "evidence_refs": [
+          "fc-b439e6e1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not addressed.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 3600,
+        "configurable": "no",
+        "summary": "60 minutes",
+        "evidence_refs": [
+          "fc-b439e6e1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "Re-exchange",
+        "summary": "No refresh token; re-exchange.",
+        "evidence_refs": [
+          "fc-b439e6e1"
+        ]
+      },
+      "administration": {
+        "summary": "Anyone with Write role on a repo can add a trusted publisher; users add CI/CD identities on their own account.",
+        "conditions": "No org-level policy documented.",
+        "evidence_refs": [
+          "fc-b439e6e1"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Publishers are listed per repo under Settings > Trusted Publishers (and per account under CI/CD Access); no org-wide list documented.",
+          "evidence_refs": [
+            "fc-b439e6e1"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Fixed at 60 minutes from exchange; not configurable",
+          "api": "POST https://huggingface.co/oauth/token response field expires_in (3600)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-b439e6e1"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "hf_jwt_",
+          "notes": "hf_oauth_ for user-scoped tokens"
+        },
+        "log_sources": [
+          {
+            "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+            "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "[OIDC] system user with issuer/subject",
+            "log": "Repo commit history",
+            "notes": "Push attribution"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "publisher added/removed (name not documented)",
+            "stage": "create",
+            "notes": "Docs say adding/removing is logged"
+          }
+        ],
+        "correlation_keys": [
+          "token id (24-char, org token settings)",
+          "username",
+          "anonymized IP/location"
+        ],
+        "anomaly_cues": [
+          "Token never rotated or unused for long periods in org token listing",
+          "Unexpected org.token_approval.authorization_request"
+        ],
+        "containment": {
+          "steps": "Remove the trusted publisher from repo settings (or CI/CD identity from account).",
+          "kills_existing": "unknown",
+          "notes": "Tokens expire within 60 minutes."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit event names"
+        ],
+        "evidence_refs": [
+          "fc-b439e6e1"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+            "reveals": "File contents (models, datasets)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Org audit log has no download events"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-e1e6add6",
+          "fc-5fdecf58"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-5fdecf58",
+      "title": "Hub OpenAPI",
+      "url": "https://huggingface.co/.well-known/openapi.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b439e6e1",
+      "title": "Trusted Publishers",
+      "url": "https://huggingface.co/docs/hub/trusted-publishers",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e1e6add6",
+      "title": "Audit Logs",
+      "url": "https://huggingface.co/docs/hub/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

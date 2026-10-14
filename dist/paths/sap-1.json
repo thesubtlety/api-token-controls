@@ -1,0 +1,412 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "sap",
+      "name": "SAP BTP and S/4HANA Cloud",
+      "scope_notes": "Covers SAP Business Technology Platform (XSUAA, Cloud Management service, btp CLI), SAP Cloud Identity Services, and SAP S/4HANA Cloud Public Edition. Covers BTP Cloud Foundry/multi-environment subaccounts, Identity Authentication tenants, and S/4HANA Cloud Public Edition communication management; BTP docs cited from SAP's official SAP-docs GitHub source of help.sap.com.",
+      "controls": [
+        {
+          "name": "credential-types (xs-security.json)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "sap-1"
+          ],
+          "what": "Restricts which secret types (binding-secret, x509) bindings and service keys of an XSUAA instance can use.",
+          "setting": "xs-security.json oauth2-configuration.credential-types",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-c27d4d0f"
+          ]
+        },
+        {
+          "name": "Delete binding / service key",
+          "effect": "revoke",
+          "applies_to": [
+            "sap-1",
+            "sap-3"
+          ],
+          "what": "Deleting the binding or service key makes XSUAA stop accepting its secret/certificate.",
+          "setting": "cf unbind-service / cf delete-service-key / cockpit",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-c27d4d0f",
+            "fc-1697835f"
+          ]
+        },
+        {
+          "name": "token-validity / refresh-token-validity",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "sap-1",
+            "sap-2",
+            "sap-3"
+          ],
+          "what": "Sets access/refresh token lifetime per XSUAA instance.",
+          "setting": "xs-security.json oauth2-configuration",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-763e16d9"
+          ]
+        },
+        {
+          "name": "Token Validity (subaccount security settings)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "sap-1",
+            "sap-2",
+            "sap-3"
+          ],
+          "what": "Sets default token lifetimes for all instances in a subaccount that don't set their own.",
+          "setting": "BTP cockpit > Subaccount > Security > Settings > Token Validity; Security Settings API",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-37a60c08"
+          ]
+        },
+        {
+          "name": "Token revoke endpoint",
+          "effect": "revoke",
+          "applies_to": [
+            "sap-1",
+            "sap-2",
+            "sap-3"
+          ],
+          "what": "Revokes an issued token, but apps validating offline keep accepting it until expiry.",
+          "setting": "Cloud Foundry UAA revoke endpoint",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-07f59e19"
+          ]
+        },
+        {
+          "name": "hide-secret",
+          "effect": "other",
+          "applies_to": [
+            "sap-1"
+          ],
+          "what": "Omits the client secret from a binding or service key that only needs authorization data.",
+          "setting": "binding parameters {\"credential-type\":\"binding-secret\",\"hide-secret\":\"true\"}",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-4c857534"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "sap-1",
+          "what": "XSUAA does not check certificate revocation; a compromised X.509 binding cert stays valid until the binding is deleted.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-c27d4d0f"
+          ]
+        },
+        {
+          "path_id": "sap-1",
+          "what": "Revoked access tokens keep working in apps that validate offline until they expire.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-07f59e19"
+          ]
+        },
+        {
+          "path_id": "sap-1",
+          "what": "Legacy instance secrets cannot be rotated without recreating the instance.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-763e16d9"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Any IP/network allowlist for XSUAA clients, btp API credentials, IAS API secrets or S/4HANA communication users.",
+        "Whether XSUAA password-grant tokens (cis service keys) honor IAS/corporate IdP MFA or conditional access.",
+        "Exact audit message for service key deletion and for API credential create/delete in XSUAA audit log.",
+        "Whether communication user passwords expire.",
+        "Org-wide switch to block creation of service keys or API credentials (none found).",
+        "IAS audit event emitted on client secret creation/deletion (change log covers admin CREATE/UPDATE/DELETE generally)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "sap-1",
+      "provider_id": "sap",
+      "name": "XSUAA service key / service binding (OAuth client credentials: binding-secret or X.509)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Binding an app to an XSUAA (SAP Authorization and Trust Management) instance, or creating a service key, issues a client ID plus a binding secret or X.509 certificate. The holder calls the token endpoint (client_credentials) and gets a JWT access token.",
+        "evidence_refs": [
+          "fc-c27d4d0f"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Client-credential flows involve no user, so the identity provider is not consulted; audit entries show UNKNOWN_USER. No doc statement on conditional access was found.",
+        "evidence_refs": [
+          "fc-b76f0ff6"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No IP allowlist for OAuth clients/tokens found in the XSUAA docs reviewed.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": 43200,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Secret lives as long as the binding/key; X.509 until cert expiry; access token 12h default",
+        "evidence_refs": [
+          "fc-c27d4d0f",
+          "fc-763e16d9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "Access token validity (token-validity in xs-security.json or subaccount Token Validity setting)",
+        "summary": "Client re-requests tokens with the long-lived secret; rotate the secret by unbind/rebind or new service key.",
+        "evidence_refs": [
+          "fc-1697835f",
+          "fc-763e16d9",
+          "fc-37a60c08"
+        ]
+      },
+      "administration": {
+        "summary": "Developers with Space Developer-level access create bindings/keys; credential-types in xs-security.json restricts which secret types can be issued. Legacy instance secrets are shared by all bindings and cannot be rotated.",
+        "conditions": "Cloud Foundry/Kyma environments; instance-secret not allowed for new bindings since 2026-01-19.",
+        "evidence_refs": [
+          "fc-c27d4d0f",
+          "fc-763e16d9"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The client ID and secret identify the application, not a person.",
+          "evidence_refs": [
+            "fc-c27d4d0f"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Client IDs look like sb-<xsappname>!t<n>; access token is a signed JWT."
+        },
+        "log_sources": [
+          {
+            "name": "SAP Audit Log service (BTP subaccount)",
+            "notes": "Audit Log Viewer or Retrieval API GET <url>/auditlog/v2/auditlogrecords; 90 days free, longer with Audit Log service premium edition (support ticket)."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Client ID",
+            "log": "UAA ClientAuthenticationSuccess",
+            "notes": "Recorded data per UAA audit spec"
+          },
+          {
+            "field": "Principal ID (client or user ID)",
+            "log": "UAA TokenIssuedEvent",
+            "notes": "Also records scopes"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "binding entry created (XSUAA instance audit)",
+            "stage": "create",
+            "notes": "New binding secret appears in subaccount audit log; exact message text not given"
+          },
+          {
+            "event": "TokenIssuedEvent",
+            "stage": "use",
+            "notes": "UAA event"
+          },
+          {
+            "event": "ClientAuthenticationSuccess",
+            "stage": "use",
+            "notes": "UAA event"
+          },
+          {
+            "event": "ClientDeleteSuccess",
+            "stage": "revoke",
+            "notes": "UAA event when a client is deleted"
+          }
+        ],
+        "correlation_keys": [
+          "client ID",
+          "subaccount/zone ID",
+          "service instance ID"
+        ],
+        "anomaly_cues": [
+          "UNKNOWN_USER entries mark client-credential flows",
+          "Token issuance for a client from a new caller pattern",
+          "New service keys on high-privilege instances (apiaccess, cis central)"
+        ],
+        "containment": {
+          "steps": "Delete the binding or service key (cf unbind-service / delete-service-key); create a replacement first. Shorten token-validity; for apps validating offline, wait for expiry or rotate signing keys.",
+          "kills_existing": "partial",
+          "notes": "Secret stops working at once, but already-issued JWTs remain valid in offline-validating apps until expiry."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether API data reads by the client are logged by consuming apps"
+        ],
+        "evidence_refs": [
+          "fc-c27d4d0f",
+          "fc-07f59e19",
+          "fc-b76f0ff6",
+          "fc-f217d031",
+          "fc-2a9b5d1b",
+          "fc-391814bc",
+          "fc-d7580551"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST <uaa url>/oauth/token (grant_type=client_credentials)",
+            "reveals": "Access token and granted scopes",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "TokenIssuedEvent",
+            "log_notes": "UAA event, principal = client ID"
+          }
+        ],
+        "unknown": [
+          "Data reads depend on the bound application; not logged by XSUAA"
+        ],
+        "evidence_refs": [
+          "fc-f217d031"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-07f59e19",
+      "title": "Validation and Revocation of Access Tokens",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/30-development/validation-and-revocation-of-access-tokens-8eb23a1.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1697835f",
+      "title": "Rotate Binding Secrets",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/rotate-binding-secrets-618441b.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2a9b5d1b",
+      "title": "Retention of Audit Data written from SAP BTP Applications and Services",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/retention-of-audit-data-written-from-sap-btp-applications-and-services-3ea497f.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-37a60c08",
+      "title": "Configure Token Policy for SAP Authorization and Trust Management Service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/configure-token-policy-for-sap-authorization-and-trust-management-service-40290a9.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-391814bc",
+      "title": "Audit Log Retrieval API Usage for Subaccounts in the Cloud Foundry Environment",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/audit-log-retrieval-api-usage-for-subaccounts-in-the-cloud-foundry-environment-30ece35.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4c857534",
+      "title": "Parameters for Suppressing Client Secrets",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/parameters-for-suppressing-client-secrets-974ac87.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-763e16d9",
+      "title": "Security Considerations for the SAP Authorization and Trust Management Service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/60-security/security-considerations-for-the-sap-authorization-and-trust-management-service-f117cab.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b76f0ff6",
+      "title": "Auditing and Logging Information for SAP Authorization and Trust Management Service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/60-security/auditing-and-logging-information-for-sap-authorization-and-trust-management-service-d8f4b7c.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c27d4d0f",
+      "title": "Service Instance Secrets (SAP Authorization and Trust Management service)",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/service-instance-secrets-5578ec4.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7580551",
+      "title": "Audit Events Logged by SAP Audit Log service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/audit-events-logged-by-sap-audit-log-service-d888e5e.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f217d031",
+      "title": "UAA Audit Requirements (Cloud Foundry docs, linked from SAP XSUAA audit page)",
+      "url": "https://docs.cloudfoundry.org/running/managing-cf/uaa-audit-requirements.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

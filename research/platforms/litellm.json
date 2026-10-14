@@ -1,0 +1,1326 @@
+{
+ "id": "litellm",
+ "name": "LiteLLM",
+ "scope_notes": "Covers LiteLLM Proxy (AI Gateway). Self-hosted open-source proxy (MIT) with an Enterprise license gating JWT auth, IP filtering, audit logs and key rotation; all controls are operator config on your own deployment.",
+ "controls": [
+  {
+   "name": "key/block",
+   "effect": "disable",
+   "applies_to": [
+    "litellm-2",
+    "litellm-3"
+   ],
+   "what": "Blocks a virtual key; /key/unblock re-enables it.",
+   "setting": "POST /key/block",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-c8c961a5"
+   ]
+  },
+  {
+   "name": "key/delete",
+   "effect": "revoke",
+   "applies_to": [
+    "litellm-2",
+    "litellm-3"
+   ],
+   "what": "Deletes a virtual key; deletion is recorded in audit logs and the Deleted Keys view.",
+   "setting": "POST /key/delete; Admin UI Keys page",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-34776e02",
+    "fc-f9271513"
+   ]
+  },
+  {
+   "name": "key_generation_settings",
+   "effect": "disable",
+   "applies_to": [
+    "litellm-2"
+   ],
+   "what": "Limits which user or team roles may create personal or team keys, and can require params.",
+   "setting": "litellm_settings.key_generation_settings",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-c8c961a5"
+   ]
+  },
+  {
+   "name": "upperbound_key_generate_params",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "litellm-2"
+   ],
+   "what": "Rejects key requests above a max duration, budget or rate limit.",
+   "setting": "litellm_settings.upperbound_key_generate_params",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-c8c961a5"
+   ]
+  },
+  {
+   "name": "custom_key_policy",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "litellm-2",
+    "litellm-3"
+   ],
+   "what": "Custom Python hook that can deny any key create, update or regenerate (e.g. require expiry within 7 days).",
+   "setting": "general_settings.custom_key_policy",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-c8c961a5"
+   ]
+  },
+  {
+   "name": "allowed_routes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "litellm-2",
+    "litellm-3"
+   ],
+   "what": "Restricts which proxy routes a key can call, including admin-owned keys.",
+   "setting": "allowed_routes on /key/generate or /key/update",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-c8c961a5"
+   ]
+  },
+  {
+   "name": "team_member_permissions",
+   "effect": "limit_scope",
+   "applies_to": [
+    "litellm-2"
+   ],
+   "what": "Controls which key-management routes team members may call; default is read-only key info.",
+   "setting": "team_member_permissions on the team",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ee00c8b3"
+   ]
+  },
+  {
+   "name": "allowed_ips",
+   "effect": "limit_network",
+   "applies_to": [
+    "litellm-1",
+    "litellm-2",
+    "litellm-3",
+    "litellm-4"
+   ],
+   "what": "Only listed client IPs can call proxy endpoints; others get 403.",
+   "setting": "general_settings.allowed_ips",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-3e5f4bbf"
+   ]
+  },
+  {
+   "name": "Key regenerate (rotation)",
+   "effect": "revoke",
+   "applies_to": [
+    "litellm-2",
+    "litellm-3"
+   ],
+   "what": "Issues a new secret; old secret is revoked immediately unless a grace_period is set.",
+   "setting": "POST /key/{key}/regenerate",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-c8c961a5"
+   ]
+  },
+  {
+   "name": "Scheduled key rotation (auto_rotate)",
+   "effect": "require_rotation",
+   "applies_to": [
+    "litellm-2"
+   ],
+   "what": "Background job regenerates keys on rotation_interval and invalidates the old string.",
+   "setting": "auto_rotate + rotation_interval on key; LITELLM_KEY_ROTATION_ENABLED=true",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-c8c961a5"
+   ]
+  },
+  {
+   "name": "disable_env_credential_login",
+   "effect": "other",
+   "applies_to": [
+    "litellm-1"
+   ],
+   "what": "Stops the master key and UI_USERNAME/UI_PASSWORD from logging into the Admin UI; API use of the master key continues.",
+   "setting": "general_settings.disable_env_credential_login: true",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-0395d3df"
+   ]
+  },
+  {
+   "name": "Master key rotation",
+   "effect": "revoke",
+   "applies_to": [
+    "litellm-1"
+   ],
+   "what": "Replace the master key value and restart every proxy instance.",
+   "setting": "LITELLM_MASTER_KEY / general_settings.master_key; POST /key/regenerate with new_master_key when no salt key",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7d6648d7"
+   ]
+  },
+  {
+   "name": "SCIM user deprovisioning",
+   "effect": "revoke",
+   "applies_to": [
+    "litellm-2"
+   ],
+   "what": "Deprovisioning a user blocks all keys they own and clears them from the auth cache.",
+   "setting": "IdP SCIM push / DELETE /scim/v2/Users/{id}",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-b1f46815"
+   ]
+  },
+  {
+   "name": "JWT audience/issuer validation",
+   "effect": "limit_scope",
+   "applies_to": [
+    "litellm-4"
+   ],
+   "what": "JWT_AUDIENCE/JWT_ISSUER or litellm_jwtauth.issuers restrict which tokens are accepted; unset means any token from listed providers is accepted.",
+   "setting": "JWT_AUDIENCE, JWT_ISSUER, litellm_jwtauth.issuers",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7ad6da80"
+   ]
+  },
+  {
+   "name": "store_audit_logs",
+   "effect": "other",
+   "applies_to": [
+    "litellm-1",
+    "litellm-2",
+    "litellm-3"
+   ],
+   "what": "Records create/update/delete/regenerate of keys, teams, users, models.",
+   "setting": "litellm_settings.store_audit_logs",
+   "plan": "Enterprise",
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-34776e02"
+   ]
+  },
+  {
+   "name": "enable_jwt_auth",
+   "effect": "disable",
+   "applies_to": [
+    "litellm-4"
+   ],
+   "what": "JWT tokens are only checked when this config setting is on; leaving it unset means JWT auth is not accepted.",
+   "setting": "general_settings.enable_jwt_auth in config.yaml",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7ad6da80"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "litellm-1",
+   "what": "Failed-login rate limiting does not cover use of the master key as an API bearer token.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-0395d3df"
+   ]
+  },
+  {
+   "path_id": "litellm-1",
+   "what": "Disabling env-credential UI login does not stop the master key on the API.",
+   "kind": "disable",
+   "evidence_refs": [
+    "fc-0395d3df"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether /key/delete and /key/block take effect instantly or after an auth-cache TTL (only SCIM deprovisioning is documented as clearing the cache).",
+  "Master key expiry and SCIM token expiry, rotation and revocation steps.",
+  "Whether management GET calls (/key/info, /key/list, /spend/logs) are logged anywhere besides server logs.",
+  "Whether allowed_ips applies to /scim routes."
+ ],
+ "credentials": [
+  {
+   "id": "litellm-1",
+   "name": "Master key (LITELLM_MASTER_KEY)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A single static bearer secret set in config or env. It is the proxy admin credential: it calls admin APIs, mints other keys, and by default also logs into the Admin UI.",
+    "evidence_refs": [
+     "fc-c8c961a5",
+     "fc-7d6648d7",
+     "fc-0395d3df"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static shared secret; SSO covers only the Admin UI and the master key keeps working on the API.",
+    "evidence_refs": [
+     "fc-0395d3df"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "general_settings.allowed_ips restricts which IPs can call any proxy endpoint (Enterprise). Not per-key.",
+    "evidence_refs": [
+     "fc-3e5f4bbf"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented; valid until changed and proxy restarted",
+    "evidence_refs": [
+     "fc-7d6648d7"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "manual",
+    "summary": "Set a new value in env/config and restart all instances (or POST /key/regenerate with new_master_key when no salt key).",
+    "evidence_refs": [
+     "fc-7d6648d7"
+    ]
+   },
+   "administration": {
+    "summary": "Whoever controls the proxy environment controls the master key. disable_env_credential_login stops it working on the UI login page but not on the API.",
+    "conditions": "Self-hosted; operator-managed.",
+    "evidence_refs": [
+     "fc-0395d3df"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "disable_env_credential_login only stops master-key login on the Admin UI page; the master key keeps authenticating admin API calls and is the documented recovery path when UI login is locked down.",
+     "evidence_refs": [
+      "fc-93e35f99",
+      "fc-2460c2d8"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Single deployment-wide secret set in config/env, not tied to a user.",
+     "evidence_refs": [
+      "fc-2460c2d8"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Admin UI > Logs (filter by key alias)",
+     "api": "GET /spend/logs/v2?start_date=...&end_date=...&api_key=<value>",
+     "cli": null,
+     "evidence_refs": [
+      "fc-cd742826",
+      "fc-39f9c861"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "sk-",
+     "notes": "Master key must start with sk-; generated keys are returned as sk-... and stored hashed."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs (LiteLLM_AuditLog)",
+      "notes": "Enterprise; on by default with license, else store_audit_logs: true. UI Logs -> Audit Logs; export via audit_log_callbacks (e.g. S3). Retention is your DB."
+     },
+     {
+      "name": "Spend logs (LiteLLM_SpendLogs)",
+      "notes": "Per-request rows with key hash; no prompt content by default; can be disabled; retention via maximum_spend_logs_retention_period."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "changed_by_api_key",
+      "log": "Audit log",
+      "notes": "Hashed key used"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "create (LiteLLM_VerificationToken)",
+      "stage": "create",
+      "notes": "Audit log action create"
+     },
+     {
+      "event": "update (LiteLLM_VerificationToken)",
+      "stage": "modify",
+      "notes": "Includes block/unblock via update"
+     },
+     {
+      "event": "delete (LiteLLM_VerificationToken)",
+      "stage": "revoke",
+      "notes": "Also shown in Deleted Keys view"
+     },
+     {
+      "event": "Regenerate",
+      "stage": "rotate",
+      "notes": "Listed as tracked action"
+     },
+     {
+      "event": "LiteLLM_SpendLogs row",
+      "stage": "use",
+      "notes": "LLM requests only"
+     }
+    ],
+    "correlation_keys": [
+     "user_api_key_hash",
+     "user_api_key_alias",
+     "user_api_key_user_id",
+     "user_api_key_team_id",
+     "x-litellm-call-id"
+    ],
+    "anomaly_cues": [
+     "Any admin action attributed to the master key",
+     "UI logins with env credentials (banner shown while enabled)"
+    ],
+    "containment": {
+     "steps": "POST /key/block or /key/delete; for master key, change LITELLM_MASTER_KEY and restart all instances.",
+     "kills_existing": "yes",
+     "notes": "Restart loads the new value; old value no longer matches."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether management reads are audited"
+    ],
+    "evidence_refs": [
+     "fc-c8c961a5",
+     "fc-7d6648d7",
+     "fc-34776e02",
+     "fc-39f9c861",
+     "fc-8db90b49",
+     "fc-b1f46815",
+     "fc-f9271513",
+     "fc-a6830e3b"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /key/info?key=<key>",
+      "reveals": "Key spend, models, expiry, metadata",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Not in audit log action list (create/update/delete/regenerate)"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /key/list",
+      "reveals": "Keys visible to caller",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Admin-owned keys can call management routes"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /spend/logs",
+      "reveals": "Request logs; prompts only if store_prompts_in_spend_logs",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /chat/completions",
+      "reveals": "Model access on proxy credit",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "Key/team rpm/tpm",
+      "logged": "yes",
+      "log_event": "LiteLLM_SpendLogs row",
+      "log_notes": "Unless disable_spend_logs"
+     }
+    ],
+    "unknown": [
+     "Whether management GETs are logged"
+    ],
+    "evidence_refs": [
+     "fc-c8c961a5",
+     "fc-ee00c8b3",
+     "fc-a6830e3b",
+     "fc-39f9c861"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "litellm-2",
+   "name": "Virtual keys (user and team keys)",
+   "family": "api_key",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "sk- bearer keys created via /key/generate or the Admin UI, optionally owned by a user and/or team. Management-route rights follow the owning user's role, so an admin-owned key can call admin endpoints.",
+    "evidence_refs": [
+     "fc-c8c961a5",
+     "fc-7d6648d7"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static keys; SSO is for the Admin UI only. JWT auth is the documented alternative to long-lived keys.",
+    "evidence_refs": [
+     "fc-0395d3df"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Only the proxy-wide allowed_ips list (Enterprise); no per-key IP list documented.",
+    "evidence_refs": [
+     "fc-3e5f4bbf"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional duration per key; can be 'Never expires'; admins can cap via upperbound_key_generate_params or custom_key_policy",
+    "evidence_refs": [
+     "fc-c8c961a5"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "duration / rotation_interval",
+    "summary": "POST /key/{key}/regenerate (Enterprise) issues a new secret; old one revoked immediately unless grace_period; optional scheduled auto_rotate.",
+    "evidence_refs": [
+     "fc-c8c961a5"
+    ]
+   },
+   "administration": {
+    "summary": "Admins can restrict who creates keys (key_generation_settings), limit models/routes/budgets per key, block/unblock, delete, and enforce policy hooks.",
+    "conditions": "Rotation and audit logs need Enterprise.",
+    "evidence_refs": [
+     "fc-c8c961a5"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "User-only keys are deleted when the user is deleted, and SCIM deprovisioning blocks the user's keys and clears them from the auth cache. Team service-account keys persist (see litellm-3).",
+     "evidence_refs": [
+      "fc-ee00c8b3",
+      "fc-b1f46815"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin UI Virtual Keys page / GET /key/list; the proxy_admin_viewer role can view all keys.",
+     "evidence_refs": [
+      "fc-ee00c8b3",
+      "fc-c8c961a5"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Admin UI > Logs (filter by key alias)",
+     "api": "GET /spend/logs/v2?start_date=...&end_date=...&api_key=<value>",
+     "cli": null,
+     "evidence_refs": [
+      "fc-cd742826",
+      "fc-39f9c861"
+     ]
+    },
+    "offboard": {
+     "ui": null,
+     "api": "POST /user/delete {\"user_ids\": [...]} (deletes user-only keys); SCIM: PATCH/PUT /scim/v2/Users/{id} active=false or DELETE /scim/v2/Users/{id} (blocks keys)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ee00c8b3",
+      "fc-0ed196d1",
+      "fc-b1f46815"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "sk-",
+     "notes": "Master key must start with sk-; generated keys are returned as sk-... and stored hashed."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs (LiteLLM_AuditLog)",
+      "notes": "Enterprise; on by default with license, else store_audit_logs: true. UI Logs -> Audit Logs; export via audit_log_callbacks (e.g. S3). Retention is your DB."
+     },
+     {
+      "name": "Spend logs (LiteLLM_SpendLogs)",
+      "notes": "Per-request rows with key hash; no prompt content by default; can be disabled; retention via maximum_spend_logs_retention_period."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "changed_by_api_key",
+      "log": "Audit log",
+      "notes": "Hashed key that performed the admin action"
+     },
+     {
+      "field": "user_api_key_hash",
+      "log": "Spend logs / logging payload",
+      "notes": "sha256 hash of virtual key"
+     },
+     {
+      "field": "object_id (table_name=LiteLLM_VerificationToken)",
+      "log": "Audit log",
+      "notes": "Key affected by the action"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "create (LiteLLM_VerificationToken)",
+      "stage": "create",
+      "notes": "Audit log action create"
+     },
+     {
+      "event": "update (LiteLLM_VerificationToken)",
+      "stage": "modify",
+      "notes": "Includes block/unblock via update"
+     },
+     {
+      "event": "delete (LiteLLM_VerificationToken)",
+      "stage": "revoke",
+      "notes": "Also shown in Deleted Keys view"
+     },
+     {
+      "event": "Regenerate",
+      "stage": "rotate",
+      "notes": "Listed as tracked action"
+     },
+     {
+      "event": "LiteLLM_SpendLogs row",
+      "stage": "use",
+      "notes": "LLM requests only"
+     }
+    ],
+    "correlation_keys": [
+     "user_api_key_hash",
+     "user_api_key_alias",
+     "user_api_key_user_id",
+     "user_api_key_team_id",
+     "x-litellm-call-id"
+    ],
+    "anomaly_cues": [
+     "Key created by an admin-owned key with no user_id",
+     "New keys with no duration (never expire)",
+     "Spend spikes per key hash",
+     "Requests from IPs outside normal ranges (if logged by your ingress)"
+    ],
+    "containment": {
+     "steps": "POST /key/block or /key/delete; for master key, change LITELLM_MASTER_KEY and restart all instances.",
+     "kills_existing": "partial",
+     "notes": "Block/delete is immediate on the worker that handles it. Without Redis, other workers keep accepting the key until their cache entry expires (user_api_key_cache_ttl, default 60 s). SCIM deprovisioning is documented as immediate."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether management reads are audited"
+    ],
+    "evidence_refs": [
+     "fc-c8c961a5",
+     "fc-7d6648d7",
+     "fc-34776e02",
+     "fc-39f9c861",
+     "fc-8db90b49",
+     "fc-b1f46815",
+     "fc-f9271513",
+     "fc-a6830e3b",
+     "fc-eb11ef79",
+     "fc-2460c2d8"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /key/info?key=<key>",
+      "reveals": "Key spend, models, expiry, metadata",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Not in audit log action list (create/update/delete/regenerate)"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /key/list",
+      "reveals": "Keys visible to caller",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Admin-owned keys can call management routes"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /spend/logs",
+      "reveals": "Request logs; prompts only if store_prompts_in_spend_logs",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /chat/completions",
+      "reveals": "Model access on proxy credit",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "Key/team rpm/tpm",
+      "logged": "yes",
+      "log_event": "LiteLLM_SpendLogs row",
+      "log_notes": "Unless disable_spend_logs"
+     }
+    ],
+    "unknown": [
+     "Whether management GETs are logged"
+    ],
+    "evidence_refs": [
+     "fc-c8c961a5",
+     "fc-ee00c8b3",
+     "fc-a6830e3b",
+     "fc-39f9c861"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "litellm-3",
+   "name": "Service account keys",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Virtual keys created via /key/service-account/generate with team_id and no user_id; they persist when users are deleted and apply team limits.",
+    "evidence_refs": [
+     "fc-0ecc05f0"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static keys.",
+    "evidence_refs": [
+     "fc-0ecc05f0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Proxy-wide allowed_ips only (Enterprise).",
+    "evidence_refs": [
+     "fc-3e5f4bbf"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Same key controls as virtual keys; custom_key_policy covers the service-account endpoint",
+    "evidence_refs": [
+     "fc-c8c961a5"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "duration / rotation_interval",
+    "summary": "Regenerate like other virtual keys.",
+    "evidence_refs": [
+     "fc-c8c961a5"
+    ]
+   },
+   "administration": {
+    "summary": "Not removed by user deletion or SCIM deprovisioning of a user, so must be revoked directly.",
+    "conditions": "Requires team_id.",
+    "evidence_refs": [
+     "fc-0ecc05f0"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Team keys have no user_id and are not deleted when users are removed.",
+     "evidence_refs": [
+      "fc-ee00c8b3"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Service account keys are virtual keys; listed on the Virtual Keys page / GET /key/list, visible to proxy_admin_viewer.",
+     "evidence_refs": [
+      "fc-ee00c8b3",
+      "fc-c8c961a5"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Admin UI > Logs (filter by key alias)",
+     "api": "GET /spend/logs/v2?start_date=...&end_date=...&api_key=<key> (or team_id=<team>)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-cd742826",
+      "fc-39f9c861"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "sk-",
+     "notes": "Master key must start with sk-; generated keys are returned as sk-... and stored hashed."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs (LiteLLM_AuditLog)",
+      "notes": "Enterprise; on by default with license, else store_audit_logs: true. UI Logs -> Audit Logs; export via audit_log_callbacks (e.g. S3). Retention is your DB."
+     },
+     {
+      "name": "Spend logs (LiteLLM_SpendLogs)",
+      "notes": "Per-request rows with key hash; no prompt content by default; can be disabled; retention via maximum_spend_logs_retention_period."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "changed_by_api_key",
+      "log": "Audit log",
+      "notes": "Hashed key that performed the admin action"
+     },
+     {
+      "field": "user_api_key_hash",
+      "log": "Spend logs / logging payload",
+      "notes": "sha256 hash of virtual key"
+     },
+     {
+      "field": "object_id (table_name=LiteLLM_VerificationToken)",
+      "log": "Audit log",
+      "notes": "Key affected by the action"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "create (LiteLLM_VerificationToken)",
+      "stage": "create",
+      "notes": "Audit log action create"
+     },
+     {
+      "event": "update (LiteLLM_VerificationToken)",
+      "stage": "modify",
+      "notes": "Includes block/unblock via update"
+     },
+     {
+      "event": "delete (LiteLLM_VerificationToken)",
+      "stage": "revoke",
+      "notes": "Also shown in Deleted Keys view"
+     },
+     {
+      "event": "Regenerate",
+      "stage": "rotate",
+      "notes": "Listed as tracked action"
+     },
+     {
+      "event": "LiteLLM_SpendLogs row",
+      "stage": "use",
+      "notes": "LLM requests only"
+     }
+    ],
+    "correlation_keys": [
+     "user_api_key_hash",
+     "user_api_key_alias",
+     "user_api_key_user_id",
+     "user_api_key_team_id",
+     "x-litellm-call-id"
+    ],
+    "anomaly_cues": [
+     "Key created by an admin-owned key with no user_id",
+     "New keys with no duration (never expire)",
+     "Spend spikes per key hash",
+     "Requests from IPs outside normal ranges (if logged by your ingress)"
+    ],
+    "containment": {
+     "steps": "POST /key/block or /key/delete; for master key, change LITELLM_MASTER_KEY and restart all instances.",
+     "kills_existing": "partial",
+     "notes": "Same per-worker cache behaviour as virtual keys: without Redis, a revoked key works on other workers until user_api_key_cache_ttl (default 60 s) expires."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether management reads are audited"
+    ],
+    "evidence_refs": [
+     "fc-c8c961a5",
+     "fc-7d6648d7",
+     "fc-34776e02",
+     "fc-39f9c861",
+     "fc-8db90b49",
+     "fc-b1f46815",
+     "fc-f9271513",
+     "fc-a6830e3b",
+     "fc-eb11ef79",
+     "fc-2460c2d8"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /key/info?key=<key>",
+      "reveals": "Key spend, models, expiry, metadata",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Not in audit log action list (create/update/delete/regenerate)"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /key/list",
+      "reveals": "Keys visible to caller",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Admin-owned keys can call management routes"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /spend/logs",
+      "reveals": "Request logs; prompts only if store_prompts_in_spend_logs",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /chat/completions",
+      "reveals": "Model access on proxy credit",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "Key/team rpm/tpm",
+      "logged": "yes",
+      "log_event": "LiteLLM_SpendLogs row",
+      "log_notes": "Unless disable_spend_logs"
+     }
+    ],
+    "unknown": [
+     "Whether management GETs are logged"
+    ],
+    "evidence_refs": [
+     "fc-c8c961a5",
+     "fc-ee00c8b3",
+     "fc-a6830e3b",
+     "fc-39f9c861"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "litellm-4",
+   "name": "OIDC / JWT-based auth (incl. Kubernetes ServiceAccount tokens)",
+   "family": "jwt",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "With enable_jwt_auth, the proxy accepts IdP-signed JWTs as bearer tokens, validated against configured JWKS URLs; claims map to users, teams and admin scope.",
+    "evidence_refs": [
+     "fc-7ad6da80"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "Any OIDC issuer with JWKS, including Kubernetes service account tokens. Audience/issuer checks are optional unless configured.",
+    "evidence_refs": [
+     "fc-7ad6da80"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Proxy-wide allowed_ips only (Enterprise).",
+    "evidence_refs": [
+     "fc-3e5f4bbf"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Set by the IdP via exp; proxy checks exp",
+    "evidence_refs": [
+     "fc-7ad6da80"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "IdP token exp",
+    "summary": "Client obtains a new JWT from its IdP.",
+    "evidence_refs": [
+     "fc-7ad6da80"
+    ]
+   },
+   "administration": {
+    "summary": "Configured in config.yaml (enable_jwt_auth, JWT_PUBLIC_KEY_URL, JWT_AUDIENCE, litellm_jwtauth.issuers).",
+    "conditions": "Enterprise license.",
+    "evidence_refs": [
+     "fc-7ad6da80"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Tokens are issued by the operator's own OpenID provider, so IdP policy applies at issuance; LiteLLM only verifies signature and claims at use.",
+     "evidence_refs": [
+      "fc-7ad6da80"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "config.yaml general_settings: enable_jwt_auth: true; env JWT_PUBLIC_KEY_URL=<IdP JWKS URL>, JWT_AUDIENCE; or litellm_jwtauth.issuers per issuer. IdP MFA/SSO policy applies at token issuance.",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-7ad6da80"
+     ]
+    },
+    "expiry": {
+     "ui": "Set token lifetime at the OpenID provider (exp claim); proxy verifies exp on every request",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-7ad6da80"
+     ]
+    },
+    "reads": {
+     "ui": "Admin UI > Logs",
+     "api": "GET /spend/logs/v2?start_date=...&end_date=...&user_id=<value>",
+     "cli": null,
+     "evidence_refs": [
+      "fc-cd742826",
+      "fc-39f9c861"
+     ]
+    },
+    "kill": {
+     "ui": "Remove the issuer from JWT_PUBLIC_KEY_URL / litellm_jwtauth.issuers in config, or rotate IdP signing keys; restart the proxy or wait public_key_ttl (default 600s)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-7ad6da80"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "IdP-issued JWT (eyJ...)"
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs (LiteLLM_AuditLog)",
+      "notes": "Enterprise; on by default with license, else store_audit_logs: true. UI Logs -> Audit Logs; export via audit_log_callbacks (e.g. S3). Retention is your DB."
+     },
+     {
+      "name": "Spend logs (LiteLLM_SpendLogs)",
+      "notes": "Per-request rows with key hash; no prompt content by default; can be disabled; retention via maximum_spend_logs_retention_period."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "user_api_key_user_id / user_api_key_team_id",
+      "log": "Spend logs",
+      "notes": "Mapped from JWT claims"
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "JWT sub / team claim",
+     "user_api_key_user_id"
+    ],
+    "anomaly_cues": [
+     "Tokens from unexpected issuer when JWT_AUDIENCE/JWT_ISSUER unset"
+    ],
+    "containment": {
+     "steps": "Revoke at the IdP, remove the issuer/JWKS URL from config, or rotate signing keys.",
+     "kills_existing": "partial",
+     "notes": "Issued JWTs remain valid until exp unless the issuer is removed; JWKS cached for public_key_ttl."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact log fields for JWT-authenticated requests"
+    ],
+    "evidence_refs": [
+     "fc-7ad6da80"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "POST /v1/chat/completions",
+      "reveals": "Model access",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "LiteLLM_SpendLogs row",
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "POST /key/generate",
+      "reveals": "Mint a virtual key with the JWT (shown in docs)",
+      "bulk": false,
+      "scope": "litellm_proxy_admin (for admin)",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "create (LiteLLM_VerificationToken)",
+      "log_notes": "Audit logs need Enterprise/store_audit_logs"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-7ad6da80",
+     "fc-a6830e3b",
+     "fc-34776e02"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "litellm-5",
+   "name": "SCIM token",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer token created under Settings > Admin Settings > SCIM, used by the IdP to call /scim endpoints.",
+    "evidence_refs": [
+     "fc-b1f46815"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static token held by the IdP.",
+    "evidence_refs": [
+     "fc-b1f46815"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "allowed_ips applies to proxy endpoints; /scim/v2 routes use the same user_api_key_auth path that runs the IP check (from source). Docs do not name /scim routes explicitly. Enterprise.",
+    "evidence_refs": [
+     "fc-3e5f4bbf",
+     "fc-1370f127",
+     "fc-40f68606"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Not documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "unknown",
+    "summary": "Create a new token in the UI; rotation/revocation steps not documented.",
+    "evidence_refs": [
+     "fc-b1f46815"
+    ]
+   },
+   "administration": {
+    "summary": "Created by admins in the Admin UI; can deprovision users, which blocks their keys.",
+    "conditions": "SCIM setup.",
+    "evidence_refs": [
+     "fc-b1f46815"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Token is created for the IdP provisioning connection, not a person.",
+     "evidence_refs": [
+      "fc-b1f46815"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "network": {
+     "ui": "config.yaml general_settings: allowed_ips: [\"<ip>\"] (Enterprise)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-3e5f4bbf"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented"
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs (LiteLLM_AuditLog)",
+      "notes": "Enterprise; on by default with license, else store_audit_logs: true. UI Logs -> Audit Logs; export via audit_log_callbacks (e.g. S3). Retention is your DB."
+     },
+     {
+      "name": "Spend logs (LiteLLM_SpendLogs)",
+      "notes": "Per-request rows with key hash; no prompt content by default; can be disabled; retention via maximum_spend_logs_retention_period."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [],
+    "anomaly_cues": [
+     "Unexpected SCIM user/team changes"
+    ],
+    "containment": {
+     "steps": "Not documented; manage in Settings > Admin Settings > SCIM.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Revocation steps",
+     "Logging of SCIM calls"
+    ],
+    "evidence_refs": [
+     "fc-b1f46815"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /scim/v2/Users",
+      "reveals": "Proxy users and emails",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Audit logs track only Create, Update, Delete and Regenerate on keys, teams, users and models; reads are outside that scope. Enterprise."
+     }
+    ],
+    "unknown": [
+     "SCIM endpoints a holder could read (e.g. user lists) not documented in fetched pages"
+    ],
+    "evidence_refs": [
+     "fc-b1f46815",
+     "fc-34776e02"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

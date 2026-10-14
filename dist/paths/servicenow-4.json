@@ -1,0 +1,398 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "servicenow",
+      "name": "ServiceNow",
+      "scope_notes": "Release/plugin dependent. API key/HMAC requires com.glide.tokenbased_auth and API-specific policy. Documentation reviewed is Brazil.",
+      "controls": [
+        {
+          "name": "REST API access policy",
+          "effect": "disable",
+          "applies_to": [
+            "servicenow-1",
+            "servicenow-2",
+            "servicenow-3",
+            "servicenow-4",
+            "servicenow-5"
+          ],
+          "what": "Per REST API (or globally), lists the inbound authentication profiles allowed, so unlisted credential types such as Basic are refused.",
+          "setting": "All > System Web Services > REST API Access Policies (map Inbound Authentication Profiles)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-bfedae0f"
+          ],
+          "quote": "Create an API access policy and map an authentication profile to restrict the authentication type for a REST API."
+        },
+        {
+          "name": "API access policy with adaptive authentication filter criteria (IP)",
+          "effect": "limit_network",
+          "applies_to": [
+            "servicenow-1",
+            "servicenow-2",
+            "servicenow-3",
+            "servicenow-4",
+            "servicenow-5"
+          ],
+          "what": "An access policy can combine an allowed auth type with filter criteria such as an IP range; other auth types or IPs are denied.",
+          "setting": "REST API Access Policies + Adaptive Authentication filter criteria",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn27search10"
+          ],
+          "quote": "allows only OAuth 2.0 authentication type from a specified range of IP addresses"
+        },
+        {
+          "name": "Adaptive authentication policies",
+          "effect": "limit_network",
+          "applies_to": [
+            "servicenow-1",
+            "servicenow-2",
+            "servicenow-3",
+            "servicenow-4",
+            "servicenow-5"
+          ],
+          "what": "Allows or denies authentication by IP address, role or group, including for inbound REST API requests.",
+          "setting": "All > Adaptive Authentication > Authentication Policies / Filter Criteria",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-52e15fdd"
+          ],
+          "quote": "You can use the filter criteria of adaptive authentication framework to restrict access to inbound ServiceNow REST APIs."
+        },
+        {
+          "name": "IP Address Access Control",
+          "effect": "limit_network",
+          "applies_to": [
+            "servicenow-1",
+            "servicenow-2",
+            "servicenow-3",
+            "servicenow-4",
+            "servicenow-5"
+          ],
+          "what": "Instance-wide allow/deny IP rules for inbound traffic regardless of credential type.",
+          "setting": "All > System Security > IP Address Access Control (plugin com.snc.ipauthenticator)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-71e16f03"
+          ],
+          "quote": "Deny: Any IP address in this range cannot interact with this instance unless it is listed in an Allow rule."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Which authentication types the default Global REST API policy allows; the Brazil page names the Global Blocking Policy but does not list them.",
+        "No documented ServiceNow switch to disable Basic authentication instance-wide other than access policies; absence not stated by ServiceNow.",
+        "Whether adaptive authentication is active by default.",
+        "Default of Enforce Token Restrictions on OIDC provider records (OAuth registry default is unselected).",
+        "ServiceNow docs are SPA-rendered; quotes over ~125 characters were captured as exact fragments."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "servicenow-4",
+      "provider_id": "servicenow",
+      "name": "Basic credentials",
+      "family": "basic",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Basic username/password; API key/HMAC via plugin; OAuth bearer including code + PKCE, client credentials and Third-Party ID Token Flow.",
+        "evidence_refs": [
+          "turn10search2",
+          "turn1search7",
+          "turn30search6",
+          "turn31view2"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "turn10search2",
+          "turn1search7",
+          "turn30search6",
+          "turn31view2"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "REST API access policies can allow only selected authentication types and source IP ranges.",
+        "evidence_refs": [
+          "turn27search10",
+          "turn27search6",
+          "turn1search7",
+          "turn31view2"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_applicable",
+        "summary": "Until password change/account disablement",
+        "evidence_refs": [
+          "turn10search2",
+          "turn1search7",
+          "turn30search6",
+          "turn31view2"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "The same username and password are reused on each request. Access ends when the password changes or the account is disabled.",
+        "evidence_refs": [
+          "turn10search2",
+          "turn1search7",
+          "turn30search6",
+          "turn31view2"
+        ]
+      },
+      "administration": {
+        "summary": "Roles/ACLs, REST auth scopes, API access policies and OAuth client restrictions. Enable token restrictions to associate tokens with permitted APIs.",
+        "conditions": "Release/plugin dependent. API key/HMAC requires com.glide.tokenbased_auth and API-specific policy. Documentation reviewed is Brazil.",
+        "evidence_refs": [
+          "turn27search10",
+          "turn27search6",
+          "turn1search7",
+          "turn31view2"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "All > System Logs > Transactions; filter Created by = the integration user, then URL (e.g. the REST path called)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-1f10b8d9"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Username:password via HTTP Basic."
+        },
+        "log_sources": [
+          {
+            "name": "Transaction log (System Logs > Transactions)",
+            "notes": "Records requests with Created by, URL, IP address, HTTP Response Code. Retention not stated in docs."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Created by",
+            "log": "Transaction log",
+            "notes": "Authenticated username"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "Created by",
+          "IP address",
+          "URL",
+          "HTTP Response Code",
+          "Created"
+        ],
+        "anomaly_cues": [
+          "Basic-auth API calls from an interactive user account",
+          "Password spraying: many failed requests across users from one IP address",
+          "Successful REST call from a new IP after failures",
+          "Service account used from a browser"
+        ],
+        "containment": {
+          "steps": "Reset the password; lock or deactivate the user; restrict account to web service access or move it to OAuth/API key with access policy.",
+          "kills_existing": "unknown",
+          "notes": "Existing sessions may persist; session termination not covered in fetched docs."
+        },
+        "sample_query": {
+          "language": "ServiceNow list filter (UI field labels)",
+          "query": "System Logs > Transactions: Created by = svc.basic ^ Created in Last 7 days ^ IP address NOT IN <known integration egress IPs>",
+          "purpose": "Find Basic-auth service account calls from unexpected IPs"
+        },
+        "unknown": [
+          "Transaction log table/column names (only UI labels fetched)",
+          "login/login.failed event names (only community sources)",
+          "Transaction log retention",
+          "Failed login event and its fields",
+          "Field marking auth method per request"
+        ],
+        "evidence_refs": [
+          "fc-80dbcdb2"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/now/table/sys_user?sysparm_query=user_name={me}&sysparm_limit=1 (Authorization: Basic)",
+            "reveals": "The basic-auth user's own record and role summary; identity and reach",
+            "bulk": false,
+            "scope": "read ACL on sys_user",
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "Transaction Log [syslog_transaction]",
+            "log_notes": "Request logged with Created by, URL, IP, HTTP Response Code"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/now/table/{tableName}?sysparm_limit=10000&sysparm_offset=N",
+            "reveals": "Bulk record data from readable tables (e.g. incident, cmdb_ci)",
+            "bulk": true,
+            "scope": "read ACL on target table",
+            "rate_limit": "sysparm_limit default 10000; X-Total-Count",
+            "logged": "yes",
+            "log_event": "Transaction Log [syslog_transaction]",
+            "log_notes": "Each Table API GET logged; retention ~56 days default"
+          }
+        ],
+        "unknown": [
+          "sys_user_has_role is a community/third-party source, not ServiceNow official docs",
+          "Whether request bodies are stored"
+        ],
+        "evidence_refs": [
+          "fc-226db718",
+          "fc-80dbcdb2",
+          "fc-ff5fd1ed"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1f10b8d9",
+      "title": "Transaction logs (Zurich)",
+      "url": "https://www.servicenow.com/docs/r/zurich/platform-security/r_TransactionLogs.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-226db718",
+      "title": "Table API | ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/api-reference/rest-apis/c_TableAPI.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-52e15fdd",
+      "title": "Adaptive authentication (Brazil)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/adaptive-authentication.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-71e16f03",
+      "title": "IP address access control (Brazil)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/t_AccessControl.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-80dbcdb2",
+      "title": "Transaction logs",
+      "url": "https://www.servicenow.com/docs/r/platform-security/r_TransactionLogs.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bfedae0f",
+      "title": "Create API access policy (Brazil)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/create-api-access-policy.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ff5fd1ed",
+      "title": "Log history | ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/r_LogHistory.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search2",
+      "title": "OAuth Inbound - ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/oauth-inbound.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn1search7",
+      "title": "Create an endpoint for clients to access the instance",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/t_CreateEndpointforExternalClients.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn27search10",
+      "title": "REST API access policies - ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/inbound-authentication-profile.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn27search6",
+      "title": "API access policy - ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/api-access-policy.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn30search6",
+      "title": "Token-based authentication - ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/token-based-auth-api.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn31view2",
+      "title": "Configure API key - Token-based authentication",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/configure-api-key.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

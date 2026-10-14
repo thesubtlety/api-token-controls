@@ -1,0 +1,385 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "gcp",
+      "name": "Google Cloud",
+      "scope_notes": "Covers Google Cloud (IAM, API Keys, Cloud Storage). Covers Google Cloud project/org credentials; org policy constraints and VPC Service Controls need an organization resource; Workspace user OAuth and domain-wide delegation are in the separate `google` platform.",
+      "controls": [
+        {
+          "name": "iam.managed.disableServiceAccountKeyCreation (legacy iam.disableServiceAccountKeyCreation)",
+          "effect": "disable",
+          "applies_to": [
+            "gcp-1",
+            "gcp-5"
+          ],
+          "what": "Blocks creation of new service account keys and SA HMAC keys.",
+          "setting": "Organization policies > constraint; gcloud resource-manager org-policies enable-enforce",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7af2d5e5"
+          ]
+        },
+        {
+          "name": "constraints/storage.restrictAuthTypes",
+          "effect": "disable",
+          "applies_to": [
+            "gcp-5"
+          ],
+          "what": "Rejects user-account and/or service-account HMAC-signed requests to Cloud Storage.",
+          "setting": "Organization policies",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6c229c4f"
+          ]
+        },
+        {
+          "name": "Deactivate / delete HMAC key",
+          "effect": "revoke",
+          "applies_to": [
+            "gcp-5"
+          ],
+          "what": "Set the key INACTIVE or delete it; deleted keys are invalid immediately.",
+          "setting": "Cloud Storage > Settings > Interoperability; hmacKeys update/delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-704428c1",
+            "fc-5d748a08"
+          ]
+        },
+        {
+          "name": "VPC Service Controls",
+          "effect": "limit_network",
+          "applies_to": [
+            "gcp-1",
+            "gcp-2",
+            "gcp-3",
+            "gcp-4",
+            "gcp-5"
+          ],
+          "what": "Service perimeters with ingress rules limit API access by network origin and identity, even with stolen credentials.",
+          "setting": "Security > VPC Service Controls",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-c4499f95"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether existing keys created before iam.serviceAccountKeyExpiryHours was set get an expiry (docs say 'newly created').",
+        "Federated (STS) access token lifetime.",
+        "Whether API keys support an expiry setting.",
+        "Which audit field identifies the API key or HMAC access ID used on a data-plane request.",
+        "Whether GetKeyString/lookupKey calls are logged for keys.lookupKey.",
+        "Plan/pricing for VPC Service Controls (needs organization)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "gcp-5",
+      "provider_id": "gcp",
+      "name": "Cloud Storage HMAC keys",
+      "family": "hmac",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Access ID + secret used to sign Cloud Storage XML API requests (S3-compatible). Usually tied to a service account; user-account HMAC keys also exist.",
+        "evidence_refs": [
+          "fc-704428c1"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Signed requests carry no IdP session. No doc ties HMAC use to SSO or CAA.",
+        "evidence_refs": [
+          "fc-704428c1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "No per-key IP list found. VPC Service Controls can restrict Cloud Storage access by network.",
+        "evidence_refs": [
+          "fc-c4499f95"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented on fetched pages; valid until deactivated or deleted",
+        "evidence_refs": [
+          "fc-704428c1",
+          "fc-5d748a08"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Valid until deleted",
+        "summary": "Rotate by creating a new key, updating clients, then deleting the old key.",
+        "evidence_refs": [
+          "fc-704428c1"
+        ]
+      },
+      "administration": {
+        "summary": "disableServiceAccountKeyCreation also blocks SA HMAC key creation; storage.restrictAuthTypes rejects HMAC-signed requests org-wide.",
+        "conditions": "Org policies need an organization resource.",
+        "evidence_refs": [
+          "fc-7af2d5e5",
+          "fc-6c229c4f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Deleting the account deletes its HMAC keys, and docs warn user-account keys break when the user is disabled after leaving.",
+          "evidence_refs": [
+            "fc-704428c1"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "HMAC keys are listed per project (gcloud storage hmac list / ListHmacKeys); HMAC keys are not in the Cloud Asset Inventory asset type list.",
+          "evidence_refs": [
+            "fc-5d748a08"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Metrics Explorer: storage.googleapis.com/authn/authentication_count grouped by access_id; key admin events in Logs Explorer: protoPayload.serviceName=\"storage.googleapis.com\"",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-704428c1",
+            "fc-1de9c6e8",
+            "fc-5c044d8c"
+          ]
+        },
+        "reads": {
+          "ui": "Enable Data Read for Cloud Storage (IAM & Admin > Audit Logs); Logs Explorer: protoPayload.serviceName=\"storage.googleapis.com\" (object get/list)",
+          "api": null,
+          "cli": "gcloud projects set-iam-policy PROJECT_ID policy.yaml (auditConfigs DATA_READ for storage.googleapis.com)",
+          "evidence_refs": [
+            "fc-a6bc72ba",
+            "fc-1de9c6e8"
+          ]
+        },
+        "offboard": {
+          "ui": "Google Admin console > Directory > Users > (user) > More options > Delete user (deleting the account deletes its HMAC keys)",
+          "api": "DELETE https://admin.googleapis.com/admin/directory/v1/users/{userKey}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-704428c1",
+            "fc-f1606f58",
+            "fc-73a5ea2c"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "GOOG",
+          "notes": "Access ID 61 chars for SA, 24 chars for user; example starts GOOG. Secret is 40-char base64."
+        },
+        "log_sources": [
+          {
+            "name": "Cloud Storage Admin Activity logs",
+            "notes": "HMAC key create/delete/update."
+          },
+          {
+            "name": "Cloud Storage Data Access logs",
+            "notes": "Object reads (DATA_READ); off by default."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "unknown",
+            "log": "Cloud Storage audit logs",
+            "notes": "Field carrying the HMAC access ID not found in fetched docs."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Creating HMAC keys",
+            "stage": "create",
+            "notes": "Operation label in Storage audit log table; exact methodName not listed"
+          },
+          {
+            "event": "Updating HMAC keys",
+            "stage": "revoke",
+            "notes": "State change to INACTIVE"
+          },
+          {
+            "event": "Deleting HMAC keys",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "access ID",
+          "service account email"
+        ],
+        "anomaly_cues": [
+          "New HMAC key on a privileged SA",
+          "XML API bulk object reads"
+        ],
+        "containment": {
+          "steps": "Set the key INACTIVE, then delete it.",
+          "kills_existing": "yes",
+          "notes": "Deleted HMAC keys are immediately invalid."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact methodName strings for HMAC events"
+        ],
+        "evidence_refs": [
+          "fc-704428c1",
+          "fc-1de9c6e8",
+          "fc-5d748a08",
+          "fc-10383540"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "Cloud Storage XML API object GET/list (HMAC-signed)",
+            "reveals": "Object data",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "DATA_READ Data Access; off by default"
+          }
+        ],
+        "unknown": [
+          "Whether HMAC access ID appears in the Data Access log entry"
+        ],
+        "evidence_refs": [
+          "fc-704428c1",
+          "fc-1de9c6e8",
+          "fc-10383540"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "GCP storage hmac keys create",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_storage_hmac_keys_create.yml",
+          "detects": "A granted storage.hmacKeys.create permission check (Cloud Storage HMAC key creation)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-10383540",
+      "title": "Cloud Audit Logs overview",
+      "url": "https://cloud.google.com/logging/docs/audit",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1de9c6e8",
+      "title": "Cloud Storage audit logging",
+      "url": "https://cloud.google.com/storage/docs/audit-logging",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5c044d8c",
+      "title": "View logs by using the Logs Explorer",
+      "url": "https://cloud.google.com/logging/docs/view/logs-explorer-interface",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5d748a08",
+      "title": "Manage HMAC keys for service accounts",
+      "url": "https://cloud.google.com/storage/docs/authentication/managing-hmackeys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6c229c4f",
+      "title": "Organization policy constraints",
+      "url": "https://cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-704428c1",
+      "title": "HMAC keys",
+      "url": "https://cloud.google.com/storage/docs/authentication/hmackeys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-73a5ea2c",
+      "title": "Directory API: User Accounts",
+      "url": "https://developers.google.com/workspace/admin/directory/v1/guides/manage-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7af2d5e5",
+      "title": "Restricting service account usage",
+      "url": "https://cloud.google.com/resource-manager/docs/organization-policy/restricting-service-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a6bc72ba",
+      "title": "Enable Data Access audit logs",
+      "url": "https://cloud.google.com/logging/docs/audit/configure-data-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c4499f95",
+      "title": "Overview of VPC Service Controls",
+      "url": "https://cloud.google.com/vpc-service-controls/docs/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f1606f58",
+      "title": "Delete a user from your organization | Google Workspace Admin Help",
+      "url": "https://support.google.com/a/answer/33314?hl=en",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

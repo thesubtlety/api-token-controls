@@ -1,0 +1,594 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "servicenow",
+      "name": "ServiceNow",
+      "scope_notes": "Release/plugin dependent. API key/HMAC requires com.glide.tokenbased_auth and API-specific policy. Documentation reviewed is Brazil.",
+      "controls": [
+        {
+          "name": "REST API access policy",
+          "effect": "disable",
+          "applies_to": [
+            "servicenow-1",
+            "servicenow-2",
+            "servicenow-3",
+            "servicenow-4",
+            "servicenow-5"
+          ],
+          "what": "Per REST API (or globally), lists the inbound authentication profiles allowed, so unlisted credential types such as Basic are refused.",
+          "setting": "All > System Web Services > REST API Access Policies (map Inbound Authentication Profiles)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-bfedae0f"
+          ],
+          "quote": "Create an API access policy and map an authentication profile to restrict the authentication type for a REST API."
+        },
+        {
+          "name": "API access policy with adaptive authentication filter criteria (IP)",
+          "effect": "limit_network",
+          "applies_to": [
+            "servicenow-1",
+            "servicenow-2",
+            "servicenow-3",
+            "servicenow-4",
+            "servicenow-5"
+          ],
+          "what": "An access policy can combine an allowed auth type with filter criteria such as an IP range; other auth types or IPs are denied.",
+          "setting": "REST API Access Policies + Adaptive Authentication filter criteria",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn27search10"
+          ],
+          "quote": "allows only OAuth 2.0 authentication type from a specified range of IP addresses"
+        },
+        {
+          "name": "Adaptive authentication policies",
+          "effect": "limit_network",
+          "applies_to": [
+            "servicenow-1",
+            "servicenow-2",
+            "servicenow-3",
+            "servicenow-4",
+            "servicenow-5"
+          ],
+          "what": "Allows or denies authentication by IP address, role or group, including for inbound REST API requests.",
+          "setting": "All > Adaptive Authentication > Authentication Policies / Filter Criteria",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-52e15fdd"
+          ],
+          "quote": "You can use the filter criteria of adaptive authentication framework to restrict access to inbound ServiceNow REST APIs."
+        },
+        {
+          "name": "IP Address Access Control",
+          "effect": "limit_network",
+          "applies_to": [
+            "servicenow-1",
+            "servicenow-2",
+            "servicenow-3",
+            "servicenow-4",
+            "servicenow-5"
+          ],
+          "what": "Instance-wide allow/deny IP rules for inbound traffic regardless of credential type.",
+          "setting": "All > System Security > IP Address Access Control (plugin com.snc.ipauthenticator)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-71e16f03"
+          ],
+          "quote": "Deny: Any IP address in this range cannot interact with this instance unless it is listed in an Allow rule."
+        },
+        {
+          "name": "Enforce Token Restrictions (OAuth application registry)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "servicenow-1"
+          ],
+          "what": "Tokens from this OAuth client work only on APIs whose access policy allows its authentication profile; otherwise they reach any API the user's ACLs allow.",
+          "setting": "All > System OAuth > Application Registry > [client] > Enforce Token Restrictions",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "turn1search7"
+          ],
+          "quote": "Select to only allow tokens to be used with APIs set to allow the authentication profile."
+        },
+        {
+          "name": "REST API Auth Scope",
+          "effect": "limit_scope",
+          "applies_to": [
+            "servicenow-1",
+            "servicenow-3"
+          ],
+          "what": "Once an API has an auth scope, only OAuth entities (or API keys) carrying that scope can call it; the useraccount scope bypasses this.",
+          "setting": "System Web Services > REST API Auth Scope; link scope to OAuth entity / REST API Key",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-9b82e581"
+          ],
+          "quote": "you must associate the same Auth Scope to the OAuth Entity which should have access to this REST API."
+        },
+        {
+          "name": "Access / Refresh Token Lifespan",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "servicenow-1"
+          ],
+          "what": "Sets per-client access token (default 1800 s) and refresh token (default 100 days) lifetimes.",
+          "setting": "All > System OAuth > Application Registry > [client] > Access Token Lifespan / Refresh Token Lifespan",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "turn1search7"
+          ],
+          "quote": "By default, refresh tokens expire in 100 days (8640000 seconds)."
+        },
+        {
+          "name": "OAuth application registry Active",
+          "effect": "disable",
+          "applies_to": [
+            "servicenow-1"
+          ],
+          "what": "Deactivating the registry entry stops the OAuth client.",
+          "setting": "All > System OAuth > Application Registry > [client] > Active",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "turn1search7"
+          ],
+          "quote": "Select the check box to make the application registry active."
+        },
+        {
+          "name": "glide.oauth.inbound.client.credential.grant_type.enabled",
+          "effect": "disable",
+          "applies_to": [
+            "servicenow-1"
+          ],
+          "what": "Inbound OAuth client credentials grant is only available after an admin creates this property and sets it to true.",
+          "setting": "sys_properties.list > New property glide.oauth.inbound.client.credential.grant_type.enabled",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-98b663b4"
+          ],
+          "quote": "Create the glide.oauth.inbound.client.credential.grant_type.enabled system property"
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Which authentication types the default Global REST API policy allows; the Brazil page names the Global Blocking Policy but does not list them.",
+        "No documented ServiceNow switch to disable Basic authentication instance-wide other than access policies; absence not stated by ServiceNow.",
+        "Whether adaptive authentication is active by default.",
+        "Default of Enforce Token Restrictions on OIDC provider records (OAuth registry default is unselected).",
+        "ServiceNow docs are SPA-rendered; quotes over ~125 characters were captured as exact fragments."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "servicenow-1",
+      "provider_id": "servicenow",
+      "name": "OAuth",
+      "family": "oauth",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Basic username/password; API key/HMAC via plugin; OAuth bearer including code + PKCE, client credentials and Third-Party ID Token Flow.",
+        "evidence_refs": [
+          "turn10search2",
+          "turn1search7",
+          "turn30search6",
+          "turn31view2"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Inbound Third-Party ID Token Flow trusts external providers such as Entra or Okta, subject to configured trust.",
+        "evidence_refs": [
+          "turn10search2",
+          "turn1search7",
+          "turn30search6",
+          "turn31view2"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "REST API access policies can allow only selected authentication types and source IP ranges.",
+        "evidence_refs": [
+          "turn27search10",
+          "turn27search6",
+          "turn1search7",
+          "turn31view2"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 1800,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Default 30 min; configurable",
+        "evidence_refs": [
+          "turn10search2",
+          "turn1search7",
+          "turn30search6",
+          "turn31view2"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "absolute",
+        "summary": "OAuth refresh tokens default to 100 days (8,640,000 s), set per application registry entry.",
+        "evidence_refs": [
+          "turn10search2",
+          "turn1search7",
+          "turn30search6",
+          "turn31view2"
+        ]
+      },
+      "administration": {
+        "summary": "Roles/ACLs, REST auth scopes, API access policies and OAuth client restrictions. Enable token restrictions to associate tokens with permitted APIs.",
+        "conditions": "Release/plugin dependent. API key/HMAC requires com.glide.tokenbased_auth and API-specific policy. Documentation reviewed is Brazil.",
+        "evidence_refs": [
+          "turn27search10",
+          "turn27search6",
+          "turn1search7",
+          "turn31view2"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "System OAuth > Manage Tokens (oauth_credential table) shows all tokens; admin-only module.",
+          "evidence_refs": [
+            "fc-b890f6dd"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "All > System Logs > Transactions; filter Created by = the integration user, then URL (e.g. the REST path called)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-1f10b8d9"
+          ]
+        },
+        "kill": {
+          "ui": "System OAuth > Manage Tokens > (token Name) > Revoke Access",
+          "api": "https://<instance>/oauth_revoke_token.do?token=<access or refresh token>",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e7072946",
+            "fc-9ed7b57f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Opaque tokens stored in oauth_credential; no GitHub pattern listed for ServiceNow."
+        },
+        "log_sources": [
+          {
+            "name": "Transaction log (System Logs > Transactions)",
+            "notes": "Records requests with Created by, URL, IP address, HTTP Response Code. Retention not stated in docs."
+          },
+          {
+            "name": "oauth_credential table (System OAuth > Manage Tokens)",
+            "notes": "Issued access/refresh tokens with Type and Expires; admins can Revoke Access."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Type",
+            "log": "oauth_credential",
+            "notes": "Access Token or Refresh Token"
+          },
+          {
+            "field": "Expires",
+            "log": "oauth_credential",
+            "notes": "Expiry time"
+          },
+          {
+            "field": "Created by",
+            "log": "Transaction log",
+            "notes": "User the token acts as"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "Created by",
+          "IP address",
+          "URL",
+          "HTTP Response Code",
+          "Created"
+        ],
+        "anomaly_cues": [
+          "Spike in oauth_credential rows for one OAuth client",
+          "REST transactions by an integration user from a new IP address",
+          "Large Table API reads (URL with high sysparm_limit) by OAuth users",
+          "Refresh tokens with very long Expires for broad clients"
+        ],
+        "containment": {
+          "steps": "Revoke Access on the token record in Manage Tokens, or call oauth_revoke_token.do with the token; deactivate the OAuth application registry entry; lock the user.",
+          "kills_existing": "partial",
+          "notes": "oauth_revoke_token.do or Manage Tokens > Revoke Access marks the given token expired. Docs do not say that revoking a refresh token also expires access tokens already issued from it (default 30-minute life)."
+        },
+        "sample_query": {
+          "language": "ServiceNow list filter (UI field labels)",
+          "query": "System Logs > Transactions: Created by = integration.user ^ Created in Last 7 days ^ IP address NOT IN <known integration egress IPs>",
+          "purpose": "Find integration-user REST calls from unexpected IPs"
+        },
+        "unknown": [
+          "Transaction log table/column names (only UI labels fetched)",
+          "login/login.failed event names (only community sources)",
+          "Transaction log retention",
+          "oauth_credential column names for user and client",
+          "Default token lifetimes (page fetched only in German)"
+        ],
+        "evidence_refs": [
+          "fc-80dbcdb2",
+          "fc-e117ca6f",
+          "fc-38784ada",
+          "fc-b1e9419d",
+          "fc-b890f6dd"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/now/table/sys_user?sysparm_query=user_name={me}&sysparm_limit=1",
+            "reveals": "The authenticating/integration user's own record (user_name, email, roles summary); whose context the OAuth token runs as",
+            "bulk": false,
+            "scope": "read ACL on sys_user table",
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "Transaction Log [syslog_transaction]",
+            "log_notes": "Transaction log records each request (Created by, URL, IP address, Type incl. REST, HTTP Response Code). Default rotation: weekly, 8 rotations (~56 days)"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/now/table/sys_db_object  (or sys_dictionary)",
+            "reveals": "List of tables/schema in the instance; targeting map for data pull",
+            "bulk": true,
+            "scope": "read ACL on sys_db_object",
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "Transaction Log [syslog_transaction]",
+            "log_notes": "GET requests appear in transaction log with URL and user"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/now/table/{tableName}?sysparm_limit=10000&sysparm_offset=N",
+            "reveals": "Bulk record data from any table the user can read (e.g. incident, sys_user); paginates via offset/Link header",
+            "bulk": true,
+            "scope": "read ACL on target table (applied after sysparm_limit)",
+            "rate_limit": "sysparm_limit default 10000; X-Total-Count header gives total",
+            "logged": "yes",
+            "log_event": "Transaction Log [syslog_transaction]",
+            "log_notes": "Each Table API GET logged as a REST transaction (URL, Output length, Created by, IP). Retention ~56 days default (weekly x8)"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/now/attachment/{sys_id}/file",
+            "reveals": "Binary file content of attachments; data exfiltration beyond field values",
+            "bulk": false,
+            "scope": "read on sys_attachment and target table",
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "Transaction Log [syslog_transaction]",
+            "log_notes": "Attachment download request logged as a transaction"
+          }
+        ],
+        "unknown": [
+          "Whether syslog_transaction records request/response bodies (docs do not confirm)",
+          "Whether REST transactions are retained the full 56 days on every instance (rotation configurable)"
+        ],
+        "evidence_refs": [
+          "fc-226db718",
+          "fc-80dbcdb2",
+          "fc-ff5fd1ed",
+          "fc-aef5a63c"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1f10b8d9",
+      "title": "Transaction logs (Zurich)",
+      "url": "https://www.servicenow.com/docs/r/zurich/platform-security/r_TransactionLogs.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-226db718",
+      "title": "Table API | ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/api-reference/rest-apis/c_TableAPI.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-38784ada",
+      "title": "Revoke an OAuth token",
+      "url": "https://www.servicenow.com/docs/r/8yND1KuvF7tjP~F577YThQ/hMCUQrOe2CEAjaIJdG03MA",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-52e15fdd",
+      "title": "Adaptive authentication (Brazil)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/adaptive-authentication.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-71e16f03",
+      "title": "IP address access control (Brazil)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/t_AccessControl.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-80dbcdb2",
+      "title": "Transaction logs",
+      "url": "https://www.servicenow.com/docs/r/platform-security/r_TransactionLogs.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-98b663b4",
+      "title": "Create the Client Credentials system property (Brazil)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/create-cc-sys-prop.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9b82e581",
+      "title": "REST API Auth Scope (Brazil)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/rest-api-auth-scope.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9ed7b57f",
+      "title": "Revoke an OAuth token (Zurich)",
+      "url": "https://www.servicenow.com/docs/r/zurich/platform-security/authentication/t_RevokeOAuthToken.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aef5a63c",
+      "title": "Attachment API | ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/api-reference/rest-apis/c_AttachmentAPI.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b1e9419d",
+      "title": "Revoke an OAuth token (Australia)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/t_RevokeOAuthToken.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b890f6dd",
+      "title": "Manage OAuth tokens (Australia)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/t_ManageTokens.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bfedae0f",
+      "title": "Create API access policy (Brazil)",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/create-api-access-policy.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e117ca6f",
+      "title": "Manage OAuth tokens",
+      "url": "https://www.servicenow.com/docs/r/8yND1KuvF7tjP~F577YThQ/tRbtHD1JlT~rcClYeZ2viA",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e7072946",
+      "title": "Manage OAuth tokens (Zurich)",
+      "url": "https://www.servicenow.com/docs/r/zurich/platform-security/authentication/t_ManageTokens.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ff5fd1ed",
+      "title": "Log history | ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/r_LogHistory.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search2",
+      "title": "OAuth Inbound - ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/oauth-inbound.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn1search7",
+      "title": "Create an endpoint for clients to access the instance",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/t_CreateEndpointforExternalClients.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn27search10",
+      "title": "REST API access policies - ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/inbound-authentication-profile.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn27search6",
+      "title": "API access policy - ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/api-access-policy.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn30search6",
+      "title": "Token-based authentication - ServiceNow",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/token-based-auth-api.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn31view2",
+      "title": "Configure API key - Token-based authentication",
+      "url": "https://www.servicenow.com/docs/r/platform-security/authentication/configure-api-key.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,562 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "jfrog",
+      "name": "JFrog",
+      "scope_notes": "Covers JFrog Platform (Cloud/SaaS). JFrog Cloud SaaS; IP allowlist, OIDC integration and MyJFrog API tokens need Enterprise X or Enterprise+, log streaming needs Enterprise+, Cloud Log Collection is on all SaaS licenses; several token thresholds are documented only as self-hosted YAML settings.",
+      "controls": [
+        {
+          "name": "Revoke Token by ID / Access Tokens page",
+          "effect": "revoke",
+          "applies_to": [
+            "jfrog-1",
+            "jfrog-2"
+          ],
+          "what": "Admin revokes any token; users revoke their own.",
+          "setting": "Administration > User Management > Access Tokens; DELETE /access/api/v1/tokens/{tokenId}",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-91713033"
+          ]
+        },
+        {
+          "name": "Revoke Token by Value",
+          "effect": "revoke",
+          "applies_to": [
+            "jfrog-1",
+            "jfrog-2"
+          ],
+          "what": "Admin revokes a leaked JWT or reference token by its value.",
+          "setting": "POST /access/api/v1/tokens/revoke",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4dae0227"
+          ]
+        },
+        {
+          "name": "Token default expiry",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "jfrog-1",
+            "jfrog-2"
+          ],
+          "what": "Sets the default expiry for new tokens.",
+          "setting": "PUT /access/api/v1/config/token/default_expiry",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-e23d8f15",
+            "fc-b5410fc6"
+          ]
+        },
+        {
+          "name": "token.max-expiry",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "jfrog-1",
+            "jfrog-2"
+          ],
+          "what": "Caps non-admin token lifetime and blocks non-expiring tokens when set above 0.",
+          "setting": "access.config YAML token.max-expiry (default 0 = no limit)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-b5410fc6"
+          ]
+        },
+        {
+          "name": "token.allow-refreshable",
+          "effect": "disable",
+          "applies_to": [
+            "jfrog-1"
+          ],
+          "what": "Stops creation of refreshable tokens.",
+          "setting": "access.config YAML token.allow-refreshable=false",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-b5410fc6"
+          ]
+        },
+        {
+          "name": "IP/CIDR Allowlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "jfrog-1",
+            "jfrog-2",
+            "jfrog-3",
+            "jfrog-4"
+          ],
+          "what": "Only listed IPs/JPDs can reach the JPD.",
+          "setting": "MyJFrog > Security > Allowlist; MyJFrog IP allowlist API",
+          "plan": "Enterprise X or Enterprise+",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-54c4dbf6"
+          ]
+        },
+        {
+          "name": "Disable/delete user (with SCIM)",
+          "effect": "revoke",
+          "applies_to": [
+            "jfrog-2",
+            "jfrog-1"
+          ],
+          "what": "Deleting or disabling a user revokes their identity tokens; SCIM pushes IdP deprovisioning.",
+          "setting": "User Management > Users; SCIM",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-b123d5cd",
+            "fc-f71d8e4b"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "jfrog-1",
+          "what": "Tokens with expiry shorter than the revocable threshold (default 6 hours) cannot be revoked.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-b5410fc6"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether SaaS customers can change token.max-expiry, token.allow-refreshable or revocable-expiry-threshold (documented only as Access YAML settings).",
+        "A setting to stop non-admin users creating identity tokens.",
+        "Default and maximum lifetime of UI-generated identity tokens.",
+        "Whether the IP allowlist covers the MyJFrog portal API.",
+        "Whether MyJFrog audit logs record API token generation (event names not listed).",
+        "Reference token length: Access Tokens page says 128 characters, Identity Tokens page says 64."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "jfrog-1",
+      "provider_id": "jfrog",
+      "name": "Access tokens (scoped tokens: admin, user, group and project scopes; reference token form)",
+      "family": "jwt",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "JWT issued by JFrog Access, sent as Bearer; a 'reference token' alias can be used as a password for basic auth. Admins can mint tokens for any subject, including non-existent (transient) users and CI jobs. Tokens can also authenticate on other JPDs in the same circle of trust.",
+        "evidence_refs": [
+          "fc-b5410fc6"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "Tokens are independent of the IdP session. Without SCIM, a user removed from the IdP can keep refreshing tokens.",
+        "evidence_refs": [
+          "fc-b5410fc6",
+          "fc-f71d8e4b"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "MyJFrog IP/CIDR allowlist blocks all traffic to the JPD from non-listed IPs (Enterprise X/Enterprise+). Off by default.",
+        "evidence_refs": [
+          "fc-54c4dbf6"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Default 1h; expiry 0 = never expires unless admin sets a max expiry",
+        "evidence_refs": [
+          "fc-b5410fc6"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "refreshable tokens can be refreshed by the holder",
+        "summary": "Optional refresh token; otherwise create a new token.",
+        "evidence_refs": [
+          "fc-b5410fc6"
+        ]
+      },
+      "administration": {
+        "summary": "Admins see and revoke all tokens (UI User Management > Access Tokens, or REST). Project admins can mint project tokens. Tokens shorter than the revocable threshold (default 6h) cannot be revoked.",
+        "conditions": "Max expiry, refreshable and revocable thresholds are documented as Access YAML settings; SaaS customer control not documented.",
+        "evidence_refs": [
+          "fc-b5410fc6",
+          "fc-91713033",
+          "fc-92db6d5b"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Tokens are not re-checked against the IdP; a user disabled in the IdP may still refresh tokens unless SCIM pushes the change.",
+          "evidence_refs": [
+            "fc-f71d8e4b"
+          ]
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "SCIM deprovisioning disables the user and blocks refreshes; JFrog says to revoke active tokens explicitly for immediate termination.",
+          "evidence_refs": [
+            "fc-f71d8e4b"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Administration > User Management > Access Tokens page and GET /access/api/v1/tokens (admins see all).",
+          "evidence_refs": [
+            "fc-92db6d5b",
+            "fc-b5410fc6"
+          ]
+        }
+      },
+      "how": {
+        "disable": {
+          "ui": null,
+          "api": null,
+          "cli": "Self-managed: set token.allow-refreshable: false in $JFROG_HOME/artifactory/var/etc/artifactory/access.config.latest.yml",
+          "evidence_refs": [
+            "fc-b5410fc6"
+          ]
+        },
+        "usage": {
+          "ui": "Administration > Artifactory > System Logs (access log; auth type field = TOKEN, filter by username). SaaS: download Audit Trail and Request logs from the jfrog-logs repository",
+          "api": "POST /access/api/v1/logshipping/config {\"enabled\": true} (enable Cloud Log Collection)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2304a161",
+            "fc-b9344161",
+            "fc-ed4d9658",
+            "fc-aabc563c"
+          ]
+        },
+        "reads": {
+          "ui": "Request log (jfrog-logs repo on SaaS): filter Request method=POST and Request URL containing api/search/aql, plus Username",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-b9344161",
+            "fc-ed4d9658",
+            "fc-d814cbc7"
+          ]
+        },
+        "kill": {
+          "ui": "Administration > User Management > Access Tokens > select token > Revoke",
+          "api": "DELETE /access/api/v1/tokens/{tokenId}; DELETE /access/api/v1/tokens/revoke (by token value)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-b5410fc6",
+            "fc-91713033",
+            "fc-4dae0227"
+          ]
+        },
+        "offboard": {
+          "ui": "Administration > User Management > Users (disable/delete user), then revoke the user's tokens under User Management > Access Tokens",
+          "api": "PATCH /access/api/v1/scim/v2/Users/{username} (disable) or DELETE /access/api/v2/users/{username}; then DELETE /access/api/v1/tokens/{tokenId}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-f71d8e4b",
+            "fc-fafeaa51",
+            "fc-fe770e49",
+            "fc-16e5bc2e",
+            "fc-b5410fc6",
+            "fc-91713033"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "cmVmd",
+          "notes": "Reference tokens start with cmVmd; full tokens are JWTs (eyJ...)."
+        },
+        "log_sources": [
+          {
+            "name": "Audit Trail Log (access-security-audit)",
+            "notes": "Token create/update/delete; via Cloud Log Collection (all SaaS licenses, jfrog-logs repo, up to 24h delay) or Log Streaming (Enterprise+)."
+          },
+          {
+            "name": "Artifactory Request Log",
+            "notes": "Every HTTP request with username and remote address."
+          },
+          {
+            "name": "Artifactory Access Log",
+            "notes": "Logins, deploys with auth type APIKEY or TOKEN; SaaS omits DOWNLOAD events by default."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Entity Name (TKN)",
+            "log": "Audit Trail Log",
+            "notes": "Token entity; exact ID content not documented."
+          },
+          {
+            "field": "token_id / last_used",
+            "log": "Get Tokens API",
+            "notes": "Inventory, not a log."
+          },
+          {
+            "field": "Username",
+            "log": "Request Log",
+            "notes": "No token ID field."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "C TKN",
+            "stage": "create",
+            "notes": "Event Type C on entity TKN."
+          },
+          {
+            "event": "D TKN",
+            "stage": "revoke",
+            "notes": "Event Type D on entity TKN."
+          },
+          {
+            "event": "ACCEPTED LOGIN",
+            "stage": "use",
+            "notes": "Access log with type TOKEN."
+          }
+        ],
+        "correlation_keys": [
+          "username/subject",
+          "Trace ID",
+          "remote IP"
+        ],
+        "anomaly_cues": [
+          "Tokens with no expiry or for transient subjects",
+          "Admin-scoped tokens created outside change windows",
+          "Large AQL queries or mass downloads in the request log"
+        ],
+        "containment": {
+          "steps": "Revoke by ID or by value; disable the user; for refreshable tokens without SCIM, disable the JFrog user directly.",
+          "kills_existing": "partial",
+          "notes": "Tokens below the revocable threshold (default 6h) cannot be revoked and run to expiry."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact token identifier in audit trail entries"
+        ],
+        "evidence_refs": [
+          "fc-b5410fc6",
+          "fc-b123d5cd",
+          "fc-aabc563c",
+          "fc-2304a161",
+          "fc-036a31be",
+          "fc-b9344161",
+          "fc-ed4d9658",
+          "fc-92db6d5b",
+          "fc-4dae0227"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /access/api/v1/tokens/me",
+            "reveals": "current token's subject, scope, expiry",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Request log records all HTTP requests."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /artifactory/api/repositories",
+            "reveals": "repository list",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Request log."
+          },
+          {
+            "stage": "collection",
+            "call": "POST /artifactory/api/search/aql",
+            "reveals": "artifact metadata across repos",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Request log; body not logged per documented fields."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-036a31be",
+          "fc-ed4d9658",
+          "fc-255ebb40",
+          "fc-a8def87a",
+          "fc-d814cbc7"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-036a31be",
+      "title": "JFrog Cloud Log Streaming",
+      "url": "https://docs.jfrog.com/administration/docs/jfrog-cloud-log-streaming",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-16e5bc2e",
+      "title": "Delete User",
+      "url": "https://docs.jfrog.com/administration/reference/deleteuser",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2304a161",
+      "title": "Access Log",
+      "url": "https://docs.jfrog.com/administration/docs/access-log",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-255ebb40",
+      "title": "Get Token by ID",
+      "url": "https://docs.jfrog.com/administration/reference/gettokenbyid",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4dae0227",
+      "title": "Revoke Token by Value",
+      "url": "https://docs.jfrog.com/administration/reference/revoketokenbyvalue",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-54c4dbf6",
+      "title": "Configure Cloud Security",
+      "url": "https://docs.jfrog.com/administration/docs/configure-cloud-security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-91713033",
+      "title": "Revoke Token by ID",
+      "url": "https://docs.jfrog.com/administration/reference/revoketokenbyid",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-92db6d5b",
+      "title": "Get Tokens",
+      "url": "https://docs.jfrog.com/administration/reference/gettokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8def87a",
+      "title": "Get Repositories by Type and Project",
+      "url": "https://docs.jfrog.com/artifactory/reference/getrepositoriesbytypeandproject",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aabc563c",
+      "title": "Audit Trail Log",
+      "url": "https://docs.jfrog.com/administration/docs/audit-trail-log",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b123d5cd",
+      "title": "Identity Tokens",
+      "url": "https://docs.jfrog.com/user-management/docs/identity-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b5410fc6",
+      "title": "Access Tokens",
+      "url": "https://docs.jfrog.com/administration/docs/access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9344161",
+      "title": "Cloud Log Collection",
+      "url": "https://docs.jfrog.com/administration/docs/cloud-log-collection",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d814cbc7",
+      "title": "Artifactory Query Language (AQL)",
+      "url": "https://docs.jfrog.com/artifactory/reference/searchaql",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e23d8f15",
+      "title": "Put Token Default Expiry Value",
+      "url": "https://docs.jfrog.com/administration/reference/settokendefaultexpiry",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed4d9658",
+      "title": "Log Files Location and Naming",
+      "url": "https://docs.jfrog.com/administration/docs/log-files-location-and-naming",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f71d8e4b",
+      "title": "JFrog Authentication and Token Management Overview",
+      "url": "https://docs.jfrog.com/administration/docs/jfrog-authentication-and-token-management-overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fafeaa51",
+      "title": "DISABLE User (SCIM)",
+      "url": "https://docs.jfrog.com/administration/reference/patchscimuser",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fe770e49",
+      "title": "Manage Users",
+      "url": "https://docs.jfrog.com/administration/docs/manage-users-2",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

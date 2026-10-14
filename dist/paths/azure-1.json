@@ -1,0 +1,462 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "azure",
+      "name": "Microsoft Azure",
+      "scope_notes": "Covers Microsoft Azure (Azure Storage, Azure Resource Manager, Microsoft Entra Workload ID, Azure DevOps Services). Azure Storage and ARM controls are per subscription/account; Conditional Access for workload identities needs Workload Identities Premium; Azure DevOps PAT policies need an Entra-backed organization. Entra delegated/app-only OAuth for Graph and managed identities are covered by the separate microsoft platform.",
+      "controls": [
+        {
+          "name": "Allow storage account key access (AllowSharedKeyAccess = false)",
+          "effect": "disable",
+          "applies_to": [
+            "azure-1",
+            "azure-2"
+          ],
+          "what": "Rejects all requests authorized with account keys, including account and service SAS; user delegation SAS still works.",
+          "setting": "Storage account > Configuration > Allow storage account key access; ARM property allowSharedKeyAccess",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-722fbc0c"
+          ]
+        },
+        {
+          "name": "Azure Policy: Storage accounts should prevent shared key access",
+          "effect": "disable",
+          "applies_to": [
+            "azure-1",
+            "azure-2"
+          ],
+          "what": "Audits or prevents storage accounts that permit Shared Key authorization.",
+          "setting": "Azure Policy assignment",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-722fbc0c"
+          ]
+        },
+        {
+          "name": "Regenerate key (RegenerateKey)",
+          "effect": "revoke",
+          "applies_to": [
+            "azure-1",
+            "azure-2"
+          ],
+          "what": "Replaces an account key and revokes SAS signed with that key.",
+          "setting": "Storage account > Access keys > Rotate key; POST .../regenerateKey",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-16c4599c",
+            "fc-be5920ad"
+          ]
+        },
+        {
+          "name": "Key expiration policy",
+          "effect": "require_rotation",
+          "applies_to": [
+            "azure-1"
+          ],
+          "what": "Shows a reminder and enables Azure Policy compliance checks when keys are not rotated in the interval; does not disable keys.",
+          "setting": "Storage account > Security + networking > Access keys > Set rotation reminder",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-16c4599c"
+          ]
+        },
+        {
+          "name": "Storage firewall network rules",
+          "effect": "limit_network",
+          "applies_to": [
+            "azure-1",
+            "azure-2"
+          ],
+          "what": "Limits which IPs, VNets and resource instances can reach the account endpoint.",
+          "setting": "Storage account > Networking",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-fe0e4c61"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "azure-1",
+          "what": "Key expiration policy only reminds; keys never expire.",
+          "kind": "expiry",
+          "evidence_refs": [
+            "fc-16c4599c"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether Azure Activity Log records the service principal identity for ARM read calls made with azure-3/azure-4 tokens (Activity log typically skips reads).",
+        "Exact Entra audit activity name for adding/removing a federated identity credential.",
+        "Default of the Azure DevOps \"IP Conditional Access policy validation on non-interactive flows\" policy.",
+        "Maximum Azure DevOps PAT lifetime when no tenant policy is set.",
+        "Token format or prefix for storage keys, SAS, client secrets or Azure DevOps PATs.",
+        "Whether app management policies require a specific license."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "azure-1",
+      "provider_id": "azure",
+      "name": "Storage account access keys (Shared Key)",
+      "family": "hmac",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Two account keys (key1/key2) per storage account; requests are HMAC-SHA256 signed in the SharedKey Authorization header. Keys give full data access and can mint SAS tokens.",
+        "evidence_refs": [
+          "fc-16c4599c",
+          "fc-955c09bb"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Shared Key does not use Microsoft Entra ID, so Entra Conditional Access does not apply; docs say Shared Key must be disallowed to protect an account with Conditional Access.",
+        "evidence_refs": [
+          "fc-722fbc0c"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Storage firewall network rules (IP, VNet, resource instance, trusted services) apply to requests to the account endpoint; default allows any network.",
+        "evidence_refs": [
+          "fc-fe0e4c61"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "No expiry; key expiration policy only shows a rotation reminder",
+        "evidence_refs": [
+          "fc-16c4599c"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "Keys stay valid until regenerated; rotate by switching to the second key, then regenerating the first.",
+        "evidence_refs": [
+          "fc-16c4599c"
+        ]
+      },
+      "administration": {
+        "summary": "Anyone with Microsoft.Storage/storageAccounts/listkeys/action can read keys. Admins can disallow Shared Key per account (AllowSharedKeyAccess=false) and enforce that with Azure Policy.",
+        "conditions": "Shared Key is allowed when the property is unset.",
+        "evidence_refs": [
+          "fc-16c4599c",
+          "fc-722fbc0c"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Docs say Conditional Access protects a storage account only after Shared Key authorization is disallowed.",
+          "evidence_refs": [
+            "fc-722fbc0c"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The two access keys belong to the storage account, not to a user.",
+          "evidence_refs": [
+            "fc-16c4599c"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Each account has exactly two keys, listed under Security + networking > Access keys or with az storage account keys list (per account).",
+          "evidence_refs": [
+            "fc-16c4599c"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Storage account > Monitoring > Diagnostic settings: send StorageBlobLogs to a Log Analytics workspace; then Logs: StorageBlobLogs | where AuthenticationType == \"AccountKey\"; group by AuthenticationHash to tell keys apart",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-722fbc0c",
+            "fc-e013ea13"
+          ]
+        },
+        "reads": {
+          "ui": "Log Analytics (after diagnostic setting): StorageBlobLogs | where AuthenticationType == \"AccountKey\" and OperationName == \"GetBlob\"",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-722fbc0c",
+            "fc-7801a81e",
+            "fc-e013ea13"
+          ]
+        },
+        "kill": {
+          "ui": "Storage account > Security + networking > Access keys > Regenerate (each key); or Settings > Configuration > Allow storage account key access = Disabled",
+          "api": "POST https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/regenerateKey",
+          "cli": "az storage account keys renew --resource-group <rg> --account-name <account> --key primary (then --key secondary); or az storage account update --name <account> --resource-group <rg> --allow-shared-key-access false",
+          "evidence_refs": [
+            "fc-16c4599c",
+            "fc-be5920ad",
+            "fc-722fbc0c"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Azure Activity Log",
+            "notes": "Control-plane writes/actions (e.g. listKeys, regenerateKey); 90 days free; reads typically not captured."
+          },
+          {
+            "name": "Azure Storage resource logs (StorageBlobLogs)",
+            "notes": "Data-plane requests incl. AuthenticationType and AuthenticationHash; not collected until a diagnostic setting routes them."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "AuthenticationHash",
+            "log": "StorageBlobLogs",
+            "notes": "key1|key2 plus SHA-256 hash of key."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Microsoft.Storage/storageAccounts/listkeys/action",
+            "stage": "create",
+            "notes": "Key read via ARM."
+          },
+          {
+            "event": "Microsoft.Storage/storageAccounts/regeneratekey/action",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "AuthenticationHash",
+          "CallerIpAddress",
+          "AccountName"
+        ],
+        "anomaly_cues": [
+          "AccountKey requests from new IPs",
+          "listKeys by an unusual principal"
+        ],
+        "containment": {
+          "steps": "Regenerate the exposed key (and the other if unsure); or set AllowSharedKeyAccess=false.",
+          "kills_existing": "yes",
+          "notes": "Regenerating also revokes SAS signed with that key; dependent apps break."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-16c4599c",
+          "fc-722fbc0c",
+          "fc-11e5a751",
+          "fc-3255e45c",
+          "fc-425d48c0",
+          "fc-fbfd318a"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "GET https://{account}.blob.core.windows.net/?comp=list",
+            "reveals": "All containers",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "StorageBlobLogs only if diagnostic setting configured."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET https://{account}.blob.core.windows.net/{container}?restype=container&comp=list",
+            "reveals": "Blob names",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Same."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://{account}.blob.core.windows.net/{container}/{blob}",
+            "reveals": "Blob contents",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Same."
+          }
+        ],
+        "unknown": [
+          "No whoami call for Shared Key or SAS."
+        ],
+        "evidence_refs": [
+          "fc-3255e45c",
+          "fc-9da5e9a2",
+          "fc-8211d8c0",
+          "fc-afe1b0ea"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Azure Storage Account Keys Listed",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_storage_account_keys_listed.yml",
+          "detects": "Storage account access keys were listed."
+        },
+        {
+          "source": "Panther",
+          "title": "Azure Storage Account Key Regenerated",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_storage_account_key_regenerated.yml",
+          "detects": "A storage account access key was regenerated."
+        },
+        {
+          "source": "Panther",
+          "title": "Azure Storage Account Shared Key Access Enabled",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_storage_account_key_access_enabled.yml",
+          "detects": "Shared key access was turned on for an existing storage account (allowSharedKeyAccess true)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-11e5a751",
+      "title": "Azure Blob Storage Monitoring Metrics and Logs Reference | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/blobs/monitor-blob-storage-reference",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-16c4599c",
+      "title": "Manage account access keys - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3255e45c",
+      "title": "Monitor Azure Blob Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/blobs/monitor-blob-storage",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-425d48c0",
+      "title": "Azure permissions for Storage - Azure RBAC | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/storage",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-722fbc0c",
+      "title": "Prevent authorization with Shared Key - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/common/shared-key-authorization-prevent",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7801a81e",
+      "title": "Storage Analytics logged operations and status messages",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/storage-analytics-logged-operations-and-status-messages",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8211d8c0",
+      "title": "List Blobs (REST API) - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-955c09bb",
+      "title": "Authorize with Shared Key (REST API) - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/authorize-with-shared-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9da5e9a2",
+      "title": "List Containers (REST API) - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/list-containers2",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-afe1b0ea",
+      "title": "Get Blob (REST API) - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-be5920ad",
+      "title": "Storage Accounts - Regenerate Key - REST API (Azure Storage Resource Provider) | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storagerp/storage-accounts/regenerate-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e013ea13",
+      "title": "Azure Monitor Logs reference - StorageBlobLogs - Azure Monitor | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/storagebloblogs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fbfd318a",
+      "title": "Activity Log in Azure Monitor - Azure Monitor | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fe0e4c61",
+      "title": "Azure Storage firewall rules and network access | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/common/storage-network-security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

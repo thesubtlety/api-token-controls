@@ -1,0 +1,618 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "snowflake",
+      "name": "Snowflake",
+      "scope_notes": "Avoid treating default PAT safeguards as immutable. Verify client/driver and cloud support for federation.",
+      "controls": [
+        {
+          "name": "Authentication policy AUTHENTICATION_METHODS",
+          "effect": "disable",
+          "applies_to": [
+            "snowflake-1",
+            "snowflake-3",
+            "snowflake-4",
+            "snowflake-5"
+          ],
+          "what": "Allow-list of auth methods; omitting PROGRAMMATIC_ACCESS_TOKEN, KEYPAIR, WORKLOAD_IDENTITY or OAUTH blocks that method for the account or user.",
+          "setting": "CREATE/ALTER AUTHENTICATION POLICY ... AUTHENTICATION_METHODS; ALTER ACCOUNT/USER SET AUTHENTICATION POLICY",
+          "plan": "not stated",
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-7efd1500"
+          ],
+          "quote": "PROGRAMMATIC_ACCESS_TOKEN: Allows users to authenticate with a programmatic access token."
+        },
+        {
+          "name": "PAT_POLICY MAX_EXPIRY_IN_DAYS / DEFAULT_EXPIRY_IN_DAYS",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "snowflake-1"
+          ],
+          "what": "Sets the default (15 days) and maximum (365 days) PAT lifetime; lowering the max breaks longer existing tokens.",
+          "setting": "Authentication policy PAT_POLICY",
+          "plan": "not stated",
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-7efd1500"
+          ],
+          "quote": "Specifies the maximum number of days that can be set for the expiration time for a programmatic access token."
+        },
+        {
+          "name": "PAT network policy requirement (NETWORK_POLICY_EVALUATION)",
+          "effect": "limit_network",
+          "applies_to": [
+            "snowflake-1"
+          ],
+          "what": "By default a user must be subject to a network policy to create or use PATs; admins can relax this.",
+          "setting": "Authentication policy PAT_POLICY NETWORK_POLICY_EVALUATION (ENFORCED_REQUIRED default)",
+          "plan": "not stated",
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search13"
+          ],
+          "quote": "the user must be subject to a network policy with one or more network rules to generate or use programmatic access tokens"
+        },
+        {
+          "name": "PAT role restriction requirement",
+          "effect": "limit_scope",
+          "applies_to": [
+            "snowflake-1"
+          ],
+          "what": "Service-user PATs must name a single role by default; admins can also require it for person users.",
+          "setting": "PAT_POLICY REQUIRE_ROLE_RESTRICTION_FOR_SERVICE_USERS / REQUIRE_ROLE_RESTRICTION_FOR_PERSON_USERS",
+          "plan": "not stated",
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search13"
+          ],
+          "quote": "you must specify the role that will be used during sessions authenticated with that token."
+        },
+        {
+          "name": "MODIFY PROGRAMMATIC AUTHENTICATION METHODS privilege",
+          "effect": "limit_resources",
+          "applies_to": [
+            "snowflake-1",
+            "snowflake-3",
+            "snowflake-4"
+          ],
+          "what": "Only roles with OWNERSHIP or this privilege on a user can manage that user's PATs, key pairs or workload identities.",
+          "setting": "GRANT MODIFY PROGRAMMATIC AUTHENTICATION METHODS ON USER ... TO ROLE",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search13"
+          ],
+          "quote": "you must use a role that has the OWNERSHIP or MODIFY PROGRAMMATIC AUTHENTICATION METHODS privilege on that user."
+        },
+        {
+          "name": "Disable / revoke PAT",
+          "effect": "revoke",
+          "applies_to": [
+            "snowflake-1"
+          ],
+          "what": "Admins can disable or remove a PAT; disabling a user's login disables their PATs.",
+          "setting": "ALTER USER ... MODIFY / REMOVE PROGRAMMATIC ACCESS TOKEN",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "turn5search13"
+          ],
+          "quote": "You cannot recover a programmatic access token after you revoke it."
+        },
+        {
+          "name": "Network policies (account / user / security integration)",
+          "effect": "limit_network",
+          "applies_to": [
+            "snowflake-1",
+            "snowflake-2",
+            "snowflake-3",
+            "snowflake-4",
+            "snowflake-5"
+          ],
+          "what": "Restrict inbound access by IP or private endpoint; integration-level policy overrides user and account policies.",
+          "setting": "CREATE NETWORK POLICY; ALTER ACCOUNT/USER/SECURITY INTEGRATION SET NETWORK_POLICY",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-87ff0aac"
+          ],
+          "quote": "the most specific network policy overrides more general network policies."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Edition requirements for authentication policies are not stated on the reference pages.",
+        "Whether Snowflake OAuth (as opposed to External OAuth) can be disallowed via AUTHENTICATION_METHODS; the OAUTH value is documented as 'Allows External OAuth'.",
+        "No account-wide policy found to force named key pairs or cap key-pair lifetime; legacy RSA_PUBLIC_KEY keys never expire.",
+        "Docs differ on how to unblock privileged roles for custom OAuth clients (account parameter vs Snowflake Support).",
+        "Whether the WIF quote 'disable it' covers the DEFAULT identity (docs say DEFAULT must use SET/UNSET WORKLOAD_IDENTITY)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "snowflake-1",
+      "provider_id": "snowflake",
+      "name": "Programmatic access token",
+      "family": "pat",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Snowflake OAuth/External OAuth, key-pair JWT, programmatic access tokens (PATs), and workload identity federation.",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Account/user network policies. By default PERSON and SERVICE users need a network policy to use a PAT; SERVICE_AGENT users do not. Authentication policy NETWORK_POLICY_EVALUATION can drop the requirement or skip enforcement.",
+        "evidence_refs": [
+          "turn5search13",
+          "turn16search12"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 1296000,
+        "maximum_seconds": 31536000,
+        "configurable": "yes",
+        "summary": "Default 15 days; default max 365 days",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not_applicable",
+        "summary": "No refresh; rotate the PAT (new secret, extended expiry) or generate a new one. Lowering the policy maximum makes existing longer-lived PATs fail.",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24"
+        ]
+      },
+      "administration": {
+        "summary": "Authentication policies restrict auth methods/security integrations; RBAC and PAT role restriction, blocked roles, expiry/revocation.",
+        "conditions": "Avoid treating default PAT safeguards as immutable. Verify client/driver and cloud support for federation.",
+        "evidence_refs": [
+          "turn5search13",
+          "turn16search12"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Disabling a user, which is what Okta SCIM deactivation does, automatically disables the user's PATs and aborts the user's running queries.",
+          "evidence_refs": [
+            "turn5search13",
+            "fc-817b452f",
+            "fc-c0be79cd"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "SNOWFLAKE.ACCOUNT_USAGE.CREDENTIALS WHERE type = 'PAT' lists PATs for all users.",
+          "evidence_refs": [
+            "turn5search13"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Snowsight > Governance & security > Users & roles > (user) > Programmatic access tokens (per user)",
+          "api": null,
+          "cli": "SQL: SELECT * FROM SNOWFLAKE.ACCOUNT_USAGE.CREDENTIALS WHERE type = 'PAT'; per user: SHOW USER PROGRAMMATIC ACCESS TOKENS FOR USER <name>",
+          "evidence_refs": [
+            "fc-6ad68624",
+            "turn5search13",
+            "fc-2ab95aab"
+          ]
+        },
+        "disable": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: CREATE AUTHENTICATION POLICY <p> AUTHENTICATION_METHODS = (... without 'PROGRAMMATIC_ACCESS_TOKEN'); ALTER ACCOUNT|USER <name> SET AUTHENTICATION POLICY <policy>",
+          "evidence_refs": [
+            "fc-7efd1500",
+            "turn16search12"
+          ]
+        },
+        "network": {
+          "ui": "Snowsight > Governance & security > Network policies > Network Policies tab > + Network Policy, then activate",
+          "api": null,
+          "cli": "SQL: ALTER USER|ACCOUNT ... SET NETWORK_POLICY = <np>; PAT requirement: ALTER AUTHENTICATION POLICY <p> SET PAT_POLICY = (NETWORK_POLICY_EVALUATION = ENFORCED_REQUIRED)",
+          "evidence_refs": [
+            "fc-87ff0aac",
+            "turn5search13"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: ALTER AUTHENTICATION POLICY <p> SET PAT_POLICY = (DEFAULT_EXPIRY_IN_DAYS = n MAX_EXPIRY_IN_DAYS = m); per-token expiry: EXPIRATION_DATE in ACCOUNT_USAGE.CREDENTIALS",
+          "evidence_refs": [
+            "turn5search13",
+            "fc-7efd1500",
+            "fc-6ad68624"
+          ]
+        },
+        "usage": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY WHERE first_authentication_factor_id = '<CREDENTIAL_ID from CREDENTIALS>'",
+          "evidence_refs": [
+            "turn5search13",
+            "fc-a3c06820",
+            "fc-6ad68624"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: SELECT ... FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah JOIN QUERY_HISTORY qh USING (query_id) JOIN LOGIN_HISTORY lh ON qh.authn_event_id = lh.event_id WHERE lh.first_authentication_factor_id = '<pat_credential_id>' (or join SESSIONS on login_event_id)",
+          "evidence_refs": [
+            "fc-c4392740",
+            "fc-26b6697e",
+            "fc-69a9e246",
+            "turn5search13"
+          ]
+        },
+        "offboard": {
+          "ui": "Snowsight > Governance & security > Users & roles > (user) ... > Disable User",
+          "api": "PATCH /scim/v2/Users/{id} with {\"op\":\"replace\",\"value\":{\"active\":false}}",
+          "cli": "ALTER USER <name> SET DISABLED = TRUE",
+          "evidence_refs": [
+            "fc-5a418c44",
+            "fc-c0be79cd",
+            "fc-d32994ba",
+            "fc-817b452f",
+            "turn5search13"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Format not published. GitHub detects it as secret type snowflake_programmatic_access_token (partner + push protection) but does not publish the regex. Sent as Authorization: Bearer; SQL API token type PROGRAMMATIC_ACCESS_TOKEN."
+        },
+        "log_sources": [
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY",
+            "notes": "Successful and failed logins, 365 days, up to 2h latency. INFORMATION_SCHEMA LOGIN_HISTORY table functions cover 7 days. PAT logins have FIRST_AUTHENTICATION_FACTOR = PROGRAMMATIC_ACCESS_TOKEN."
+          },
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.SESSIONS",
+            "notes": "One row per session, 1 year, up to 3h latency; links to login via LOGIN_EVENT_ID. Does not track SQL API transient sessions."
+          },
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY",
+            "notes": "Queries per SESSION_ID with AUTHN_EVENT_ID, 365 days, up to 45 min latency."
+          },
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.CREDENTIALS",
+            "notes": "Current credential inventory (PAT, KEYPAIR, WIF types) with LAST_USED_ON; up to 2h latency; deleted credentials are not included. PAT rows have TYPE 'PAT'; ADDITIONAL_DETAILS has ROLE_RESTRICTION, ROTATED_TO."
+          },
+          {
+            "name": "GitHub secret scanning partner program",
+            "notes": "Leaked PATs in public GitHub repos are reported to Snowflake, which auto-disables them."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "FIRST_AUTHENTICATION_FACTOR_ID",
+            "log": "LOGIN_HISTORY",
+            "notes": "Credential ID of the PAT used; join to CREDENTIALS.CREDENTIAL_ID."
+          },
+          {
+            "field": "CREDENTIAL_ID",
+            "log": "CREDENTIALS",
+            "notes": "System ID of the PAT."
+          },
+          {
+            "field": "NAME",
+            "log": "CREDENTIALS",
+            "notes": "PAT name chosen at creation."
+          },
+          {
+            "field": "PAT_NAME",
+            "log": "SYSTEM$DECODE_PAT output",
+            "notes": "Name of the PAT for a given secret (with USER_NAME, STATE)."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "ALTER USER … ADD PROGRAMMATIC ACCESS TOKEN",
+            "stage": "create",
+            "notes": "SQL command; find in QUERY_HISTORY.QUERY_TEXT. Default expiry 15 days, max 365."
+          },
+          {
+            "event": "PROGRAMMATIC_ACCESS_TOKEN",
+            "stage": "use",
+            "notes": "FIRST_AUTHENTICATION_FACTOR value in LOGIN_HISTORY (success and failure)."
+          },
+          {
+            "event": "ALTER USER … ROTATE PROGRAMMATIC ACCESS TOKEN",
+            "stage": "change",
+            "notes": "New secret, same name; old secret expires per EXPIRE_ROTATED_TOKEN_AFTER_HOURS."
+          },
+          {
+            "event": "ALTER USER … MODIFY PROGRAMMATIC ACCESS TOKEN",
+            "stage": "change",
+            "notes": "Sets DISABLED and other properties."
+          },
+          {
+            "event": "ALTER USER … REMOVE PROGRAMMATIC ACCESS TOKEN",
+            "stage": "revoke",
+            "notes": "Irreversible."
+          }
+        ],
+        "correlation_keys": [
+          "USER_NAME",
+          "CLIENT_IP",
+          "REPORTED_CLIENT_TYPE",
+          "REPORTED_CLIENT_VERSION",
+          "EVENT_ID",
+          "LOGIN_EVENT_ID",
+          "SESSION_ID",
+          "AUTHN_EVENT_ID",
+          "CLIENT_APPLICATION_ID",
+          "FIRST_AUTHENTICATION_FACTOR_ID",
+          "CREDENTIAL_ID",
+          "CREATED_BY"
+        ],
+        "anomaly_cues": [
+          "PAT login from a CLIENT_IP never seen for that FIRST_AUTHENTICATION_FACTOR_ID",
+          "PAT created by a CREATED_BY user different from the token owner, especially on a service user",
+          "PAT created with long expiry (near 365 days) or with network policy bypass (ADDITIONAL_DETAILS.MINS_TO_BYPASS_NETWORK_POLICY_REQUIREMENT)",
+          "Burst of failed PROGRAMMATIC_ACCESS_TOKEN logins against many users",
+          "PAT use right after creation from an IP unlike the creator's session",
+          "CREDENTIALS STATUS = DISABLED from GitHub auto-disable: review earlier use of that token"
+        ],
+        "containment": {
+          "steps": "Identify owner of a found secret with SELECT SYSTEM$DECODE_PAT('<secret>'); run ALTER USER <u> REMOVE PROGRAMMATIC ACCESS TOKEN <name> (or MODIFY … SET DISABLED = TRUE to preserve for review). For wider compromise, ALTER USER <u> SET DISABLED = TRUE, which aborts running queries and disables the user's PATs.",
+          "kills_existing": "unknown",
+          "notes": "Docs do not say whether sessions opened with a PAT end on removal. ALTER USER SET DISABLED = TRUE aborts running queries. Removed PATs drop out of CREDENTIALS, so snapshot the row before removing."
+        },
+        "sample_query": {
+          "language": "Snowflake SQL (ACCOUNT_USAGE)",
+          "query": "SELECT login.event_timestamp, login.user_name, login.client_ip, cred.name, cred.created_by FROM SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY login JOIN SNOWFLAKE.ACCOUNT_USAGE.CREDENTIALS cred ON login.first_authentication_factor_id = cred.credential_id WHERE login.first_authentication_factor = 'PROGRAMMATIC_ACCESS_TOKEN' AND login.event_timestamp > DATEADD(day,-30,CURRENT_TIMESTAMP()) ORDER BY login.event_timestamp DESC;",
+          "purpose": "List PAT logins with token name, creator and source IP for the last 30 days."
+        },
+        "unknown": [
+          "PAT secret prefix/regex",
+          "SESSIONS.AUTHENTICATION_METHOD value for PAT sessions",
+          "Whether existing sessions end when a PAT is removed or disabled",
+          "Native audit event name for PAT create/remove beyond QUERY_HISTORY text"
+        ],
+        "evidence_refs": [
+          "turn5search13",
+          "fc-87c7a3e7",
+          "fc-846e1fd4",
+          "fc-a3c06820",
+          "fc-69a9e246",
+          "fc-26b6697e",
+          "fc-6ad68624",
+          "fc-c0be79cd",
+          "fc-5371b82a"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /api/v2/statements (SELECT)",
+            "reveals": "Any table data the token's role can read",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "QUERY_HISTORY view (join SESSIONS and LOGIN_HISTORY.first_authentication_factor_id to tie queries to the PAT)",
+            "log_notes": "QUERY_HISTORY keeps 365 days. ACCESS_HISTORY (objects and columns read) needs Enterprise Edition."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-6de35438",
+          "fc-5371b82a",
+          "fc-26b6697e",
+          "fc-a3c06820",
+          "turn5search13",
+          "fc-e3e502a4"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-26b6697e",
+      "title": "QUERY_HISTORY view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/query_history",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2ab95aab",
+      "title": "SHOW USER PROGRAMMATIC ACCESS TOKENS",
+      "url": "https://docs.snowflake.com/en/sql-reference/sql/show-user-programmatic-access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5371b82a",
+      "title": "Authenticating to the server (SQL API) - Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/developer-guide/sql-api/authenticating",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5a418c44",
+      "title": "User management",
+      "url": "https://docs.snowflake.com/en/user-guide/admin-user-management",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69a9e246",
+      "title": "SESSIONS view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/sessions",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6ad68624",
+      "title": "CREDENTIALS view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/credentials",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6de35438",
+      "title": "Submitting a request to execute SQL statements",
+      "url": "https://docs.snowflake.com/en/developer-guide/sql-api/submitting-requests",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7efd1500",
+      "title": "CREATE AUTHENTICATION POLICY | Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/sql-reference/sql/create-authentication-policy",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-817b452f",
+      "title": "Okta SCIM integration",
+      "url": "https://docs.snowflake.com/en/user-guide/scim-okta",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-87c7a3e7",
+      "title": "SYSTEM$DECODE_PAT",
+      "url": "https://docs.snowflake.com/en/sql-reference/functions/system_decode_pat",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-87ff0aac",
+      "title": "Controlling network traffic with network policies | Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/network-policies",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a3c06820",
+      "title": "LOGIN_HISTORY view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/login_history",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c0be79cd",
+      "title": "ALTER USER",
+      "url": "https://docs.snowflake.com/en/sql-reference/sql/alter-user",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c4392740",
+      "title": "ACCESS_HISTORY view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/access_history",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d32994ba",
+      "title": "SCIM user API reference",
+      "url": "https://docs.snowflake.com/en/user-guide/scim-user-api-reference",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e3e502a4",
+      "title": "Access History",
+      "url": "https://docs.snowflake.com/en/user-guide/access-history",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn16search12",
+      "title": "Authentication policies - Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/authentication-policies",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn16search24",
+      "title": "Overview of Snowflake authentication",
+      "url": "https://docs.snowflake.com/en/user-guide/security-authentication-overview",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search1",
+      "title": "Workload identity federation | Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/workload-identity-federation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search13",
+      "title": "Using programmatic access tokens for authentication | Snowflake ...",
+      "url": "https://docs.snowflake.com/en/user-guide/programmatic-access-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

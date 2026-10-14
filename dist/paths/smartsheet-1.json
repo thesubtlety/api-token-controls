@@ -1,0 +1,708 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "smartsheet",
+      "name": "Smartsheet",
+      "scope_notes": "API tokens need Business/Enterprise/AWM; SAML, token expiration and Directory Integration are Enterprise; Event Reporting is an Enterprise/AWM add-on; Gov and Regions use separate tokens.",
+      "controls": [
+        {
+          "name": "API Access Token expiration period",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "smartsheet-1",
+            "smartsheet-2"
+          ],
+          "what": "Sets one expiration for all existing and future user and OAuth tokens in the plan; expired tokens are revoked.",
+          "setting": "Admin Center > Security & Control > API Access Token tile > Expiration period",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-3be48ac5"
+          ],
+          "quote": "Once a System Admin sets expiration times, all existing and future tokens within the plan adhere to this duration and are automatically revoked upon expiration."
+        },
+        {
+          "name": "Revoke (delete) API access token",
+          "effect": "revoke",
+          "applies_to": [
+            "smartsheet-1"
+          ],
+          "what": "User deletes their own token in the UI.",
+          "setting": "Account > Personal Settings > API Access > Manage API Access Tokens",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-f681399d"
+          ],
+          "quote": "You can also revoke (delete) API access tokens in the  API Access  >  Manage API Access Tokens  page."
+        },
+        {
+          "name": "Revoke access token (DELETE /token)",
+          "effect": "revoke",
+          "applies_to": [
+            "smartsheet-1",
+            "smartsheet-2"
+          ],
+          "what": "Revokes the token used to make the call; later calls with it fail.",
+          "setting": "DELETE /token",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-de04292b"
+          ],
+          "quote": "Revokes the access token used to make this request. The access token is no longer valid, and subsequent API calls made using the token fail."
+        },
+        {
+          "name": "Deactivate user",
+          "effect": "revoke",
+          "applies_to": [
+            "smartsheet-1"
+          ],
+          "what": "Blocks the user and immediately revokes all API access tokens they generated.",
+          "setting": "Admin Center > Users and Groups > Seat Types and True-up > Deactivate; or POST /users/{userId}/deactivate",
+          "plan": "Pro, Business, Enterprise",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-5d6faa49",
+            "fc-6fc7951b"
+          ],
+          "quote": "Deactivating a user immediately revokes all API access tokens they've generated. The deactivated user can no longer use them."
+        },
+        {
+          "name": "Directory Integration (Okta / Entra ID SCIM)",
+          "effect": "revoke",
+          "applies_to": [
+            "smartsheet-1"
+          ],
+          "what": "Removing or unassigning the user in the IdP deactivates them on next sync, which revokes their tokens.",
+          "setting": "Admin Center > Security & Controls > Directory Integration",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-61b81701",
+            "fc-5d6faa49"
+          ],
+          "quote": "When a user is removed from Okta or unassigned from the Smartsheet app, they're automatically deactivated in Smartsheet on the next sync."
+        },
+        {
+          "name": "Admin Center API page",
+          "effect": "other",
+          "applies_to": [
+            "smartsheet-1"
+          ],
+          "what": "Shows users with active tokens used in last 30 days and endpoint call counts; view-only.",
+          "setting": "Admin Center > API (Endpoints, API users tabs)",
+          "plan": "Business, Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-36e69f57"
+          ],
+          "quote": "The API page in Admin Center gives System Admins a clear picture of API activity across their organization, such as who holds API tokens, what endpoints they're calling, and how often."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "smartsheet-1",
+          "what": "Per-user or per-role token expiration",
+          "kind": "expiry",
+          "evidence_refs": [
+            "fc-3be48ac5"
+          ],
+          "quote": "You can’t assign individualized or role-based expiration dates, as this is a general setting for all tokens under the specified plan."
+        },
+        {
+          "path_id": "smartsheet-1",
+          "what": "Revoking tokens from the Admin Center API page",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-36e69f57"
+          ],
+          "quote": "System Admins can review API data, but can't revoke tokens or manage API access directly through this interface."
+        }
+      ],
+      "controls_unknown": [
+        "Whether SAML-only sign-in, domain-level SAML or domain strict blocks or re-checks existing or new personal tokens (docs are silent; only sign-in and sessions are described).",
+        "Any admin setting to stop users from creating API tokens.",
+        "Any admin path to revoke one specific token of another user without deactivating the user.",
+        "Whether password change, user removal (vs deactivation), or seat downgrade revokes tokens.",
+        "Whether deactivation revokes OAuth app tokens (doc says tokens 'they've generated').",
+        "IP allowlisting for API access.",
+        "Whether Safe Sharing, Enterprise Plan Manager, or User Auto-Provisioning affect tokens.",
+        "Admin control over which third-party OAuth apps users may authorize.",
+        "Refresh token lifetime.",
+        "Numeric API rate limits.",
+        "How Assume-User (impersonated) calls are attributed in Event Reporting."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "smartsheet-1",
+      "provider_id": "smartsheet",
+      "name": "Personal API access token",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "User generates a raw token in Personal Settings > API Access; it is sent as an Authorization: Bearer header and acts with the user's full access. Shown once. Tokens are per environment (commercial, Regions, Gov).",
+        "evidence_refs": [
+          "fc-1448c676",
+          "fc-f05785b7",
+          "fc-f681399d"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "API calls need only the bearer token. SAML, domain-level SAML and domain strict docs describe sign-in methods and sessions only and say nothing about existing or new API tokens. No doc states tokens are blocked or re-checked under SAML-only sign-in. IdP deprovisioning via Directory Integration deactivates the user, and deactivation revokes the user's tokens.",
+        "evidence_refs": [
+          "fc-f05785b7",
+          "fc-9148e35e",
+          "fc-356acc4a",
+          "fc-19f3ca0b",
+          "fc-61b81701",
+          "fc-5d6faa49"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No Smartsheet doc found describing IP allowlisting for API tokens. Event Reporting records source IP only for WEB_APP events.",
+        "evidence_refs": [
+          "fc-c995b92a"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "conditional",
+        "summary": "No expiry by default; Enterprise admins can set one plan-wide expiration",
+        "evidence_refs": [
+          "fc-3be48ac5"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "plan-wide expiration set by System Admin, counted from token creation",
+        "summary": "Personal tokens cannot be refreshed or extended; user generates a new one.",
+        "evidence_refs": [
+          "fc-3be48ac5",
+          "fc-f681399d"
+        ]
+      },
+      "administration": {
+        "summary": "Users create and delete their own tokens. Admins can set plan-wide expiry (Enterprise), see token holders and endpoint call counts on the Admin Center API page (view-only), and kill all of a user's tokens by deactivating the user. A System Admin's token can call the API as any plan user via the Assume-User header. SCIM provisioning (Okta/Entra) is configured with a System Admin's personal token, not a separate credential.",
+        "conditions": "Token creation requires Business, Enterprise or AWM. No documented setting to block users from creating tokens or for an admin to revoke one specific token of another user.",
+        "evidence_refs": [
+          "fc-1448c676",
+          "fc-f681399d",
+          "fc-3be48ac5",
+          "fc-5d6faa49",
+          "fc-36e69f57",
+          "fc-367b11d0",
+          "fc-21177c39"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Only documented case: API calls by external collaborators to items protected by 'Require work accounts with SSO' fail unless exempt; docs are silent on SSO for internal users' tokens.",
+          "evidence_refs": [
+            "fc-3800c44e"
+          ]
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Deactivating a user (manually or via SCIM directory sync) immediately revokes the user's API access tokens.",
+          "evidence_refs": [
+            "fc-b8e4c919",
+            "fc-b3c63be3"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "No admin token list found; Event Reporting ACCESS_TOKEN - AUTHORIZE events (Enterprise/AWM add-on) show tokens being created.",
+          "evidence_refs": [
+            "fc-c995b92a"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": null,
+          "api": "GET https://api.smartsheet.com/2.0/events?since=<date>; keep objectType=ACCESS_TOKEN, action=AUTHORIZE (Event Reporting add-on, System Admin)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-9825020c"
+          ]
+        },
+        "sso": {
+          "ui": "Admin Center > Settings > Secure External Access > Require work accounts with single sign-on (SSO) = On (external collaborators only)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-34868f9c"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "GET https://api.smartsheet.com/2.0/events?since=<date>; keep objectType=SHEET, action=LOAD; match additionalDetails.accessTokenName",
+          "cli": null,
+          "evidence_refs": [
+            "fc-9825020c"
+          ]
+        },
+        "offboard": {
+          "ui": "Admin Center > Users and Groups > Seat Types and True-up > user row ⋮ > Deactivate",
+          "api": "POST https://api.smartsheet.com/2.0/users/{userId}/deactivate",
+          "cli": null,
+          "evidence_refs": [
+            "fc-5d6faa49",
+            "fc-9825020c"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "No documented prefix. Docs example bearer value is 38 alphanumeric characters. Value shown once at creation."
+        },
+        "log_sources": [
+          {
+            "name": "Event Reporting (GET /events, List filtered events, SIEM)",
+            "notes": "Premium add-on for Enterprise/AWM; System Admin; six months from enablement. Built-in SIEM streaming needs Safeguard or Advance Platinum."
+          },
+          {
+            "name": "Admin Center API page",
+            "notes": "Business/Enterprise; last 30 days, refreshed daily; user-generated tokens only; call counts per endpoint and user; CSV export; excludes deactivated/removed users."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "accessTokenName",
+            "log": "Event Reporting (all events)",
+            "notes": "Present on API calls when the token was named at creation."
+          },
+          {
+            "field": "tokenDisplayValue",
+            "log": "ACCESS_TOKEN events",
+            "notes": "Mnemonic shown in UI; not unique."
+          },
+          {
+            "field": "requestUserId",
+            "log": "Event Reporting (all events)",
+            "notes": "User whose data the token can access (token owner)."
+          },
+          {
+            "field": "source",
+            "log": "Event Reporting (all events)",
+            "notes": "API_UNDEFINED_APP / API_INTEGRATED_APP / API_ODBC_DRIVER vs WEB_APP."
+          },
+          {
+            "field": "tokenUserId",
+            "log": "ACCESS_TOKEN - REVOKE",
+            "notes": "Owner of revoked token."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "ACCESS_TOKEN - AUTHORIZE",
+            "stage": "create",
+            "notes": "Includes tokenName, tokenDisplayValue, tokenExpirationTimestamp, accessScopes."
+          },
+          {
+            "event": "SHEET - LOAD",
+            "stage": "use",
+            "notes": "Sheet loaded via API."
+          },
+          {
+            "event": "REPORT - LOAD",
+            "stage": "use",
+            "notes": "Report loaded via API."
+          },
+          {
+            "event": "ATTACHMENT - LOAD",
+            "stage": "use",
+            "notes": "Attachment viewed or downloaded."
+          },
+          {
+            "event": "ACCESS_TOKEN - REVOKE",
+            "stage": "revoke",
+            "notes": "Includes tokenUserId."
+          },
+          {
+            "event": "USER - DEACTIVATE",
+            "stage": "revoke",
+            "notes": "Deactivation revokes all the user's tokens; no per-token event documented for this."
+          }
+        ],
+        "correlation_keys": [
+          "requestUserId",
+          "accessTokenName",
+          "tokenDisplayValue",
+          "source",
+          "additionalDetails.emailAddress"
+        ],
+        "anomaly_cues": [
+          "ACCESS_TOKEN - AUTHORIZE for users who don't normally use the API, especially System Admins (Assume-User).",
+          "Bursts of SHEET - LOAD / ATTACHMENT - LOAD with an API_* source.",
+          "No source IP on API events; pivot on accessTokenName and requestUserId instead.",
+          "New user appearing on the Admin Center API users tab."
+        ],
+        "containment": {
+          "steps": "Owner deletes the token under Personal Settings > API Access, or call DELETE /token with it. Admin: deactivate the user (revokes all their tokens), then reissue as needed.",
+          "kills_existing": "yes",
+          "notes": "Revoked token fails on later calls. Admin revocation of a single token of another user is not documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether list/search calls (GET /sheets, GET /search, GET /users) produce events.",
+          "How impersonated (Assume-User) calls are attributed."
+        ],
+        "evidence_refs": [
+          "fc-de04292b",
+          "fc-f681399d",
+          "fc-5d6faa49",
+          "fc-36e69f57",
+          "fc-164d722c",
+          "fc-c995b92a",
+          "fc-ac219757",
+          "fc-e37455e6",
+          "fc-367b11d0"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /users/me",
+            "reveals": "Token owner profile; extra fields for System Admins",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No event type documented for this call."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /users",
+            "reveals": "Org user list; admin attributes for System Admins",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /sheets",
+            "reveals": "All sheets the user can access",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /workspaces",
+            "reveals": "Workspaces the user can access",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /search",
+            "reveals": "Full-text hits across accessible sheets",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /sheets/{sheetId}",
+            "reveals": "Full sheet data",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "429 / errorCode 4003 when exceeded; limit not stated",
+            "logged": "plan",
+            "log_event": "SHEET - LOAD",
+            "log_notes": "Event Reporting add-on; carries accessTokenName and API_* source."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /events",
+            "reveals": "Org audit log (System Admin only)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Requires Event Reporting."
+          }
+        ],
+        "unknown": [
+          "Numeric rate limit.",
+          "Whether list/search calls are logged."
+        ],
+        "evidence_refs": [
+          "fc-d26b692a",
+          "fc-24ad2400",
+          "fc-e7d5d1da",
+          "fc-5c37376e",
+          "fc-da425467",
+          "fc-3179c3a8",
+          "fc-ac219757",
+          "fc-c995b92a",
+          "fc-3edc2576",
+          "fc-164d722c"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1448c676",
+      "title": "Get Started",
+      "url": "https://developers.smartsheet.com/api/smartsheet/guides/getting-started",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-164d722c",
+      "title": "Events",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/events",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-19f3ca0b",
+      "title": "Activate strict domain-level sign-in",
+      "url": "https://help.smartsheet.com/articles/2483310-activate-strict-domain-level-login",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-21177c39",
+      "title": "Manage Smartsheet users through Entra ID",
+      "url": "https://help.smartsheet.com/articles/2479786-manage-smartsheet-users-through-azure-active-directory",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-24ad2400",
+      "title": "List users",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/users/list-users",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3179c3a8",
+      "title": "List workspaces",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/workspaces/list-workspaces",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-34868f9c",
+      "title": "Admin Center: Configure Require work accounts with SSO",
+      "url": "https://help.smartsheet.com/articles/2483524-admin-center-configure-require-work-accounts-sso",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-356acc4a",
+      "title": "Configure SAML for domain-level single sign-on to Smartsheet",
+      "url": "https://help.smartsheet.com/articles/2483123-domain-level-saml-configuration",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-367b11d0",
+      "title": "User Impersonation",
+      "url": "https://developers.smartsheet.com/api/smartsheet/guides/advanced-topics/user-impersonation",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-36e69f57",
+      "title": "View API users and usage data",
+      "url": "https://help.smartsheet.com/articles/2483686-view-api-users-and-usage-data",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3800c44e",
+      "title": "Governance policies for external collaborators",
+      "url": "https://help.smartsheet.com/articles/2483128-governance-policies-external-collaborators",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3be48ac5",
+      "title": "Admin Center: Configure access token expiration time",
+      "url": "https://help.smartsheet.com/articles/2483100-configure-access-token-expiration-time",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3edc2576",
+      "title": "Error codes",
+      "url": "https://developers.smartsheet.com/api/smartsheet/error-codes",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5c37376e",
+      "title": "Search everything",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/search/list-search",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5d6faa49",
+      "title": "Deactivate or reactivate users",
+      "url": "https://help.smartsheet.com/articles/2483484-admin-center-deactivate-or-reactivate-users",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-61b81701",
+      "title": "Use Okta SCIM with Smartsheet",
+      "url": "https://help.smartsheet.com/articles/2482731-configure-Okta-SCIM",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6fc7951b",
+      "title": "Deactivate user",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/users/deactivate-user",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9148e35e",
+      "title": "SAML and SSO for Smartsheet overview (Enterprise only)",
+      "url": "https://help.smartsheet.com/articles/2476661-saml-sso-overview-enterprise",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9825020c",
+      "title": "Smartsheet API OpenAPI description (List events)",
+      "url": "https://developers.smartsheet.com/_spec/api/smartsheet/openapi.yaml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac219757",
+      "title": "List events",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/events/list-events",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b3c63be3",
+      "title": "Smartsheet Security Capabilities, Practices, and Safeguards (2026-10)",
+      "url": "https://www.smartsheet.com/sites/default/files/2026-10/Security-Capabilities-Practices-and-Safeguards.pdf",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b8e4c919",
+      "title": "Deactivating and reactivating users",
+      "url": "https://help.smartsheet.com/learning-track/system-admin-user-management/deactivating-and-reactivating-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c995b92a",
+      "title": "Event types",
+      "url": "https://developers.smartsheet.com/api/smartsheet/event-types",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d26b692a",
+      "title": "Get current user",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/users/get-current-user",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-da425467",
+      "title": "Get sheet",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/sheets/getsheet",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-de04292b",
+      "title": "Revoke access token",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/tokens/tokens-delete",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e37455e6",
+      "title": "Event Reporting overview",
+      "url": "https://help.smartsheet.com/articles/2479296-event-reporting-monitor-how-your-organization-uses-data",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e7d5d1da",
+      "title": "List sheets",
+      "url": "https://developers.smartsheet.com/api/smartsheet/openapi/sheets/list-sheets",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f05785b7",
+      "title": "Authentication",
+      "url": "https://developers.smartsheet.com/api/smartsheet/guides/basics/authentication",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f681399d",
+      "title": "Generate an API access token",
+      "url": "https://help.smartsheet.com/articles/2482389-generate-API-key",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,526 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "pingone",
+      "name": "PingOne",
+      "scope_notes": "Covers PingOne (PingOne Platform / Management APIs). SaaS; covers PingOne platform Worker apps and gateway credentials; inbound traffic policies need a Cloudflare-based custom domain.",
+      "controls": [
+        {
+          "name": "Application enable/disable toggle",
+          "effect": "disable",
+          "applies_to": [
+            "pingone-1",
+            "pingone-2"
+          ],
+          "what": "Disables a Worker app so it cannot be used.",
+          "setting": "Applications > Applications > (app) > toggle; API: PUT application enabled=false",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8cac78c5"
+          ]
+        },
+        {
+          "name": "Role assignments (Roles tab / roleAssignments API)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "pingone-1"
+          ],
+          "what": "Worker app access equals its admin role assignments, scoped to org, environment, population, group, or application, and checked on each API call.",
+          "setting": "Applications > (app) > Roles; POST /environments/{envID}/applications/{appID}/roleAssignments",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-dce1fcaf",
+            "fc-8cac78c5",
+            "fc-2f4a0407"
+          ]
+        },
+        {
+          "name": "assignActorRoles",
+          "effect": "limit_scope",
+          "applies_to": [
+            "pingone-1"
+          ],
+          "what": "When false, an API-created Worker app does not inherit the creator's roles.",
+          "setting": "POST /environments/{envID}/applications body assignActorRoles=false",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-20053ea2"
+          ]
+        },
+        {
+          "name": "Generate New Secret",
+          "effect": "require_rotation",
+          "applies_to": [
+            "pingone-1"
+          ],
+          "what": "Replaces the client secret and keeps the previous one valid for a chosen window (1 minute to 90 days).",
+          "setting": "Applications > (app) > Configuration > Generate New Secret; application secret API",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8cac78c5",
+            "fc-cb535db9"
+          ]
+        },
+        {
+          "name": "Revoke Previous Client Secret",
+          "effect": "revoke",
+          "applies_to": [
+            "pingone-1"
+          ],
+          "what": "Ends the grace period for the old secret immediately.",
+          "setting": "Applications > (app) > Configuration > Revoke Previous Client Secret",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d7a2894c"
+          ]
+        },
+        {
+          "name": "Inbound traffic policies",
+          "effect": "limit_network",
+          "applies_to": [
+            "pingone-1",
+            "pingone-2"
+          ],
+          "what": "Allow or block requests by CIDR and other verify rules, only on Cloudflare-based custom domains.",
+          "setting": "/v1/environments/{envID}/inboundTrafficPolicies",
+          "plan": "Requires Cloudflare-based custom domain",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-0a3517b2"
+          ]
+        },
+        {
+          "name": "Delete application",
+          "effect": "revoke",
+          "applies_to": [
+            "pingone-1",
+            "pingone-2"
+          ],
+          "what": "Removes the Worker app and its secret (logged as APPLICATION.DELETED).",
+          "setting": "DELETE /v1/environments/{envID}/applications/{appID}",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d7a2894c"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "pingone-1",
+          "what": "Issued PingOne API (Management API) access tokens cannot be revoked; they stay valid until expiry (60 min default).",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-cd359d30"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether disabling the app or rotating the secret invalidates already-issued access tokens (role removal does take effect per call per S5)",
+        "Whether successful client_credentials token issuance produces an audit event",
+        "Whether Management API read calls (e.g., GET users) are audited",
+        "Whether inbound traffic policies apply to api.pingone.com",
+        "Admin-level policy to block Worker app creation or require approval",
+        "Gateway credential expiry and whether its creation/deletion has a distinct audit event",
+        "Maximum configurable access token lifetime for the PingOne API resource"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "pingone-1",
+      "provider_id": "pingone",
+      "name": "Worker application (client_credentials)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A Worker app authenticates to POST /{envID}/as/token with its client ID and secret (or client_secret_jwt / private_key_jwt) and gets a 60-minute JWT access token. The token has admin-level access to the PingOne Management APIs, limited by the app's own role assignments. No user signs in, so sign-on policies and MFA do not apply to it (docs describe it as a userless app; no explicit SSO-bypass statement).",
+        "evidence_refs": [
+          "fc-dac5a2b3",
+          "fc-d9163dfc",
+          "fc-eec0710e",
+          "fc-65fdebe7"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Docs describe client secret and private_key_jwt client authentication; no workload identity federation for Worker apps was found.",
+        "evidence_refs": [
+          "fc-65fdebe7"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "Inbound traffic policies (IP allow/block via CIDR verify rules) exist only for Cloudflare-based custom domains. Docs do not say they cover api.pingone.com Management API calls or the default auth.pingone.com token endpoint.",
+        "evidence_refs": [
+          "fc-0a3517b2"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Access token 60 min; client secret has no documented expiry",
+        "evidence_refs": [
+          "fc-d9163dfc",
+          "fc-cb535db9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Secret is long-lived until rotated; app requests a new token with the same secret",
+        "summary": "No refresh token; reuse the client secret. On rotation the previous secret can stay valid 1 minute to 90 days.",
+        "evidence_refs": [
+          "fc-cb535db9",
+          "fc-8cac78c5"
+        ]
+      },
+      "administration": {
+        "summary": "Admins create Worker apps and assign admin roles scoped to org, environment, population, group, or application. Apps created via API inherit the creator's roles unless assignActorRoles=false. Apps can be disabled with the toggle; removing all roles blocks token issuance.",
+        "conditions": "An actor cannot grant roles it lacks; reading the secret requires a superset of the app's roles.",
+        "evidence_refs": [
+          "fc-dce1fcaf",
+          "fc-cb535db9",
+          "fc-8cac78c5",
+          "fc-20053ea2",
+          "fc-2f4a0407"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "client_credentials tokens use the application's own role assignments, not a user's.",
+          "evidence_refs": [
+            "fc-dac5a2b3"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /v1/environments/{envID}/applications lists all applications, including Worker apps, per environment.",
+          "evidence_refs": [
+            "fc-5b730360"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Access token is an RS256 JWT; client secret is at least 64 characters for PingOne-generated secrets."
+        },
+        "log_sources": [
+          {
+            "name": "PingOne Audit (Monitoring > Audit) and GET/POST /v1/environments/{envID}/activities",
+            "notes": "Configuration events kept 2 years, user events 90 days; queries max 14 days; Audit API rate 10/second."
+          },
+          {
+            "name": "Subscriptions (webhooks)",
+            "notes": "Streams audit events to HTTPS/TCP endpoints; events lost if target down >7 days."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actors.client.id",
+            "log": "Audit activities",
+            "notes": "Worker app (client) ID that performed the action"
+          },
+          {
+            "field": "resources.id",
+            "log": "Audit activities",
+            "notes": "Application ID on APPLICATION.* / SECRET.* events"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "APPLICATION.CREATED",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "ROLE_ASSIGNMENT.CREATED",
+            "stage": "create",
+            "notes": "Roles granted to the app"
+          },
+          {
+            "event": "SECRET.READ",
+            "stage": "other",
+            "notes": "Someone viewed the secret"
+          },
+          {
+            "event": "SECRET.UPDATED",
+            "stage": "rotate",
+            "notes": ""
+          },
+          {
+            "event": "PREVIOUS_SECRET.USED",
+            "stage": "use",
+            "notes": "Old secret still in use after rotation"
+          },
+          {
+            "event": "PREVIOUS_SECRET.REVOKED",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "APPLICATION.UPDATED",
+            "stage": "other",
+            "notes": "Includes enable/disable (inferred)"
+          },
+          {
+            "event": "ROLE_ASSIGNMENT.DELETED",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "APPLICATION.DELETED",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "actors.client.id",
+          "actors.user.id",
+          "resources.id",
+          "source.ipAddress",
+          "source.userAgent",
+          "correlationId"
+        ],
+        "anomaly_cues": [
+          "SECRET.READ by an unexpected admin",
+          "PREVIOUS_SECRET.USED long after rotation",
+          "New ROLE_ASSIGNMENT.CREATED on a Worker app, especially cross-environment",
+          "Config changes with actors.client.id of a Worker app from a new source.ipAddress"
+        ],
+        "containment": {
+          "steps": "Generate a new secret and revoke the previous secret, remove role assignments, or disable/delete the app. Existing access tokens cannot be revoked; removing roles cuts access on the next call.",
+          "kills_existing": "partial",
+          "notes": "Role removal is checked per call (S5); token revocation is not available for PingOne API tokens (S8)."
+        },
+        "sample_query": "GET /v1/environments/{envID}/activities?filter=recordedat gt \"<start>\" and recordedat lt \"<end>\"",
+        "unknown": [
+          "Token issuance events",
+          "Read-call auditing"
+        ],
+        "evidence_refs": [
+          "fc-cd359d30",
+          "fc-dce1fcaf",
+          "fc-d7a2894c",
+          "fc-39890c13",
+          "fc-7b7c7242",
+          "fc-c1d548be"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/environments",
+            "reveals": "Environments the app can reach",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "Configuration 600/minute",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No read event documented"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v1/environments/{envID}/users",
+            "reveals": "All user records",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "Directory Data Read Rate 100/second",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No user-read event in the event list"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /v1/environments/{envID}/activities",
+            "reveals": "Audit log",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "Audit API Rate 10/second",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "No documented whoami endpoint for client_credentials tokens"
+        ],
+        "evidence_refs": [
+          "fc-d9163dfc",
+          "fc-61c4baa4",
+          "fc-a2298e01",
+          "fc-39890c13"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0a3517b2",
+      "title": "Inbound Traffic Policies",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/inbound-traffic/index.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-20053ea2",
+      "title": "Create Application (OIDC Protocol - Worker App)",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/applications/applications-1/create-application-oidc-protocol---worker-app.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2f4a0407",
+      "title": "Configuring roles for a worker application",
+      "url": "https://docs.pingidentity.com/pingone/applications/p1_configurerolesforworkerapplication.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-39890c13",
+      "title": "Audit Activities",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/audit-activities/index.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5b730360",
+      "title": "Read All Applications | PingOne Platform APIs",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/applications/applications-1/read-all-applications.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-61c4baa4",
+      "title": "Read User or Users",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/users/users-1/read-all-users.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-65fdebe7",
+      "title": "Token Admin App (client_credentials)",
+      "url": "https://developer.pingidentity.com/pingone-api/auth/openid-connect-oauth-2/token/token-admin-app-client_credentials.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7b7c7242",
+      "title": "Audit",
+      "url": "https://docs.pingidentity.com/pingone/monitoring/p1_reporting.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8cac78c5",
+      "title": "Editing an application - Worker",
+      "url": "https://docs.pingidentity.com/pingone/applications/p1_edit_application_worker.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a2298e01",
+      "title": "Base rate limits",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/rate-limiting/base-rate-limits.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c1d548be",
+      "title": "Subscriptions (webhooks)",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/subscriptions-webhooks/index.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cb535db9",
+      "title": "Application Secret",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/applications/application-secret/index.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cd359d30",
+      "title": "Token Revocation",
+      "url": "https://developer.pingidentity.com/pingone-api/auth/openid-connect-oauth-2/token/token-revocation.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7a2894c",
+      "title": "Audit Reporting Events",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/reference/audit-reporting-events.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d9163dfc",
+      "title": "Access tokens and ID tokens",
+      "url": "https://developer.pingidentity.com/pingone-api/foundations/authentication-concepts/access-tokens-and-id-tokens/index.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dac5a2b3",
+      "title": "Worker applications",
+      "url": "https://developer.pingidentity.com/pingone-api/foundations/authentication-concepts/authorization-and-authentication-by-application-type/worker-applications.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dce1fcaf",
+      "title": "Administrator permissions and role assignments",
+      "url": "https://developer.pingidentity.com/pingone-api/foundations/pingone-roles-scopes-and-permissions/administrator-permissions-and-role-assignments.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eec0710e",
+      "title": "Applications",
+      "url": "https://docs.pingidentity.com/pingone/applications/p1_application_types.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

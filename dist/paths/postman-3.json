@@ -1,0 +1,264 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "postman",
+      "name": "Postman",
+      "scope_notes": "Cloud SaaS; admin key management, service accounts, SCIM and audit logs need Enterprise (SSO also on Team with Simple Security add-on).",
+      "controls": [
+        {
+          "name": "SCIM API key turn on/off, regenerate, delete",
+          "effect": "disable",
+          "applies_to": [
+            "postman-3"
+          ],
+          "what": "Disable, replace or delete a service-account-owned SCIM key.",
+          "setting": "Service Accounts > SCIM API keys",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8dd0705e"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP allowlisting for Postman API keys or the Postman API (none found in docs).",
+        "Whether API keys or service account tokens are blocked by SSO-only enforcement or IdP conditional access; docs do not say.",
+        "Whether revoking a service account API key invalidates already-issued short-lived tokens.",
+        "Whether removing or SCIM-deactivating a user revokes their Postman API keys.",
+        "Default and allowed expiry values for user API keys and SCIM keys.",
+        "Exact audit action codes for service account key events and collection access key create/delete.",
+        "Whether Postman API read calls (GET /collections, /workspaces, etc.) appear in audit logs.",
+        "How OAuth client_credentials clients (installationAuthId) are registered and administered.",
+        "Documented prefix for user Postman API keys (OAuth token example shows PMAK-XXX; not stated for API keys)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "postman-3",
+      "provider_id": "postman",
+      "name": "SCIM API key",
+      "family": "api_key",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Bearer key in the Authorization header for /scim/v2 endpoints only. Owned by an Admin/Super Admin user or by a system service account.",
+        "evidence_refs": [
+          "fc-eee563b7",
+          "fc-fe66452e",
+          "fc-8dd0705e"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "No workload identity federation documented for this credential.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No Postman doc found describing IP allowlisting for API keys or the Postman API.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Keys show an expiration date; default not stated",
+        "evidence_refs": [
+          "fc-8dd0705e"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not stated",
+        "summary": "Regenerate; old key can stay active during switch",
+        "evidence_refs": [
+          "fc-2937dfd5"
+        ]
+      },
+      "administration": {
+        "summary": "Generated under Organization settings > Authentication after SSO and SCIM are on. Service-account keys can be renamed, turned off, regenerated, deleted. Power follows owner role.",
+        "conditions": "Enterprise plan; SSO configured",
+        "evidence_refs": [
+          "fc-2937dfd5",
+          "fc-8b8b5ec4",
+          "fc-8dd0705e"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Docs imply a SCIM key owned by an Admin stops working when that Admin leaves; keys owned by a service account keep working.",
+          "evidence_refs": [
+            "fc-8dd0705e",
+            "fc-2937dfd5"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "SCIM keys are managed in Organization settings (Authentication) and service-account-owned keys are listed on the service account; no doc describes one org-wide list.",
+          "evidence_refs": [
+            "fc-8dd0705e",
+            "fc-8b8b5ec4"
+          ]
+        }
+      },
+      "how": {
+        "offboard": {
+          "ui": "Remove the owning Admin from the team (Admin/Org Manager/Super Admin only), or deactivate via IdP SCIM; keys owned by a service account are unaffected",
+          "api": "PUT https://api.postman.com/scim/v2/Users/{userId} {\"active\": false}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-8dd0705e",
+            "fc-2937dfd5",
+            "fc-92f53bb1"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs (dashboard and GET /audit/logs)",
+            "notes": "Enterprise; 180 days; CSV export or Postman API for SIEM; events carry actor, IP, userAgent, data.variables"
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "unknown",
+            "log": "Audit logs",
+            "notes": "not documented"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "team.scimkey_create",
+            "stage": "create",
+            "notes": "Created SCIM Key"
+          }
+        ],
+        "correlation_keys": [
+          "data.actor.id",
+          "ip"
+        ],
+        "anomaly_cues": [
+          "SCIM user provisioning or deactivation not originating from your IdP",
+          "SCIM key created by unexpected admin"
+        ],
+        "containment": {
+          "steps": "Turn off, regenerate or delete the key under Service Accounts or Organization settings > Authentication.",
+          "kills_existing": "unknown",
+          "notes": "Regeneration may keep old key active if chosen."
+        },
+        "sample_query": "GET https://api.postman.com/audit/logs?action=team.scimkey_create",
+        "unknown": [
+          "Revoke/disable event codes"
+        ],
+        "evidence_refs": [
+          "fc-e6b6d910",
+          "fc-8dd0705e",
+          "fc-2937dfd5"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "enumeration",
+            "call": "GET /scim/v2/Users",
+            "reveals": "All team members",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Provisioning changes are audited; reads not stated"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-fe66452e"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-2937dfd5",
+      "title": "SCIM provisioning overview",
+      "url": "https://learning.postman.com/docs/administration/scim-provisioning/scim-provisioning-overview/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8b8b5ec4",
+      "title": "Manage API keys",
+      "url": "https://learning.postman.com/docs/administration/managing-your-team/managing-api-keys/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8dd0705e",
+      "title": "Manage service account identities for automation and integrations",
+      "url": "https://learning.postman.com/docs/administration/service-accounts/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-92f53bb1",
+      "title": "Update a user (SCIM)",
+      "url": "https://learning.postman.com/api-docs/api-reference/scim/update-scim-user",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e6b6d910",
+      "title": "Get all audit log event actions",
+      "url": "https://learning.postman.com/api-docs/api-reference/audit-logs/get-audit-log-event-actions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eee563b7",
+      "title": "Postman API Reference Overview",
+      "url": "https://learning.postman.com/api-docs/api-reference",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fe66452e",
+      "title": "Get all users",
+      "url": "https://learning.postman.com/api-docs/api-reference/scim/get-scim-user-resources",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

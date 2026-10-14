@@ -1,0 +1,1330 @@
+{
+ "id": "portkey",
+ "name": "Portkey",
+ "scope_notes": "Covers Portkey (Prisma AIRS AI Gateway). SaaS control plane with hybrid/air-gapped self-hosted options; JWT auth, audit logs and key-permission settings are Enterprise, rotation is on all plans.",
+ "controls": [
+  {
+   "name": "Delete API key",
+   "effect": "revoke",
+   "applies_to": [
+    "portkey-1",
+    "portkey-2",
+    "portkey-3"
+   ],
+   "what": "Removes an API key.",
+   "setting": "DELETE /v1/api-keys/{id} (Admin API)",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-c13c2749"
+   ]
+  },
+  {
+   "name": "API key scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "portkey-1",
+    "portkey-2",
+    "portkey-3"
+   ],
+   "what": "Each key gets a list of permission scopes at create/update.",
+   "setting": "scopes on POST /api-keys/{type}/{sub-type}",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-538a9eb1"
+   ]
+  },
+  {
+   "name": "expires_at / org-workspace maximum TTL",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "portkey-1",
+    "portkey-2",
+    "portkey-3"
+   ],
+   "what": "Key expiry date, which cannot exceed a configured org/workspace maximum TTL.",
+   "setting": "expires_at on create; max TTL setting name not documented",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5803e935"
+   ]
+  },
+  {
+   "name": "Rotation policy",
+   "effect": "require_rotation",
+   "applies_to": [
+    "portkey-1",
+    "portkey-2",
+    "portkey-3"
+   ],
+   "what": "Scheduled automatic rotation (weekly, monthly or N days).",
+   "setting": "rotation_policy on create/update; POST /v2/api-keys/{id}/rotate",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-db5e3ba6"
+   ]
+  },
+  {
+   "name": "user_api_key_rotation_period",
+   "effect": "require_rotation",
+   "applies_to": [
+    "portkey-3"
+   ],
+   "what": "Org enforces a rotation cadence (1-365 days) on workspace-user keys.",
+   "setting": "Organisation setting user_api_key_rotation_period",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-db5e3ba6"
+   ]
+  },
+  {
+   "name": "API Key Management permissions",
+   "effect": "limit_scope",
+   "applies_to": [
+    "portkey-2",
+    "portkey-3"
+   ],
+   "what": "Controls whether workspace managers/members can view or manage keys.",
+   "setting": "Admin Settings > Security > API Key Management",
+   "plan": "Enterprise",
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-61d9e0d0"
+   ]
+  },
+  {
+   "name": "Per-key rate and usage limits",
+   "effect": "limit_resources",
+   "applies_to": [
+    "portkey-1",
+    "portkey-2",
+    "portkey-3"
+   ],
+   "what": "Request/token rate limits and cost/token budgets per key.",
+   "setting": "rate_limits, usage_limits on create/update",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-5803e935"
+   ]
+  },
+  {
+   "name": "Pinned default config",
+   "effect": "limit_scope",
+   "applies_to": [
+    "portkey-1",
+    "portkey-2",
+    "portkey-3"
+   ],
+   "what": "Pins a config to a key; allow_config_override=false stops callers overriding it.",
+   "setting": "defaults.config_id, defaults.allow_config_override",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-5803e935"
+   ]
+  },
+  {
+   "name": "JWKS configuration",
+   "effect": "limit_scope",
+   "applies_to": [
+    "portkey-4"
+   ],
+   "what": "Only JWTs signed by configured JWKS are accepted; remove JWKS to stop JWT auth.",
+   "setting": "Admin Settings > Organisation > Authentication",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-eaaae6ec"
+   ]
+  },
+  {
+   "name": "Integration workspace provisioning",
+   "effect": "limit_resources",
+   "applies_to": [
+    "portkey-6"
+   ],
+   "what": "Choose which workspaces and models can use stored provider credentials.",
+   "setting": "Integrations page",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-9cbf23a7"
+   ]
+  },
+  {
+   "name": "Manage Keys (Workspace Managers)",
+   "effect": "disable",
+   "applies_to": [
+    "portkey-2",
+    "portkey-3"
+   ],
+   "what": "Org admins can turn off workspace managers' ability to create, update and delete workspace service and user API keys.",
+   "setting": "Admin Settings > Security > API Key Management",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-61d9e0d0"
+   ]
+  },
+  {
+   "name": "Manage Keys (Workspace Members)",
+   "effect": "disable",
+   "applies_to": [
+    "portkey-3"
+   ],
+   "what": "Org admins can turn off workspace members' ability to create, update and delete their own user API keys.",
+   "setting": "Admin Settings > Security > API Key Management",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-61d9e0d0"
+   ]
+  },
+  {
+   "name": "Managers Write Workspace Integrations",
+   "effect": "disable",
+   "applies_to": [
+    "portkey-6"
+   ],
+   "what": "Org admins can stop workspace managers from creating, updating or deleting AI integrations; owners and admins keep full access.",
+   "setting": "Admin Settings > Security > Integration Management (workspace-level overrides possible)",
+   "plan": "Enterprise",
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-dd099053"
+   ]
+  }
+ ],
+ "no_control": [],
+ "controls_unknown": [
+  "IP allowlisting for API keys or JWTs",
+  "Name of the org/workspace maximum key TTL setting",
+  "Whether user API keys are disabled when the user is removed or deprovisioned via SCIM",
+  "Whether SSO enforcement affects API keys",
+  "Whether GET (read) API calls appear in audit logs (filter lists only POST/PUT/DELETE)",
+  "Auth cache delay after key deletion",
+  "SCIM token expiry and revocation",
+  "API key token prefix"
+ ],
+ "credentials": [
+  {
+   "id": "portkey-1",
+   "name": "Admin API Keys (organisation API keys)",
+   "family": "api_key",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Org-level keys sent in x-portkey-api-key. They can act across all workspaces and manage users, workspaces, keys, integrations and audit logs depending on scopes.",
+    "evidence_refs": [
+     "fc-538a9eb1",
+     "fc-f4537ba5"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key. SSO (OIDC/SAML) is documented for control-plane login only; no statement that keys follow IdP policy.",
+    "evidence_refs": [
+     "fc-e90e66fe"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No IP allowlist for API keys found in docs. Audit logs record client IP.",
+    "evidence_refs": [
+     "fc-02f7691c"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional expires_at, capped by org/workspace max TTL if configured",
+    "evidence_refs": [
+     "fc-5803e935"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_at / rotation_policy",
+    "summary": "POST /v2/api-keys/{id}/rotate or scheduled rotation; old secret valid for transition period (min 30 min).",
+    "evidence_refs": [
+     "fc-db5e3ba6"
+    ]
+   },
+   "administration": {
+    "summary": "Only org owners/admins can create and manage. Scopes set at create/update.",
+    "conditions": "Org owner/admin.",
+    "evidence_refs": [
+     "fc-f4537ba5",
+     "fc-538a9eb1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin API GET /api-keys lists keys; admin keys can carry the organisation_service_api_keys.list scope.",
+     "evidence_refs": [
+      "fc-e877444f",
+      "fc-538a9eb1"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Admin Settings > Audit Logs > filter Action = Export",
+     "api": "GET https://api.portkey.ai/v1/audit-logs?action=<export>&user_type=api_key",
+     "cli": null,
+     "evidence_refs": [
+      "fc-02f7691c",
+      "fc-46ab8a49"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented"
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs",
+      "notes": "Enterprise; Admin Settings > Audit Logs or GET /audit-logs (admin key with audit_logs.list); indefinite retention; filter by user_type=api_key."
+     },
+     {
+      "name": "Request Logs",
+      "notes": "Gateway request logs with full request/response; retention 3 days Developer, 30 days Production, unlimited Enterprise."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "user_type=api_key / user_id",
+      "log": "Audit log",
+      "notes": "Actor can be an API key"
+     },
+     {
+      "field": "api_key_id, old_key_masked",
+      "log": "Audit log (rotation)",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Create (resource type API Keys)",
+      "stage": "create",
+      "notes": "Audit action filter"
+     },
+     {
+      "event": "Rotate",
+      "stage": "rotate",
+      "notes": "rotation_mode manual|auto"
+     },
+     {
+      "event": "Delete",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "Update",
+      "stage": "modify",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "request_id",
+     "client_ip",
+     "workspace_id",
+     "api key id"
+    ],
+    "anomaly_cues": [
+     "Admin key actions from new Client IP or Country",
+     "Keys created without expires_at",
+     "Workspace service key creating other keys"
+    ],
+    "containment": {
+     "steps": "DELETE the key via Admin API or dashboard; or rotate with minimum 30-minute transition.",
+     "kills_existing": "unknown",
+     "notes": "Rotation leaves old secret valid at least 30 minutes."
+    },
+    "sample_query": "GET /v1/audit-logs?user_type=api_key&resource_type=...&start_time=...&end_time=...",
+    "unknown": [
+     "Whether request logs record which API key was used (field name)"
+    ],
+    "evidence_refs": [
+     "fc-02f7691c",
+     "fc-46ab8a49",
+     "fc-db5e3ba6",
+     "fc-c13c2749",
+     "fc-5308ecb8"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Models available to the key",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/api-keys",
+      "reveals": "API keys in scope",
+      "bulk": true,
+      "scope": "*_api_keys.list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit method filter lists only POST/PUT/DELETE"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/integrations",
+      "reveals": "Stored provider integrations",
+      "bulk": true,
+      "scope": "organisation_integrations.list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /v1/logs/exports",
+      "reveals": "Bulk export of request logs (full prompts/responses)",
+      "bulk": true,
+      "scope": "logs.export",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "Export",
+      "log_notes": "Audit action 'Export' exists (Enterprise)"
+     }
+    ],
+    "unknown": [
+     "Whoami endpoint"
+    ],
+    "evidence_refs": [
+     "fc-a6646e85",
+     "fc-e877444f",
+     "fc-02f7691c",
+     "fc-ec7d1ad0",
+     "fc-5308ecb8",
+     "fc-538a9eb1"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "portkey-2",
+   "name": "Workspace Service API Keys",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Workspace-scoped keys for automation; can also create, rotate and delete other workspace keys.",
+    "evidence_refs": [
+     "fc-538a9eb1"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key.",
+    "evidence_refs": [
+     "fc-538a9eb1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional expires_at, capped by max TTL if configured",
+    "evidence_refs": [
+     "fc-5803e935"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_at / rotation_policy",
+    "summary": "Manual or scheduled rotation, same key ID.",
+    "evidence_refs": [
+     "fc-db5e3ba6"
+    ]
+   },
+   "administration": {
+    "summary": "Created by workspace admins/managers (managers per org permission settings); scopes, rate limits, usage limits and pinned config per key.",
+    "conditions": "API key access permissions setting is Enterprise.",
+    "evidence_refs": [
+     "fc-61d9e0d0",
+     "fc-5803e935"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /api-keys (List API Key) with workspace_id; scope workspace_service_api_keys.list.",
+     "evidence_refs": [
+      "fc-e877444f"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Admin Settings > Audit Logs > filter Action = Export",
+     "api": "GET https://api.portkey.ai/v1/audit-logs?action=<export>&user_type=api_key",
+     "cli": null,
+     "evidence_refs": [
+      "fc-02f7691c",
+      "fc-46ab8a49"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented"
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs",
+      "notes": "Enterprise; Admin Settings > Audit Logs or GET /audit-logs (admin key with audit_logs.list); indefinite retention; filter by user_type=api_key."
+     },
+     {
+      "name": "Request Logs",
+      "notes": "Gateway request logs with full request/response; retention 3 days Developer, 30 days Production, unlimited Enterprise."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "user_type=api_key / user_id",
+      "log": "Audit log",
+      "notes": "Actor can be an API key"
+     },
+     {
+      "field": "api_key_id, old_key_masked",
+      "log": "Audit log (rotation)",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Create (resource type API Keys)",
+      "stage": "create",
+      "notes": "Audit action filter"
+     },
+     {
+      "event": "Rotate",
+      "stage": "rotate",
+      "notes": "rotation_mode manual|auto"
+     },
+     {
+      "event": "Delete",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "Update",
+      "stage": "modify",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "request_id",
+     "client_ip",
+     "workspace_id",
+     "api key id"
+    ],
+    "anomaly_cues": [
+     "Admin key actions from new Client IP or Country",
+     "Keys created without expires_at",
+     "Workspace service key creating other keys"
+    ],
+    "containment": {
+     "steps": "DELETE the key via Admin API or dashboard; or rotate with minimum 30-minute transition.",
+     "kills_existing": "unknown",
+     "notes": "Rotation leaves old secret valid at least 30 minutes."
+    },
+    "sample_query": "GET /v1/audit-logs?user_type=api_key&resource_type=...&start_time=...&end_time=...",
+    "unknown": [
+     "Whether request logs record which API key was used (field name)"
+    ],
+    "evidence_refs": [
+     "fc-02f7691c",
+     "fc-46ab8a49",
+     "fc-db5e3ba6",
+     "fc-c13c2749",
+     "fc-5308ecb8"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Models available to the key",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/api-keys",
+      "reveals": "API keys in scope",
+      "bulk": true,
+      "scope": "*_api_keys.list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit method filter lists only POST/PUT/DELETE"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/integrations",
+      "reveals": "Stored provider integrations",
+      "bulk": true,
+      "scope": "organisation_integrations.list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /v1/logs/exports",
+      "reveals": "Bulk export of request logs (full prompts/responses)",
+      "bulk": true,
+      "scope": "logs.export",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "Export",
+      "log_notes": "Audit action 'Export' exists (Enterprise)"
+     }
+    ],
+    "unknown": [
+     "Whoami endpoint"
+    ],
+    "evidence_refs": [
+     "fc-a6646e85",
+     "fc-e877444f",
+     "fc-02f7691c",
+     "fc-ec7d1ad0",
+     "fc-5308ecb8",
+     "fc-538a9eb1"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "portkey-3",
+   "name": "Workspace User API Keys",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Workspace keys tied to an individual user; same operational scopes as service keys but cannot manage other keys.",
+    "evidence_refs": [
+     "fc-538a9eb1"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Docs do not say whether user keys stop when the user is removed or SSO policy changes.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional expires_at; org can enforce rotation cadence for user keys",
+    "evidence_refs": [
+     "fc-5803e935",
+     "fc-db5e3ba6"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "user_api_key_rotation_period",
+    "summary": "Rotation; non-admins can rotate only their own keys.",
+    "evidence_refs": [
+     "fc-db5e3ba6"
+    ]
+   },
+   "administration": {
+    "summary": "Org admins choose whether workspace managers/members can view or manage keys.",
+    "conditions": "Enterprise for permission settings.",
+    "evidence_refs": [
+     "fc-61d9e0d0"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /api-keys (List API Key) with workspace_id; scope workspace_user_api_keys.list lists all workspace user keys.",
+     "evidence_refs": [
+      "fc-e877444f",
+      "fc-538a9eb1"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Admin Settings > Audit Logs > filter Action = Export",
+     "api": "GET https://api.portkey.ai/v1/audit-logs?action=<export>&user_type=api_key",
+     "cli": null,
+     "evidence_refs": [
+      "fc-02f7691c",
+      "fc-46ab8a49"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented"
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs",
+      "notes": "Enterprise; Admin Settings > Audit Logs or GET /audit-logs (admin key with audit_logs.list); indefinite retention; filter by user_type=api_key."
+     },
+     {
+      "name": "Request Logs",
+      "notes": "Gateway request logs with full request/response; retention 3 days Developer, 30 days Production, unlimited Enterprise."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "user_type=api_key / user_id",
+      "log": "Audit log",
+      "notes": "Actor can be an API key"
+     },
+     {
+      "field": "api_key_id, old_key_masked",
+      "log": "Audit log (rotation)",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Create (resource type API Keys)",
+      "stage": "create",
+      "notes": "Audit action filter"
+     },
+     {
+      "event": "Rotate",
+      "stage": "rotate",
+      "notes": "rotation_mode manual|auto"
+     },
+     {
+      "event": "Delete",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "Update",
+      "stage": "modify",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "request_id",
+     "client_ip",
+     "workspace_id",
+     "api key id"
+    ],
+    "anomaly_cues": [
+     "Admin key actions from new Client IP or Country",
+     "Keys created without expires_at",
+     "Workspace service key creating other keys"
+    ],
+    "containment": {
+     "steps": "DELETE the key via Admin API or dashboard; or rotate with minimum 30-minute transition.",
+     "kills_existing": "unknown",
+     "notes": "Rotation leaves old secret valid at least 30 minutes."
+    },
+    "sample_query": "GET /v1/audit-logs?user_type=api_key&resource_type=...&start_time=...&end_time=...",
+    "unknown": [
+     "Whether request logs record which API key was used (field name)"
+    ],
+    "evidence_refs": [
+     "fc-02f7691c",
+     "fc-46ab8a49",
+     "fc-db5e3ba6",
+     "fc-c13c2749",
+     "fc-5308ecb8"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Models available to the key",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/api-keys",
+      "reveals": "API keys in scope",
+      "bulk": true,
+      "scope": "*_api_keys.list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit method filter lists only POST/PUT/DELETE"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/integrations",
+      "reveals": "Stored provider integrations",
+      "bulk": true,
+      "scope": "organisation_integrations.list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /v1/logs/exports",
+      "reveals": "Bulk export of request logs (full prompts/responses)",
+      "bulk": true,
+      "scope": "logs.export",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "Export",
+      "log_notes": "Audit action 'Export' exists (Enterprise)"
+     }
+    ],
+    "unknown": [
+     "Whoami endpoint"
+    ],
+    "evidence_refs": [
+     "fc-a6646e85",
+     "fc-e877444f",
+     "fc-02f7691c",
+     "fc-ec7d1ad0",
+     "fc-5308ecb8",
+     "fc-538a9eb1"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "portkey-4",
+   "name": "JWT Authentication",
+   "family": "jwt",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Clients send an RS256 JWT instead of an API key; Portkey validates it against JWKS configured on the organisation. Claims carry org, workspace and scopes.",
+    "evidence_refs": [
+     "fc-eaaae6ec"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "Any issuer whose JWKS URL/JSON is configured; user identified from email_id, sub or uid.",
+    "evidence_refs": [
+     "fc-eaaae6ec"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "exp claim required; set by issuer",
+    "evidence_refs": [
+     "fc-eaaae6ec"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "exp",
+    "summary": "Client mints/obtains a new JWT.",
+    "evidence_refs": [
+     "fc-eaaae6ec"
+    ]
+   },
+   "administration": {
+    "summary": "Configured under Admin Settings > Organisation > Authentication.",
+    "conditions": "Enterprise.",
+    "evidence_refs": [
+     "fc-eaaae6ec"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Admin Settings > Audit Logs > filter Action = Export",
+     "api": "GET https://api.portkey.ai/v1/audit-logs?action=<export>",
+     "cli": null,
+     "evidence_refs": [
+      "fc-02f7691c",
+      "fc-46ab8a49"
+     ]
+    },
+    "expiry": {
+     "ui": "Set by the issuer via the JWT exp claim (mandatory); check exp in the token payload",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-eaaae6ec"
+     ]
+    },
+    "kill": {
+     "ui": "Admin Settings > Organisation > Authentication > remove the key (kid) from JWKS URL/JWKS JSON; then revoke at the issuer",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-eaaae6ec"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "RS256 JWT"
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs",
+      "notes": "Enterprise; Admin Settings > Audit Logs or GET /audit-logs (admin key with audit_logs.list); indefinite retention; filter by user_type=api_key."
+     },
+     {
+      "name": "Request Logs",
+      "notes": "Gateway request logs with full request/response; retention 3 days Developer, 30 days Production, unlimited Enterprise."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "email_id / sub / uid",
+      "log": "Request logs/metrics",
+      "notes": "User attribution precedence"
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "email_id",
+     "sub"
+    ],
+    "anomaly_cues": [
+     "JWTs with broad scopes or long exp"
+    ],
+    "containment": {
+     "steps": "Remove or rotate the JWKS entry; revoke at issuer.",
+     "kills_existing": "partial",
+     "notes": "Valid JWTs work until exp unless JWKS removed."
+    },
+    "sample_query": null,
+    "unknown": [
+     "JWKS cache duration"
+    ],
+    "evidence_refs": [
+     "fc-eaaae6ec"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Models available to the key",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/api-keys",
+      "reveals": "API keys in scope",
+      "bulk": true,
+      "scope": "*_api_keys.list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit method filter lists only POST/PUT/DELETE"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/integrations",
+      "reveals": "Stored provider integrations",
+      "bulk": true,
+      "scope": "organisation_integrations.list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /v1/logs/exports",
+      "reveals": "Bulk export of request logs (full prompts/responses)",
+      "bulk": true,
+      "scope": "logs.export",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "Export",
+      "log_notes": "Audit action 'Export' exists (Enterprise)"
+     }
+    ],
+    "unknown": [
+     "Whoami endpoint"
+    ],
+    "evidence_refs": [
+     "fc-a6646e85",
+     "fc-e877444f",
+     "fc-02f7691c",
+     "fc-ec7d1ad0",
+     "fc-5308ecb8",
+     "fc-538a9eb1"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "portkey-5",
+   "name": "SCIM API token",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer token generated in Admin Settings > Authentication Settings > SCIM Provisioning, used by the IdP for user/workspace provisioning.",
+    "evidence_refs": [
+     "fc-ef442d48"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static token.",
+    "evidence_refs": [
+     "fc-ef442d48"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Not documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "unknown",
+    "summary": "Generate a new token in the control plane.",
+    "evidence_refs": [
+     "fc-ef442d48"
+    ]
+   },
+   "administration": {
+    "summary": "Org admin setting.",
+    "conditions": "SCIM (Enterprise org management).",
+    "evidence_refs": [
+     "fc-ef442d48"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The SCIM token is generated at org level in Admin Settings, not tied to a user's account in the docs.",
+     "evidence_refs": [
+      "fc-ef442d48"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented"
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs",
+      "notes": "Enterprise; Admin Settings > Audit Logs or GET /audit-logs (admin key with audit_logs.list); indefinite retention; filter by user_type=api_key."
+     },
+     {
+      "name": "Request Logs",
+      "notes": "Gateway request logs with full request/response; retention 3 days Developer, 30 days Production, unlimited Enterprise."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [],
+    "anomaly_cues": [
+     "Unexpected user/workspace provisioning"
+    ],
+    "containment": {
+     "steps": "Regenerate in Admin Settings > Authentication Settings > SCIM Provisioning (revocation of old token not documented).",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Revocation behaviour"
+    ],
+    "evidence_refs": [
+     "fc-ef442d48"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "SCIM read endpoints"
+    ],
+    "evidence_refs": [
+     "fc-ef442d48"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "portkey-6",
+   "name": "Integrations / Virtual Keys (stored provider credentials)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Upstream provider keys (OpenAI, Bedrock, etc.) stored encrypted in Portkey and used by the gateway on behalf of a Portkey API key; not returned to users. Virtual Keys are deprecated in favour of Model Catalog/Integrations.",
+    "evidence_refs": [
+     "fc-9cbf23a7",
+     "fc-3ad9141b"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Holder needs a Portkey API key or JWT to use them.",
+    "evidence_refs": [
+     "fc-3ad9141b"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Lifetime is the upstream provider's",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "upstream",
+    "summary": "Update the integration with a new provider key.",
+    "evidence_refs": [
+     "fc-9cbf23a7"
+    ]
+   },
+   "administration": {
+    "summary": "Org admins choose which workspaces and models can use each integration and set budgets/rate limits.",
+    "conditions": "",
+    "evidence_refs": [
+     "fc-9cbf23a7"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Integrations are org/workspace-level stored provider credentials, not user credentials.",
+     "evidence_refs": [
+      "fc-9cbf23a7"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Integrations page (Connected and Workspace-Created tabs) and the List Integrations admin API.",
+     "evidence_refs": [
+      "fc-9cbf23a7",
+      "fc-cee9e019"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Upstream provider format"
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs",
+      "notes": "Enterprise; Admin Settings > Audit Logs or GET /audit-logs (admin key with audit_logs.list); indefinite retention; filter by user_type=api_key."
+     },
+     {
+      "name": "Request Logs",
+      "notes": "Gateway request logs with full request/response; retention 3 days Developer, 30 days Production, unlimited Enterprise."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [
+     {
+      "event": "Create/Update/Delete (resource type Integrations)",
+      "stage": "modify",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "integration slug"
+    ],
+    "anomaly_cues": [
+     "Integration shared to new workspaces"
+    ],
+    "containment": {
+     "steps": "Rotate the key at the upstream provider and update/delete the integration.",
+     "kills_existing": "yes",
+     "notes": "Upstream rotation ends use."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-02f7691c",
+     "fc-9cbf23a7"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Not a standalone bearer credential"
+    ],
+    "evidence_refs": [
+     "fc-9cbf23a7"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

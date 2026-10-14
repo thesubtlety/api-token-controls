@@ -1,0 +1,287 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "coupa",
+      "name": "Coupa",
+      "scope_notes": "Covers Coupa (Core platform REST API). Covers customer-created integrations to the Coupa Core platform; Treasury, CSO and Supply Chain products have separate APIs and are out of scope.",
+      "controls": [
+        {
+          "name": "Deactivate OAuth2/OpenID Connect client",
+          "effect": "revoke",
+          "applies_to": [
+            "coupa-1",
+            "coupa-2"
+          ],
+          "what": "Deactivate an individual client.",
+          "setting": "Setup > Integrations > Oauth2/OpenID Connect Clients",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-40a8fd6e"
+          ]
+        },
+        {
+          "name": "Scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "coupa-1",
+            "coupa-2"
+          ],
+          "what": "Each client gets only the service.object.right scopes assigned.",
+          "setting": "Client create/edit page; /oauth2/scopes",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-40a8fd6e",
+            "fc-b64fd3cd"
+          ]
+        },
+        {
+          "name": "IP Whitelisting",
+          "effect": "limit_network",
+          "applies_to": [
+            "coupa-1",
+            "coupa-2"
+          ],
+          "what": "Rejects API requests from IPs or CIDRs not on the client's allowlist (403).",
+          "setting": "OAuth/OIDC Client Configuration > IP Whitelisting",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-0d5c298b"
+          ]
+        },
+        {
+          "name": "Client Purpose",
+          "effect": "other",
+          "applies_to": [
+            "coupa-1",
+            "coupa-2"
+          ],
+          "what": "Mandatory field recording whether the client is internal, third-party or marketplace.",
+          "setting": "OAuth/OIDC Client Configuration > Client Purpose",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-0d5c298b"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether deactivating a client invalidates already-issued 24h JWT access tokens.",
+        "Whether client secrets can be rotated without recreating the client, and whether they expire.",
+        "Admin audit log events for OAuth client creation, edits, secret views or deactivation.",
+        "Whether customers can view the API telemetry data (docs describe 'internal reporting').",
+        "Whether Coupa SAML SSO settings affect OAuth token use or API key use.",
+        "Whether any legacy API keys still authenticate on current releases."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "coupa-2",
+      "provider_id": "coupa",
+      "name": "OAuth2/OpenID Connect Client - Authorization Code / Device Code grant (user-delegated)",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A user signs in to Coupa and consents; the app gets an access token and, with offline_access, a refresh token acting as that user (e.g. Okta provisioning).",
+        "evidence_refs": [
+          "fc-40a8fd6e",
+          "fc-369686f3"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "The user authenticates to Coupa during consent (SSO if configured); later refresh-token use has no documented IdP check.",
+        "evidence_refs": [
+          "fc-40a8fd6e"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "IP Whitelisting is a field on OAuth/OIDC clients; docs do not limit it to client credentials. Account/business group restrictions apply only to client-credentials clients.",
+        "evidence_refs": [
+          "fc-0d5c298b"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 86399,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Refresh tokens expire every 90 days",
+        "evidence_refs": [
+          "fc-40a8fd6e"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "90-day refresh token",
+        "summary": "App refreshes until the refresh token expires, then the user re-authenticates.",
+        "evidence_refs": [
+          "fc-40a8fd6e"
+        ]
+      },
+      "administration": {
+        "summary": "Same client table; scopes required.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-40a8fd6e"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "The OpenIDConnect Clients table lists clients, but docs name no view of which users authorized a client or their tokens.",
+          "evidence_refs": [
+            "fc-40a8fd6e"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Setup > Integrations > Oauth2/OpenID Connect Clients (lists clients only, not per-user grants)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-40a8fd6e"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "Fixed: refresh tokens expire every 90 days; not configurable in docs",
+          "cli": null,
+          "evidence_refs": [
+            "fc-40a8fd6e"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "JWT access token; refresh token 90 days."
+        },
+        "log_sources": [
+          {
+            "name": "API telemetry",
+            "notes": "Same limits as coupa-1."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "client Identifier",
+          "consenting user"
+        ],
+        "anomaly_cues": [
+          "Authorization code clients requesting offline_access with write scopes"
+        ],
+        "containment": {
+          "steps": "Deactivate the client.",
+          "kills_existing": "unknown",
+          "notes": null
+        },
+        "sample_query": null,
+        "unknown": [
+          "How to revoke one user's refresh token"
+        ],
+        "evidence_refs": [
+          "fc-0d5c298b",
+          "fc-40a8fd6e"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "enumeration",
+            "call": "GET /api/users",
+            "reveals": "User records",
+            "bulk": true,
+            "scope": "core.user.read",
+            "rate_limit": "25 req/s, burst 20",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-eb306fb1",
+          "fc-369686f3"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0d5c298b",
+      "title": "OAuth 2.0 and OIDC (Coupa Documentation)",
+      "url": "https://docs.coupa.com/en/developer-documentation/the-coupa-core-api/oauth-2.0-and-oidc",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-369686f3",
+      "title": "Set Up Okta User Provisioning with OAuth 2.0",
+      "url": "https://docs.coupa.com/en/developer-documentation/the-coupa-core-api/oauth-2.0-and-oidc/set-up-okta-user-provisioning-with-oauth-2.0",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-40a8fd6e",
+      "title": "OpenID Connect Clients",
+      "url": "https://docs.coupa.com/en/developer-documentation/the-coupa-core-api/oauth-2.0-and-oidc/openid-connect-clients",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b64fd3cd",
+      "title": "OAuth 2.0 Getting Started with Coupa API (Revised 25 February 2026)",
+      "url": "https://compass.coupa.com/en-us/products/total-spend-management-platform/integration-playbooks-and-resources/integration-knowledge-articles/oauth-2.0-getting-started-with-coupa-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eb306fb1",
+      "title": "Get Started with the API",
+      "url": "https://docs.coupa.com/en/developer-documentation/the-coupa-core-api/get-started-with-the-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,1632 @@
+{
+ "id": "datadog",
+ "name": "Datadog",
+ "scope_notes": "IP documentation differs on entitlement (Pro+ via support vs Enterprise). Confirm contract. AWS WIF requires supported integration/configuration.",
+ "controls": [
+  {
+   "name": "Application key scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Restricts an application key to the listed authorization scopes instead of all of its owner's permissions.",
+   "setting": "Organization Settings > Application Keys (edit key scopes); Key Management API",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "turn19search19"
+   ],
+   "quote": "Scoped application keys are granted only the scopes specified by the user"
+  },
+  {
+   "name": "API Keys Write permission",
+   "effect": "disable",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Only roles holding api_keys_write can create or rename API keys (Admin role by default).",
+   "setting": "Organization Settings > Roles (custom roles)",
+   "plan": "Custom roles may require an eligible plan (not confirmed)",
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5e887a08"
+   ],
+   "quote": "Create and rename API Keys for your organization."
+  },
+  {
+   "name": "User App Keys / Org App Keys Write permissions",
+   "effect": "disable",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Controls who can create and manage their own application keys (user_app_keys) or anyone's keys (org_app_keys_write).",
+   "setting": "Organization Settings > Roles",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5e887a08"
+   ],
+   "quote": "View and manage Application Keys owned by the user."
+  },
+  {
+   "name": "Service Account Write permission",
+   "effect": "disable",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Limits who can create, disable and use service accounts that own application keys.",
+   "setting": "Organization Settings > Roles; Organization Settings > Service Accounts",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5e887a08"
+   ],
+   "quote": "Create, disable, and use Service Accounts in your organization."
+  },
+  {
+   "name": "One-Time Read (OTR) mode",
+   "effect": "other",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Shows application key secrets only once at creation; becomes permanent after 3 months enabled.",
+   "setting": "Organization Settings > Application Keys (requires org_app_keys_write + org_management)",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "turn19search19"
+   ],
+   "quote": "When OTR mode is enabled, application key secrets are only displayed once during creation."
+  },
+  {
+   "name": "Actions API access (per application key)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Application keys cannot call the Actions APIs unless explicitly enabled per key.",
+   "setting": "Organization Settings > Application Keys or API",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "turn19search19"
+   ],
+   "quote": "By default, application keys cannot be used with these APIs."
+  },
+  {
+   "name": "IP Allowlist",
+   "effect": "limit_network",
+   "applies_to": [
+    "datadog-1",
+    "datadog-2"
+   ],
+   "what": "Blocks UI, public API and OAuth app access from IPs outside the list; Agent intake and some endpoints are exempt.",
+   "setting": "Organization Settings > Security > IP Allowlist; IP Allowlist API; Terraform ip_allowlist (Org Management permission)",
+   "plan": "Pro+ or Enterprise, enabled via support (API reference says Enterprise)",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "turn5search4"
+   ],
+   "quote": "When the IP allowlist is enabled, only IP addresses or CIDR ranges in the allowlist can access the Datadog API and UI."
+  },
+  {
+   "name": "Revoke API key / application key",
+   "effect": "revoke",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Revoked API keys can be restored for 7 days; application key revocation is permanent.",
+   "setting": "Organization Settings > API Keys / Application Keys; Key Management API",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "turn19search19"
+   ],
+   "quote": "Revoking an application key is permanent."
+  },
+  {
+   "name": "Disable OAuth access for an application",
+   "effect": "disable",
+   "applies_to": [
+    "datadog-2"
+   ],
+   "what": "Turns off an OAuth app and revokes it for all users in the org.",
+   "setting": "Organization Settings > OAuth Apps (Admin role or org_authorized_apps_read/write)",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-2e8c2579"
+   ],
+   "quote": "Disabling OAuth access for an application revokes access to this application for all users in your organization."
+  },
+  {
+   "name": "Revoke a user's OAuth access",
+   "effect": "revoke",
+   "applies_to": [
+    "datadog-2"
+   ],
+   "what": "Removes one user's authorization for an OAuth app; the user can re-authorize.",
+   "setting": "Organization Settings > OAuth Apps",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-2e8c2579"
+   ],
+   "quote": "Revoking a user's OAuth access to an application removes all access to that application."
+  },
+  {
+   "name": "Workload Identity Federation identity and intake mappings",
+   "effect": "limit_resources",
+   "applies_to": [
+    "datadog-3"
+   ],
+   "what": "Only AWS role ARNs matched by a mapping can authenticate, and each identity mapping grants exactly one Datadog user or service account's permissions.",
+   "setting": "Organization Settings > Workload Identity Federation > Identity Mappings / Intake Mappings; cloud_auth API",
+   "plan": "Not stated on page; requires Datadog-AWS integration",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "turn23search0"
+   ],
+   "quote": "Each mapping grants a cloud role the permissions of a specific Datadog user or service account."
+  },
+  {
+   "name": "Workload Identity Federation Write permission",
+   "effect": "disable",
+   "applies_to": [
+    "datadog-3"
+   ],
+   "what": "Only roles with this permission can add, change or remove federation mappings (Admin role by default).",
+   "setting": "Organization Settings > Roles",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5e887a08"
+   ],
+   "quote": "Add, update, and remove workload identity federation configurations"
+  },
+  {
+   "name": "Client Tokens Write permission",
+   "effect": "disable",
+   "applies_to": [
+    "datadog-4"
+   ],
+   "what": "Only roles with client_tokens_write can create or edit client tokens (Standard role by default).",
+   "setting": "Organization Settings > Roles; Organization Settings > Client Tokens",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-5e887a08"
+   ],
+   "quote": "Create and edit Client Tokens."
+  },
+  {
+   "name": "Revoke a token (PAT)",
+   "effect": "revoke",
+   "applies_to": [
+    "datadog-5"
+   ],
+   "what": "Owner or admin revokes a PAT; it stops authenticating within seconds.",
+   "setting": "Personal Settings > Access Tokens or Organization Settings > Access Tokens > Revoke Token; DELETE /api/v2/personal_access_tokens/<PAT_ID>",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-8325e472"
+   ]
+  },
+  {
+   "name": "Revoke a token (SAT)",
+   "effect": "revoke",
+   "applies_to": [
+    "datadog-6"
+   ],
+   "what": "Admin revokes a SAT; it stops authenticating within seconds.",
+   "setting": "Organization Settings > Service Accounts > (account) > Revoke, or Organization Settings > Access Tokens; DELETE /api/v2/service_accounts/<SERVICE_ACCOUNT_ID>/access_tokens/<TOKEN_ID>",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-d92d4223"
+   ]
+  },
+  {
+   "name": "Disable existing members",
+   "effect": "revoke",
+   "applies_to": [
+    "datadog-5"
+   ],
+   "what": "Disabling a user revokes all of their PATs immediately.",
+   "setting": "Organization Settings > Users > Disable",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-f2508496"
+   ]
+  },
+  {
+   "name": "User App Keys (user_app_keys) permission",
+   "effect": "disable",
+   "applies_to": [
+    "datadog-5"
+   ],
+   "what": "Only roles with user_app_keys can create PATs; remove it from a role to stop its members creating PATs.",
+   "setting": "Organization Settings > Roles (permission user_app_keys)",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-8325e472",
+    "fc-5e887a08"
+   ]
+  },
+  {
+   "name": "Service Account Write (service_account_write) permission",
+   "effect": "disable",
+   "applies_to": [
+    "datadog-6"
+   ],
+   "what": "Only roles with service_account_write (or org_app_keys_write) can create SATs.",
+   "setting": "Organization Settings > Roles (permission service_account_write)",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-d92d4223",
+    "fc-5e887a08"
+   ]
+  },
+  {
+   "name": "Token scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "datadog-5",
+    "datadog-6"
+   ],
+   "what": "Each PAT or SAT must have at least one scope and can only do what its scopes allow.",
+   "setting": "Select Scopes when creating or editing a token",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-8325e472",
+    "fc-d92d4223"
+   ]
+  },
+  {
+   "name": "Mandatory PAT time-to-live",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "datadog-5"
+   ],
+   "what": "Every PAT expires between 24 hours and one year after creation; expired tokens are revoked automatically.",
+   "setting": "Expiration Date at creation (fixed by Datadog bounds)",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-8325e472"
+   ]
+  },
+  {
+   "name": "Restrictions on token-authenticated API calls",
+   "effect": "other",
+   "applies_to": [
+    "datadog-5",
+    "datadog-6"
+   ],
+   "what": "A PAT or SAT cannot create application keys, and can only mint tokens with a subset of its scopes and no longer TTL.",
+   "setting": "Built in",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-8325e472",
+    "fc-d92d4223"
+   ]
+  },
+  {
+   "name": "IP Allowlist",
+   "effect": "limit_network",
+   "applies_to": [
+    "datadog-5",
+    "datadog-6"
+   ],
+   "what": "Org-wide allowlist blocks API calls from IPs outside the list, including token-authenticated calls.",
+   "setting": "Organization Settings > Security > IP Allowlist; IP Allowlist API",
+   "plan": "Pro+ or Enterprise (request through support)",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "turn5search4"
+   ]
+  },
+  {
+   "name": "Unused Application Keys (Governance Console control)",
+   "effect": "revoke",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Detects application keys unused for a set period (default 30 days) and can automatically revoke them.",
+   "setting": "Governance Console > Controls > Unused Application Keys > Enforce control",
+   "plan": "Enterprise (Governance Console, via support)",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6e071546",
+    "fc-a86a9545"
+   ]
+  },
+  {
+   "name": "Unused API Keys (Governance Console control)",
+   "effect": "revoke",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Detects API keys unused for a set period and can automatically revoke them.",
+   "setting": "Governance Console > Controls > Unused API Keys > Enforce control",
+   "plan": "Enterprise (Governance Console, via support)",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6e071546",
+    "fc-a86a9545"
+   ]
+  },
+  {
+   "name": "Leaked API Keys (Governance Console control)",
+   "effect": "revoke",
+   "applies_to": [
+    "datadog-1"
+   ],
+   "what": "Detects active API keys found exposed publicly by Datadog token leak detection, with optional enforcement.",
+   "setting": "Governance Console > Controls > Leaked API Keys",
+   "plan": "Enterprise (Governance Console, via support)",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6e071546",
+    "fc-a86a9545"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "datadog-1",
+   "what": "No expiration or maximum lifetime for API or application keys.",
+   "evidence_refs": [
+    "fc-f1c37728"
+   ],
+   "quote": "Long-lived. No built-in expiration.",
+   "kind": "expiry"
+  },
+  {
+   "path_id": "datadog-4",
+   "what": "No expiration for RUM client tokens, and they survive deactivation of the creating user.",
+   "evidence_refs": [
+    "turn19search19"
+   ],
+   "quote": "When a user who created a client token is deactivated, the client token remains active.",
+   "kind": "expiry"
+  },
+  {
+   "path_id": "datadog-5",
+   "what": "IP restriction for a single token; the IP allowlist is org-wide only.",
+   "kind": "network",
+   "evidence_refs": [
+    "turn5search4"
+   ]
+  },
+  {
+   "path_id": "datadog-6",
+   "what": "IP restriction for a single token; the IP allowlist is org-wide only.",
+   "kind": "network",
+   "evidence_refs": [
+    "turn5search4"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "No org setting found that blocks personal application keys or forces service-account-only keys.",
+  "Whether the IP allowlist applies to API-key and client-token requests outside telemetry intake is not stated; entitlement differs between account docs (Pro+/Enterprise) and API reference (Enterprise).",
+  "Plan requirement for Agent-based WIF: current WIF page lists no tier; earlier material says Enterprise-only and preview.",
+  "How to delete or disable an identity mapping is not documented on the WIF page; intake mappings are deleted via API.",
+  "Whether custom roles (needed to narrow these permissions) require a specific plan was not confirmed."
+ ],
+ "credentials": [
+  {
+   "id": "datadog-1",
+   "name": "API + application keys",
+   "family": "api_key",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Organization API key, often combined with a user/service-account application key; OAuth for supported apps; workload federation for supported scenarios.",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Org IP allowlist applies to UI/API, with documented intake/public-dashboard exceptions. Not a per-key rule.",
+    "evidence_refs": [
+     "turn5search4",
+     "turn5search8",
+     "turn19search19"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "No built-in expiry",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "API/application keys require explicit rotation or revocation.",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23"
+    ]
+   },
+   "administration": {
+    "summary": "Application-key scopes, service accounts, role permissions, OAuth grants, IP allowlist and key revocation.",
+    "conditions": "IP allowlist docs still differ on entitlement (account docs: Pro+ or Enterprise, via support; API reference: enterprise-only). Confirm contract. AWS WIF requires the Datadog-AWS integration.",
+    "evidence_refs": [
+     "turn5search4",
+     "turn5search8",
+     "turn19search19"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Disabling a user revokes the application keys they created, but API keys they created stay valid.",
+     "evidence_refs": [
+      "turn19search19",
+      "fc-f2508496"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Organization Settings > API Keys lists all org API keys (API Keys Read), and Org App Keys Read shows application keys of all users.",
+     "evidence_refs": [
+      "fc-5e887a08"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Audit Trail explorer (Organization Settings > Audit Trail); query @evt.name:\"Log Management\" @asset.type:logs_query, narrow by API Key ID / actor facet",
+     "api": "POST /api/v2/audit/events/search with filter.query \"@evt.name:\\\"Log Management\\\" @asset.type:logs_query\"",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2ab91e19",
+      "fc-29c5614b",
+      "fc-e14d7c2a"
+     ]
+    },
+    "offboard": {
+     "ui": "Organization Settings > Users > Edit > Disable toggle > Save (revokes app keys); then Organization Settings > API Keys > Revoke for API keys the user created",
+     "api": "DELETE /api/v2/users/{user_id}; DELETE /api/v2/api_keys/{api_key_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-f2508496",
+      "fc-61800227",
+      "turn19search19",
+      "fc-e1c4d962"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ddapp_ (new application keys); API keys: null",
+     "notes": "New app keys use ddapp_ prefix; legacy app keys and API keys have no documented prefix. GitHub detects datadog_api_key and datadog_app_key."
+    },
+    "log_sources": [
+     {
+      "name": "Datadog Audit Trail",
+      "notes": "Request events for API calls plus product events; records @auth_method and key IDs. Default 90-day retention when enabled (3-90 days); 7 days when disabled."
+     },
+     {
+      "name": "Organization Settings key list (Last used)",
+      "notes": "Last used timestamp per key; Audit Trail extends history."
+     },
+     {
+      "name": "Datadog Logs (datadog.api_key_uuid tag)",
+      "notes": "Ingested logs carry UUID of submitting API key."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "@metadata.api_key.id",
+      "log": "Audit Trail",
+      "notes": "API key used to authenticate"
+     },
+     {
+      "field": "@metadata.app_key.id",
+      "log": "Audit Trail",
+      "notes": "Application key when @auth_method is api_app_keys"
+     },
+     {
+      "field": "@metadata.application_key.id",
+      "log": "Audit Trail",
+      "notes": "Application key used for API auth"
+     },
+     {
+      "field": "datadog.api_key_uuid",
+      "log": "Logs",
+      "notes": "API key that submitted the log"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "@evt.name:Authentication @asset.type:api_key",
+      "stage": "create",
+      "notes": "API key accessed, listed, created or deleted in Org Settings"
+     },
+     {
+      "event": "@evt.name:Authentication @asset.type:application_key",
+      "stage": "create",
+      "notes": "App key accessed, listed, created or deleted"
+     },
+     {
+      "event": "@evt.name:\"Access Management\" @asset.type:application_key",
+      "stage": "change",
+      "notes": "Service account app key created/modified/deleted"
+     },
+     {
+      "event": "@auth_method:api_app_keys",
+      "stage": "use",
+      "notes": "API request authenticated with key pair"
+     },
+     {
+      "event": "Dormant application key used",
+      "stage": "use",
+      "notes": "Security Notification, @metadata.dormant_key_age"
+     },
+     {
+      "event": "Token leaked",
+      "stage": "revoke",
+      "notes": "Security Notification, @metadata.key_leak.detected_at; revoke the key"
+     }
+    ],
+    "correlation_keys": [
+     "@usr.email",
+     "@usr.id",
+     "@network.client.ip",
+     "@network.client.geoip.as.number",
+     "@http.useragent",
+     "@http.url_details.path",
+     "@metadata.api_key.id",
+     "@metadata.app_key.id"
+    ],
+    "anomaly_cues": [
+     "App key used after owner deactivated (should be revoked; check API keys created by that user, which stay valid)",
+     "Dormant application key used notification",
+     "Key ID seen from new ASN or country",
+     "Read-heavy calls (logs queries, key listing) from a key normally used for writes",
+     "Token leaked notification for any key"
+    ],
+    "containment": {
+     "steps": "Revoke API key in Organization Settings > API keys (restorable 7 days); revoke app key in Application Keys (permanent). Rotate: create new key, update services, then revoke.",
+     "kills_existing": "yes",
+     "notes": "Revocation may take a few seconds to propagate. Disabling a user revokes their app keys but NOT API keys they created."
+    },
+    "sample_query": {
+     "language": "Datadog Audit Trail search",
+     "query": "@auth_method:api_app_keys @metadata.app_key.id:<KEY_ID> -@network.client.ip:(<KNOWN_IP_1> OR <KNOWN_IP_2>)",
+     "purpose": "Find use of a specific application key from unexpected IPs"
+    },
+    "unknown": [
+     "API key string format/regex",
+     "exact @evt.name value for API request events",
+     "@asset.type for service-account app key list vs org"
+    ],
+    "evidence_refs": [
+     "turn19search19",
+     "fc-2ab91e19",
+     "fc-346bcc6d",
+     "fc-29c5614b",
+     "fc-846e1fd4",
+     "fc-8325e472"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "POST /api/v2/logs/events/search",
+      "reveals": "Log events (needs logs_read_data)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "@evt.name:\"Log Management\" @asset.type:logs_query",
+      "log_notes": "Audit Trail event 'Query (Public Beta)'; Audit Trail must be enabled."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-1bb0d6f3",
+     "fc-29c5614b"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "datadog-2",
+   "name": "OAuth app",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Organization API key, often combined with a user/service-account application key; OAuth for supported apps; workload federation for supported scenarios.",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "OAuth authorization-code grant with PKCE and user consent. No external identity/assertion exchange is documented for this path; AWS workload federation is a separate path (datadog-3).",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23",
+     "fc-44d9ffd5"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Org IP allowlist explicitly covers third-party apps accessing Datadog through OAuth. Org-wide only; cannot be scoped to a token, key, user or endpoint.",
+    "evidence_refs": [
+     "turn5search4",
+     "turn5search8",
+     "turn19search19"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Access token TTL 1 hour",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23",
+     "fc-44d9ffd5"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "none",
+    "summary": "Refresh token obtains a new 1-hour access token. Marketplace OAuth client refresh tokens have no expiration until the user revokes authorization; other client types not stated.",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23",
+     "fc-44d9ffd5"
+    ]
+   },
+   "administration": {
+    "summary": "Application-key scopes, service accounts, role permissions, OAuth grants, IP allowlist and key revocation.",
+    "conditions": "IP documentation differs on entitlement (Pro+ via support vs Enterprise). Confirm contract. AWS WIF requires supported integration/configuration.",
+    "evidence_refs": [
+     "turn5search4",
+     "turn5search8",
+     "turn19search19"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Organization Settings > Mobile and Third-Party Access lists OAuth apps and the users who authorized each one.",
+     "evidence_refs": [
+      "fc-2e8c2579"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "Fixed 1-hour access token TTL, returned by POST /api/v2/oauth2/token; not configurable",
+     "cli": null,
+     "evidence_refs": [
+      "fc-37d3997e"
+     ]
+    },
+    "usage": {
+     "ui": "Audit Trail explorer; filter by Authentication Attributes facets",
+     "api": "POST /api/v2/audit/events/search",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2ab91e19",
+      "fc-e14d7c2a"
+     ]
+    },
+    "reads": {
+     "ui": "Audit Trail explorer; query @evt.name:\"Log Management\" @asset.type:logs_query",
+     "api": "POST /api/v2/audit/events/search with that query",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2ab91e19",
+      "fc-29c5614b",
+      "fc-e14d7c2a"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "No documented access/refresh token format."
+    },
+    "log_sources": [
+     {
+      "name": "Datadog Audit Trail",
+      "notes": "Request events for API calls plus product events; records @auth_method and key IDs. Default 90-day retention when enabled (3-90 days); 7 days when disabled."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "@metadata.oauth_client.name",
+      "log": "Audit Trail",
+      "notes": "OAuth client used when @auth_method is oauth_token"
+     },
+     {
+      "field": "@asset.id",
+      "log": "Audit Trail",
+      "notes": "OAuth client asset on oauth_client events"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "@evt.name:OAuth @asset.type:oauth_client",
+      "stage": "change",
+      "notes": "OAuth client created, modified or deleted, with previous/new values"
+     },
+     {
+      "event": "@auth_method:oauth_token",
+      "stage": "use",
+      "notes": "API call made with OAuth access token"
+     }
+    ],
+    "correlation_keys": [
+     "@usr.email",
+     "@usr.id",
+     "@metadata.oauth_client.name",
+     "@network.client.ip",
+     "@http.useragent",
+     "@http.url_details.path"
+    ],
+    "anomaly_cues": [
+     "OAuth client name not on the approved app list",
+     "OAuth token use by a user who was deactivated or lost the role",
+     "New OAuth client created or redirect URIs changed",
+     "API_KEYS_WRITE-scoped app creating keys"
+    ],
+    "containment": {
+     "steps": "Revoke tokens via POST /oauth2/v1/revoke or user revokes app authorization; delete the OAuth client.",
+     "kills_existing": "partial",
+     "notes": "Refresh tokens never expire until revoked; access tokens last 1 hour. Not documented whether revoking a refresh token kills issued access tokens."
+    },
+    "sample_query": {
+     "language": "Datadog Audit Trail search",
+     "query": "@auth_method:oauth_token @http.method:(POST OR PATCH OR DELETE)",
+     "purpose": "Write actions performed through OAuth apps"
+    },
+    "unknown": [
+     "token format",
+     "OAuth client ID field in audit events",
+     "authorization/consent grant event name",
+     "refresh token rotation"
+    ],
+    "evidence_refs": [
+     "fc-346bcc6d",
+     "fc-29c5614b",
+     "fc-37d3997e",
+     "fc-2ab91e19"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "POST /api/v2/logs/events/search",
+      "reveals": "Log events (OAuth scope logs_read_data)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "@evt.name:\"Log Management\" @asset.type:logs_query",
+      "log_notes": "Audit Trail event 'Query (Public Beta)'; Audit Trail must be enabled."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-1bb0d6f3",
+     "fc-29c5614b"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "datadog-3",
+   "name": "AWS workload federation",
+   "family": "federation",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Organization API key, often combined with a user/service-account application key; OAuth for supported apps; workload federation for supported scenarios.",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "AWS identity (assumed-role ARN) maps to a Datadog user/service account for a temporary JWT (Terraform) or to an intake mapping for a managed API key (Agent). AWS is the only supported cloud; Agent flow not on US1-FED/US2-FED sites.",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "mixed",
+    "boundary": "Org IP allowlist applies to UI/API, with documented intake/public-dashboard exceptions. Not a per-key rule.",
+    "evidence_refs": [
+     "turn5search4",
+     "turn5search8",
+     "turn19search19"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Short-lived JWT; Datadog returns an expiry with the token; official Go client assumes 15 minutes if none is returned",
+    "evidence_refs": [
+     "fc-14a9c5e1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "policy",
+    "summary": "Terraform provider re-signs an AWS STS request to get a new temporary JWT. Agent receives a Datadog-managed API key that Datadog rotates; on failure the Agent falls back to the API key in datadog.yaml.",
+    "evidence_refs": [
+     "turn5search0",
+     "turn23search0",
+     "turn19search23"
+    ]
+   },
+   "administration": {
+    "summary": "Application-key scopes, service accounts, role permissions, OAuth grants, IP allowlist and key revocation.",
+    "conditions": "IP documentation differs on entitlement (Pro+ via support vs Enterprise). Confirm contract. AWS WIF requires supported integration/configuration.",
+    "evidence_refs": [
+     "turn5search4",
+     "turn5search8",
+     "turn19search19"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Identity mappings can be listed (Organization Settings > Workload Identity Federation, or GET /api/v2/cloud_auth/aws/persona_mapping); issued JWTs are not listed.",
+     "evidence_refs": [
+      "turn23search0"
+     ]
+    }
+   },
+   "how": {
+    "network": {
+     "ui": "Organization Settings > Security > IP Allowlist (org-wide)",
+     "api": "PATCH /api/v2/ip_allowlist",
+     "cli": null,
+     "evidence_refs": [
+      "turn5search4",
+      "turn5search8"
+     ]
+    },
+    "expiry": {
+     "ui": null,
+     "api": "Read the expires attribute in the POST /api/v2/delegated-token response; not configurable (Go client assumes 15 min if absent)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-14a9c5e1"
+     ]
+    },
+    "reads": {
+     "ui": "Audit Trail explorer; query @evt.name:\"Log Management\" @asset.type:logs_query",
+     "api": "POST /api/v2/audit/events/search with that query",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2ab91e19",
+      "fc-29c5614b",
+      "fc-e14d7c2a"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Terraform flow gets a temporary JWT; Agent flow gets a Datadog-managed API key. No documented format."
+    },
+    "log_sources": [
+     {
+      "name": "Datadog Audit Trail",
+      "notes": "Request events for API calls plus product events; records @auth_method and key IDs. Default 90-day retention when enabled (3-90 days); 7 days when disabled."
+     },
+     {
+      "name": "AWS CloudTrail (customer side)",
+      "notes": "Role sessions whose credentials sign the STS GetCallerIdentity request."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "arn_pattern",
+      "log": "cloud_auth persona_mapping / intake_mapping config",
+      "notes": "Assumed-role ARN pattern mapped to Datadog identity"
+     },
+     {
+      "field": "account_identifier",
+      "log": "cloud_auth persona_mapping config",
+      "notes": "Datadog user email or service account mapped to"
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "@usr.email",
+     "@usr.id",
+     "@network.client.ip",
+     "@http.useragent"
+    ],
+    "anomaly_cues": [
+     "New or broadened arn_pattern (wildcard) in a persona or intake mapping",
+     "Mapping to a human user instead of a service account",
+     "Federated identity calling from IPs outside the AWS workload's range",
+     "Agent falling back to static API key in datadog.yaml"
+    ],
+    "containment": {
+     "steps": "Delete intake mapping (DELETE /api/v2/cloud_auth/aws/intake_mapping/<MAPPING_UUID>); remove persona mapping; disable mapped service account; revoke the AWS role session on the AWS side.",
+     "kills_existing": "unknown",
+     "notes": "JWT lifetime not documented; Agent may fall back to configured static API key."
+    },
+    "sample_query": {
+     "language": "Datadog Audit Trail search",
+     "query": "@http.url_details.path:/api/v2/cloud_auth/aws/*",
+     "purpose": "Changes to AWS federation mappings"
+    },
+    "unknown": [
+     "@auth_method value for federated JWT",
+     "JWT lifetime",
+     "audit event names for mapping changes",
+     "credential id field for federated sessions"
+    ],
+    "evidence_refs": [
+     "turn23search0",
+     "fc-2ab91e19",
+     "fc-346bcc6d"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "POST /api/v2/logs/events/search",
+      "reveals": "Log events, as the mapped user or service account",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "@evt.name:\"Log Management\" @asset.type:logs_query",
+      "log_notes": "WIF JWT is used for later API calls as the mapped identity; logs query appears as Audit Trail 'Query (Public Beta)' event."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-1bb0d6f3",
+     "fc-29c5614b"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "datadog-4",
+   "name": "Client token",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Org-level token set as clientToken in browser and mobile SDKs to submit RUM events and logs. It is meant to be visible client-side, unlike API keys.",
+    "evidence_refs": [
+     "turn19search19",
+     "fc-f117cc05",
+     "fc-5e887a08"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static public token embedded in client code; no external identity exchange applies.",
+    "evidence_refs": [
+     "turn19search19"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "The org IP allowlist (Pro+ or Enterprise, via support) covers the UI and API but excludes data ingest endpoints. Client-token intake is not named either way; since end-user browsers send this traffic, source-IP limits would not normally fit.",
+    "evidence_refs": [
+     "turn5search4"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "No built-in expiry",
+    "evidence_refs": [
+     "fc-f1c37728"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "The token is reused until deleted; rotate by creating a new token and updating the client.",
+    "evidence_refs": [
+     "fc-f1c37728",
+     "turn19search19"
+    ]
+   },
+   "administration": {
+    "summary": "Client Tokens Write (default Standard role) creates and edits tokens; Read Only role can view them. RUM applications get a client token automatically. Deleted tokens cannot be restored.",
+    "conditions": "Tokens stay active after the creating user is deactivated, so review them separately from user offboarding. An authenticated proxy can hide the token from end users.",
+    "evidence_refs": [
+     "fc-5e887a08",
+     "turn19search19"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "no",
+     "details": "Client tokens stay active when the user who created them is deactivated.",
+     "evidence_refs": [
+      "turn19search19"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Organization Settings > Client Tokens tab lists the org's client tokens.",
+     "evidence_refs": [
+      "turn19search19"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not covered by GitHub secret scanning patterns; format not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Organization Settings > Client Tokens",
+      "notes": "Lists tokens; no documented usage logging"
+     },
+     {
+      "name": "Datadog Audit Trail",
+      "notes": "May record @asset.type:public_api_key events; not confirmed to be client tokens."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [],
+    "anomaly_cues": [
+     "Spike in RUM sessions or browser logs from unexpected application names or origins",
+     "Logs/RUM ingestion volume or cost spike tied to one token",
+     "Client token reused in an app it was not issued for"
+    ],
+    "containment": {
+     "steps": "Delete the token in Organization Settings > Client Tokens and ship a new token in the SDK config.",
+     "kills_existing": "yes",
+     "notes": "Deletion is permanent; deactivating the creator does not disable it. Token is public by design, so treat as abuse/injection risk, not secret leak."
+    },
+    "sample_query": {
+     "language": "Datadog Audit Trail search",
+     "query": "@evt.name:Authentication @asset.type:public_api_key",
+     "purpose": "Org Settings access/creation/deletion of public API keys (may cover client tokens; unconfirmed)"
+    },
+    "unknown": [
+     "token format",
+     "audit event name for client token create/delete",
+     "usage field identifying client token",
+     "whether public_api_key equals client token"
+    ],
+    "evidence_refs": [
+     "turn19search19",
+     "fc-29c5614b"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Not researched"
+    ],
+    "evidence_refs": []
+   },
+   "detections": []
+  },
+  {
+   "id": "datadog-5",
+   "name": "Personal Access Token (PAT)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "User-owned bearer token (prefix ddpat_) sent in the Authorization header, or in dd-application-key. No API key needed. Scopes are mandatory.",
+    "evidence_refs": [
+     "fc-8325e472"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static bearer token issued by Datadog; no external identity exchange.",
+    "evidence_refs": [
+     "fc-8325e472"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Org-wide IP allowlist covers all Datadog API calls, so token use from other IPs is blocked; it cannot be set per token. Pro+ or Enterprise, enabled through support.",
+    "evidence_refs": [
+     "turn5search4"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 31536000,
+    "configurable": "yes",
+    "summary": "Required TTL, 24 hours to 1 year; fixed at creation",
+    "evidence_refs": [
+     "fc-8325e472"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "Fixed expiration date chosen at creation",
+    "summary": "TTL cannot be changed; revoke and create a new token.",
+    "evidence_refs": [
+     "fc-8325e472"
+    ]
+   },
+   "administration": {
+    "summary": "Users with user_app_keys create their own PATs under Personal Settings > Access Tokens. Admins with org_app_keys_read/write view and revoke all PATs under Organization Settings > Access Tokens.",
+    "conditions": "user_app_keys is in the Datadog Standard Role by default.",
+    "evidence_refs": [
+     "fc-8325e472",
+     "fc-5e887a08"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Disabling a user revokes all of their PATs immediately.",
+     "evidence_refs": [
+      "fc-f2508496"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Organization Settings > Access Tokens (org_app_keys_read) or GET /api/v2/personal_access_tokens lists all PATs and SATs.",
+     "evidence_refs": [
+      "fc-8325e472",
+      "fc-1073bcff"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Personal Settings > Access Tokens > New token > Expiration Date (24h-1y); admins see expiry in Organization Settings > Access Tokens",
+     "api": "GET /api/v2/personal_access_tokens/{pat_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-8325e472"
+     ]
+    },
+    "reads": {
+     "ui": "Audit Trail explorer; query @evt.name:\"Log Management\" @asset.type:logs_query",
+     "api": "POST /api/v2/audit/events/search with that query",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2ab91e19",
+      "fc-29c5614b",
+      "fc-e14d7c2a"
+     ]
+    },
+    "offboard": {
+     "ui": "Organization Settings > Users > Edit > Disable toggle > Save",
+     "api": "DELETE /api/v2/users/{user_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-f2508496",
+      "fc-61800227"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ddpat_",
+     "notes": "ddpat_<ALIAS>_<SECRET><CHECKSUM>; alias derived from token UUID, CRC32 checksum, detectable by secret scanners. Token list returns public_portion (prefix + alias)."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Trail",
+      "notes": "Must be enabled (Organization Settings > Audit Trail Settings). Default retention 90 days (3-90 configurable). Records token creation, usage and revocation. Captures authentication method and token metadata per API call."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "public_portion / id (Token ID)",
+      "log": "GET /api/v2/personal_access_tokens response",
+      "notes": "Identifies the token in inventory. Exact Audit Trail attribute name for the token is not documented."
+     },
+     {
+      "field": "last_used_at",
+      "log": "GET /api/v2/personal_access_tokens response",
+      "notes": "Date the token was last used."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "token public_portion / Token ID",
+     "owner (user or service account)",
+     "authentication method facet in Audit Trail"
+    ],
+    "anomaly_cues": [
+     "GET /api/v2/personal_access_tokens?filter[leaked]=true returns tokens Datadog detected as leaked",
+     "New PATs/SATs created by a token-authenticated call (a token can mint subset-scoped tokens)",
+     "Recent last_used_at on tokens expected to be idle"
+    ],
+    "containment": {
+     "steps": "Revoke the token in the UI or with DELETE on its endpoint; also list and revoke any tokens it created. For PATs, disabling the owner revokes all their PATs.",
+     "kills_existing": "yes",
+     "notes": "Docs: revoked tokens can no longer authenticate; takes effect within seconds (eventual consistency)."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact Audit Trail event names and attribute names for PAT/SAT creation, use and revocation"
+    ],
+    "evidence_refs": [
+     "fc-8325e472",
+     "fc-f2508496",
+     "fc-2ab91e19",
+     "fc-1073bcff",
+     "fc-d92d4223"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/v2/users",
+      "reveals": "All users in the org, including deactivated ones",
+      "bulk": true,
+      "scope": "user_access_read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Token usage is recorded in Audit Trail generally; no specific event documented for this call."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /api/v2/personal_access_tokens",
+      "reveals": "All PATs and SATs (names, scopes, expiry, last use) when the token has org_app_keys_read",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No specific event documented."
+     },
+     {
+      "stage": "collection",
+      "call": "POST /api/v2/logs/events/search",
+      "reveals": "Log events",
+      "bulk": true,
+      "scope": "logs_read_data",
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "@evt.name:\"Log Management\" @asset.type:logs_query",
+      "log_notes": "Audit Trail logs Log Management List queries made through the Public API; Audit Trail must be enabled."
+     }
+    ],
+    "unknown": [
+     "Rate limits for these endpoints with PAT/SAT auth"
+    ],
+    "evidence_refs": [
+     "fc-8325e472",
+     "fc-1073bcff",
+     "fc-1bb0d6f3",
+     "fc-29c5614b"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "datadog-6",
+   "name": "Service Access Token (SAT)",
+   "family": "pat",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer token (prefix ddsat_) owned by a service account, sent in the Authorization header or dd-application-key. No API key needed. Scopes are mandatory.",
+    "evidence_refs": [
+     "fc-d92d4223"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static bearer token issued by Datadog; no external identity exchange.",
+    "evidence_refs": [
+     "fc-d92d4223"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Org-wide IP allowlist covers all Datadog API calls, so token use from other IPs is blocked; it cannot be set per token. Pro+ or Enterprise, enabled through support.",
+    "evidence_refs": [
+     "turn5search4"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional TTL: 1 day, 1 month, 1 year, custom, or Never; fixed at creation",
+    "evidence_refs": [
+     "fc-d92d4223"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "Expiration chosen at creation, or none",
+    "summary": "Expiration cannot be changed; revoke and create a new token.",
+    "evidence_refs": [
+     "fc-d92d4223"
+    ]
+   },
+   "administration": {
+    "summary": "Created from Organization Settings > Service Accounts by users with service_account_write; org_app_keys_write manages SATs for any service account; org_app_keys_read lists all SATs.",
+    "conditions": "service_account_write is in the Datadog Admin Role by default.",
+    "evidence_refs": [
+     "fc-d92d4223",
+     "fc-5e887a08"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "SATs belong to a service account and stay valid when people leave.",
+     "evidence_refs": [
+      "fc-d92d4223"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Organization Settings > Access Tokens (org_app_keys_read) or GET /api/v2/personal_access_tokens lists all SATs.",
+     "evidence_refs": [
+      "fc-d92d4223"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Organization Settings > Service Accounts > (account) > Access Tokens > + New Token > Expiration Date (1 day/1 month/1 year/Never/Custom)",
+     "api": "GET /api/v2/service_accounts/{service_account_id}/access_tokens/{token_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-d92d4223"
+     ]
+    },
+    "reads": {
+     "ui": "Audit Trail explorer; query @evt.name:\"Log Management\" @asset.type:logs_query",
+     "api": "POST /api/v2/audit/events/search with that query",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2ab91e19",
+      "fc-29c5614b",
+      "fc-e14d7c2a"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ddsat_",
+     "notes": "Identifiable ddsat_ prefix; token list returns public_portion."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Trail",
+      "notes": "Must be enabled (Organization Settings > Audit Trail Settings). Default retention 90 days (3-90 configurable). Records token creation, usage and revocation. Each call is attributed to the owning service account."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "public_portion / id (Token ID)",
+      "log": "GET /api/v2/personal_access_tokens response",
+      "notes": "Identifies the token in inventory. Exact Audit Trail attribute name for the token is not documented."
+     },
+     {
+      "field": "last_used_at",
+      "log": "GET /api/v2/personal_access_tokens response",
+      "notes": "Date the token was last used."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "token public_portion / Token ID",
+     "owner (user or service account)",
+     "authentication method facet in Audit Trail"
+    ],
+    "anomaly_cues": [
+     "GET /api/v2/personal_access_tokens?filter[leaked]=true returns tokens Datadog detected as leaked",
+     "New PATs/SATs created by a token-authenticated call (a token can mint subset-scoped tokens)",
+     "Recent last_used_at on tokens expected to be idle"
+    ],
+    "containment": {
+     "steps": "Revoke the token in the UI or with DELETE on its endpoint; also list and revoke any tokens it created. For PATs, disabling the owner revokes all their PATs.",
+     "kills_existing": "yes",
+     "notes": "Docs: revoked tokens can no longer authenticate; takes effect within seconds (eventual consistency)."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact Audit Trail event names and attribute names for PAT/SAT creation, use and revocation",
+     "Whether disabling the owning service account revokes its SATs"
+    ],
+    "evidence_refs": [
+     "fc-d92d4223",
+     "fc-2ab91e19",
+     "fc-1073bcff",
+     "fc-8325e472"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/v2/users",
+      "reveals": "All users in the org, including deactivated ones",
+      "bulk": true,
+      "scope": "user_access_read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Token usage is recorded in Audit Trail generally; no specific event documented for this call."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /api/v2/personal_access_tokens",
+      "reveals": "All PATs and SATs (names, scopes, expiry, last use) when the token has org_app_keys_read",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No specific event documented."
+     },
+     {
+      "stage": "collection",
+      "call": "POST /api/v2/logs/events/search",
+      "reveals": "Log events",
+      "bulk": true,
+      "scope": "logs_read_data",
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "@evt.name:\"Log Management\" @asset.type:logs_query",
+      "log_notes": "Audit Trail logs Log Management List queries made through the Public API; Audit Trail must be enabled."
+     }
+    ],
+    "unknown": [
+     "Rate limits for these endpoints with PAT/SAT auth"
+    ],
+    "evidence_refs": [
+     "fc-d92d4223",
+     "fc-1073bcff",
+     "fc-1bb0d6f3",
+     "fc-29c5614b"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

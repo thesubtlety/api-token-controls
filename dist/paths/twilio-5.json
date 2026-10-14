@@ -1,0 +1,281 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "twilio",
+      "name": "Twilio",
+      "scope_notes": "Twilio cloud APIs; PKCV needs Enterprise or Security Edition, OAuth apps are US1-only, and Monitor Events keeps 30 days (13 months with Administration, Security or Enterprise Edition).",
+      "controls": [],
+      "no_control": [
+        {
+          "path_id": "twilio-5",
+          "what": "PKCV cannot be enforced on accounts that use Flex, Studio or TaskRouter, so the Auth Token stays valid there.",
+          "kind": "disable",
+          "evidence_refs": [
+            "fc-05d9e1e1"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "IP allowlisting for REST API credentials (Auth Token, API keys, OAuth).",
+        "Expiry settings for API keys and Auth Tokens.",
+        "Whether org SSO enforcement or SCIM deactivation affects any API credential.",
+        "Org-wide policy to block Main key or Auth Token use other than PKCV.",
+        "Whether Monitor Events records read (GET) API calls or token issuance.",
+        "Whether actor_sid identifies the API key SID (SK) or only the account."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "twilio-5",
+      "provider_id": "twilio",
+      "name": "Public Key Client Validation (signed request JWT)",
+      "family": "jwt",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Each request carries a JWT signed with the customer's RSA private key (kid = public key CredentialSid, iss = API key SID) plus API key credentials. When enforced, Auth Token alone is rejected for REST.",
+        "evidence_refs": [
+          "fc-05d9e1e1",
+          "fc-103e8def"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Request signing control.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 300,
+        "configurable": "yes",
+        "summary": "Per-request JWT, max 300 s",
+        "evidence_refs": [
+          "fc-103e8def"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "exp claim",
+        "summary": "New JWT per request; rotate key pairs via Credentials PublicKeys.",
+        "evidence_refs": [
+          "fc-05d9e1e1",
+          "fc-103e8def"
+        ]
+      },
+      "administration": {
+        "summary": "Enforced from Console Settings; cannot be enforced if Flex, Studio or TaskRouter are used.",
+        "conditions": "Enterprise or Security Edition.",
+        "evidence_refs": [
+          "fc-05d9e1e1",
+          "fc-103e8def"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Signed requests use an account's API key and public key credential, which belong to the account, not a user.",
+          "evidence_refs": [
+            "fc-e7df353d"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "GET https://accounts.twilio.com/v1/Credentials/PublicKeys lists public key credentials, one account at a time.",
+          "evidence_refs": [
+            "fc-77cc84cb"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "Set the exp claim in the signed request JWT; max exp - nbf is 300 s",
+          "cli": null,
+          "evidence_refs": [
+            "fc-103e8def"
+          ]
+        },
+        "usage": {
+          "ui": "Monitor > Insights > Audit > Audit Events Log",
+          "api": "GET https://monitor.twilio.com/v1/Events?ResourceSid=<CR...> (one filter field per request)",
+          "cli": "twilio api:monitor:v1:events:list --resource-sid <CR...>",
+          "evidence_refs": [
+            "fc-9b1d5a4e",
+            "fc-f9986bc7"
+          ]
+        },
+        "reads": {
+          "ui": "Monitor > Insights > Audit > Audit Events Log; filter EventType recording.accessed",
+          "api": "GET https://monitor.twilio.com/v1/Events?EventType=recording.accessed&StartDate=...&EndDate=...",
+          "cli": null,
+          "evidence_refs": [
+            "fc-9b1d5a4e",
+            "fc-f9986bc7"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "JWT with cty twilio-pkrv;v=1, kid=CR... credential SID."
+        },
+        "log_sources": [
+          {
+            "name": "Monitor Events",
+            "notes": null
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "resource_sid (CR...)",
+            "log": "Monitor Events (account-credentials.*)",
+            "notes": null
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "account-credentials.created",
+            "stage": "create",
+            "notes": "Assumed to cover public key credentials; mapping not stated"
+          },
+          {
+            "event": "account-credentials.deleted",
+            "stage": "revoke",
+            "notes": null
+          }
+        ],
+        "correlation_keys": [
+          "kid",
+          "iss"
+        ],
+        "anomaly_cues": [
+          "New public key uploaded",
+          "Enforcement turned off"
+        ],
+        "containment": {
+          "steps": "Delete the public key credential and the API key used as iss.",
+          "kills_existing": "yes",
+          "notes": "Deleting the API key used as iss revokes REST API authentication. Docs do not separately describe deleting the public key credential."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Event for enforcement toggle"
+        ],
+        "evidence_refs": [
+          "fc-103e8def",
+          "fc-9b1d5a4e",
+          "fc-e7df353d"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Recordings/{Sid}.mp3",
+            "reveals": "Call recording audio",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "recording.accessed",
+            "log_notes": "Monitor Events; 30 days, or 13 months with Administration, Security or Enterprise Edition. actor_sid is the Account SID, not the key."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-a55c5de4",
+          "fc-438426da",
+          "fc-9b1d5a4e"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-05d9e1e1",
+      "title": "Get Started with Public Key Client Validation",
+      "url": "https://www.twilio.com/docs/iam/pkcv",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-103e8def",
+      "title": "Public Key Client Validation Quickstart",
+      "url": "https://www.twilio.com/docs/iam/pkcv/quickstart",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-438426da",
+      "title": "New Audit Events for Voice Recordings and Transcriptions to log media access",
+      "url": "https://www.twilio.com/en-us/changelog/new-audit-events-for-voice-recordings-and-transcriptions-to-log-media-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-77cc84cb",
+      "title": "CredentialPublicKey resource",
+      "url": "https://www.twilio.com/docs/iam/credentialpublickey-resource",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9b1d5a4e",
+      "title": "Monitor Events resource",
+      "url": "https://www.twilio.com/docs/usage/monitor-events",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a55c5de4",
+      "title": "Recording resource",
+      "url": "https://www.twilio.com/docs/voice/api/recording",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e7df353d",
+      "title": "REST API: Key Resource v1",
+      "url": "https://www.twilio.com/docs/iam/api-keys/key-resource-v1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f9986bc7",
+      "title": "Analyze: Investigate",
+      "url": "https://www.twilio.com/docs/usage/fraud-response-guide/analyze",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

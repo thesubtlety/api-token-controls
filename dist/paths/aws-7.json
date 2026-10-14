@@ -1,0 +1,444 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "aws",
+      "name": "AWS",
+      "scope_notes": "Covers Amazon Web Services (IAM, STS, IAM Identity Center, IAM Roles Anywhere, Amazon Bedrock). All features are available in every AWS account; SCPs and centralized root access require AWS Organizations, and Control Tower controls require AWS Control Tower.",
+      "controls": [
+        {
+          "name": "Service control policy (SCP)",
+          "effect": "disable",
+          "applies_to": [
+            "aws-1",
+            "aws-7"
+          ],
+          "what": "An SCP can deny actions such as iam:CreateAccessKey or iam:CreateServiceSpecificCredential for all IAM users and roles in member accounts.",
+          "setting": "AWS Organizations > Policies > Service control policies",
+          "plan": "AWS Organizations (all features)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-081441e9"
+          ]
+        },
+        {
+          "name": "aws:SourceIp deny policy",
+          "effect": "limit_network",
+          "applies_to": [
+            "aws-1",
+            "aws-2",
+            "aws-3",
+            "aws-4",
+            "aws-5",
+            "aws-6",
+            "aws-7",
+            "aws-8"
+          ],
+          "what": "Identity policy or SCP that denies any request from outside listed CIDR ranges.",
+          "setting": "IAM policy / SCP with NotIpAddress aws:SourceIp",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-ae269843"
+          ]
+        },
+        {
+          "name": "iam:ServiceSpecificCredentialAgeDays",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "aws-7"
+          ],
+          "what": "Policy condition that caps the expiration of new long-term Bedrock keys.",
+          "setting": "IAM policy on iam:CreateServiceSpecificCredential",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-136748fa"
+          ]
+        },
+        {
+          "name": "bedrock:CallWithBearerToken deny",
+          "effect": "disable",
+          "applies_to": [
+            "aws-7",
+            "aws-8"
+          ],
+          "what": "Denying this action blocks use of Bedrock API keys; bedrock:bearerTokenType targets SHORT_TERM or LONG_TERM.",
+          "setting": "IAM policy / SCP",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-136748fa"
+          ]
+        },
+        {
+          "name": "Deactivate / Reset / Delete long-term API key",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-7"
+          ],
+          "what": "Disables, rotates or removes a long-term Bedrock key.",
+          "setting": "Bedrock console > API keys > Actions; UpdateServiceSpecificCredential / ResetServiceSpecificCredential / DeleteServiceSpecificCredential",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-136748fa"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether long-term Bedrock API keys can be set to never expire, and their maximum lifetime.",
+        "Token format/prefix for Bedrock API keys (not documented on fetched pages).",
+        "Which CloudTrail field identifies the specific Bedrock API key on a request (key value is not logged).",
+        "Default session duration for IAM Roles Anywhere when durationSeconds is omitted.",
+        "Exact CloudTrail eventName strings for CreateAccessKey/UpdateAccessKey/DeleteAccessKey were not shown on fetched pages (they match the IAM API action names, which CloudTrail logs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "aws-7",
+      "provider_id": "aws",
+      "name": "Amazon Bedrock API keys (long-term)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Bearer token for Amazon Bedrock created as an IAM service-specific credential on a dedicated IAM user; sent in the Authorization header. Limited to Bedrock and Bedrock Runtime actions and the Region where generated.",
+        "evidence_refs": [
+          "fc-136748fa",
+          "fc-1ac80bf9"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Backed by an IAM user, not an IdP identity. Docs do not discuss IdP policy.",
+        "evidence_refs": [
+          "fc-136748fa"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "aws:SourceIp deny policies on the backing IAM user apply per request (docs do not show a Bedrock-key-specific example).",
+        "evidence_refs": [
+          "fc-bf544ac3"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Until a chosen expiration date; capped by iam:ServiceSpecificCredentialAgeDays policy",
+        "evidence_refs": [
+          "fc-136748fa"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "configured expiration date",
+        "summary": "Reused until expiry; Reset key issues a new value.",
+        "evidence_refs": [
+          "fc-136748fa"
+        ]
+      },
+      "administration": {
+        "summary": "Deny iam:CreateServiceSpecificCredential or cap age; deny bedrock:CallWithBearerToken (optionally by bearerTokenType LONG_TERM) to block use; deactivate, reset or delete keys.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-136748fa"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "A long-term Bedrock key is attached to its own dedicated IAM user, not to a person.",
+          "evidence_refs": [
+            "fc-136748fa"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Bedrock console > API keys > Long-term API keys lists keys with their status.",
+          "evidence_refs": [
+            "fc-bc49c401"
+          ]
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "IAM console > Users (or Roles) > name > Permissions tab > edit policy > JSON: Deny * with NotIpAddress aws:SourceIp on the IAM user that backs the key",
+          "api": null,
+          "cli": "aws iam put-user-policy",
+          "evidence_refs": [
+            "fc-136748fa",
+            "fc-bf544ac3",
+            "fc-14f20066"
+          ]
+        },
+        "expiry": {
+          "ui": "Bedrock console > API keys > Long-term API keys > Generate long-term API keys > API key expiration; cap with iam:ServiceSpecificCredentialAgeDays on iam:CreateServiceSpecificCredential",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-87a2ad21",
+            "fc-5c5350ad"
+          ]
+        },
+        "reads": {
+          "ui": "CloudTrail console > Event history > Event name filter = Converse",
+          "api": "CloudTrail LookupEvents (AttributeKey=EventName, AttributeValue=Converse)",
+          "cli": "aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=Converse",
+          "evidence_refs": [
+            "fc-86ae1d55",
+            "fc-0b07a9e0",
+            "fc-8d68f1b2"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Prefix not documented on fetched pages."
+        },
+        "log_sources": [
+          {
+            "name": "AWS CloudTrail event history",
+            "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+          },
+          {
+            "name": "CloudTrail trail / event data store",
+            "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "userIdentity (backing IAM user)",
+            "log": "CloudTrail",
+            "notes": "Key value not logged; key ID field not verified."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "CreateServiceSpecificCredential",
+            "stage": "create",
+            "notes": "IAM API action."
+          },
+          {
+            "event": "UpdateServiceSpecificCredential",
+            "stage": "revoke",
+            "notes": "Status=Inactive."
+          },
+          {
+            "event": "DeleteServiceSpecificCredential",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "backing IAM user ARN",
+          "sourceIPAddress"
+        ],
+        "anomaly_cues": [
+          "InvokeModel/Converse volume spike from the key's IAM user"
+        ],
+        "containment": {
+          "steps": "Deactivate, reset or delete the key; or deny bedrock:CallWithBearerToken.",
+          "kills_existing": "unknown",
+          "notes": "Docs do not state propagation timing."
+        },
+        "sample_query": null,
+        "unknown": [
+          "How a specific key appears in CloudTrail."
+        ],
+        "evidence_refs": [
+          "fc-024655eb",
+          "fc-136748fa"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "GET /foundation-models (ListFoundationModels)",
+            "reveals": "Available models",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": "ListFoundationModels",
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /model/{modelId}/converse",
+            "reveals": "Model inference at account cost",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "Converse",
+            "log_notes": "Logged as management event; key value not logged."
+          }
+        ],
+        "unknown": [
+          "No whoami call documented for Bedrock API keys."
+        ],
+        "evidence_refs": [
+          "fc-136748fa",
+          "fc-86ae1d55",
+          "fc-17157fd7",
+          "fc-1ac80bf9"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Elastic",
+          "title": "AWS IAM Credentials Added to a Bedrock API Key Phantom User",
+          "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/privilege_escalation_bedrock_phantom_user_credentials_added.toml",
+          "detects": "Access keys or console passwords added to the BedrockAPIKey-* IAM user that backs a long-term Bedrock API key."
+        },
+        {
+          "source": "Elastic",
+          "title": "AWS Bedrock API Key Phantom User Activity Outside Bedrock",
+          "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/privilege_escalation_bedrock_phantom_user_activity_outside_bedrock.toml",
+          "detects": "A BedrockAPIKey-* IAM user making API calls to services other than Bedrock."
+        },
+        {
+          "source": "Elastic",
+          "title": "AWS Bedrock API Key Used for Destructive or Anti-Recovery Action",
+          "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/impact_bedrock_api_key_destructive_action.toml",
+          "detects": "Bedrock API calls made with a bearer API key (callWithBearerToken=true) that delete guardrails, models, or logging configuration."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-024655eb",
+      "title": "Logging IAM and AWS STS API calls with AWS CloudTrail - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-081441e9",
+      "title": "Service control policies (SCPs) - AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0b07a9e0",
+      "title": "Viewing recent management events with the console",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/view-cloudtrail-events-console.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-136748fa",
+      "title": "API keys - Amazon Bedrock",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-14f20066",
+      "title": "Adding and removing IAM identity permissions",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-17157fd7",
+      "title": "ListFoundationModels - Amazon Bedrock",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/APIReference/API_ListFoundationModels.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1ac80bf9",
+      "title": "Use an Amazon Bedrock API key - Amazon Bedrock",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys-use.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5c5350ad",
+      "title": "Control permissions for Amazon Bedrock API keys",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys-permissions.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-86ae1d55",
+      "title": "Monitor Amazon Bedrock API calls using CloudTrail - Amazon Bedrock",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/logging-using-cloudtrail.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-87a2ad21",
+      "title": "Generate an Amazon Bedrock API key",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys-generate.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8d68f1b2",
+      "title": "aws cloudtrail lookup-events",
+      "url": "https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudtrail/lookup-events.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae269843",
+      "title": "AWS global condition context keys - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bc49c401",
+      "title": "Handle compromised long-term and short-term Amazon Bedrock API keys",
+      "url": "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys-revoke.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf544ac3",
+      "title": "AWS: Denies access to AWS based on the source IP - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_examples_aws_deny-ip.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

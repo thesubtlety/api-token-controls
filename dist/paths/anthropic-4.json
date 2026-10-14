@@ -1,0 +1,342 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "anthropic",
+      "name": "Anthropic API",
+      "scope_notes": "Covers Anthropic Claude API (Claude Console / Claude Platform). Claude Console organizations on platform.claude.com; Claude Enterprise (claude.ai) compliance keys and App Attest device tokens are noted but not catalogued as paths.",
+      "controls": [
+        {
+          "name": "Maximum expiration policy",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "anthropic-1",
+            "anthropic-2",
+            "anthropic-3",
+            "anthropic-4"
+          ],
+          "what": "Console limits key expiration to the policy maximum and removes Never.",
+          "setting": "Organization policy (UI path not stated)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-e8692afd"
+          ]
+        },
+        {
+          "name": "Compliance API (Activity Feed)",
+          "effect": "other",
+          "applies_to": [
+            "anthropic-1",
+            "anthropic-2",
+            "anthropic-3",
+            "anthropic-4",
+            "anthropic-5",
+            "anthropic-6"
+          ],
+          "what": "Must be on for key and federation activity to be recorded.",
+          "setting": "Claude Console > Settings > Security > Compliance API",
+          "plan": "Eligible organizations (self-service) or via account team",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-0e07061e"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Customer IP allowlisting for Claude API requests (not found in docs).",
+        "Whether keys or OAuth tokens are subject to SSO / IdP conditional access.",
+        "Whether disabling a key or archiving a rule ends already-minted WIF tokens immediately.",
+        "Lifetime and admin revocation of ant CLI OAuth tokens.",
+        "Console UI path for the maximum expiration policy and the member API key creation setting.",
+        "Whether Messages API calls generate Activity Feed events (feed excludes prompt/response text)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "anthropic-4",
+      "provider_id": "anthropic",
+      "name": "Admin API key",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "sk-ant-admin... key sent in x-api-key for the Admin, Usage and Cost, Rate Limits APIs and the Compliance Activity Feed.",
+        "evidence_refs": [
+          "fc-6484f42c",
+          "fc-ba4d5856"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Fetched docs do not say whether API keys are subject to SSO or IdP conditional access.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No customer IP allowlist for Claude API requests found in fetched docs; the IP addresses page only lists Anthropic's own ranges.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Same expiration choice as API keys at creation",
+        "evidence_refs": [
+          "fc-e8692afd"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "expires_at set at creation",
+        "summary": "Create a new admin key.",
+        "evidence_refs": [
+          "fc-e8692afd"
+        ]
+      },
+      "administration": {
+        "summary": "Only members with the admin role can provision one, in Console > Settings > Admin keys. Use is logged as admin_api_key_actor.",
+        "conditions": "Claude Enterprise (claude.ai) uses separate scoped keys; out of scope here.",
+        "evidence_refs": [
+          "fc-6484f42c",
+          "fc-0f28eb08"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admin API keys are listed on the Admin keys page (platform.claude.com/settings/admin-keys) in the Claude Console. No API list endpoint for admin keys was found.",
+          "evidence_refs": [
+            "fc-0e07061e"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Console > Admin keys (platform.claude.com/settings/admin-keys) > Create admin key > choose key expiration",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-ba4d5856",
+            "fc-e8692afd"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "GET /v1/compliance/activities?activity_types[]=org_users_listed; match actor.type=admin_api_key_actor and actor.admin_api_key_id",
+          "cli": null,
+          "evidence_refs": [
+            "fc-0f28eb08",
+            "fc-b0efd6b0"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "sk-ant-admin01-",
+          "notes": ""
+        },
+        "log_sources": [
+          {
+            "name": "Compliance API Activity Feed (GET /v1/compliance/activities)",
+            "notes": "Must be enabled; 6-year retention; not retroactive. Admin API keys can read it."
+          },
+          {
+            "name": "Usage and Cost API",
+            "notes": "Aggregated usage filterable by API key."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.admin_api_key_id",
+            "log": "Activity Feed (admin_api_key_actor)",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "admin_api_key_created",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "admin_api_key_updated",
+            "stage": "update",
+            "notes": "Rename or activate/deactivate"
+          },
+          {
+            "event": "admin_api_key_deleted",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "actor.api_key_id",
+          "actor.ip_address",
+          "actor.user_agent",
+          "workspace id"
+        ],
+        "anomaly_cues": [
+          "New platform_api_key_created outside change window",
+          "platform_file_content_downloaded bursts",
+          "Key used from unfamiliar ip_address"
+        ],
+        "containment": {
+          "steps": "Deactivate or delete the admin key in Console > Settings > Admin keys.",
+          "kills_existing": "yes",
+          "notes": "Deleting an Admin API key takes effect on the next request, with no grace period."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-6484f42c",
+          "fc-0f28eb08",
+          "fc-b0efd6b0",
+          "fc-0e07061e"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/organizations/me",
+            "reveals": "Organization of the credential",
+            "bulk": false,
+            "scope": "org:admin (for OAuth)",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v1/organizations/api_keys",
+            "reveals": "All keys, principals, status, expiry",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v1/organizations/users",
+            "reveals": "all organization members",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "org_users_listed",
+            "log_notes": "Activity Feed has an org_users_listed event with an admin_api_key_actor type (admin_api_key_id); docs do not explicitly tie the event to this endpoint. Recording starts only once the Compliance API is enabled."
+          }
+        ],
+        "unknown": [
+          "Whether Admin API reads are logged"
+        ],
+        "evidence_refs": [
+          "fc-6484f42c",
+          "fc-b258a526",
+          "fc-b0efd6b0",
+          "fc-0f28eb08"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Anthropic Admin API Key Created",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/anthropic_rules/anthropic_admin_api_key_created.yml",
+          "detects": "An Anthropic Admin API key was created."
+        },
+        {
+          "source": "Panther",
+          "title": "Anthropic Admin API Key Deleted",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/anthropic_rules/anthropic_admin_api_key_deleted.yml",
+          "detects": "An Anthropic Admin API key was deleted."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0e07061e",
+      "title": "Set up the Compliance API",
+      "url": "https://platform.claude.com/docs/en/manage-claude/compliance-api-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0f28eb08",
+      "title": "Compliance API Activity Feed",
+      "url": "https://platform.claude.com/docs/en/manage-claude/compliance-activity-feed",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6484f42c",
+      "title": "Admin API",
+      "url": "https://platform.claude.com/docs/en/manage-claude/admin-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b0efd6b0",
+      "title": "Query compliance activities",
+      "url": "https://platform.claude.com/docs/en/api/compliance/activities/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b258a526",
+      "title": "List Users",
+      "url": "https://platform.claude.com/docs/en/api/organization/users/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ba4d5856",
+      "title": "Create an Admin API key",
+      "url": "https://platform.claude.com/docs/en/manage-claude/admin-api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e8692afd",
+      "title": "Authentication",
+      "url": "https://platform.claude.com/docs/en/manage-claude/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

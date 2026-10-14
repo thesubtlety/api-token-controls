@@ -1,0 +1,538 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "snowflake",
+      "name": "Snowflake",
+      "scope_notes": "Avoid treating default PAT safeguards as immutable. Verify client/driver and cloud support for federation.",
+      "controls": [
+        {
+          "name": "Network policies (account / user / security integration)",
+          "effect": "limit_network",
+          "applies_to": [
+            "snowflake-1",
+            "snowflake-2",
+            "snowflake-3",
+            "snowflake-4",
+            "snowflake-5"
+          ],
+          "what": "Restrict inbound access by IP or private endpoint; integration-level policy overrides user and account policies.",
+          "setting": "CREATE NETWORK POLICY; ALTER ACCOUNT/USER/SECURITY INTEGRATION SET NETWORK_POLICY",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-87ff0aac"
+          ],
+          "quote": "the most specific network policy overrides more general network policies."
+        },
+        {
+          "name": "Snowflake OAuth integration ENABLED",
+          "effect": "disable",
+          "applies_to": [
+            "snowflake-2"
+          ],
+          "what": "Suspends a Snowflake OAuth integration.",
+          "setting": "ALTER SECURITY INTEGRATION ... SET ENABLED = FALSE",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-7ea986d9"
+          ],
+          "quote": "Specifies whether to initiate operation of the integration or suspend it."
+        },
+        {
+          "name": "OAUTH_ISSUE_REFRESH_TOKENS / OAUTH_REFRESH_TOKEN_VALIDITY",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "snowflake-2"
+          ],
+          "what": "Turns refresh tokens off or sets their validity (custom clients 1 to 90 days, default 90).",
+          "setting": "Security integration parameters",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-7ea986d9"
+          ],
+          "quote": "`86400` (1 day) to `7776000` (90 days)"
+        },
+        {
+          "name": "OAUTH_SINGLE_USE_REFRESH_TOKENS_REQUIRED",
+          "effect": "require_rotation",
+          "applies_to": [
+            "snowflake-2"
+          ],
+          "what": "Requires refresh tokens to be single-use.",
+          "setting": "Security integration parameter",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-7ea986d9"
+          ],
+          "quote": "Specifies whether single-use refresh tokens should be used."
+        },
+        {
+          "name": "OAUTH_ENFORCE_PKCE",
+          "effect": "other",
+          "applies_to": [
+            "snowflake-2"
+          ],
+          "what": "Requires PKCE for every authorization instead of only when the client sends it.",
+          "setting": "Security integration parameter",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-7ea986d9"
+          ],
+          "quote": "we highly recommend that your client require PKCE for all authorizations."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Edition requirements for authentication policies are not stated on the reference pages.",
+        "Whether Snowflake OAuth (as opposed to External OAuth) can be disallowed via AUTHENTICATION_METHODS; the OAUTH value is documented as 'Allows External OAuth'.",
+        "No account-wide policy found to force named key pairs or cap key-pair lifetime; legacy RSA_PUBLIC_KEY keys never expire.",
+        "Docs differ on how to unblock privileged roles for custom OAuth clients (account parameter vs Snowflake Support).",
+        "Whether the WIF quote 'disable it' covers the DEFAULT identity (docs say DEFAULT must use SET/UNSET WORKLOAD_IDENTITY)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "snowflake-2",
+      "provider_id": "snowflake",
+      "name": "Snowflake OAuth",
+      "family": "oauth",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth 2.0 with Snowflake as the authorization server. A partner or custom client sends the user through Snowflake sign-in and consent, then presents the short-lived Snowflake access token; refresh tokens are optional.",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24",
+          "fc-f6d147c2"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Snowflake issues the tokens itself; no external token is exchanged. Tokens from an external authorization server use External OAuth (snowflake-5), and cloud workload identities use workload identity federation (snowflake-4).",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24",
+          "fc-f6d147c2"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "mixed",
+        "boundary": "A network policy on the Snowflake OAuth integration covers code exchange, refresh token use and access token use, and overrides user and account policies. User-level policies are not checked on token requests (except the built-in local-application integration).",
+        "evidence_refs": [
+          "turn5search13",
+          "turn16search12",
+          "fc-7ea986d9"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": 600,
+        "maximum_seconds": 3600,
+        "configurable": "yes",
+        "summary": "Default 10 min; configurable 1 min–1 h per integration",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24",
+          "fc-7ea986d9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "absolute",
+        "summary": "Refresh tokens (on by default) default to 90 days (7776000 s); custom clients allow 1–90 days and partner apps 1 h–90 days, then the user must re-authorize. Single-use refresh tokens are optional.",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24",
+          "fc-7ea986d9"
+        ]
+      },
+      "administration": {
+        "summary": "Roles with CREATE INTEGRATION (ACCOUNTADMIN by default) create the integration. ACCOUNTADMIN, ORGADMIN, GLOBALORGADMIN and SECURITYADMIN are blocked by default; BLOCKED_ROLES_LIST, refresh-token settings and an integration network policy are set per integration.",
+        "conditions": "Avoid treating default PAT safeguards as immutable. Verify client/driver and cloud support for federation.",
+        "evidence_refs": [
+          "turn5search13",
+          "turn16search12",
+          "fc-f6d147c2"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "OAuth sessions run as a Snowflake user. Disabling that user, which SCIM deactivation does, aborts the user's queries and blocks new logins.",
+          "evidence_refs": [
+            "fc-817b452f",
+            "fc-c0be79cd"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "disable": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: ALTER SECURITY INTEGRATION <name> SET ENABLED = FALSE",
+          "evidence_refs": [
+            "fc-a2f8609e"
+          ]
+        },
+        "network": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: ALTER SECURITY INTEGRATION <name> SET NETWORK_POLICY = '<np>'",
+          "evidence_refs": [
+            "fc-7ea986d9",
+            "fc-87ff0aac"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: ALTER SECURITY INTEGRATION <name> SET OAUTH_ACCESS_TOKEN_VALIDITY = <secs> OAUTH_REFRESH_TOKEN_VALIDITY = <secs>",
+          "evidence_refs": [
+            "fc-7ea986d9",
+            "fc-a2f8609e"
+          ]
+        },
+        "usage": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY WHERE authorizing_integration_name = '<INTEGRATION>'",
+          "evidence_refs": [
+            "fc-a3c06820"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: SELECT ... FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah JOIN QUERY_HISTORY qh USING (query_id) JOIN LOGIN_HISTORY lh ON qh.authn_event_id = lh.event_id WHERE lh.authorizing_integration_name = '<INTEGRATION>'",
+          "evidence_refs": [
+            "fc-c4392740",
+            "fc-26b6697e",
+            "fc-a3c06820"
+          ]
+        },
+        "offboard": {
+          "ui": "Snowsight > Governance & security > Users & roles > (user) ... > Disable User",
+          "api": "PATCH /scim/v2/Users/{id} with {\"op\":\"replace\",\"value\":{\"active\":false}}",
+          "cli": "ALTER USER <name> SET DISABLED = TRUE",
+          "evidence_refs": [
+            "fc-5a418c44",
+            "fc-c0be79cd",
+            "fc-d32994ba",
+            "fc-817b452f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Access token and refresh token formats are not published. Access tokens last typically 10 minutes; refresh token life set by OAUTH_REFRESH_TOKEN_VALIDITY."
+        },
+        "log_sources": [
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY",
+            "notes": "Successful and failed logins, 365 days, up to 2h latency. INFORMATION_SCHEMA LOGIN_HISTORY table functions cover 7 days. OAuth logins have FIRST_AUTHENTICATION_FACTOR = OAUTH_ACCESS_TOKEN and AUTHORIZING_INTEGRATION_NAME = the security integration."
+          },
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.SESSIONS",
+            "notes": "One row per session, 1 year, up to 3h latency; links to login via LOGIN_EVENT_ID. Does not track SQL API transient sessions. CLOSED_REASON includes OAUTH_CONSENT_REVOKED and OAUTH_CRITICAL_CHANGE_INTEGRATION."
+          },
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY",
+            "notes": "Queries per SESSION_ID with AUTHN_EVENT_ID, 365 days, up to 45 min latency."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "AUTHORIZING_INTEGRATION_NAME",
+            "log": "LOGIN_HISTORY",
+            "notes": "Security integration (OAuth client) that granted access."
+          },
+          {
+            "field": "LOGIN_EVENT_ID",
+            "log": "SESSIONS",
+            "notes": "Links an OAuth session to its login event."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "OAUTH_ACCESS_TOKEN",
+            "stage": "use",
+            "notes": "FIRST_AUTHENTICATION_FACTOR value for OAuth logins, successful or failed."
+          },
+          {
+            "event": "OAUTH_ACCESS_TOKEN_INVALID",
+            "stage": "auth_fail",
+            "notes": "Expired or invalid access token at session creation."
+          },
+          {
+            "event": "invalid_grant",
+            "stage": "auth_fail",
+            "notes": "Refresh token invalid, expired, revoked, or issued to another client."
+          },
+          {
+            "event": "ALTER USER … REMOVE DELEGATED AUTHORIZATIONS FROM SECURITY INTEGRATION",
+            "stage": "revoke",
+            "notes": "Revokes consent and associated OAuth access tokens."
+          },
+          {
+            "event": "OAUTH_CONSENT_REVOKED",
+            "stage": "revoke",
+            "notes": "SESSIONS.CLOSED_REASON value."
+          }
+        ],
+        "correlation_keys": [
+          "USER_NAME",
+          "CLIENT_IP",
+          "REPORTED_CLIENT_TYPE",
+          "REPORTED_CLIENT_VERSION",
+          "EVENT_ID",
+          "LOGIN_EVENT_ID",
+          "SESSION_ID",
+          "AUTHN_EVENT_ID",
+          "CLIENT_APPLICATION_ID",
+          "AUTHORIZING_INTEGRATION_NAME",
+          "ROLE_NAME"
+        ],
+        "anomaly_cues": [
+          "OAuth login via an integration (AUTHORIZING_INTEGRATION_NAME) not normally used by that user",
+          "Same user's OAuth logins from two distant CLIENT_IPs within the token lifetime",
+          "OAuth sessions using a privileged ROLE_NAME after OAUTH_ADD_PRIVILEGED_ROLES_TO_BLOCKED_LIST was set to FALSE",
+          "New or altered OAuth security integration followed by logins from new IPs",
+          "Repeated invalid_grant / OAUTH_ACCESS_TOKEN_INVALID failures for one client"
+        ],
+        "containment": {
+          "steps": "ALTER USER <u> REMOVE DELEGATED AUTHORIZATIONS FROM SECURITY INTEGRATION <int> (per user), or REMOVE DELEGATED AUTHORIZATIONS OF ANY ROLE FROM SECURITY INTEGRATION <int>; disable the integration (ENABLED = FALSE) for client-wide compromise; ALTER USER SET DISABLED = TRUE for user compromise.",
+          "kills_existing": "partial",
+          "notes": "ALTER USER docs say removal revokes OAuth access tokens for the integration, and SESSIONS has CLOSED_REASON OAUTH_CONSENT_REVOKED; whether all open sessions close is not stated."
+        },
+        "sample_query": {
+          "language": "Snowflake SQL (ACCOUNT_USAGE)",
+          "query": "SELECT user_name, authorizing_integration_name, client_ip, COUNT(*) AS logins, MIN(event_timestamp) AS first_seen FROM SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY WHERE first_authentication_factor = 'OAUTH_ACCESS_TOKEN' AND is_success = 'YES' AND event_timestamp > DATEADD(day,-30,CURRENT_TIMESTAMP()) GROUP BY 1,2,3 ORDER BY first_seen DESC;",
+          "purpose": "Find new user/integration/IP combinations for Snowflake OAuth logins."
+        },
+        "unknown": [
+          "Access/refresh token format",
+          "Default refresh token validity",
+          "SESSIONS.AUTHENTICATION_METHOD value for OAuth",
+          "FIRST_AUTHENTICATION_FACTOR_ID population for OAuth",
+          "Audit record for refresh token issuance"
+        ],
+        "evidence_refs": [
+          "fc-9814b471",
+          "fc-a3c06820",
+          "fc-f6d147c2",
+          "fc-c0be79cd",
+          "fc-69a9e246",
+          "fc-26b6697e"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /api/v2/statements (SELECT)",
+            "reveals": "Any table data the authorized role can read",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "QUERY_HISTORY view; LOGIN_HISTORY.authorizing_integration_name names the OAuth integration",
+            "log_notes": "QUERY_HISTORY keeps 365 days. ACCESS_HISTORY needs Enterprise Edition."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-6de35438",
+          "fc-5371b82a",
+          "fc-26b6697e",
+          "fc-a3c06820",
+          "fc-e3e502a4"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-26b6697e",
+      "title": "QUERY_HISTORY view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/query_history",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5371b82a",
+      "title": "Authenticating to the server (SQL API) - Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/developer-guide/sql-api/authenticating",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5a418c44",
+      "title": "User management",
+      "url": "https://docs.snowflake.com/en/user-guide/admin-user-management",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69a9e246",
+      "title": "SESSIONS view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/sessions",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6de35438",
+      "title": "Submitting a request to execute SQL statements",
+      "url": "https://docs.snowflake.com/en/developer-guide/sql-api/submitting-requests",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7ea986d9",
+      "title": "CREATE SECURITY INTEGRATION (Snowflake OAuth) - Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/sql-reference/sql/create-security-integration-oauth-snowflake",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-817b452f",
+      "title": "Okta SCIM integration",
+      "url": "https://docs.snowflake.com/en/user-guide/scim-okta",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-87ff0aac",
+      "title": "Controlling network traffic with network policies | Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/network-policies",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9814b471",
+      "title": "Introduction to OAuth",
+      "url": "https://docs.snowflake.com/en/user-guide/oauth",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a2f8609e",
+      "title": "ALTER SECURITY INTEGRATION (Snowflake OAuth)",
+      "url": "https://docs.snowflake.com/en/sql-reference/sql/alter-security-integration-oauth-snowflake",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a3c06820",
+      "title": "LOGIN_HISTORY view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/login_history",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c0be79cd",
+      "title": "ALTER USER",
+      "url": "https://docs.snowflake.com/en/sql-reference/sql/alter-user",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c4392740",
+      "title": "ACCESS_HISTORY view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/access_history",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d32994ba",
+      "title": "SCIM user API reference",
+      "url": "https://docs.snowflake.com/en/user-guide/scim-user-api-reference",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e3e502a4",
+      "title": "Access History",
+      "url": "https://docs.snowflake.com/en/user-guide/access-history",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f6d147c2",
+      "title": "Snowflake OAuth overview | Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/oauth-snowflake-overview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn16search12",
+      "title": "Authentication policies - Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/authentication-policies",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn16search24",
+      "title": "Overview of Snowflake authentication",
+      "url": "https://docs.snowflake.com/en/user-guide/security-authentication-overview",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search1",
+      "title": "Workload identity federation | Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/workload-identity-federation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search13",
+      "title": "Using programmatic access tokens for authentication | Snowflake ...",
+      "url": "https://docs.snowflake.com/en/user-guide/programmatic-access-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

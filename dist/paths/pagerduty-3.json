@@ -1,0 +1,351 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "pagerduty",
+      "name": "PagerDuty",
+      "scope_notes": "SaaS; REST API on current plans, user token keys need Advanced Permissions, Audit Trail on Business/Enterprise for Incident Management/Digital Operations (legacy); SCIM uses general access keys or app OAuth tokens.",
+      "controls": [
+        {
+          "name": "Revoke All Tokens (App Registration)",
+          "effect": "revoke",
+          "applies_to": [
+            "pagerduty-3",
+            "pagerduty-4"
+          ],
+          "what": "App owner invalidates all OAuth tokens issued to the app.",
+          "setting": "Integrations > Developer Tools > App Registration > app > OAuth Client > Revoke All Tokens",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-583edb81"
+          ]
+        },
+        {
+          "name": "Scoped OAuth scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "pagerduty-3",
+            "pagerduty-4"
+          ],
+          "what": "Per-resource read/write scopes (e.g. incidents.read) limit what the token can call.",
+          "setting": "App Registration > OAuth > Scoped OAuth",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-51494aac"
+          ]
+        },
+        {
+          "name": "App Registration role requirement",
+          "effect": "other",
+          "applies_to": [
+            "pagerduty-3"
+          ],
+          "what": "Only Manager, Global Admin, or Account Owner base roles can register apps, so lower roles cannot create private OAuth apps.",
+          "setting": "Integrations > Developer Tools > App Registration",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-6ba98dee"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "pagerduty-3",
+          "what": "No IP/network restriction for OAuth app tokens.",
+          "kind": "network",
+          "evidence_refs": [
+            "fc-67bc3044"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether general access or user token keys can be given an expiry, or ever expire.",
+        "Whether SSO enforcement or deprovisioning in the IdP affects existing API keys (only \"user leaves the account\" disables user keys).",
+        "Any admin setting to block users from creating user token keys or to block Classic User OAuth app authorization.",
+        "Whether API key create/disable/delete events appear in the Audit Trail (the tracked resource list does not include API keys).",
+        "Whether disabling/deleting a key or Revoke All User Tokens ends in-flight access immediately (Revoke All runs in the background).",
+        "Whether private app (client credentials) tokens can be revoked by admins other than the app owner; client secret expiry/rotation.",
+        "Whether read (GET) API calls are logged anywhere customer-visible.",
+        "Whether integration key creation/rotation appears in audit records (support page says integration add/remove is not captured; Audit API lists Integrations as an associated resource of Services)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "pagerduty-3",
+      "provider_id": "pagerduty",
+      "name": "Scoped OAuth app token (private app, client credentials)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A private app with Scoped OAuth exchanges client_id/client_secret at https://identity.pagerduty.com/oauth/token (client_credentials) for a Bearer token limited only by the app's scopes, not by any user.",
+        "evidence_refs": [
+          "fc-51494aac",
+          "fc-fe7d09ba"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "No workload identity federation documented; client secret only.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "excluded",
+        "enforcement_stage": "login_only",
+        "boundary": "IP allow list does not restrict REST API calls.",
+        "evidence_refs": [
+          "fc-67bc3044"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 86400,
+        "maximum_seconds": 86400,
+        "configurable": "no",
+        "summary": "Access token 1 day; client secret no documented expiry",
+        "evidence_refs": [
+          "fc-51494aac"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "Access token expires after 1 day.",
+        "summary": "App requests a new token with its client secret; no refresh token.",
+        "evidence_refs": [
+          "fc-51494aac"
+        ]
+      },
+      "administration": {
+        "summary": "Manager, Global Admin or Account Owner can register apps under Integrations > Developer Tools > App Registration. Private apps need no install review and are not in the OAuth Apps list (Manage Private Apps instead).",
+        "conditions": "App tokens are only issued on the account that created the app.",
+        "evidence_refs": [
+          "fc-6ba98dee",
+          "fc-fe7d09ba"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Client-credentials app tokens have no user involved.",
+          "evidence_refs": [
+            "fc-583edb81"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Private apps are listed under OAuth Apps > Manage Private Apps (and App Registration > My Apps); issued app tokens are not listed.",
+          "evidence_refs": [
+            "fc-fe7d09ba"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "Fixed 1-day lifetime; POST https://identity.pagerduty.com/oauth/token response field expires_in",
+          "cli": null,
+          "evidence_refs": [
+            "fc-51494aac"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "pdus+",
+          "notes": "Documented example access token is \"pdus+_EXAMPLE_KEY_ID_EXAMPLE_TOKEN\"; prefix not formally specified."
+        },
+        "log_sources": [
+          {
+            "name": "Audit Trail (UI + GET /audit/records)",
+            "notes": "Business, Enterprise for Incident Management, Digital Operations (legacy); 12-month retention; config changes on users, teams, schedules, escalation policies, services, IP allow lists only. Admin / global API token, scope audit_records.read."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "method.truncated_token",
+            "log": "Audit record",
+            "notes": "Last 4 chars when method.type=oauth."
+          },
+          {
+            "field": "actors[] (app_reference)",
+            "log": "Audit record",
+            "notes": "Actor type for app actions."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "action=create|update|delete with method.type=oauth",
+            "stage": "use",
+            "notes": "Config changes."
+          }
+        ],
+        "correlation_keys": [
+          "method.type",
+          "method.truncated_token",
+          "actors[].type/id",
+          "execution_context.request_id",
+          "execution_context.remote_address"
+        ],
+        "anomaly_cues": [
+          "app_reference actors you do not recognize",
+          "Private apps created by Managers without review"
+        ],
+        "containment": {
+          "steps": "App Registration > app > OAuth Client > Revoke All Tokens, then delete and recreate OAuth functionality to replace the client secret (revoke first: deleting does not revoke tokens).",
+          "kills_existing": "yes",
+          "notes": "Docs say Revoke All Tokens invalidates all tokens; app tokens otherwise expire in 1 day."
+        },
+        "sample_query": null,
+        "unknown": [
+          "App registration/secret events in audit"
+        ],
+        "evidence_refs": [
+          "fc-62771079",
+          "fc-f760aba4",
+          "fc-47e47aba",
+          "fc-583edb81",
+          "fc-6ba98dee",
+          "fc-51494aac"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /abilities",
+            "reveals": "Account features",
+            "bulk": false,
+            "scope": "abilities.read",
+            "rate_limit": "960 req/min per app per account",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /incidents",
+            "reveals": "All incidents (app token not user-bounded)",
+            "bulk": true,
+            "scope": "incidents.read",
+            "rate_limit": "960 req/min per app per account",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /users",
+            "reveals": "All users (needs users.read scope)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Audit records cover configuration changes only."
+          }
+        ],
+        "unknown": [
+          "Whether GET /users/me works with an app token."
+        ],
+        "evidence_refs": [
+          "fc-51494aac",
+          "fc-079a8df5",
+          "fc-f760aba4"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-079a8df5",
+      "title": "PagerDuty REST API OpenAPI v3 spec - List users",
+      "url": "https://github.com/PagerDuty/api-schema/blob/main/reference/REST/openapiv3.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-47e47aba",
+      "title": "REST API OpenAPI spec — List audit records",
+      "url": "https://docs.pagerduty.com/api-specs/rest.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-51494aac",
+      "title": "Private Apps",
+      "url": "https://docs.pagerduty.com/developer/private-apps",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-583edb81",
+      "title": "OAuth Functionality",
+      "url": "https://docs.pagerduty.com/developer/oauth-functionality",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62771079",
+      "title": "Audit Trail Reporting",
+      "url": "https://support.pagerduty.com/main/docs/audit-trail-reporting",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-67bc3044",
+      "title": "IP Allow List for User Sessions",
+      "url": "https://support.pagerduty.com/main/docs/ip-allow-list-for-user-sessions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6ba98dee",
+      "title": "Register an App",
+      "url": "https://docs.pagerduty.com/developer/register-an-app",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f760aba4",
+      "title": "Audit Records API",
+      "url": "https://docs.pagerduty.com/developer/audit-records-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fe7d09ba",
+      "title": "Scoped OAuth Apps",
+      "url": "https://support.pagerduty.com/main/docs/scoped-oauth-apps",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

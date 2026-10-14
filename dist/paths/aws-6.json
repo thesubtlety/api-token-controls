@@ -1,0 +1,536 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "aws",
+      "name": "AWS",
+      "scope_notes": "Covers Amazon Web Services (IAM, STS, IAM Identity Center, IAM Roles Anywhere, Amazon Bedrock). All features are available in every AWS account; SCPs and centralized root access require AWS Organizations, and Control Tower controls require AWS Control Tower.",
+      "controls": [
+        {
+          "name": "aws:SourceIp deny policy",
+          "effect": "limit_network",
+          "applies_to": [
+            "aws-1",
+            "aws-2",
+            "aws-3",
+            "aws-4",
+            "aws-5",
+            "aws-6",
+            "aws-7",
+            "aws-8"
+          ],
+          "what": "Identity policy or SCP that denies any request from outside listed CIDR ranges.",
+          "setting": "IAM policy / SCP with NotIpAddress aws:SourceIp",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-ae269843"
+          ]
+        },
+        {
+          "name": "Revoke active sessions (AWSRevokeOlderSessions)",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-3",
+            "aws-4",
+            "aws-6"
+          ],
+          "what": "Attaches a deny-all policy for sessions issued before now, invalidating existing temporary credentials for the role.",
+          "setting": "IAM > Roles > role > Revoke sessions tab",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-12bba687"
+          ]
+        },
+        {
+          "name": "aws:TokenIssueTime deny policy",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-3",
+            "aws-4",
+            "aws-6",
+            "aws-8"
+          ],
+          "what": "Deny policy that blocks temporary credentials issued before a chosen time; does not affect long-term keys.",
+          "setting": "IAM policy with DateLessThan aws:TokenIssueTime",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-12bba687"
+          ]
+        },
+        {
+          "name": "Import CRL (ImportCrl)",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-6"
+          ],
+          "what": "Imports a CA revocation list so revoked certificates can no longer create sessions.",
+          "setting": "API ImportCrl / CLI import-crl",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-5fb688a0"
+          ]
+        },
+        {
+          "name": "DisableTrustAnchor",
+          "effect": "disable",
+          "applies_to": [
+            "aws-6"
+          ],
+          "what": "A disabled trust anchor makes temporary credential requests that specify it unauthorized.",
+          "setting": "POST /trustanchor/{trustAnchorId}/disable",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-9321c566"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "aws-6",
+          "what": "No live OCSP or CRL distribution point checks; revocation needs a manual CRL import.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-5fb688a0"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether long-term Bedrock API keys can be set to never expire, and their maximum lifetime.",
+        "Token format/prefix for Bedrock API keys (not documented on fetched pages).",
+        "Which CloudTrail field identifies the specific Bedrock API key on a request (key value is not logged).",
+        "Default session duration for IAM Roles Anywhere when durationSeconds is omitted.",
+        "Exact CloudTrail eventName strings for CreateAccessKey/UpdateAccessKey/DeleteAccessKey were not shown on fetched pages (they match the IAM API action names, which CloudTrail logs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "aws-6",
+      "provider_id": "aws",
+      "name": "IAM Roles Anywhere (X.509 certificate to role session)",
+      "family": "certificate",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Workloads outside AWS sign a CreateSession request with a private key and X.509 certificate from a registered trust anchor CA and receive temporary role credentials.",
+        "evidence_refs": [
+          "fc-26fc1ee4",
+          "fc-f1209bcc"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "Trust is delegated to the customer PKI (trust anchor).",
+        "evidence_refs": [
+          "fc-26fc1ee4"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Not a setting: an identity policy or SCP that denies requests when aws:SourceIp is outside allowed ranges. It is evaluated on every signed API request. aws:SourceIp is absent for calls through VPC endpoints (use aws:VpcSourceIp) and SCPs do not cover the management account.",
+        "evidence_refs": [
+          "fc-bf544ac3",
+          "fc-ae269843",
+          "fc-081441e9"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 43200,
+        "configurable": "yes",
+        "summary": "Session 15 min-12 h",
+        "evidence_refs": [
+          "fc-f1209bcc"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "certificate validity and session duration",
+        "summary": "Call CreateSession again with the certificate.",
+        "evidence_refs": [
+          "fc-f1209bcc"
+        ]
+      },
+      "administration": {
+        "summary": "Admins manage trust anchors and profiles; certificate revocation only through imported CRLs (API/CLI).",
+        "conditions": "No OCSP or CDP callbacks.",
+        "evidence_refs": [
+          "fc-5fb688a0"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Credentials are bound to an X.509 certificate and a trust anchor, not to a user.",
+          "evidence_refs": [
+            "fc-9321c566"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "Role identity policy with Deny * / NotIpAddress aws:SourceIp, or AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account",
+          "api": null,
+          "cli": "aws iam put-role-policy (inline deny) or aws organizations attach-policy",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-14f20066",
+            "fc-72343915",
+            "fc-b9b7e785"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "PATCH /profile/{profileId} with durationSeconds (900-43200)",
+          "cli": "aws rolesanywhere update-profile --profile-id <id> --duration-seconds <n>",
+          "evidence_refs": [
+            "fc-f4463dcc",
+            "fc-59942ecf",
+            "fc-b2312cf1"
+          ]
+        },
+        "reads": {
+          "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+          "api": null,
+          "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+          "evidence_refs": [
+            "fc-bcd7adf9",
+            "fc-0b07a9e0"
+          ]
+        },
+        "kill": {
+          "ui": "IAM console > Roles > role > Revoke sessions > Revoke active sessions (CRL import is API/CLI only)",
+          "api": "POST /crls (ImportCrl); POST /trustanchor/{trustAnchorId}/disable",
+          "cli": "aws rolesanywhere import-crl",
+          "evidence_refs": [
+            "fc-5fb688a0",
+            "fc-137fb716",
+            "fc-9321c566",
+            "fc-12bba687"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "ASIA",
+          "notes": "Session credentials are STS-style temporary credentials."
+        },
+        "log_sources": [
+          {
+            "name": "AWS CloudTrail event history",
+            "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+          },
+          {
+            "name": "CloudTrail trail / event data store",
+            "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "userIdentity role session name",
+            "log": "CloudTrail",
+            "notes": "Hex-encoded certificate serial number."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "CreateSession",
+            "stage": "create",
+            "notes": "Logged with additionalEventData on signing."
+          }
+        ],
+        "correlation_keys": [
+          "certificate serial (role session name)",
+          "trust anchor ARN"
+        ],
+        "anomaly_cues": [
+          "Sessions from unexpected certificate serials"
+        ],
+        "containment": {
+          "steps": "Import CRL listing the certificate; revoke active sessions on the role; disable trust anchor/profile.",
+          "kills_existing": "partial",
+          "notes": "CRL blocks new sessions; existing sessions need role session revocation."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-5fb688a0",
+          "fc-698526d8",
+          "fc-12bba687"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST sts:GetCallerIdentity",
+            "reveals": "Account, ARN, user/role ID",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetCallerIdentity",
+            "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GetAccountAuthorizationDetails",
+            "reveals": "All IAM users, groups, roles, policies",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetAccountAuthorizationDetails",
+            "log_notes": "IAM management event."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET / (s3:ListBuckets)",
+            "reveals": "All buckets owned by the account",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": "ListBuckets",
+            "log_notes": "Management/data classification not verified on fetched pages."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /{Key} (s3:GetObject)",
+            "reveals": "Object contents",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "GetObject",
+            "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-024655eb",
+          "fc-bcd7adf9",
+          "fc-3ae233ca",
+          "fc-e422ae4f",
+          "fc-0ec1c9ec",
+          "fc-a8e9c769"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Elastic",
+          "title": "AWS IAM Roles Anywhere Trust Anchor Created with External CA",
+          "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/persistence_iam_roles_anywhere_trusted_anchor_created_with_external_ca.toml",
+          "detects": "An IAM Roles Anywhere trust anchor was created with a CA that is not AWS Private CA."
+        },
+        {
+          "source": "Elastic",
+          "title": "AWS IAM Roles Anywhere Profile Creation",
+          "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/persistence_iam_roles_anywhere_profile_created.toml",
+          "detects": "An IAM Roles Anywhere profile was created."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-024655eb",
+      "title": "Logging IAM and AWS STS API calls with AWS CloudTrail - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-081441e9",
+      "title": "Service control policies (SCPs) - AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0b07a9e0",
+      "title": "Viewing recent management events with the console",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/view-cloudtrail-events-console.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0ec1c9ec",
+      "title": "GetObject - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-12bba687",
+      "title": "Revoke IAM role temporary security credentials - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_revoke-sessions.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-137fb716",
+      "title": "ImportCrl",
+      "url": "https://docs.aws.amazon.com/rolesanywhere/latest/APIReference/API_ImportCrl.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-14f20066",
+      "title": "Adding and removing IAM identity permissions",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-26fc1ee4",
+      "title": "What is AWS Identity and Access Management Roles Anywhere? - IAM Roles Anywhere",
+      "url": "https://docs.aws.amazon.com/rolesanywhere/latest/userguide/introduction.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3ae233ca",
+      "title": "GetCallerIdentity - AWS Security Token Service",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-59942ecf",
+      "title": "UpdateProfile",
+      "url": "https://docs.aws.amazon.com/rolesanywhere/latest/APIReference/API_UpdateProfile.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5fb688a0",
+      "title": "The IAM Roles Anywhere trust model - IAM Roles Anywhere",
+      "url": "https://docs.aws.amazon.com/rolesanywhere/latest/userguide/trust-model.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-698526d8",
+      "title": "Logging IAM Roles Anywhere API calls using AWS CloudTrail - IAM Roles Anywhere",
+      "url": "https://docs.aws.amazon.com/rolesanywhere/latest/userguide/logging-using-cloudtrail.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-72343915",
+      "title": "Creating organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_create.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9321c566",
+      "title": "DisableTrustAnchor - IAM Roles Anywhere",
+      "url": "https://docs.aws.amazon.com/rolesanywhere/latest/APIReference/API_DisableTrustAnchor.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8e9c769",
+      "title": "GetAccountAuthorizationDetails - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetAccountAuthorizationDetails.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae269843",
+      "title": "AWS global condition context keys - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b2312cf1",
+      "title": "CreateSession API",
+      "url": "https://docs.aws.amazon.com/rolesanywhere/latest/userguide/authentication-create-session.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9b7e785",
+      "title": "Attaching organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_attach.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bcd7adf9",
+      "title": "Logging data events - AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf544ac3",
+      "title": "AWS: Denies access to AWS based on the source IP - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_examples_aws_deny-ip.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e422ae4f",
+      "title": "ListBuckets - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f1209bcc",
+      "title": "Get temporary security credentials from IAM Roles Anywhere - IAM Roles Anywhere",
+      "url": "https://docs.aws.amazon.com/rolesanywhere/latest/userguide/credential-helper.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f4463dcc",
+      "title": "aws rolesanywhere update-profile",
+      "url": "https://awscli.amazonaws.com/v2/documentation/api/latest/reference/rolesanywhere/update-profile.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

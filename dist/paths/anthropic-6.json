@@ -1,0 +1,269 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "anthropic",
+      "name": "Anthropic API",
+      "scope_notes": "Covers Anthropic Claude API (Claude Console / Claude Platform). Claude Console organizations on platform.claude.com; Claude Enterprise (claude.ai) compliance keys and App Attest device tokens are noted but not catalogued as paths.",
+      "controls": [
+        {
+          "name": "Compliance API (Activity Feed)",
+          "effect": "other",
+          "applies_to": [
+            "anthropic-1",
+            "anthropic-2",
+            "anthropic-3",
+            "anthropic-4",
+            "anthropic-5",
+            "anthropic-6"
+          ],
+          "what": "Must be on for key and federation activity to be recorded.",
+          "setting": "Claude Console > Settings > Security > Compliance API",
+          "plan": "Eligible organizations (self-service) or via account team",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-0e07061e"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Customer IP allowlisting for Claude API requests (not found in docs).",
+        "Whether keys or OAuth tokens are subject to SSO / IdP conditional access.",
+        "Whether disabling a key or archiving a rule ends already-minted WIF tokens immediately.",
+        "Lifetime and admin revocation of ant CLI OAuth tokens.",
+        "Console UI path for the maximum expiration policy and the member API key creation setting.",
+        "Whether Messages API calls generate Activity Feed events (feed excludes prompt/response text)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "anthropic-6",
+      "provider_id": "anthropic",
+      "name": "OAuth bearer token (ant CLI login, incl. org:admin)",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Browser login via ant auth login issues a workspace-scoped token; with --scope org:admin it has organization-wide admin access.",
+        "evidence_refs": [
+          "fc-c689619c"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Browser login presumably follows Console sign-in, but docs fetched do not describe SSO enforcement.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No customer IP allowlist for Claude API requests found in fetched docs; the IP addresses page only lists Anthropic's own ranges.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Interactive tokens are short-lived (exact value not stated)",
+        "evidence_refs": [
+          "fc-6484f42c"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "Not stated",
+        "summary": "Re-export from CLI profile to refresh; mechanism details not documented.",
+        "evidence_refs": [
+          "fc-6484f42c"
+        ]
+      },
+      "administration": {
+        "summary": "org:admin limited to admin, owner, primary owner roles. Required for service account and federation endpoints.",
+        "conditions": "Admin-side revocation of issued CLI tokens not documented.",
+        "evidence_refs": [
+          "fc-6484f42c",
+          "fc-c689619c"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": null,
+          "api": "GET /v1/compliance/activities?activity_types[]=org_users_listed (actor type for OAuth tokens not documented)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-0f28eb08",
+            "fc-b0efd6b0"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": ""
+        },
+        "log_sources": [
+          {
+            "name": "Compliance API Activity Feed (GET /v1/compliance/activities)",
+            "notes": "Must be enabled; 6-year retention; not retroactive. Admin API keys can read it."
+          },
+          {
+            "name": "Usage and Cost API",
+            "notes": "Aggregated usage filterable by API key."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "actor.api_key_id",
+          "actor.ip_address",
+          "actor.user_agent",
+          "workspace id"
+        ],
+        "anomaly_cues": [
+          "New platform_api_key_created outside change window",
+          "platform_file_content_downloaded bursts",
+          "Key used from unfamiliar ip_address"
+        ],
+        "containment": {
+          "steps": "Remove the user's admin role or remove the user; locally run ant auth logout.",
+          "kills_existing": "unknown",
+          "notes": "No admin revocation of CLI tokens documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Logging of OAuth token issuance"
+        ],
+        "evidence_refs": [
+          "fc-6484f42c",
+          "fc-c689619c"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/organizations/me",
+            "reveals": "Organization of the credential",
+            "bulk": false,
+            "scope": "org:admin (for OAuth)",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v1/organizations/api_keys",
+            "reveals": "All keys, principals, status, expiry",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v1/organizations/users",
+            "reveals": "all organization members (org:admin token has organization-wide access)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "org_users_listed",
+            "log_notes": "Event exists in the Activity Feed; docs do not say which actor type an interactive OAuth token produces. Requires the Compliance API to be enabled."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-6484f42c",
+          "fc-c689619c",
+          "fc-b258a526",
+          "fc-b0efd6b0",
+          "fc-0f28eb08"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0e07061e",
+      "title": "Set up the Compliance API",
+      "url": "https://platform.claude.com/docs/en/manage-claude/compliance-api-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0f28eb08",
+      "title": "Compliance API Activity Feed",
+      "url": "https://platform.claude.com/docs/en/manage-claude/compliance-activity-feed",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6484f42c",
+      "title": "Admin API",
+      "url": "https://platform.claude.com/docs/en/manage-claude/admin-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b0efd6b0",
+      "title": "Query compliance activities",
+      "url": "https://platform.claude.com/docs/en/api/compliance/activities/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b258a526",
+      "title": "List Users",
+      "url": "https://platform.claude.com/docs/en/api/organization/users/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c689619c",
+      "title": "CLI authentication",
+      "url": "https://platform.claude.com/docs/en/cli-sdks-libraries/cli/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

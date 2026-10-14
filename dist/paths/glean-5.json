@@ -1,0 +1,308 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "glean",
+      "name": "Glean",
+      "scope_notes": "Glean-hosted enterprise SaaS (single tenant, <instance>-be.glean.com); plan tiers are not documented for these controls, and log delivery to customer storage needs Glean account team setup.",
+      "controls": [
+        {
+          "name": "Tenant-wide IP greenlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "glean-1",
+            "glean-2",
+            "glean-4",
+            "glean-5",
+            "glean-6"
+          ],
+          "what": "VPC firewall allowlist for the tenant; MCP also checks at app layer.",
+          "setting": "Not documented (Glean-managed)",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ac27dc28"
+          ]
+        },
+        {
+          "name": "Enable IDP OAuth for API access",
+          "effect": "disable",
+          "applies_to": [
+            "glean-5"
+          ],
+          "what": "Turns on acceptance of IdP tokens for listed client IDs.",
+          "setting": "Settings > Third-party access (OAuth)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-5df4608c"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether revoking a Glean-issued API token takes effect immediately",
+        "Whether user deprovisioning revokes that user's Glean-issued API tokens",
+        "Whether admin audit logs record API token create/revoke (coverage list does not mention tokens)",
+        "Per-token IP allowlist for Client API tokens",
+        "Default OAuth server state (admin docs: off; developer docs: on)",
+        "Where the tenant-wide IP greenlist is configured and whether customers manage it",
+        "EMA token lifetime"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "glean-5",
+      "provider_id": "glean",
+      "name": "External IdP OAuth token (X-Glean-Auth-Type: OAUTH)",
+      "family": "federation",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Access tokens issued by the customer's IdP (Google, Entra ID, Okta, OneLogin) and sent with X-Glean-Auth-Type: OAUTH. Glean checks issuer and client_id.",
+        "evidence_refs": [
+          "fc-5df4608c"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "Admin registers issuer and allowed client IDs; IdP policy governs issuance.",
+        "evidence_refs": [
+          "fc-5df4608c"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Tenant VPC firewall greenlist plus whatever the IdP enforces at issuance.",
+        "evidence_refs": [
+          "fc-ac27dc28"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Set by the IdP",
+        "evidence_refs": [
+          "fc-5df4608c"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "IdP policy",
+        "summary": "IdP refresh tokens.",
+        "evidence_refs": [
+          "fc-5df4608c"
+        ]
+      },
+      "administration": {
+        "summary": "Off until an admin toggles Enable IDP OAuth for API access and lists allowed client IDs.",
+        "conditions": "Revocation follows the IdP.",
+        "evidence_refs": [
+          "fc-5df4608c"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "yes",
+          "details": "The customer's IdP issues these tokens, so IdP assignments and policies decide whether a user gets one.",
+          "evidence_refs": [
+            "fc-5df4608c"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Register the OAuth app in the IdP and assign users/policies there; Admin console → Settings → Third‑party access (OAuth) → Enable IDP OAuth for API access → Manage Settings",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-5df4608c",
+            "fc-99af34b9"
+          ]
+        },
+        "network": {
+          "ui": "No self-serve setting; send Glean the allowed CIDRs and Glean enables IP green listing (tenant-wide)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-000bc4ba",
+            "fc-ac27dc28"
+          ]
+        },
+        "expiry": {
+          "ui": "Set access/refresh token lifetime in the IdP's OAuth app policy (not in Glean)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-5df4608c"
+          ]
+        },
+        "usage": {
+          "ui": "Query the glean-customer-event log (bucket/warehouse; ask account team for location); filter IsRestClientApi = true",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-b9e88402",
+            "fc-4b0dcb82",
+            "fc-94c8cbbf"
+          ]
+        },
+        "reads": {
+          "ui": "In glean-customer-event log, filter jsonPayload.type = SEARCH and IsRestClientApi = true",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-b9e88402",
+            "fc-4b0dcb82"
+          ]
+        },
+        "kill": {
+          "ui": "Revoke in the IdP; or Admin console → Settings → Third‑party access (OAuth) → Manage Settings → remove client ID from Allowed clientID(s), or toggle off Enable IDP OAuth for API access",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-5df4608c"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "IdP JWT."
+        },
+        "log_sources": [
+          {
+            "name": "IdP sign-in/token logs",
+            "notes": "Issuance logged by IdP."
+          },
+          {
+            "name": "GCE logs",
+            "notes": "Usage."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "client_id",
+          "user identity"
+        ],
+        "anomaly_cues": [
+          "Tokens from a client ID not on the allowed list (rejected)"
+        ],
+        "containment": {
+          "steps": "Revoke in IdP; remove client ID or disable IdP OAuth in Glean.",
+          "kills_existing": "partial",
+          "notes": "Revocation follows the IdP's policies. Docs do not say whether Glean checks revocation for each request or accepts tokens until they expire."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-5df4608c",
+          "fc-ac27dc28"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /rest/api/v1/search",
+            "reveals": "User-visible documents",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "SEARCH",
+            "log_notes": "GCE"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-4b0dcb82"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-000bc4ba",
+      "title": "Glean web application firewall on AWS",
+      "url": "https://docs.glean.com/security/cloud-prem/aws/aws-waf",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4b0dcb82",
+      "title": "Event schemas | Glean Customer Event logs",
+      "url": "https://docs.glean.com/administration/gce-logs/data-dictionary-detailed",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5df4608c",
+      "title": "OAuth with IdP-issued tokens",
+      "url": "https://docs.glean.com/administration/oauth/oauth-idp",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-94c8cbbf",
+      "title": "MCP usage tracking and analytics",
+      "url": "https://docs.glean.com/administration/platform/mcp/analytics",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-99af34b9",
+      "title": "About Glean SSO",
+      "url": "https://docs.glean.com/administration/identity/sso/about",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac27dc28",
+      "title": "MCP Security, Data Flow, and Permissions",
+      "url": "https://docs.glean.com/administration/platform/mcp/security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9e88402",
+      "title": "Glean Customer Event logs overview",
+      "url": "https://docs.glean.com/administration/gce-logs/data-dictionary",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,355 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "openai",
+      "name": "OpenAI API",
+      "scope_notes": "OpenAI API Platform organizations and projects (platform.openai.com); ChatGPT workspace and Codex credentials out of scope except where shared WIF docs mention them.",
+      "controls": [
+        {
+          "name": "Delete admin API key",
+          "effect": "revoke",
+          "applies_to": [
+            "openai-3"
+          ],
+          "what": "Deletes an admin key.",
+          "setting": "DELETE /v1/organization/admin_api_keys/{key_id}",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-32167ce0"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether API keys are subject to SSO or IdP conditional access (no statement found).",
+        "Whether the IP allowlist covers Administration API calls made with admin keys.",
+        "Whether audit logging must be activated and its retention period (help center pages blocked to fetch).",
+        "Whether inference/data-read API calls (e.g. GET /v1/files) appear in the audit log; it is described as user actions and configuration changes.",
+        "Whether deleting a service account or WIF mapping invalidates already-issued WIF tokens before expiry.",
+        "Lifetime, listing and admin revocation of legacy user API keys.",
+        "API key secret prefix format (not stated in fetched docs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "openai-3",
+      "provider_id": "openai",
+      "name": "Admin API key",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Organization-level key used only for Administration API endpoints (users, projects, keys, audit logs). Owned by an org owner.",
+        "evidence_refs": [
+          "fc-430bc6a7",
+          "fc-32167ce0"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Workload identity tokens cannot call Admin API endpoints; an admin key is required.",
+        "evidence_refs": [
+          "fc-6c2bdef9"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "IP allowlist covers API requests; docs do not say explicitly whether Administration API calls with admin keys are included.",
+        "evidence_refs": [
+          "fc-4f6c0e89"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Optional expires_in_seconds at creation; no expiry if omitted",
+        "evidence_refs": [
+          "fc-f165f4db"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "expires_at or none",
+        "summary": "Create a new admin key and delete the old one.",
+        "evidence_refs": [
+          "fc-32167ce0"
+        ]
+      },
+      "administration": {
+        "summary": "Only roles with Organization Admin permission (org owner) manage admin keys. Create/list/delete via dashboard or /organization/admin_api_keys.",
+        "conditions": "Whether the max-lifetime policy applies to admin keys is not stated.",
+        "evidence_refs": [
+          "fc-32167ce0",
+          "fc-aabf5d67"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Help center says demoting an owner can invalidate their admin API keys; it does not say what happens when the owner is removed entirely, and 'can' is not a guarantee.",
+          "evidence_refs": [
+            "fc-936de95e"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /v1/organization/admin_api_keys lists organization admin API keys.",
+          "evidence_refs": [
+            "fc-017197b0"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "POST /organization/admin_api_keys with expires_in_seconds (max 31536000); check expires_at via GET /organization/admin_api_keys/{key_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-f165f4db",
+            "fc-18fbf244"
+          ]
+        },
+        "offboard": {
+          "ui": "API Platform settings > People > Members > Roles (demote owner) or Remove",
+          "api": "DELETE /organization/users/{user_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-6a206783",
+            "fc-fce47a96"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs (GET /v1/organization/audit_logs)",
+            "notes": "User actions and configuration changes; actor is session or api_key with key tracking id. Read with an admin key. Activation and retention not verified."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.api_key.id",
+            "log": "Audit logs",
+            "notes": "Tracking id"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "tenant.admin_api_key.created",
+            "stage": "create",
+            "notes": "Also .updated and .deleted"
+          }
+        ],
+        "correlation_keys": [
+          "actor.api_key.id (tracking id)",
+          "actor.api_key.service_account.id",
+          "actor.session.ip_address",
+          "project_id"
+        ],
+        "anomaly_cues": [
+          "Key used from IP that triggers ip_not_authorized",
+          "api_key.created by unexpected user or outside change window",
+          "Usage spike grouped by api_key_id"
+        ],
+        "containment": {
+          "steps": "Delete via dashboard admin-keys page or DELETE /v1/organization/admin_api_keys/{key_id}.",
+          "kills_existing": "yes",
+          "notes": "Docs state API key revocation takes effect within a few seconds; the statement is for API keys in general, not admin keys specifically. Keys are per-request bearer secrets with no derived tokens."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether admin key reads (list users, list audit logs) are themselves logged"
+        ],
+        "evidence_refs": [
+          "fc-32167ce0",
+          "fc-fdef42f5",
+          "fc-a738cffa"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "GET /v1/organization/users",
+            "reveals": "All org users and roles",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v1/organization/audit_logs",
+            "reveals": "Org activity history, key ids, IPs",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v1/organization/projects/{project_id}/api_keys",
+            "reveals": "Keys, owners, last_used_at",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "Whether admin-key read calls are logged"
+        ],
+        "evidence_refs": [
+          "fc-c1f4a29f",
+          "fc-fdef42f5",
+          "fc-a8249c0b"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-017197b0",
+      "title": "List admin API keys",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/admin_api_keys/methods/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-18fbf244",
+      "title": "OpenAI OpenAPI spec (AdminApiKey schema)",
+      "url": "https://github.com/openai/openai-openapi/blob/main/openapi.yaml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-32167ce0",
+      "title": "Admin API Keys reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/admin_api_keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-430bc6a7",
+      "title": "Admin APIs",
+      "url": "https://developers.openai.com/api/docs/guides/admin-apis",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4f6c0e89",
+      "title": "IP allowlist",
+      "url": "https://developers.openai.com/api/docs/guides/ip-allowlist",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6a206783",
+      "title": "Managing members in an API organization",
+      "url": "https://help.openai.com/en/articles/4936812-how-do-i-add-change-or-remove-members-on-my-openai-api-account",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6c2bdef9",
+      "title": "Workload identity token exchange reference",
+      "url": "https://developers.openai.com/api/reference/workload-identity-federation",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-936de95e",
+      "title": "Managing members in an API organization",
+      "url": "https://help.openai.com/en/articles/4936812-managing-members-in-an-api-organization",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a738cffa",
+      "title": "API Overview - Authentication",
+      "url": "https://developers.openai.com/api/reference/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8249c0b",
+      "title": "Project API Keys reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/projects/subresources/api_keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aabf5d67",
+      "title": "Manage permissions in the OpenAI platform",
+      "url": "https://developers.openai.com/api/docs/guides/rbac",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c1f4a29f",
+      "title": "Users reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f165f4db",
+      "title": "Create admin API key",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/admin_api_keys/methods/create",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fce47a96",
+      "title": "Delete user",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/users/methods/delete",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fdef42f5",
+      "title": "Audit Logs reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/audit_logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,805 @@
+{
+ "id": "devin",
+ "name": "Devin",
+ "scope_notes": "Covers Devin (Cognition). Cognition-hosted SaaS on Teams and Enterprise plans; PAT policy, IP access lists, enterprise service users, audit log API and SCIM are Enterprise features.",
+ "controls": [
+  {
+   "name": "PAT policy",
+   "effect": "disable",
+   "applies_to": [
+    "devin-2"
+   ],
+   "what": "Disabled, Approval required, or Self serve for all orgs in the enterprise.",
+   "setting": "Enterprise settings > Devin API > PAT policies",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-afe65dae",
+    "fc-113ec1ab"
+   ]
+  },
+  {
+   "name": "PAT approval workflow",
+   "effect": "require_approval",
+   "applies_to": [
+    "devin-2"
+   ],
+   "what": "Admins approve or deny each PAT request; requests lapse after 7 days.",
+   "setting": "PAT policies > Approval queue",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-113ec1ab"
+   ]
+  },
+  {
+   "name": "PAT expiration policy",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "devin-2"
+   ],
+   "what": "Requires expiry, capped at 365 days by default or shorter.",
+   "setting": "PAT policies",
+   "plan": "Enterprise",
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-113ec1ab"
+   ]
+  },
+  {
+   "name": "PAT inventory revoke",
+   "effect": "revoke",
+   "applies_to": [
+    "devin-2"
+   ],
+   "what": "Admin revokes any user's PAT, one at a time; policy changes can bulk-revoke noncompliant tokens.",
+   "setting": "PAT policies > PAT inventory",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-113ec1ab",
+    "fc-3e18b5ad"
+   ]
+  },
+  {
+   "name": "Automatic PAT revocation on deprovision",
+   "effect": "revoke",
+   "applies_to": [
+    "devin-2"
+   ],
+   "what": "PATs revoked when a user leaves the account, incl. SCIM.",
+   "setting": "Automatic",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-113ec1ab"
+   ]
+  },
+  {
+   "name": "Rotate / Revoke PAT",
+   "effect": "revoke",
+   "applies_to": [
+    "devin-2"
+   ],
+   "what": "Owner rotates (old secret stops immediately) or revokes.",
+   "setting": "Settings > Devin API > PATs",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-113ec1ab"
+   ]
+  },
+  {
+   "name": "Service user role (RBAC)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "devin-1"
+   ],
+   "what": "Role decides which endpoints a service user key can call.",
+   "setting": "Settings > Devin API > Service users",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-afe65dae"
+   ]
+  },
+  {
+   "name": "Static service user keys disabled",
+   "effect": "disable",
+   "applies_to": [
+    "devin-1"
+   ],
+   "what": "Blocks creating or rotating static service user keys (except SCIM/Outpost service users).",
+   "setting": "Enterprise setting (name not documented; audit action update_service_user_key_policy)",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-4d3a8626"
+   ]
+  },
+  {
+   "name": "Revoke API key for service user",
+   "effect": "revoke",
+   "applies_to": [
+    "devin-1"
+   ],
+   "what": "Revokes one service user key.",
+   "setting": "DELETE /v3beta1/enterprise/service-users/{service_user_id}/api-keys/{api_key_id}",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-40172871"
+   ]
+  },
+  {
+   "name": "Service user key expiration",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "devin-1"
+   ],
+   "what": "Optional expires_at at creation or rotation.",
+   "setting": "POST /v3beta1/enterprise/service-users/{id}/api-keys",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-4d3a8626",
+    "fc-d35de59b"
+   ]
+  },
+  {
+   "name": "IP Access Lists",
+   "effect": "limit_network",
+   "applies_to": [
+    "devin-1",
+    "devin-2",
+    "devin-3"
+   ],
+   "what": "Only allowed CIDRs can reach Devin APIs and webapp.",
+   "setting": "/v3/enterprise/ip-access-list (ManageIPWhitelist)",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-224e4437"
+   ]
+  },
+  {
+   "name": "Revoke API Key (v2)",
+   "effect": "revoke",
+   "applies_to": [
+    "devin-3"
+   ],
+   "what": "Revokes an enterprise legacy key.",
+   "setting": "DELETE /v2/enterprise/api-keys/{api_key_id}",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-c4561cbf",
+    "fc-3e2c6251"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "devin-2",
+   "what": "Teams (non-enterprise) accounts have no PAT policy and may create non-expiring PATs.",
+   "kind": "expiry",
+   "evidence_refs": [
+    "fc-113ec1ab"
+   ]
+  },
+  {
+   "path_id": "devin-2",
+   "what": "PATs cannot be scoped below the user's full permissions.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-113ec1ab"
+   ]
+  },
+  {
+   "path_id": "devin-3",
+   "what": "Legacy keys do not support RBAC.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-afe65dae"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether API tokens are blocked when SSO is enforced or bypass IdP conditional access (not stated)",
+  "Inbound workload federation for the Devin API (audit actions exist, no guide found)",
+  "Where the static service user key policy is set in the UI",
+  "Audit log retention period",
+  "Whether read calls (list sessions, list knowledge) are audited",
+  "Legacy key expiry and whether a v3 setting disables them",
+  "Whether revoking a service user key ends access immediately"
+ ],
+ "credentials": [
+  {
+   "id": "devin-1",
+   "name": "Service User API Key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "cog_ bearer key for a non-human service user created at organization or enterprise level. Permissions come from the RBAC role assigned to the service user. Also works with the Devin MCP server.",
+    "evidence_refs": [
+     "fc-afe65dae",
+     "fc-3cdfab2a"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Audit actions mention federated identity providers and credentials, but no inbound federation guide was found.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Enterprise IP access list rejects API requests from other IPs with 401; applies enterprise-wide, not per key.",
+    "evidence_refs": [
+     "fc-224e4437"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional expiry; can be non-expiring",
+    "evidence_refs": [
+     "fc-4d3a8626",
+     "fc-d35de59b"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "optional fixed date",
+    "summary": "Rotate creates a new key and revokes the old one by default; graceful overlap is optional.",
+    "evidence_refs": [
+     "fc-d35de59b"
+    ]
+   },
+   "administration": {
+    "summary": "Admins create service users and keys and choose their role. The enterprise can disable static service user keys (except SCIM/Outpost service users). Impersonating users via create_as_user_id needs ImpersonateOrgSessions.",
+    "conditions": "Enterprise key API is beta.",
+    "evidence_refs": [
+     "fc-afe65dae",
+     "fc-4d3a8626"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Service user keys belong to a non-human service user, not a person.",
+     "evidence_refs": [
+      "fc-afe65dae"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Enterprise admins can list service users (GET /v3/enterprise/members/service-users) and each one's keys with status (GET /v3beta1/enterprise/service-users/{service_user_id}/api-keys).",
+     "evidence_refs": [
+      "fc-596866b9"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": null,
+     "api": "GET /v3/enterprise/audit-logs?action=create_session; match service_user_id",
+     "cli": null,
+     "evidence_refs": [
+      "fc-3e18b5ad",
+      "fc-afe65dae"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "cog_",
+     "notes": "Shown once at creation."
+    },
+    "log_sources": [
+     {
+      "name": "Audit logs API",
+      "notes": "GET /v3/enterprise/audit-logs (ViewAccountAuditLogs); org variant exists. Max 100-day window per query."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "service_user_id",
+      "log": "audit log",
+      "notes": "Also service_user_name; no key ID field documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "create_service_user_api_key",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "rotate_service_user_api_key",
+      "stage": "rotate",
+      "notes": ""
+     },
+     {
+      "event": "revoke_service_user_api_key",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "service_user_id",
+     "org_id"
+    ],
+    "anomaly_cues": [
+     "create_session with create_as_user_id from a service user",
+     "rotate with revoke_current=false leaving two keys active"
+    ],
+    "containment": {
+     "steps": "Revoke the key (API or Settings > Devin API > Service users); or delete the service user.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": "GET /v3/enterprise/audit-logs?action=create_service_user_api_key",
+    "unknown": [
+     "Per-request API logging"
+    ],
+    "evidence_refs": [
+     "fc-afe65dae",
+     "fc-3e18b5ad",
+     "fc-40172871"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v3/self",
+      "reveals": "Principal type and identity",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v3/organizations/{org_id}/sessions",
+      "reveals": "Sessions in the org",
+      "bulk": true,
+      "scope": "ViewOrgSessions",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /v3/organizations/{org_id}/sessions",
+      "reveals": "Starts a Devin session with repo/secret access",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "create_session",
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-3e18b5ad",
+     "fc-c274a10d",
+     "fc-d82dd168"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "devin-2",
+   "name": "Personal Access Token (PAT)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "cog_ bearer token that acts as the human user with all of that user's permissions in every org they belong to. Used by the Devin CLI, desktop apps, MCP and API.",
+    "evidence_refs": [
+     "fc-afe65dae",
+     "fc-113ec1ab"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static token.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Enterprise IP access list applies to API requests.",
+    "evidence_refs": [
+     "fc-224e4437"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": 31536000,
+    "configurable": "yes",
+    "summary": "Enterprise: expiry required, max 365 days by default (shorter configurable); Teams: may never expire",
+    "evidence_refs": [
+     "fc-113ec1ab"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "fixed date",
+    "summary": "Rotate generates a new secret; old secret stops immediately.",
+    "evidence_refs": [
+     "fc-113ec1ab"
+    ]
+   },
+   "administration": {
+    "summary": "Enterprise PAT policy: Disabled (default), Approval required, or Self serve. Admins see a PAT inventory and can revoke tokens. PATs are revoked when the user loses membership, including SCIM deprovisioning.",
+    "conditions": "No policy controls on Teams plans.",
+    "evidence_refs": [
+     "fc-afe65dae",
+     "fc-113ec1ab"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "PATs are revoked automatically when the user loses account membership, including through SCIM deprovisioning or IdP group changes.",
+     "evidence_refs": [
+      "fc-113ec1ab"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "The PAT inventory view on the enterprise PAT policies tab lists PATs across the enterprise (Enterprise; needs Manage account API keys).",
+     "evidence_refs": [
+      "fc-113ec1ab"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Enterprise settings > Devin API > PAT policies > PAT inventory",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-113ec1ab"
+     ]
+    },
+    "expiry": {
+     "ui": "Enterprise settings > Devin API > PAT policies (maximum lifetime); PAT inventory shows each token's expiration date",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-113ec1ab"
+     ]
+    },
+    "usage": {
+     "ui": null,
+     "api": "GET /v3/enterprise/audit-logs; filter results on user_id / user_email",
+     "cli": null,
+     "evidence_refs": [
+      "fc-3e18b5ad"
+     ]
+    },
+    "kill": {
+     "ui": "Enterprise settings > Devin API > PAT policies > PAT inventory > Revoke (row); or set policy to Disabled to revoke all",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-113ec1ab"
+     ]
+    },
+    "offboard": {
+     "ui": "Settings > Membership > remove member; or deactivate the user in the IdP (SCIM)",
+     "api": "DELETE /v3/enterprise/members/users/{user_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-113ec1ab",
+      "fc-eaa03bdb",
+      "fc-31dc69bc",
+      "fc-049c9e41"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "cog_",
+     "notes": "Shown once."
+    },
+    "log_sources": [
+     {
+      "name": "Audit logs API",
+      "notes": "Enterprise. Email notifications for PAT lifecycle."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "user_id / user_email",
+      "log": "audit log",
+      "notes": "PAT actions attributed to the user."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "create_pat",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "rotate_pat",
+      "stage": "rotate",
+      "notes": ""
+     },
+     {
+      "event": "revoke_pat",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "policy_revoke_pat",
+      "stage": "revoke",
+      "notes": "Revoked by policy change"
+     },
+     {
+      "event": "approve_pat_request",
+      "stage": "other",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "user_id",
+     "org_id"
+    ],
+    "anomaly_cues": [
+     "create_pat right after approve_pat_request for a departing user",
+     "search_query or create_session volume spike"
+    ],
+    "containment": {
+     "steps": "Admin revokes from PAT inventory, or switch PAT policy to Disabled, or remove the user (auto-revokes).",
+     "kills_existing": "yes",
+     "notes": "Rotation stops the old secret immediately; revoke is documented as invalidating the token."
+    },
+    "sample_query": "GET /v3/enterprise/audit-logs?action=create_pat",
+    "unknown": [],
+    "evidence_refs": [
+     "fc-113ec1ab",
+     "fc-3e18b5ad"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v3/self",
+      "reveals": "pat_user identity",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v3/organizations/{org_id}/sessions",
+      "reveals": "Sessions the user can view",
+      "bulk": true,
+      "scope": "ViewOrgSessions",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-c274a10d",
+     "fc-d82dd168"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "devin-3",
+   "name": "Legacy API keys (Personal apk_user_ / Service apk_)",
+   "family": "api_key",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Deprecated keys for the v1 and v2 APIs, still accepted during the deprecation period. Scoped to an (org_id, user_id) pair; no RBAC.",
+    "evidence_refs": [
+     "fc-afe65dae",
+     "fc-3d9238a8"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Enterprise IP access list covers Devin APIs.",
+    "evidence_refs": [
+     "fc-224e4437"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Not documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not documented",
+    "summary": "Generate a new key in legacy settings; migrate to v3.",
+    "evidence_refs": [
+     "fc-afe65dae"
+    ]
+   },
+   "administration": {
+    "summary": "Enterprise admins can list and revoke enterprise keys via the v2 API. Not accepted by the Devin MCP server.",
+    "conditions": "v2 key endpoints need an enterprise admin personal API key.",
+    "evidence_refs": [
+     "fc-3cdfab2a",
+     "fc-c4561cbf",
+     "fc-3e2c6251"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /v2/enterprise/api-keys lists legacy API keys across all orgs in the enterprise (needs an enterprise admin personal API key).",
+     "evidence_refs": [
+      "fc-3e2c6251"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": null,
+     "api": "GET /v3/enterprise/audit-logs; filter results on user_id / user_email",
+     "cli": null,
+     "evidence_refs": [
+      "fc-3e18b5ad"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "apk_user_ / apk_",
+     "notes": "Personal vs service legacy keys."
+    },
+    "log_sources": [
+     {
+      "name": "Audit logs API",
+      "notes": ""
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "user_id",
+      "log": "audit log",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "create_user_api_key",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "create_org_api_key",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "create_service_api_key",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "revoke_enterprise_api_key",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "revoke_all_enterprise_api_keys",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "user_id",
+     "org_id"
+    ],
+    "anomaly_cues": [
+     "view_user_api_key / view_org_api_key events",
+     "Any legacy key use after v3 migration"
+    ],
+    "containment": {
+     "steps": "DELETE /v2/enterprise/api-keys/{api_key_id} or revoke in Settings > API Keys.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Expiry"
+    ],
+    "evidence_refs": [
+     "fc-3e18b5ad",
+     "fc-c4561cbf"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /v1/sessions",
+      "reveals": "Org sessions",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-3d9238a8"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

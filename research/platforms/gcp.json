@@ -1,0 +1,1504 @@
+{
+ "id": "gcp",
+ "name": "Google Cloud",
+ "scope_notes": "Covers Google Cloud (IAM, API Keys, Cloud Storage). Covers Google Cloud project/org credentials; org policy constraints and VPC Service Controls need an organization resource; Workspace user OAuth and domain-wide delegation are in the separate `google` platform.",
+ "controls": [
+  {
+   "name": "iam.managed.disableServiceAccountKeyCreation (legacy iam.disableServiceAccountKeyCreation)",
+   "effect": "disable",
+   "applies_to": [
+    "gcp-1",
+    "gcp-5"
+   ],
+   "what": "Blocks creation of new service account keys and SA HMAC keys.",
+   "setting": "Organization policies > constraint; gcloud resource-manager org-policies enable-enforce",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7af2d5e5"
+   ]
+  },
+  {
+   "name": "iam.managed.disableServiceAccountKeyUpload",
+   "effect": "disable",
+   "applies_to": [
+    "gcp-1"
+   ],
+   "what": "Blocks uploading external public keys to service accounts.",
+   "setting": "Organization policies",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7af2d5e5"
+   ]
+  },
+  {
+   "name": "constraints/iam.serviceAccountKeyExpiryHours",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "gcp-1"
+   ],
+   "what": "Sets an expiry (1h to 2160h) for newly created SA keys.",
+   "setting": "Organization policies",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7af2d5e5",
+    "fc-6fc9753d"
+   ]
+  },
+  {
+   "name": "iam.serviceAccountKeyExposureResponse",
+   "effect": "revoke",
+   "applies_to": [
+    "gcp-1",
+    "gcp-4"
+   ],
+   "what": "Auto-disables SA keys and SA-bound API keys that Google detects as exposed.",
+   "setting": "Organization policies (DISABLE_KEY or WAIT_FOR_ABUSE)",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7af2d5e5"
+   ]
+  },
+  {
+   "name": "constraints/iam.allowServiceAccountCredentialLifetimeExtension",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "gcp-2"
+   ],
+   "what": "Lists SAs allowed to mint tokens longer than 1 hour (up to 12 hours).",
+   "setting": "Organization policies",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7af2d5e5"
+   ]
+  },
+  {
+   "name": "Service Account Token Creator role",
+   "effect": "limit_scope",
+   "applies_to": [
+    "gcp-2"
+   ],
+   "what": "Only principals granted this role on an SA can mint its short-lived tokens.",
+   "setting": "IAM policy on the service account",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-c3066f15"
+   ]
+  },
+  {
+   "name": "Disable service account (serviceAccounts.disable)",
+   "effect": "revoke",
+   "applies_to": [
+    "gcp-1",
+    "gcp-2",
+    "gcp-3",
+    "gcp-4"
+   ],
+   "what": "Immediately disables the SA, which is the documented way to cut off already-issued short-lived tokens.",
+   "setting": "IAM > Service accounts > Disable; POST .../serviceAccounts/SA_ID:disable",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-e9b2abab",
+    "fc-6fc9753d"
+   ]
+  },
+  {
+   "name": "Delete / disable service account key",
+   "effect": "revoke",
+   "applies_to": [
+    "gcp-1"
+   ],
+   "what": "Stops the key from minting new tokens; tokens already minted stay valid until expiry.",
+   "setting": "IAM > Service accounts > Keys; DELETE .../keys/KEY_ID",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-6fc9753d",
+    "fc-65ab24ea"
+   ]
+  },
+  {
+   "name": "constraints/iam.workloadIdentityPoolProviders",
+   "effect": "limit_scope",
+   "applies_to": [
+    "gcp-3"
+   ],
+   "what": "Allow-lists which external IdP issuers can be configured.",
+   "setting": "Organization policies",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7af2d5e5"
+   ]
+  },
+  {
+   "name": "constraints/iam.workloadIdentityPoolAwsAccounts",
+   "effect": "limit_scope",
+   "applies_to": [
+    "gcp-3"
+   ],
+   "what": "Allow-lists which AWS accounts can federate.",
+   "setting": "Organization policies",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7af2d5e5"
+   ]
+  },
+  {
+   "name": "Attribute conditions",
+   "effect": "limit_scope",
+   "applies_to": [
+    "gcp-3"
+   ],
+   "what": "CEL condition on the provider limits which external tokens (e.g. which GitHub org) can be exchanged.",
+   "setting": "Workload identity pool provider > attributeCondition",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-bb467882"
+   ]
+  },
+  {
+   "name": "Disable / delete workload identity pool",
+   "effect": "revoke",
+   "applies_to": [
+    "gcp-3"
+   ],
+   "what": "Disabling or deleting the pool stops its identities from accessing Google Cloud.",
+   "setting": "IAM > Workload Identity Pools > Status toggle / Delete",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-460c5437"
+   ]
+  },
+  {
+   "name": "iam.managed.disableServiceAccountApiKeyCreation",
+   "effect": "disable",
+   "applies_to": [
+    "gcp-4"
+   ],
+   "what": "Blocks binding API keys to service accounts except for allowed services.",
+   "setting": "Organization policies > Block service account API key bindings",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-7af2d5e5",
+    "fc-38d3a9e8"
+   ]
+  },
+  {
+   "name": "API key application and API restrictions",
+   "effect": "limit_network",
+   "applies_to": [
+    "gcp-4"
+   ],
+   "what": "Restricts a key to listed external IPs, referrers or apps, and to specific APIs.",
+   "setting": "APIs & Services > Credentials > key > Application restrictions / API restrictions",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-38d3a9e8"
+   ]
+  },
+  {
+   "name": "Delete API key",
+   "effect": "revoke",
+   "applies_to": [
+    "gcp-4"
+   ],
+   "what": "Deletes the key; it can be restored for 30 days.",
+   "setting": "APIs & Services > Credentials; DeleteKey",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-38d3a9e8",
+    "fc-096deda2"
+   ]
+  },
+  {
+   "name": "constraints/storage.restrictAuthTypes",
+   "effect": "disable",
+   "applies_to": [
+    "gcp-5"
+   ],
+   "what": "Rejects user-account and/or service-account HMAC-signed requests to Cloud Storage.",
+   "setting": "Organization policies",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6c229c4f"
+   ]
+  },
+  {
+   "name": "Deactivate / delete HMAC key",
+   "effect": "revoke",
+   "applies_to": [
+    "gcp-5"
+   ],
+   "what": "Set the key INACTIVE or delete it; deleted keys are invalid immediately.",
+   "setting": "Cloud Storage > Settings > Interoperability; hmacKeys update/delete",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-704428c1",
+    "fc-5d748a08"
+   ]
+  },
+  {
+   "name": "VPC Service Controls",
+   "effect": "limit_network",
+   "applies_to": [
+    "gcp-1",
+    "gcp-2",
+    "gcp-3",
+    "gcp-4",
+    "gcp-5"
+   ],
+   "what": "Service perimeters with ingress rules limit API access by network origin and identity, even with stolen credentials.",
+   "setting": "Security > VPC Service Controls",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-c4499f95"
+   ]
+  },
+  {
+   "name": "constraints/iam.workloadIdentityPoolProviders (Deny All)",
+   "effect": "disable",
+   "applies_to": [
+    "gcp-3"
+   ],
+   "what": "Org policy rule set to Deny All blocks creating new workload identity pool providers; exceptions can allow trusted providers per project. Same constraint as the existing limit_scope entry, used as a block.",
+   "setting": "Organization policy: constraints/iam.workloadIdentityPoolProviders",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-bb467882"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "gcp-1",
+   "what": "Deleting a key does not revoke access tokens already minted from it.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-6fc9753d"
+   ]
+  },
+  {
+   "path_id": "gcp-2",
+   "what": "Issued short-lived tokens cannot be revoked individually; only disabling/deleting the SA cuts them off.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-6fc9753d"
+   ]
+  },
+  {
+   "path_id": "gcp-1",
+   "what": "Keys never expire unless the expiry org policy is set.",
+   "kind": "expiry",
+   "evidence_refs": [
+    "fc-6fc9753d"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether existing keys created before iam.serviceAccountKeyExpiryHours was set get an expiry (docs say 'newly created').",
+  "Federated (STS) access token lifetime.",
+  "Whether API keys support an expiry setting.",
+  "Which audit field identifies the API key or HMAC access ID used on a data-plane request.",
+  "Whether GetKeyString/lookupKey calls are logged for keys.lookupKey.",
+  "Plan/pricing for VPC Service Controls (needs organization)."
+ ],
+ "credentials": [
+  {
+   "id": "gcp-1",
+   "name": "Service account keys (user-managed)",
+   "family": "jwt",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A JSON (or P12) private key for a service account. The holder signs a JWT and exchanges it for an OAuth 2.0 access token, then calls Google APIs as the service account.",
+    "evidence_refs": [
+     "fc-6fc9753d",
+     "fc-9ac8bb6a",
+     "fc-3d9aa972"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Keys authenticate the service account directly. Context-Aware Access policies 'apply only to users', so IdP/CAA conditions on human users do not gate key use. No doc states an SSO check on keys.",
+    "evidence_refs": [
+     "fc-214cc15d",
+     "fc-2e7078e9"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "No IP list on the key itself. VPC Service Controls perimeters with ingress rules (by identity and IP) restrict API requests to protected services; services outside the perimeter are not covered.",
+    "evidence_refs": [
+     "fc-c4499f95",
+     "fc-57894375"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Never expire by default; iam.serviceAccountKeyExpiryHours can set 1h-2160h (90 days) for new keys",
+    "evidence_refs": [
+     "fc-6fc9753d",
+     "fc-7af2d5e5"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Key reused to mint new 1-hour access tokens until the key is deleted, disabled or expires",
+    "summary": "Rotate by creating a new key and deleting the old one (up to 10 keys per SA).",
+    "evidence_refs": [
+     "fc-6fc9753d",
+     "fc-3d9aa972"
+    ]
+   },
+   "administration": {
+    "summary": "Org policy can block key creation and key upload; for orgs created on/after 2024-05-03 creation is blocked by default. Exposed keys are auto-disabled by default.",
+    "conditions": "Org policies need an organization resource.",
+    "evidence_refs": [
+     "fc-7af2d5e5"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Keys belong to a service account; access ends when the service account is disabled or deleted, not when a user leaves.",
+     "evidence_refs": [
+      "fc-c6d6c1f9"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Cloud Asset Inventory supports iam.googleapis.com/ServiceAccountKey in its list/search/export APIs across an organization.",
+     "evidence_refs": [
+      "fc-55f8493d"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Security > Asset Inventory > Resource search, filter asset type iam.googleapis.com/ServiceAccountKey; per SA: IAM & Admin > Service accounts > (SA) > Keys",
+     "api": "GET https://cloudasset.googleapis.com/v1/{scope}:searchAllResources?assetTypes=iam.googleapis.com/ServiceAccountKey",
+     "cli": "gcloud asset search-all-resources --scope=organizations/ORG_ID --asset-types=iam.googleapis.com/ServiceAccountKey",
+     "evidence_refs": [
+      "fc-2177519d",
+      "fc-55f8493d",
+      "fc-889bbaa1"
+     ]
+    },
+    "expiry": {
+     "ui": "Organization policies > constraints/iam.serviceAccountKeyExpiryHours > Manage policy",
+     "api": null,
+     "cli": "gcloud resource-manager org-policies allow constraints/iam.serviceAccountKeyExpiryHours 2160h --organization=ORG_ID",
+     "evidence_refs": [
+      "fc-7af2d5e5"
+     ]
+    },
+    "usage": {
+     "ui": "Logging > Logs Explorer, filter protoPayload.authenticationInfo.serviceAccountKeyName=\"//iam.googleapis.com/projects/P/serviceAccounts/SA/keys/KEY_ID\"; per-key counts: Metrics Explorer > Service account key authentication events",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-9ac8bb6a",
+      "fc-858b9298",
+      "fc-5c044d8c"
+     ]
+    },
+    "reads": {
+     "ui": "IAM & Admin > Audit Logs > select service > Permission types: Data Read > Save; then Logs Explorer filter serviceAccountKeyName",
+     "api": "Add auditConfigs {logType: DATA_READ} to the project/folder/org IAM policy (setIamPolicy)",
+     "cli": "gcloud projects set-iam-policy PROJECT_ID policy.yaml",
+     "evidence_refs": [
+      "fc-a6bc72ba",
+      "fc-5c044d8c"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "JSON file with \"type\": \"service_account\", private_key_id (key ID) and client_email."
+    },
+    "log_sources": [
+     {
+      "name": "Cloud Audit Logs - Admin Activity",
+      "notes": "Always on; key create/delete/disable. _Required bucket keeps 400 days."
+     },
+     {
+      "name": "Cloud Audit Logs - Data Access",
+      "notes": "Off by default except BigQuery; needed to see reads. _Default bucket 30 days."
+     },
+     {
+      "name": "Cloud Monitoring 'Service account key authentication events'",
+      "notes": "Usage metric per key."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "protoPayload.authenticationInfo.serviceAccountKeyName",
+      "log": "Cloud Audit Logs of called service",
+      "notes": "Full key resource name; missing for App Engine and Compute Engine."
+     },
+     {
+      "field": "protoPayload.authenticationInfo.principalEmail",
+      "log": "Cloud Audit Logs",
+      "notes": "The SA email."
+     },
+     {
+      "field": "RequestMetadata.callerIp",
+      "log": "Cloud Audit Logs",
+      "notes": "Caller IP."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "google.iam.admin.v1.CreateServiceAccountKey",
+      "stage": "create",
+      "notes": "Admin Activity"
+     },
+     {
+      "event": "google.iam.admin.v1.DisableServiceAccountKey",
+      "stage": "revoke",
+      "notes": "Also emitted by gcp-compromised-key-response@system.gserviceaccount.com on auto-disable"
+     },
+     {
+      "event": "google.iam.admin.v1.DeleteServiceAccountKey",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "google.iam.admin.v1.DisableServiceAccount",
+      "stage": "revoke",
+      "notes": "Kills minted tokens too"
+     }
+    ],
+    "correlation_keys": [
+     "serviceAccountKeyName",
+     "principalEmail",
+     "callerIp"
+    ],
+    "anomaly_cues": [
+     "Key used from a new callerIp",
+     "Auto-disable by gcp-compromised-key-response",
+     "Key created then used from outside your network",
+     "Key usage after long inactivity"
+    ],
+    "containment": {
+     "steps": "Disable the SA (cuts all tokens), then delete the key; rotate dependents.",
+     "kills_existing": "partial",
+     "notes": "Key deletion alone leaves minted tokens valid (up to 1h, or 12h if extended)."
+    },
+    "sample_query": "protoPayload.authenticationInfo.serviceAccountKeyName:\"KEY_ID\"",
+    "unknown": [
+     "Retention beyond 400/30 days requires sinks"
+    ],
+    "evidence_refs": [
+     "fc-6fc9753d",
+     "fc-9ac8bb6a",
+     "fc-65ab24ea",
+     "fc-7af2d5e5",
+     "fc-10383540",
+     "fc-4bd38048",
+     "fc-858b9298",
+     "fc-e9b2abab"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET https://oauth2.googleapis.com/tokeninfo?access_token=ACCESS_TOKEN",
+      "reveals": "Token scopes, expiry, client",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Not covered by Cloud Audit Logs docs"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET https://cloudasset.googleapis.com/v1/{scope=*/*}:searchAllResources",
+      "reveals": "All resources visible to the SA",
+      "bulk": true,
+      "scope": "https://www.googleapis.com/auth/cloud-platform",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "google.cloud.asset.v1.AssetService.SearchAllResources",
+      "log_notes": "ADMIN_READ Data Access log; off by default"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET https://storage.googleapis.com/storage/v1/b",
+      "reveals": "Buckets in a project",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "Listing buckets is ADMIN_READ Data Access; off by default"
+     },
+     {
+      "stage": "collection",
+      "call": "Cloud Storage object get/list",
+      "reveals": "Object data",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "DATA_READ Data Access; off by default (BigQuery is on by default)"
+     }
+    ],
+    "unknown": [
+     "Rate limits not checked"
+    ],
+    "evidence_refs": [
+     "fc-0c3ff338",
+     "fc-9b8d61c5",
+     "fc-d7ef2703",
+     "fc-4afde58b",
+     "fc-1de9c6e8",
+     "fc-10383540"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "GCP.Iam.ServiceAccountKeys.Create",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_iam_service_account_key_create.yml",
+     "detects": "A granted iam.serviceAccountKeys.create permission check (service account key creation)."
+    },
+    {
+     "source": "Panther",
+     "title": "GCP Service Account or Keys Created",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_service_account_or_keys_created.yml",
+     "detects": "A user (not an automated workflow) created a service account or service account key."
+    },
+    {
+     "source": "Sigma",
+     "title": "Google Cloud Service Account Disabled or Deleted",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/gcp/audit/gcp_service_account_disabled_or_deleted.yml",
+     "detects": "A service account was disabled or deleted."
+    },
+    {
+     "source": "Sigma",
+     "title": "Google Cloud Service Account Modified",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/gcp/audit/gcp_service_account_modified.yml",
+     "detects": "A service account was created or patched."
+    }
+   ]
+  },
+  {
+   "id": "gcp-2",
+   "name": "Short-lived service account credentials (service account impersonation)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A principal with the Service Account Token Creator role calls the IAM Credentials API (generateAccessToken, generateIdToken, signJwt) to mint a short-lived token for a service account.",
+    "evidence_refs": [
+     "fc-c3066f15",
+     "fc-3d9aa972"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "The caller authenticates first (user, SA or federated identity), so the caller's own login controls apply at minting time. The minted SA token is then used without user CAA checks.",
+    "evidence_refs": [
+     "fc-214cc15d",
+     "fc-9ac8bb6a"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Only via VPC Service Controls perimeters on supported services.",
+    "evidence_refs": [
+     "fc-c4499f95"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 43200,
+    "configurable": "conditional",
+    "summary": "1 hour; up to 12 hours with iam.allowServiceAccountCredentialLifetimeExtension",
+    "evidence_refs": [
+     "fc-7af2d5e5",
+     "fc-c3066f15"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "Absolute token lifetime",
+    "summary": "Caller mints a new token while it still holds the Token Creator permission.",
+    "evidence_refs": [
+     "fc-c3066f15"
+    ]
+   },
+   "administration": {
+    "summary": "Control who holds roles/iam.serviceAccountTokenCreator on each SA. Issued tokens cannot be revoked one by one; disable or delete the SA.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-c3066f15",
+     "fc-6fc9753d"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The token is issued for a service account, not a user.",
+     "evidence_refs": [
+      "fc-c3066f15"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Organization policies > constraints/iam.allowServiceAccountCredentialLifetimeExtension > Manage policy (list SAs allowed up to 12h)",
+     "api": null,
+     "cli": "gcloud resource-manager org-policies allow constraints/iam.allowServiceAccountCredentialLifetimeExtension SA_EMAIL --organization=ORG_ID",
+     "evidence_refs": [
+      "fc-7af2d5e5"
+     ]
+    },
+    "usage": {
+     "ui": "Enable Data Access (Admin Read) for IAM Service Account Credentials API under IAM & Admin > Audit Logs; then Logs Explorer: protoPayload.serviceName=\"iamcredentials.googleapis.com\" protoPayload.methodName=\"GenerateAccessToken\"",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a6bc72ba",
+      "fc-0a98d88f"
+     ]
+    },
+    "reads": {
+     "ui": "Enable Data Read for Cloud Storage (IAM & Admin > Audit Logs); Logs Explorer: protoPayload.serviceName=\"storage.googleapis.com\" and protoPayload.authenticationInfo.principalEmail=SA_EMAIL",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a6bc72ba",
+      "fc-1de9c6e8",
+      "fc-5c044d8c"
+     ]
+    },
+    "kill": {
+     "ui": "IAM & Admin > Service accounts > (SA) > Service account status > Disable service account; remove Token Creator grants on the SA",
+     "api": "POST https://iam.googleapis.com/v1/projects/PROJECT_ID/serviceAccounts/SA_ID:disable",
+     "cli": "gcloud iam service-accounts disable SA_EMAIL; gcloud iam service-accounts remove-iam-policy-binding SA_EMAIL --member=PRINCIPAL --role=roles/iam.serviceAccountTokenCreator",
+     "evidence_refs": [
+      "fc-e9b2abab",
+      "fc-37594405"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "OAuth 2.0 access token or OIDC ID token; not documented as prefixed."
+    },
+    "log_sources": [
+     {
+      "name": "IAM Data Access audit logs (iamcredentials.googleapis.com)",
+      "notes": "Must be enabled; records each token mint."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "protoPayload.authenticationInfo.principalEmail",
+      "log": "data_access",
+      "notes": "Who minted the token"
+     },
+     {
+      "field": "resource.labels.email_id",
+      "log": "data_access",
+      "notes": "SA the token was minted for"
+     },
+     {
+      "field": "serviceAccountDelegationInfo",
+      "log": "Audit logs of called services",
+      "notes": "Delegation chain on some services"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "GenerateAccessToken",
+      "stage": "create",
+      "notes": "serviceName iamcredentials.googleapis.com; Data Access only"
+     }
+    ],
+    "correlation_keys": [
+     "principalEmail",
+     "resource.labels.email_id"
+    ],
+    "anomaly_cues": [
+     "New principal minting tokens for a privileged SA",
+     "Token Creator role granted unexpectedly"
+    ],
+    "containment": {
+     "steps": "Remove Token Creator bindings; disable the SA to kill live tokens.",
+     "kills_existing": "yes",
+     "notes": "Disabling the SA is the documented kill for short-lived credentials."
+    },
+    "sample_query": "protoPayload.methodName=\"GenerateAccessToken\"",
+    "unknown": [],
+    "evidence_refs": [
+     "fc-9ac8bb6a",
+     "fc-6fc9753d",
+     "fc-e9b2abab",
+     "fc-bb467882"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/PRIV_SA:generateAccessToken",
+      "reveals": "Whether caller can impersonate the SA",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "GenerateAccessToken",
+      "log_notes": "Data Access log; must be enabled"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET https://cloudasset.googleapis.com/v1/{scope=*/*}:searchAllResources",
+      "reveals": "Resources visible to the SA",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "google.cloud.asset.v1.AssetService.SearchAllResources",
+      "log_notes": "ADMIN_READ Data Access"
+     },
+     {
+      "stage": "collection",
+      "call": "GET https://storage.googleapis.com/storage/v1/b/BUCKET/o (objects.list)",
+      "reveals": "Object names and metadata in a bucket",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Listing objects is a DATA_READ Data Access audit log entry; Data Access logs are off by default and must be enabled."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-c3066f15",
+     "fc-9ac8bb6a",
+     "fc-9b8d61c5",
+     "fc-d7ef2703",
+     "fc-4b87438e",
+     "fc-1de9c6e8"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Sigma",
+     "title": "Google Cloud Service Account Disabled or Deleted",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/gcp/audit/gcp_service_account_disabled_or_deleted.yml",
+     "detects": "A service account was disabled or deleted."
+    },
+    {
+     "source": "Sigma",
+     "title": "Google Cloud Service Account Modified",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/gcp/audit/gcp_service_account_modified.yml",
+     "detects": "A service account was created or patched."
+    },
+    {
+     "source": "Panther",
+     "title": "GCP Permissions Granted to Create or Manage Service Account Key",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_permissions_granted_to_create_or_manage_service_account_key.yml",
+     "detects": "SetIamPolicy adding Service Account Token Creator or Service Account User, which allows impersonation."
+    },
+    {
+     "source": "Panther",
+     "title": "GCP IAM serviceAccounts getAccessToken Privilege Escalation",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_iam_service_accounts_get_access_token_privilege_escalation.yml",
+     "detects": "A granted iam.serviceAccounts.getAccessToken permission check (minting a service account access token)."
+    },
+    {
+     "source": "Panther",
+     "title": "GCP IAM serviceAccounts.signJwt Privilege Escalation",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_iam_serviceaccounts_signjwt.yml",
+     "detects": "SignJwt calls with granted iam.serviceAccounts.signJwt, used to mint tokens as a service account."
+    },
+    {
+     "source": "Panther",
+     "title": "GCP IAM serviceAccounts signBlob",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_iam_service_accounts_sign_blob.yml",
+     "detects": "A granted iam.serviceAccounts.signBlob permission check, which can be used to get a service account token."
+    }
+   ]
+  },
+  {
+   "id": "gcp-3",
+   "name": "Workload Identity Federation",
+   "family": "federation",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An external workload (AWS, Azure, GitHub, other OIDC/SAML IdP) sends its IdP token to the Security Token Service and gets a federated token, used directly on resources or to impersonate a service account.",
+    "evidence_refs": [
+     "fc-38ad440c",
+     "fc-4987d566",
+     "fc-bb467882"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "Trust is based on the external IdP token plus provider attribute conditions; no Google user SSO is involved.",
+    "evidence_refs": [
+     "fc-38ad440c",
+     "fc-bb467882"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "VPC Service Controls perimeters only; no IP setting on the pool itself was found.",
+    "evidence_refs": [
+     "fc-c4499f95"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 3600,
+    "configurable": "not_verified",
+    "summary": "Federated bearer tokens valid up to 1 hour",
+    "evidence_refs": [
+     "fc-c6d6c1f9"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "New exchange with a fresh external IdP token",
+    "summary": "Workload re-exchanges its IdP credential.",
+    "evidence_refs": [
+     "fc-38ad440c"
+    ]
+   },
+   "administration": {
+    "summary": "Org policy allow-lists IdP issuers and AWS accounts; pools/providers can be disabled or deleted; attribute conditions restrict which external identities can exchange.",
+    "conditions": "Org policies need an organization resource.",
+    "evidence_refs": [
+     "fc-7af2d5e5",
+     "fc-bb467882",
+     "fc-460c5437"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Credentials come from external workloads' federated identities, not Google user accounts.",
+     "evidence_refs": [
+      "fc-38ad440c"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Pools and providers are listable org-wide in Cloud Asset Inventory; issued federated tokens are not.",
+     "evidence_refs": [
+      "fc-55f8493d"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "IAM & Admin > Workload Identity Federation (Workload Identity Pools page); org-wide: Asset Inventory search for iam.googleapis.com/WorkloadIdentityPool and WorkloadIdentityPoolProvider",
+     "api": "projects.locations.workloadIdentityPools.providers.list()",
+     "cli": "gcloud iam workload-identity-pools list --location=global; gcloud iam workload-identity-pools providers list --workload-identity-pool=POOL --location=global",
+     "evidence_refs": [
+      "fc-460c5437",
+      "fc-55f8493d",
+      "fc-2177519d"
+     ]
+    },
+    "disable": {
+     "ui": "Organization policies > constraints/iam.workloadIdentityPoolProviders > Manage policy (Deny all or list allowed issuer URIs)",
+     "api": null,
+     "cli": "gcloud resource-manager org-policies allow constraints/iam.workloadIdentityPoolProviders ISSUER_URI --organization=ORG_ID",
+     "evidence_refs": [
+      "fc-7af2d5e5"
+     ]
+    },
+    "expiry": {
+     "ui": null,
+     "api": "POST https://sts.googleapis.com/v1/token returns expires_in (seconds until the federated token expires)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-4987d566"
+     ]
+    },
+    "usage": {
+     "ui": "Enable Data Access for Security Token Service API (IAM & Admin > Audit Logs); Logs Explorer: protoPayload.serviceName=\"sts.googleapis.com\" protoPayload.methodName=\"google.identity.sts.v1.SecurityTokenService.ExchangeToken\", read principalSubject",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a6bc72ba",
+      "fc-3811be05",
+      "fc-fb0a74b3",
+      "fc-5c044d8c"
+     ]
+    },
+    "reads": {
+     "ui": "Enable Data Read for Cloud Storage (IAM & Admin > Audit Logs); Logs Explorer: protoPayload.serviceName=\"storage.googleapis.com\", filter on the federated principal or impersonated SA",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-a6bc72ba",
+      "fc-1de9c6e8",
+      "fc-5c044d8c"
+     ]
+    },
+    "kill": {
+     "ui": "Workload Identity Pools > (pool) > Status toggle > Disable (provider: same on provider details); also disable any impersonated SA",
+     "api": "projects.locations.workloadIdentityPools.patch() (and providers.patch) with disabled=true",
+     "cli": "gcloud iam workload-identity-pools update POOL --location=global --disabled; gcloud iam workload-identity-pools providers update-oidc PROVIDER --workload-identity-pool=POOL --location=global --disabled",
+     "evidence_refs": [
+      "fc-460c5437",
+      "fc-e9da40ad",
+      "fc-c12f2c8c",
+      "fc-e9b2abab"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Federated access token from STS; not documented as prefixed."
+    },
+    "log_sources": [
+     {
+      "name": "Data Access logs for STS API and IAM API (Admin Read)",
+      "notes": "Must be enabled to log exchanges."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "protoPayload.authenticationInfo.principalSubject",
+      "log": "data_access",
+      "notes": "External subject (AWS ARN, Azure object ID, OIDC sub)"
+     },
+     {
+      "field": "protoPayload.metadata.mapped_principal",
+      "log": "data_access",
+      "notes": "principal:// identifier"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "google.identity.sts.v1.SecurityTokenService.ExchangeToken",
+      "stage": "use",
+      "notes": "Token exchange"
+     },
+     {
+      "event": "GenerateAccessToken",
+      "stage": "use",
+      "notes": "When impersonating an SA"
+     }
+    ],
+    "correlation_keys": [
+     "principalSubject",
+     "mapped_principal",
+     "google.subject mapping"
+    ],
+    "anomaly_cues": [
+     "Exchanges from unexpected GitHub org/repo or AWS account",
+     "Provider without attribute condition on a multi-tenant IdP"
+    ],
+    "containment": {
+     "steps": "Disable the provider or pool; tighten attribute condition; disable impersonated SA to kill live tokens.",
+     "kills_existing": "partial",
+     "notes": "Disabling the pool blocks existing tokens (until re-enabled); disabling a provider only stops new exchanges and existing tokens keep working. Tokens from impersonated service accounts need separate action."
+    },
+    "sample_query": "protoPayload.methodName=\"google.identity.sts.v1.SecurityTokenService.ExchangeToken\"",
+    "unknown": [
+     "Whether disabling a pool invalidates tokens already issued"
+    ],
+    "evidence_refs": [
+     "fc-bb467882",
+     "fc-fb0a74b3",
+     "fc-460c5437",
+     "fc-ab8a649f",
+     "fc-b766971e",
+     "fc-c6d6c1f9"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST https://sts.googleapis.com/v1/token",
+      "reveals": "Federated token for the external identity",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "google.identity.sts.v1.SecurityTokenService.ExchangeToken",
+      "log_notes": "Needs STS Admin Read Data Access logs"
+     },
+     {
+      "stage": "collection",
+      "call": "GET https://storage.googleapis.com/storage/v1/b/BUCKET/o (objects.list)",
+      "reveals": "Object names and metadata in a bucket",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "DATA_READ Data Access audit log; off by default."
+     }
+    ],
+    "unknown": [
+     "Other calls same as gcp-2 after impersonation"
+    ],
+    "evidence_refs": [
+     "fc-4987d566",
+     "fc-fb0a74b3",
+     "fc-4b87438e",
+     "fc-1de9c6e8"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "GCP Workload Identity Pool Created or Updated",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_workload_identity_pool_created_or_updated.yml",
+     "detects": "A workload identity pool provider was created or updated."
+    }
+   ]
+  },
+  {
+   "id": "gcp-4",
+   "name": "API keys (standard keys and authorization keys bound to a service account)",
+   "family": "api_key",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A bearer string (AIza...) sent with requests. Standard keys only identify a project for billing/quota; authorization keys act as the bound service account, similar to a long-lived access token.",
+    "evidence_refs": [
+     "fc-38d3a9e8"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Standard keys identify no principal; authorization keys act as a service account. Neither is tied to user SSO.",
+    "evidence_refs": [
+     "fc-38d3a9e8",
+     "fc-214cc15d"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Per-key application restrictions (external IPs, referrers, Android/iOS apps) and API restrictions. Keys created by REST API are unrestricted unless set. Internal IPs are not supported.",
+    "evidence_refs": [
+     "fc-38d3a9e8"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry setting found on fetched pages",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Valid until deleted",
+    "summary": "Console 'Rotate key' creates a new key with the same restrictions; then delete the old one.",
+    "evidence_refs": [
+     "fc-38d3a9e8"
+    ]
+   },
+   "administration": {
+    "summary": "Binding keys to service accounts is blocked by a default org policy (Gemini API allowed by default). Standard key creation needs serviceusage.apiKeys.create.",
+    "conditions": "Changing the constraint needs an organization resource.",
+    "evidence_refs": [
+     "fc-7af2d5e5",
+     "fc-38d3a9e8",
+     "fc-096deda2"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Standard keys don't identify a principal; authorization keys act as a service account.",
+     "evidence_refs": [
+      "fc-38d3a9e8"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Cloud Asset Inventory supports apikeys.googleapis.com/Key; per project also gcloud services api-keys list.",
+     "evidence_refs": [
+      "fc-55f8493d"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Logs Explorer: protoPayload.serviceName=\"apikeys.googleapis.com\" (CreateKey/DeleteKey/UpdateKey are Admin Activity; GetKeyString needs Data Access Admin Read enabled)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-096deda2",
+      "fc-5c044d8c",
+      "fc-a6bc72ba"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "AIza",
+     "notes": "Encrypted string, e.g. AIzaSy..."
+    },
+    "log_sources": [
+     {
+      "name": "Cloud Audit Logs (apikeys.googleapis.com)",
+      "notes": "CreateKey/DeleteKey/UpdateKey are Admin Activity; GetKeyString is Data Access."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "unknown",
+      "log": "Cloud Audit Logs",
+      "notes": "Docs say authorization keys obscure end-user identity; data-plane key field not documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "google.api.apikeys.v2.ApiKeys.CreateKey",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "google.api.apikeys.v2.ApiKeys.DeleteKey",
+      "stage": "revoke",
+      "notes": "Restorable 30 days via UndeleteKey"
+     },
+     {
+      "event": "google.api.apikeys.v2.ApiKeys.GetKeyString",
+      "stage": "use",
+      "notes": "Someone read the key string; Data Access"
+     }
+    ],
+    "correlation_keys": [
+     "key ID",
+     "bound service account email"
+    ],
+    "anomaly_cues": [
+     "Unrestricted keys",
+     "GetKeyString by unusual principal",
+     "Authorization key created after constraint change"
+    ],
+    "containment": {
+     "steps": "Delete the key (or add restrictions); for authorization keys also disable the bound SA.",
+     "kills_existing": "unknown",
+     "notes": "Propagation time for deletion not documented."
+    },
+    "sample_query": "protoPayload.serviceName=\"apikeys.googleapis.com\"",
+    "unknown": [
+     "Which log field shows the API key on API calls"
+    ],
+    "evidence_refs": [
+     "fc-38d3a9e8",
+     "fc-3ff88682",
+     "fc-096deda2"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "No documented whoami for API keys; reachable APIs depend on key restrictions"
+    ],
+    "evidence_refs": [
+     "fc-38d3a9e8"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "GCP serviceusage.apiKeys.create Privilege Escalation",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_serviceusage_apikeys_create_privilege_escalation.yml",
+     "detects": "An API key was created (methodName ending ApiKeys.CreateKey with serviceusage.apiKeys.create granted)."
+    }
+   ]
+  },
+  {
+   "id": "gcp-5",
+   "name": "Cloud Storage HMAC keys",
+   "family": "hmac",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Access ID + secret used to sign Cloud Storage XML API requests (S3-compatible). Usually tied to a service account; user-account HMAC keys also exist.",
+    "evidence_refs": [
+     "fc-704428c1"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Signed requests carry no IdP session. No doc ties HMAC use to SSO or CAA.",
+    "evidence_refs": [
+     "fc-704428c1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "No per-key IP list found. VPC Service Controls can restrict Cloud Storage access by network.",
+    "evidence_refs": [
+     "fc-c4499f95"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented on fetched pages; valid until deactivated or deleted",
+    "evidence_refs": [
+     "fc-704428c1",
+     "fc-5d748a08"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Valid until deleted",
+    "summary": "Rotate by creating a new key, updating clients, then deleting the old key.",
+    "evidence_refs": [
+     "fc-704428c1"
+    ]
+   },
+   "administration": {
+    "summary": "disableServiceAccountKeyCreation also blocks SA HMAC key creation; storage.restrictAuthTypes rejects HMAC-signed requests org-wide.",
+    "conditions": "Org policies need an organization resource.",
+    "evidence_refs": [
+     "fc-7af2d5e5",
+     "fc-6c229c4f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Deleting the account deletes its HMAC keys, and docs warn user-account keys break when the user is disabled after leaving.",
+     "evidence_refs": [
+      "fc-704428c1"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "HMAC keys are listed per project (gcloud storage hmac list / ListHmacKeys); HMAC keys are not in the Cloud Asset Inventory asset type list.",
+     "evidence_refs": [
+      "fc-5d748a08"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Metrics Explorer: storage.googleapis.com/authn/authentication_count grouped by access_id; key admin events in Logs Explorer: protoPayload.serviceName=\"storage.googleapis.com\"",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-704428c1",
+      "fc-1de9c6e8",
+      "fc-5c044d8c"
+     ]
+    },
+    "reads": {
+     "ui": "Enable Data Read for Cloud Storage (IAM & Admin > Audit Logs); Logs Explorer: protoPayload.serviceName=\"storage.googleapis.com\" (object get/list)",
+     "api": null,
+     "cli": "gcloud projects set-iam-policy PROJECT_ID policy.yaml (auditConfigs DATA_READ for storage.googleapis.com)",
+     "evidence_refs": [
+      "fc-a6bc72ba",
+      "fc-1de9c6e8"
+     ]
+    },
+    "offboard": {
+     "ui": "Google Admin console > Directory > Users > (user) > More options > Delete user (deleting the account deletes its HMAC keys)",
+     "api": "DELETE https://admin.googleapis.com/admin/directory/v1/users/{userKey}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-704428c1",
+      "fc-f1606f58",
+      "fc-73a5ea2c"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "GOOG",
+     "notes": "Access ID 61 chars for SA, 24 chars for user; example starts GOOG. Secret is 40-char base64."
+    },
+    "log_sources": [
+     {
+      "name": "Cloud Storage Admin Activity logs",
+      "notes": "HMAC key create/delete/update."
+     },
+     {
+      "name": "Cloud Storage Data Access logs",
+      "notes": "Object reads (DATA_READ); off by default."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "unknown",
+      "log": "Cloud Storage audit logs",
+      "notes": "Field carrying the HMAC access ID not found in fetched docs."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Creating HMAC keys",
+      "stage": "create",
+      "notes": "Operation label in Storage audit log table; exact methodName not listed"
+     },
+     {
+      "event": "Updating HMAC keys",
+      "stage": "revoke",
+      "notes": "State change to INACTIVE"
+     },
+     {
+      "event": "Deleting HMAC keys",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "access ID",
+     "service account email"
+    ],
+    "anomaly_cues": [
+     "New HMAC key on a privileged SA",
+     "XML API bulk object reads"
+    ],
+    "containment": {
+     "steps": "Set the key INACTIVE, then delete it.",
+     "kills_existing": "yes",
+     "notes": "Deleted HMAC keys are immediately invalid."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact methodName strings for HMAC events"
+    ],
+    "evidence_refs": [
+     "fc-704428c1",
+     "fc-1de9c6e8",
+     "fc-5d748a08",
+     "fc-10383540"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "Cloud Storage XML API object GET/list (HMAC-signed)",
+      "reveals": "Object data",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "DATA_READ Data Access; off by default"
+     }
+    ],
+    "unknown": [
+     "Whether HMAC access ID appears in the Data Access log entry"
+    ],
+    "evidence_refs": [
+     "fc-704428c1",
+     "fc-1de9c6e8",
+     "fc-10383540"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "GCP storage hmac keys create",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_storage_hmac_keys_create.yml",
+     "detects": "A granted storage.hmacKeys.create permission check (Cloud Storage HMAC key creation)."
+    }
+   ]
+  }
+ ]
+}

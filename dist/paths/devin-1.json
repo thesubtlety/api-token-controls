@@ -1,0 +1,378 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "devin",
+      "name": "Devin",
+      "scope_notes": "Covers Devin (Cognition). Cognition-hosted SaaS on Teams and Enterprise plans; PAT policy, IP access lists, enterprise service users, audit log API and SCIM are Enterprise features.",
+      "controls": [
+        {
+          "name": "Service user role (RBAC)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "devin-1"
+          ],
+          "what": "Role decides which endpoints a service user key can call.",
+          "setting": "Settings > Devin API > Service users",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-afe65dae"
+          ]
+        },
+        {
+          "name": "Static service user keys disabled",
+          "effect": "disable",
+          "applies_to": [
+            "devin-1"
+          ],
+          "what": "Blocks creating or rotating static service user keys (except SCIM/Outpost service users).",
+          "setting": "Enterprise setting (name not documented; audit action update_service_user_key_policy)",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4d3a8626"
+          ]
+        },
+        {
+          "name": "Revoke API key for service user",
+          "effect": "revoke",
+          "applies_to": [
+            "devin-1"
+          ],
+          "what": "Revokes one service user key.",
+          "setting": "DELETE /v3beta1/enterprise/service-users/{service_user_id}/api-keys/{api_key_id}",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-40172871"
+          ]
+        },
+        {
+          "name": "Service user key expiration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "devin-1"
+          ],
+          "what": "Optional expires_at at creation or rotation.",
+          "setting": "POST /v3beta1/enterprise/service-users/{id}/api-keys",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-4d3a8626",
+            "fc-d35de59b"
+          ]
+        },
+        {
+          "name": "IP Access Lists",
+          "effect": "limit_network",
+          "applies_to": [
+            "devin-1",
+            "devin-2",
+            "devin-3"
+          ],
+          "what": "Only allowed CIDRs can reach Devin APIs and webapp.",
+          "setting": "/v3/enterprise/ip-access-list (ManageIPWhitelist)",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-224e4437"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether API tokens are blocked when SSO is enforced or bypass IdP conditional access (not stated)",
+        "Inbound workload federation for the Devin API (audit actions exist, no guide found)",
+        "Where the static service user key policy is set in the UI",
+        "Audit log retention period",
+        "Whether read calls (list sessions, list knowledge) are audited",
+        "Legacy key expiry and whether a v3 setting disables them",
+        "Whether revoking a service user key ends access immediately"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "devin-1",
+      "provider_id": "devin",
+      "name": "Service User API Key",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "cog_ bearer key for a non-human service user created at organization or enterprise level. Permissions come from the RBAC role assigned to the service user. Also works with the Devin MCP server.",
+        "evidence_refs": [
+          "fc-afe65dae",
+          "fc-3cdfab2a"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Audit actions mention federated identity providers and credentials, but no inbound federation guide was found.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Enterprise IP access list rejects API requests from other IPs with 401; applies enterprise-wide, not per key.",
+        "evidence_refs": [
+          "fc-224e4437"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Optional expiry; can be non-expiring",
+        "evidence_refs": [
+          "fc-4d3a8626",
+          "fc-d35de59b"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "optional fixed date",
+        "summary": "Rotate creates a new key and revokes the old one by default; graceful overlap is optional.",
+        "evidence_refs": [
+          "fc-d35de59b"
+        ]
+      },
+      "administration": {
+        "summary": "Admins create service users and keys and choose their role. The enterprise can disable static service user keys (except SCIM/Outpost service users). Impersonating users via create_as_user_id needs ImpersonateOrgSessions.",
+        "conditions": "Enterprise key API is beta.",
+        "evidence_refs": [
+          "fc-afe65dae",
+          "fc-4d3a8626"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service user keys belong to a non-human service user, not a person.",
+          "evidence_refs": [
+            "fc-afe65dae"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Enterprise admins can list service users (GET /v3/enterprise/members/service-users) and each one's keys with status (GET /v3beta1/enterprise/service-users/{service_user_id}/api-keys).",
+          "evidence_refs": [
+            "fc-596866b9"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": null,
+          "api": "GET /v3/enterprise/audit-logs?action=create_session; match service_user_id",
+          "cli": null,
+          "evidence_refs": [
+            "fc-3e18b5ad",
+            "fc-afe65dae"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "cog_",
+          "notes": "Shown once at creation."
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs API",
+            "notes": "GET /v3/enterprise/audit-logs (ViewAccountAuditLogs); org variant exists. Max 100-day window per query."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "service_user_id",
+            "log": "audit log",
+            "notes": "Also service_user_name; no key ID field documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "create_service_user_api_key",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "rotate_service_user_api_key",
+            "stage": "rotate",
+            "notes": ""
+          },
+          {
+            "event": "revoke_service_user_api_key",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "service_user_id",
+          "org_id"
+        ],
+        "anomaly_cues": [
+          "create_session with create_as_user_id from a service user",
+          "rotate with revoke_current=false leaving two keys active"
+        ],
+        "containment": {
+          "steps": "Revoke the key (API or Settings > Devin API > Service users); or delete the service user.",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": "GET /v3/enterprise/audit-logs?action=create_service_user_api_key",
+        "unknown": [
+          "Per-request API logging"
+        ],
+        "evidence_refs": [
+          "fc-afe65dae",
+          "fc-3e18b5ad",
+          "fc-40172871"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v3/self",
+            "reveals": "Principal type and identity",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v3/organizations/{org_id}/sessions",
+            "reveals": "Sessions in the org",
+            "bulk": true,
+            "scope": "ViewOrgSessions",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /v3/organizations/{org_id}/sessions",
+            "reveals": "Starts a Devin session with repo/secret access",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "create_session",
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-3e18b5ad",
+          "fc-c274a10d",
+          "fc-d82dd168"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-224e4437",
+      "title": "IP Access Lists | Devin Docs",
+      "url": "https://docs.devin.ai/enterprise/security-access/ip-access-lists",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3cdfab2a",
+      "title": "Devin MCP | Devin Docs",
+      "url": "https://docs.devin.ai/work-with-devin/devin-mcp",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3e18b5ad",
+      "title": "List Audit Logs | Devin API",
+      "url": "https://docs.devin.ai/api-reference/v3/audit-logs/enterprise-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-40172871",
+      "title": "Revoke API key for service user",
+      "url": "https://docs.devin.ai/api-reference/v3/service-users/delete-enterprise-service-user-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4d3a8626",
+      "title": "Create API key for service user",
+      "url": "https://docs.devin.ai/api-reference/v3/service-users/post-enterprise-service-user-api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-596866b9",
+      "title": "Devin API v3 OpenAPI spec",
+      "url": "https://docs.devin.ai/v3-openapi.yaml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-afe65dae",
+      "title": "Authentication | Devin Docs",
+      "url": "https://docs.devin.ai/api-reference/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c274a10d",
+      "title": "Get Self | Devin API",
+      "url": "https://docs.devin.ai/api-reference/v3/self/self",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d35de59b",
+      "title": "Rotate API key for service user",
+      "url": "https://docs.devin.ai/api-reference/v3/service-users/rotate-enterprise-service-user-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d82dd168",
+      "title": "List Sessions | Devin API",
+      "url": "https://docs.devin.ai/api-reference/v3/sessions/organizations-sessions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

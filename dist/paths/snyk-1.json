@@ -1,0 +1,405 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "snyk",
+      "name": "Snyk",
+      "scope_notes": "Snyk SaaS; API access, service accounts and audit logs require the Enterprise plan, while Free/Team personal tokens work only for CLI/IDE/CI.",
+      "controls": [
+        {
+          "name": "PAT expiry (max 90 days)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "snyk-1"
+          ],
+          "what": "Every PAT has an expiry no later than 90 days; users choose the date.",
+          "setting": "Account settings > Personal access tokens",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-85f6d010"
+          ]
+        },
+        {
+          "name": "Revoke PAT",
+          "effect": "revoke",
+          "applies_to": [
+            "snyk-1"
+          ],
+          "what": "The owner revokes a PAT in the UI or via DELETE /self/personal_access_tokens/{id}.",
+          "setting": "Account settings > Personal access tokens > Revoke; DELETE /rest/self/personal_access_tokens/{personal_access_token_id}",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-85f6d010"
+          ]
+        },
+        {
+          "name": "Audit logs",
+          "effect": "other",
+          "applies_to": [
+            "snyk-1",
+            "snyk-2",
+            "snyk-3",
+            "snyk-4",
+            "snyk-5"
+          ],
+          "what": "Group and Org audit log search (90 days) incl. service account and app lifecycle and api.access events.",
+          "setting": "GET /rest/{groups|orgs}/{id}/audit_logs/search",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d03e3195",
+            "fc-6e08e2b2"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "snyk-1",
+          "what": "PATs cannot be created through the API (UI only), so no admin-driven issuance flow.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-85f6d010"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether PATs, legacy API tokens or service account tokens bypass SSO / IdP conditional access (not stated).",
+        "Any admin setting to disable PATs or legacy API tokens, or to revoke another user's personal token (none documented).",
+        "Whether removing a user from a Group/Org or the IdP invalidates their PAT/legacy token (not stated).",
+        "Any customer IP allowlist for API requests (none documented).",
+        "Audit event names for PAT and legacy token create/revoke (not in the documented event lists).",
+        "Contents of api.access events (which fields identify the token or service account).",
+        "Admin approval or allowlist for Snyk App installation.",
+        "Token string prefixes / formats.",
+        "Refresh token lifetime for Snyk Apps."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "snyk-1",
+      "provider_id": "snyk",
+      "name": "Personal Access Token (PAT)",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "User-created token sent as `Authorization: token <PAT>` or via SNYK_TOKEN for CLI/IDE. Acts as the user. API use needs Enterprise; Free/Team tokens work only for CLI/IDE/CI.",
+        "evidence_refs": [
+          "fc-5d9e987b",
+          "fc-c0598d0a"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static bearer token; no workload identity federation.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Snyk docs describe no customer-configurable IP allowlist for API callers; IP lists in docs cover Snyk scanners reaching your targets.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 7776000,
+        "configurable": "yes",
+        "summary": "User picks expiry, max 90 days",
+        "evidence_refs": [
+          "fc-85f6d010"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "fixed expiry date chosen at creation",
+        "summary": "Create a new PAT before the old one expires (up to 3 active).",
+        "evidence_refs": [
+          "fc-85f6d010"
+        ]
+      },
+      "administration": {
+        "summary": "Users create (UI only) and revoke their own PATs. No admin-side disable, policy or revoke for other users' PATs is documented. SSO/IdP bypass not documented (not_verified).",
+        "conditions": "API access Enterprise only.",
+        "evidence_refs": [
+          "fc-85f6d010"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Removing a user from a Group removes their access to its Organizations and Projects, but docs do not say the PAT itself is revoked.",
+          "evidence_refs": [
+            "fc-ed3b9edf"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Only the owning user can list their own PATs (Personal access tokens tab, GET /self/personal_access_tokens); no admin-wide listing documented.",
+          "evidence_refs": [
+            "fc-85f6d010",
+            "fc-9ff4c7bf"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": null,
+          "api": "GET https://api.snyk.io/rest/groups/{group_id}/audit_logs/search?version={version}&events=api.access&user_id={user_id} (or /rest/orgs/{org_id}/audit_logs/search)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-d03e3195",
+            "fc-44be6988",
+            "fc-3bb65c22",
+            "fc-08d7923f"
+          ]
+        },
+        "offboard": {
+          "ui": "Group > Members > trash icon next to user > Delete member",
+          "api": "DELETE https://api.snyk.io/rest/groups/{group_id}/memberships/{membership_id}?version={version}&cascade=true; per Org: DELETE https://api.snyk.io/v1/org/{orgId}/members/update/{userId}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ed3b9edf",
+            "fc-08d7923f",
+            "fc-c380ac89"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Snyk audit logs (Group/Org search API)",
+            "notes": "Enterprise; past 90 days; GET /rest/groups/{group_id}/audit_logs/search and /rest/orgs/{org_id}/audit_logs/search; api.access hidden unless requested via events=api.access."
+          },
+          {
+            "name": "Event forwarding (Amazon EventBridge, AWS CloudTrail Lake)",
+            "notes": "Platform audit events, Enterprise; use for retention beyond 90 days."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "userId / user_id",
+            "log": "audit logs",
+            "notes": "Identifies the acting user; whether a service account appears here is not documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "api.access",
+            "stage": "use",
+            "notes": "Exists in Group and Org event lists; excluded by default; described as high-volume low-information."
+          }
+        ],
+        "correlation_keys": [
+          "user_id",
+          "org_id",
+          "group_id",
+          "project_id",
+          "created"
+        ],
+        "anomaly_cues": [
+          "api.access from a user outside working pattern",
+          "Bulk reads of /orgs/{org_id}/issues or projects across many Orgs",
+          "New PAT appearing in GET /self/personal_access_tokens (owner only)"
+        ],
+        "containment": {
+          "steps": "Owner revokes in Account settings > Personal access tokens or DELETE /rest/self/personal_access_tokens/{id}. Admins can only remove the user from Group/Orgs.",
+          "kills_existing": "unknown",
+          "notes": "Docs say revocation cannot be reverted but do not say whether in-flight access ends instantly."
+        },
+        "sample_query": null,
+        "unknown": [
+          "PAT create/revoke audit event names",
+          "Whether admin removal of the user kills the PAT"
+        ],
+        "evidence_refs": [
+          "fc-85f6d010",
+          "fc-d03e3195",
+          "fc-6e08e2b2",
+          "fc-44be6988",
+          "fc-fc5cfbca"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /rest/self",
+            "reveals": "Identity of the token holder",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Enterprise; api.access hidden by default; per-call detail not documented."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /rest/orgs",
+            "reveals": "Organizations the token can access",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Same as above."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /rest/orgs/{org_id}/projects",
+            "reveals": "Projects / monitored repos and images",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Reads have no explicit action event."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /rest/orgs/{org_id}/issues",
+            "reveals": "All vulnerability findings for the Org",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Reads have no explicit action event."
+          }
+        ],
+        "unknown": [
+          "Exact fields recorded in api.access"
+        ],
+        "evidence_refs": [
+          "fc-6e08e2b2",
+          "fc-d74cf79a",
+          "fc-44be6988"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-08d7923f",
+      "title": "Snyk REST API spec (rest-spec.json, linked from docs.snyk.io API reference)",
+      "url": "https://558411700-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FIEEjSXQQu36y0vmFV8zf%2Fuploads%2Fgit-blob-c1151c14af94bd6daf3db0c2cf3424397eb0191a%2Frest-spec.json?alt=media",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3bb65c22",
+      "title": "Audit Logs (API reference)",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/reference/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-44be6988",
+      "title": "Search Audit Logs v1 to REST migration guide",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/api-end-of-life-eol-process-and-migration-guides/guides-to-migration/search-audit-logs-group-and-org-v1-api-to-ga-rest-audit-logs-api-migration-guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5d9e987b",
+      "title": "Authentication for API",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/authentication-for-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6e08e2b2",
+      "title": "Snyk REST API OpenAPI spec 2026-03-25 (AccessTokenTtlSeconds / service account attributes)",
+      "url": "https://api.snyk.io/rest/openapi/2026-03-25",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-85f6d010",
+      "title": "Personal Access Tokens (PATs)",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/authentication-for-api/personal-access-tokens-pats",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9ff4c7bf",
+      "title": "PersonalAccessToken (API reference)",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/reference/personalaccesstoken",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c0598d0a",
+      "title": "Authenticate to use the CLI",
+      "url": "https://docs.snyk.io/developer-tools/snyk-cli/authenticate-to-use-the-cli",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c380ac89",
+      "title": "Remove members from Groups and Orgs using the API",
+      "url": "https://docs.snyk.io/platform-administration/user-management/user-management-with-the-api/remove-members-from-groups-and-orgs-using-the-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d03e3195",
+      "title": "Retrieve audit logs of user-initiated activity by API for an Org or Group",
+      "url": "https://docs.snyk.io/platform-administration/user-management/user-management-with-the-api/retrieve-audit-logs-of-user-initiated-activity-by-api-for-an-org-or-group",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d74cf79a",
+      "title": "About the REST API",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/rest-api/about-the-rest-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed3b9edf",
+      "title": "Manage users in a Group",
+      "url": "https://docs.snyk.io/platform-administration/snyk-hierarchy/groups/manage-users-in-a-group",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fc5cfbca",
+      "title": "Event forwarding",
+      "url": "https://docs.snyk.io/developer-tools/integrations/event-forwarding",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

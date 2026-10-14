@@ -1,0 +1,691 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "aws",
+      "name": "AWS",
+      "scope_notes": "Covers Amazon Web Services (IAM, STS, IAM Identity Center, IAM Roles Anywhere, Amazon Bedrock). All features are available in every AWS account; SCPs and centralized root access require AWS Organizations, and Control Tower controls require AWS Control Tower.",
+      "controls": [
+        {
+          "name": "Deactivate / delete access key (UpdateAccessKey, DeleteAccessKey)",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-1",
+            "aws-2"
+          ],
+          "what": "Setting a key Inactive or deleting it stops all further use of that key.",
+          "setting": "IAM console > Users > Security credentials > Actions > Deactivate/Delete; API UpdateAccessKey / DeleteAccessKey",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-128b9c71"
+          ]
+        },
+        {
+          "name": "Service control policy (SCP)",
+          "effect": "disable",
+          "applies_to": [
+            "aws-1",
+            "aws-7"
+          ],
+          "what": "An SCP can deny actions such as iam:CreateAccessKey or iam:CreateServiceSpecificCredential for all IAM users and roles in member accounts.",
+          "setting": "AWS Organizations > Policies > Service control policies",
+          "plan": "AWS Organizations (all features)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-081441e9"
+          ]
+        },
+        {
+          "name": "aws:SourceIp deny policy",
+          "effect": "limit_network",
+          "applies_to": [
+            "aws-1",
+            "aws-2",
+            "aws-3",
+            "aws-4",
+            "aws-5",
+            "aws-6",
+            "aws-7",
+            "aws-8"
+          ],
+          "what": "Identity policy or SCP that denies any request from outside listed CIDR ranges.",
+          "setting": "IAM policy / SCP with NotIpAddress aws:SourceIp",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-ae269843"
+          ]
+        },
+        {
+          "name": "Time-bound policy (aws:CurrentTime)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "aws-1"
+          ],
+          "what": "Inline deny policy that blocks all actions after a set date, giving long-term keys an effective expiry.",
+          "setting": "IAM > Users > Permissions > Create inline policy",
+          "plan": null,
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-2cbd2f32"
+          ]
+        },
+        {
+          "name": "IAM Access Analyzer unused access",
+          "effect": "other",
+          "applies_to": [
+            "aws-1"
+          ],
+          "what": "Generates findings for IAM user access keys unused within a set window.",
+          "setting": "IAM Access Analyzer > Create unused access analyzer",
+          "plan": "Paid feature (pricing not verified)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8c352022"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "aws-1",
+          "what": "No built-in expiry for IAM user access keys.",
+          "kind": "expiry",
+          "evidence_refs": [
+            "fc-a9f9573f"
+          ]
+        },
+        {
+          "path_id": "aws-1",
+          "what": "sts:GetCallerIdentity cannot be denied, so any valid key can confirm its identity.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-3ae233ca"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether long-term Bedrock API keys can be set to never expire, and their maximum lifetime.",
+        "Token format/prefix for Bedrock API keys (not documented on fetched pages).",
+        "Which CloudTrail field identifies the specific Bedrock API key on a request (key value is not logged).",
+        "Default session duration for IAM Roles Anywhere when durationSeconds is omitted.",
+        "Exact CloudTrail eventName strings for CreateAccessKey/UpdateAccessKey/DeleteAccessKey were not shown on fetched pages (they match the IAM API action names, which CloudTrail logs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "aws-1",
+      "provider_id": "aws",
+      "name": "IAM user access keys",
+      "family": "hmac",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Access key ID (AKIA...) plus secret access key used to SigV4-sign AWS API and CLI requests. Up to two keys per IAM user.",
+        "evidence_refs": [
+          "fc-405c7e5c",
+          "fc-a9f9573f"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Keys belong to IAM users, not to an external IdP. AWS recommends federation with temporary credentials for humans and roles for workloads; no doc states whether IdP sign-in policy applies to these keys (it is not part of the signing flow).",
+        "evidence_refs": [
+          "fc-028a3561"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Not a setting: an identity policy or SCP that denies requests when aws:SourceIp is outside allowed ranges. It is evaluated on every signed API request. aws:SourceIp is absent for calls through VPC endpoints (use aws:VpcSourceIp) and SCPs do not cover the management account.",
+        "evidence_refs": [
+          "fc-bf544ac3",
+          "fc-ae269843",
+          "fc-081441e9"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "conditional",
+        "summary": "Never expire; a time-bound deny policy (aws:CurrentTime) can cut them off",
+        "evidence_refs": [
+          "fc-a9f9573f",
+          "fc-2cbd2f32"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "Same key pair is reused until deactivated or deleted; rotation is manual (create second key, switch, deactivate, delete).",
+        "evidence_refs": [
+          "fc-a9f9573f",
+          "fc-128b9c71"
+        ]
+      },
+      "administration": {
+        "summary": "Admins with IAM permissions create, deactivate and delete keys; SCPs/IAM policies can deny iam:CreateAccessKey and restrict what the user can call.",
+        "conditions": "SCPs need AWS Organizations and do not apply to the management account.",
+        "evidence_refs": [
+          "fc-128b9c71",
+          "fc-081441e9"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "AWS says IAM user access keys cannot be used with MFA-protected API access, and they are not issued through an IdP.",
+          "evidence_refs": [
+            "fc-56f0ccfa"
+          ]
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Access keys belong to the IAM user; deleting the IAM user deletes its keys. IAM users are not tied to IdP/SCIM deprovisioning.",
+          "evidence_refs": [
+            "fc-12d20ce6"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "The IAM credential report lists every user in the account with access key status.",
+          "evidence_refs": [
+            "fc-23db6390"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "IAM console > Credential report > Download Report",
+          "api": "GenerateCredentialReport, then GetCredentialReport",
+          "cli": "aws iam generate-credential-report; aws iam get-credential-report",
+          "evidence_refs": [
+            "fc-23db6390"
+          ]
+        },
+        "network": {
+          "ui": "IAM console > Users (or Roles) > name > Permissions tab > edit policy > JSON: Deny * with NotIpAddress aws:SourceIp; or AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account",
+          "api": null,
+          "cli": "aws iam put-user-policy (inline deny) or aws organizations create-policy + attach-policy",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-14f20066",
+            "fc-72343915",
+            "fc-b9b7e785"
+          ]
+        },
+        "reads": {
+          "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+          "api": null,
+          "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+          "evidence_refs": [
+            "fc-bcd7adf9",
+            "fc-0b07a9e0"
+          ]
+        },
+        "kill": {
+          "ui": "IAM console > Users > user > Security credentials > Access keys > Actions > Deactivate, then Delete; add an inline deny policy on the user to cut off temporary credentials already minted",
+          "api": "UpdateAccessKey (Status=Inactive), DeleteAccessKey",
+          "cli": "aws iam update-access-key --status Inactive; aws iam delete-access-key; aws iam put-user-policy",
+          "evidence_refs": [
+            "fc-4ce033de",
+            "fc-e737228d",
+            "fc-14f20066"
+          ]
+        },
+        "offboard": {
+          "ui": "IAM console > Users > select user > Delete (deactivate active access keys first)",
+          "api": null,
+          "cli": "aws iam delete-user (after removing keys, policies, groups)",
+          "evidence_refs": [
+            "fc-12d20ce6"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "AKIA",
+          "notes": "Access key ID AKIA...; 40-char secret not logged."
+        },
+        "log_sources": [
+          {
+            "name": "AWS CloudTrail event history",
+            "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+          },
+          {
+            "name": "CloudTrail trail / event data store",
+            "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+          },
+          {
+            "name": "IAM credential report / GetAccessKeyLastUsed",
+            "notes": "Last-used date, service, Region; first use per 15 min only."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "userIdentity.accessKeyId",
+            "log": "CloudTrail",
+            "notes": "Key ID used to sign the request; may be empty for security reasons."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "CreateAccessKey",
+            "stage": "create",
+            "notes": "IAM API action; CloudTrail logs all IAM calls."
+          },
+          {
+            "event": "UpdateAccessKey",
+            "stage": "revoke",
+            "notes": "Status Inactive."
+          },
+          {
+            "event": "DeleteAccessKey",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "userIdentity.accessKeyId",
+          "userIdentity.arn",
+          "sourceIPAddress",
+          "userAgent"
+        ],
+        "anomaly_cues": [
+          "GetCallerIdentity from a new IP or user agent",
+          "GuardDuty UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS",
+          "Key used after long idle period (credential report)"
+        ],
+        "containment": {
+          "steps": "UpdateAccessKey Status=Inactive, then DeleteAccessKey. Also attach aws:TokenIssueTime deny to the user to block STS sessions the key may have minted.",
+          "kills_existing": "partial",
+          "notes": "Deactivation stops the key immediately, but temporary credentials already obtained with it (GetSessionToken/AssumeRole) stay valid until expiry unless permissions are also changed."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-a9f9573f",
+          "fc-128b9c71",
+          "fc-7df0d702",
+          "fc-024655eb",
+          "fc-cfcea12e",
+          "fc-bcd7adf9",
+          "fc-23db6390",
+          "fc-20863948",
+          "fc-e737228d",
+          "fc-d34f092b"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST sts:GetCallerIdentity",
+            "reveals": "Account, ARN, user/role ID",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetCallerIdentity",
+            "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GetAccountAuthorizationDetails",
+            "reveals": "All IAM users, groups, roles, policies",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetAccountAuthorizationDetails",
+            "log_notes": "IAM management event."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET / (s3:ListBuckets)",
+            "reveals": "All buckets owned by the account",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": "ListBuckets",
+            "log_notes": "Management/data classification not verified on fetched pages."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /{Key} (s3:GetObject)",
+            "reveals": "Object contents",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "GetObject",
+            "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-024655eb",
+          "fc-bcd7adf9",
+          "fc-3ae233ca",
+          "fc-e422ae4f",
+          "fc-0ec1c9ec",
+          "fc-a8e9c769"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "AWS User API Key Created",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_iam_user_key_created.yml",
+          "detects": "An IAM user access key was created by a different principal than the key owner."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS IAM Backdoor Users Keys",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_iam_backdoor_users_keys.yml",
+          "detects": "CreateAccessKey where the caller is not the user receiving the key."
+        },
+        {
+          "source": "Panther",
+          "title": "New IAM Credentials Updated",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_update_credentials.yml",
+          "detects": "Successful creation of access keys, users, or login profiles, or password changes."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS IAM S3Browser User or AccessKey Creation",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_iam_s3browser_user_or_accesskey_creation.yml",
+          "detects": "IAM user or access key creation from the S3 Browser user agent."
+        },
+        {
+          "source": "Panther",
+          "title": "AWS IAM Access Key Compromise Detection",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_key_compromised.yml",
+          "detects": "AWS attached an exposed-credential quarantine policy to a user whose access key was found leaked."
+        },
+        {
+          "source": "Panther",
+          "title": "AWS Compromised IAM Key Quarantine",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_iam_compromised_key_quarantine.yml",
+          "detects": "The AWSCompromisedKeyQuarantineV2 managed policy was attached to a user, group, or role."
+        },
+        {
+          "source": "Panther",
+          "title": "AWS.CloudTrail.UserAccessKeyAuth",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_cloudtrail_useraccesskeyauth.yml",
+          "detects": "Any successful API call made with a long-term IAM user access key (key ID starting with AKIA)."
+        },
+        {
+          "source": "Panther",
+          "title": "AWS STS GetSessionToken by IAM User",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_sts_getsessiontoken_misuse.yml",
+          "detects": "An IAM user called GetSessionToken to turn long-term keys into temporary credentials."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS STS GetSessionToken Misuse",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_sts_getsessiontoken_misuse.yml",
+          "detects": "GetSessionToken called by an IAM user."
+        },
+        {
+          "source": "Panther",
+          "title": "AWS STS GetCallerIdentity via TruffleHog",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_sts_getcalleridentity_trufflehog.yml",
+          "detects": "GetCallerIdentity with a TruffleHog user agent, used to check whether leaked access keys still work."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS STS GetCallerIdentity Enumeration Via TruffleHog",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_sts_getcalleridentity_trufflehog.yml",
+          "detects": "GetCallerIdentity with a TruffleHog user agent."
+        },
+        {
+          "source": "Sigma",
+          "title": "PUA - AWS TruffleHog Execution",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_cloudtrail_pua_trufflehog.yml",
+          "detects": "Any CloudTrail event with the TruffleHog user agent."
+        },
+        {
+          "source": "Panther",
+          "title": "Detect Reconnaissance from IAM Users",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_iam_user_recon_denied.yml",
+          "detects": "An IAM user hit AccessDenied on List/Describe/Get calls in common services, a sign of a stolen key being used for recon."
+        },
+        {
+          "source": "Panther",
+          "title": "AWS Console GetSigninToken Potential Abuse",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_console_getsignintoken.yml",
+          "detects": "GetSigninToken from a non-SSO user agent, used to turn CLI credentials into a console session."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS Console GetSigninToken Potential Abuse",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_console_getsignintoken.yml",
+          "detects": "GetSigninToken from a user agent other than the console federation endpoint."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-024655eb",
+      "title": "Logging IAM and AWS STS API calls with AWS CloudTrail - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-028a3561",
+      "title": "Security best practices in IAM - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-081441e9",
+      "title": "Service control policies (SCPs) - AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0b07a9e0",
+      "title": "Viewing recent management events with the console",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/view-cloudtrail-events-console.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0ec1c9ec",
+      "title": "GetObject - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-128b9c71",
+      "title": "Update access keys - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys_retrieve.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-12d20ce6",
+      "title": "Remove or deactivate an IAM user",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_remove.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-14f20066",
+      "title": "Adding and removing IAM identity permissions",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-20863948",
+      "title": "GuardDuty IAM finding types - Amazon GuardDuty",
+      "url": "https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_finding-types-iam.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-23db6390",
+      "title": "Generate credential reports for your AWS account - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2cbd2f32",
+      "title": "Control the use of access keys by attaching an inline policy to an IAM user - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access-keys_inline-policy.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3ae233ca",
+      "title": "GetCallerIdentity - AWS Security Token Service",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-405c7e5c",
+      "title": "Manage access keys for IAM users - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4ce033de",
+      "title": "Manage access keys for IAM users",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access-keys-admin-managed.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-56f0ccfa",
+      "title": "Secure API access with MFA - IAM",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_configure-api-require.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-72343915",
+      "title": "Creating organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_create.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7df0d702",
+      "title": "GetAccessKeyLastUsed - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetAccessKeyLastUsed.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8c352022",
+      "title": "IAM Access Analyzer findings - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-findings.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8e9c769",
+      "title": "GetAccountAuthorizationDetails - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetAccountAuthorizationDetails.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a9f9573f",
+      "title": "Programmatic access with AWS security credentials - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds-programmatic-access.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae269843",
+      "title": "AWS global condition context keys - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9b7e785",
+      "title": "Attaching organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_attach.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bcd7adf9",
+      "title": "Logging data events - AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf544ac3",
+      "title": "AWS: Denies access to AWS based on the source IP - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_examples_aws_deny-ip.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cfcea12e",
+      "title": "Working with CloudTrail event history - AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/view-cloudtrail-events.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d34f092b",
+      "title": "CloudTrail userIdentity element - AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-user-identity.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e422ae4f",
+      "title": "ListBuckets - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e737228d",
+      "title": "Disabling permissions for temporary security credentials - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_control-access_disable-perms.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

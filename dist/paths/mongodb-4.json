@@ -1,0 +1,378 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "mongodb",
+      "name": "MongoDB Atlas",
+      "scope_notes": "Atlas cloud service; Admin API credentials (service accounts, legacy API keys) manage Atlas but cannot read cluster data, while database users read data; database auditing, access history and workload federation need dedicated (M10+) clusters.",
+      "controls": [
+        {
+          "name": "Temporary User",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "mongodb-3",
+            "mongodb-4",
+            "mongodb-5",
+            "mongodb-6"
+          ],
+          "what": "Database user is deleted automatically after 6 hours, 1 day or 1 week.",
+          "setting": "Database & Network Access > Add New Database User > Temporary User",
+          "plan": null,
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-9bd547dc"
+          ]
+        },
+        {
+          "name": "Restrict access to specific clusters",
+          "effect": "limit_resources",
+          "applies_to": [
+            "mongodb-3",
+            "mongodb-4",
+            "mongodb-5",
+            "mongodb-6"
+          ],
+          "what": "Limits a database user to chosen clusters and federated database instances.",
+          "setting": "Database user > Restrict Access to Specific Clusters",
+          "plan": null,
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-9bd547dc"
+          ]
+        },
+        {
+          "name": "Project IP access list",
+          "effect": "limit_network",
+          "applies_to": [
+            "mongodb-3",
+            "mongodb-4",
+            "mongodb-5",
+            "mongodb-6"
+          ],
+          "what": "Only listed IPs can connect to clusters.",
+          "setting": "Database & Network Access > IP Access List",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-12ff9164"
+          ]
+        },
+        {
+          "name": "Delete database user",
+          "effect": "revoke",
+          "applies_to": [
+            "mongodb-3",
+            "mongodb-4",
+            "mongodb-5",
+            "mongodb-6"
+          ],
+          "what": "Removes the database user; also the only way to revoke an X.509 user.",
+          "setting": "Database & Network Access > Database Users > Delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-9bd547dc"
+          ]
+        },
+        {
+          "name": "Roles required to add database users",
+          "effect": "disable",
+          "applies_to": [
+            "mongodb-3",
+            "mongodb-4",
+            "mongodb-5",
+            "mongodb-6"
+          ],
+          "what": "Only users with the listed Organization or Project roles can create database users of any authentication type.",
+          "setting": "Atlas organization/project role assignment",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-9bd547dc"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "mongodb-4",
+          "what": "Atlas-managed X.509 certificates cannot be revoked individually; only deleting the user removes access.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-9bd547dc"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether an org can block creation of legacy API keys entirely.",
+        "Whether API keys have any expiry setting.",
+        "Whether deleting a service account or secret invalidates already-issued 1-hour access tokens.",
+        "Whether deleting a database user terminates open connections.",
+        "Whether Admin API read (GET) calls are recorded anywhere; Activity Feed documents changes, not reads.",
+        "Default secret expiration value for service accounts."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "mongodb-4",
+      "provider_id": "mongodb",
+      "name": "Database user with X.509 certificate",
+      "family": "certificate",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Client certificate (mutual TLS) authenticates to the $external database. Atlas-managed or self-managed CA.",
+        "evidence_refs": [
+          "fc-9bd547dc"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Database-level certificate credential.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Project IP access list gates connections.",
+        "evidence_refs": [
+          "fc-12ff9164"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Certificate expiration date set at issue",
+        "evidence_refs": [
+          "fc-9bd547dc"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "Certificate expiration date",
+        "summary": "Download a new certificate for the user.",
+        "evidence_refs": [
+          "fc-9bd547dc"
+        ]
+      },
+      "administration": {
+        "summary": "Atlas-managed certificates cannot be revoked individually; delete the user.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-9bd547dc"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Database users are separate from Atlas users.",
+          "evidence_refs": [
+            "fc-9bd547dc"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /api/atlas/v2/groups/{groupId}/databaseUsers lists database users per project; individual certificates are not listed by this call.",
+          "evidence_refs": [
+            "fc-4e5e3561"
+          ]
+        }
+      },
+      "how": {
+        "disable": {
+          "ui": "Project > Security > Project Identity & Access > Users: limit Project Owner / Project Database Access Admin roles (only these, plus Org Owner and Stream Processing admin roles, can add database users)",
+          "api": "PUT /api/atlas/v2/groups/{groupId}/users/{userId}/roles",
+          "cli": null,
+          "evidence_refs": [
+            "fc-9bd547dc",
+            "fc-4cd56763",
+            "fc-9803de9f"
+          ]
+        },
+        "usage": {
+          "ui": "Database auditing on (authenticate action), then Clusters > ... > Download Logs > mongodb-audit-log; filter atype \"authenticate\" by user",
+          "api": "GET /api/atlas/v2/groups/{groupId}/clusters/{hostName}/logs/mongodb-audit-log.gz",
+          "cli": "atlas logs download <hostname> mongodb-audit-log.gz",
+          "evidence_refs": [
+            "fc-57b3000d",
+            "fc-5617ae5a",
+            "fc-9803de9f"
+          ]
+        },
+        "reads": {
+          "ui": "Project > Security > Database & Network Access > Advanced > Database Auditing On > select authCheck Reads with Successes and Failures; then Clusters > ... > Download Logs > mongodb-audit-log, search atype \"authCheck\"",
+          "api": "PATCH /api/atlas/v2/groups/{groupId}/auditLog {\"enabled\":true,\"auditAuthorizationSuccess\":true}; GET /api/atlas/v2/groups/{groupId}/clusters/{hostName}/logs/mongodb-audit-log.gz",
+          "cli": "atlas auditing update; atlas logs download <hostname> mongodb-audit-log.gz",
+          "evidence_refs": [
+            "fc-57b3000d",
+            "fc-9803de9f",
+            "fc-5617ae5a"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "X.509 client certificate."
+        },
+        "log_sources": [
+          {
+            "name": "Project Activity Feed",
+            "notes": null
+          },
+          {
+            "name": "Database audit log",
+            "notes": "Not on Free/Flex."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "certificate subject / username",
+            "log": "audit log",
+            "notes": null
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "MONGODB_USER_X509_CERT_CREATED",
+            "stage": "create",
+            "notes": null
+          },
+          {
+            "event": "MONGODB_USER_X509_CERT_REVOKED",
+            "stage": "revoke",
+            "notes": "Event exists though UI says certificates cannot be revoked"
+          },
+          {
+            "event": "MONGODB_USER_DELETED",
+            "stage": "revoke",
+            "notes": null
+          }
+        ],
+        "correlation_keys": [
+          "username"
+        ],
+        "anomaly_cues": [
+          "New certificate downloaded for an existing user"
+        ],
+        "containment": {
+          "steps": "Delete the database user.",
+          "kills_existing": "unknown",
+          "notes": "Individual certificates cannot be revoked."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-96310969",
+          "fc-9bd547dc",
+          "fc-57b3000d"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "MongoDB find command on a collection",
+            "reveals": "Documents in the database",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "authCheck",
+            "log_notes": "Database auditing is not available on Free or Flex clusters; successful reads are logged only with authChecksReadAll (auditAuthorizationSuccess = true), which Atlas warns can hurt performance."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-57b3000d"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-12ff9164",
+      "title": "Configure IP Access List Entries",
+      "url": "https://www.mongodb.com/docs/atlas/security/ip-access-list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4cd56763",
+      "title": "Manage Access to a Project - Atlas",
+      "url": "https://www.mongodb.com/docs/atlas/access/manage-project-access/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4e5e3561",
+      "title": "Return All Database Users in One Project",
+      "url": "https://www.mongodb.com/docs/api/doc/atlas-admin-api-v2/operation/operation-listdatabaseusers",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5617ae5a",
+      "title": "View and Download MongoDB Logs",
+      "url": "https://www.mongodb.com/docs/atlas/mongodb-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-57b3000d",
+      "title": "Set Up Database Auditing",
+      "url": "https://www.mongodb.com/docs/atlas/database-auditing/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-96310969",
+      "title": "Atlas Alert Event Types",
+      "url": "https://www.mongodb.com/docs/atlas/reference/atlas-alert-event-types/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9803de9f",
+      "title": "MongoDB Atlas Administration API v2 OpenAPI spec (mongodb/openapi)",
+      "url": "https://raw.githubusercontent.com/mongodb/openapi/main/openapi/v2.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9bd547dc",
+      "title": "Configure Database Users",
+      "url": "https://www.mongodb.com/docs/atlas/security-add-mongodb-users/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

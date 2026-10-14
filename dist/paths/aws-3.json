@@ -1,0 +1,570 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "aws",
+      "name": "AWS",
+      "scope_notes": "Covers Amazon Web Services (IAM, STS, IAM Identity Center, IAM Roles Anywhere, Amazon Bedrock). All features are available in every AWS account; SCPs and centralized root access require AWS Organizations, and Control Tower controls require AWS Control Tower.",
+      "controls": [
+        {
+          "name": "aws:SourceIp deny policy",
+          "effect": "limit_network",
+          "applies_to": [
+            "aws-1",
+            "aws-2",
+            "aws-3",
+            "aws-4",
+            "aws-5",
+            "aws-6",
+            "aws-7",
+            "aws-8"
+          ],
+          "what": "Identity policy or SCP that denies any request from outside listed CIDR ranges.",
+          "setting": "IAM policy / SCP with NotIpAddress aws:SourceIp",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-ae269843"
+          ]
+        },
+        {
+          "name": "Maximum session duration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "aws-3",
+            "aws-4"
+          ],
+          "what": "Caps role session length at 1-12 hours (default 1 hour).",
+          "setting": "IAM > Roles > Edit > Maximum session duration; UpdateRole",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-f8572ed3"
+          ]
+        },
+        {
+          "name": "Revoke active sessions (AWSRevokeOlderSessions)",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-3",
+            "aws-4",
+            "aws-6"
+          ],
+          "what": "Attaches a deny-all policy for sessions issued before now, invalidating existing temporary credentials for the role.",
+          "setting": "IAM > Roles > role > Revoke sessions tab",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-12bba687"
+          ]
+        },
+        {
+          "name": "aws:TokenIssueTime deny policy",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-3",
+            "aws-4",
+            "aws-6",
+            "aws-8"
+          ],
+          "what": "Deny policy that blocks temporary credentials issued before a chosen time; does not affect long-term keys.",
+          "setting": "IAM policy with DateLessThan aws:TokenIssueTime",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-12bba687"
+          ]
+        },
+        {
+          "name": "Role trust policy",
+          "effect": "disable",
+          "applies_to": [
+            "aws-3",
+            "aws-4"
+          ],
+          "what": "The trust policy decides which principals can assume a role; removing a principal stops new sessions for it.",
+          "setting": "IAM console > Roles > Trust relationships / aws iam update-assume-role-policy",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8307f06f"
+          ]
+        },
+        {
+          "name": "MFA condition in role trust policy (aws:MultiFactorAuthPresent)",
+          "effect": "require_sso",
+          "applies_to": [
+            "aws-3"
+          ],
+          "what": "A trust policy can require that the caller authenticated with MFA before assuming the role.",
+          "setting": "Role trust policy Condition aws:MultiFactorAuthPresent",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-56f0ccfa"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "aws-3",
+          "what": "Sessions of service-linked roles cannot be revoked.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-12bba687"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether long-term Bedrock API keys can be set to never expire, and their maximum lifetime.",
+        "Token format/prefix for Bedrock API keys (not documented on fetched pages).",
+        "Which CloudTrail field identifies the specific Bedrock API key on a request (key value is not logged).",
+        "Default session duration for IAM Roles Anywhere when durationSeconds is omitted.",
+        "Exact CloudTrail eventName strings for CreateAccessKey/UpdateAccessKey/DeleteAccessKey were not shown on fetched pages (they match the IAM API action names, which CloudTrail logs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "aws-3",
+      "provider_id": "aws",
+      "name": "IAM role temporary credentials (AWS STS AssumeRole)",
+      "family": "hmac",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "STS returns temporary credentials (ASIA... key ID, secret, session token) for a role. Caller must already hold AWS credentials and be trusted by the role trust policy.",
+        "evidence_refs": [
+          "fc-a9f9573f",
+          "fc-e737228d"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Role assumption from existing AWS credentials; external IdP federation is covered in aws-4 and aws-5.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Not a setting: an identity policy or SCP that denies requests when aws:SourceIp is outside allowed ranges. It is evaluated on every signed API request. aws:SourceIp is absent for calls through VPC endpoints (use aws:VpcSourceIp) and SCPs do not cover the management account.",
+        "evidence_refs": [
+          "fc-bf544ac3",
+          "fc-ae269843",
+          "fc-081441e9"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 43200,
+        "configurable": "yes",
+        "summary": "15 min to role max (1-12 h, default 1 h); role chaining capped at 1 h",
+        "evidence_refs": [
+          "fc-7de43c0b",
+          "fc-f8572ed3"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "absolute session expiry",
+        "summary": "Call AssumeRole again for new credentials.",
+        "evidence_refs": [
+          "fc-e737228d"
+        ]
+      },
+      "administration": {
+        "summary": "Role trust policy controls who can assume; max session duration set per role; active sessions revoked with Revoke active sessions (AWSRevokeOlderSessions) or aws:TokenIssueTime deny.",
+        "conditions": "Service-linked role sessions cannot be revoked.",
+        "evidence_refs": [
+          "fc-f8572ed3",
+          "fc-12bba687"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Not tied to the IdP, but a role's trust policy can require MFA before the role can be assumed.",
+          "evidence_refs": [
+            "fc-56f0ccfa"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Role sessions belong to a role, not a user; already-issued sessions stay valid until they expire unless permissions are removed.",
+          "evidence_refs": [
+            "fc-e737228d"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Role trust policy: add Condition Bool aws:MultiFactorAuthPresent = true on sts:AssumeRole",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-56f0ccfa"
+          ]
+        },
+        "network": {
+          "ui": "Role identity policy with Deny * / NotIpAddress aws:SourceIp, or AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account",
+          "api": null,
+          "cli": "aws iam put-role-policy (inline deny) or aws organizations attach-policy",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-14f20066",
+            "fc-72343915",
+            "fc-b9b7e785"
+          ]
+        },
+        "reads": {
+          "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+          "api": null,
+          "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+          "evidence_refs": [
+            "fc-bcd7adf9",
+            "fc-0b07a9e0"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "ASIA",
+          "notes": "Temporary key ID ASIA... plus session token."
+        },
+        "log_sources": [
+          {
+            "name": "AWS CloudTrail event history",
+            "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+          },
+          {
+            "name": "CloudTrail trail / event data store",
+            "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "userIdentity.accessKeyId",
+            "log": "CloudTrail",
+            "notes": "Key ID used to sign the request; may be empty for security reasons."
+          },
+          {
+            "field": "userIdentity.sessionContext.sessionIssuer.arn",
+            "log": "CloudTrail",
+            "notes": "Role that issued the session."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "AssumeRole",
+            "stage": "create",
+            "notes": "Logged in caller and role accounts; denied cross-account assumptions not logged in target account."
+          }
+        ],
+        "correlation_keys": [
+          "userIdentity.accessKeyId (ASIA)",
+          "responseElements.credentials.accessKeyId in AssumeRole event",
+          "sourceIdentity",
+          "roleSessionName"
+        ],
+        "anomaly_cues": [
+          "AssumeRole from unexpected principal",
+          "Role chaining across accounts"
+        ],
+        "containment": {
+          "steps": "IAM > Roles > Revoke active sessions (AWSRevokeOlderSessions) or deny aws:TokenIssueTime before now; fix trust policy.",
+          "kills_existing": "yes",
+          "notes": "Applies to all sessions of the role, not just one; ~30 s propagation; not possible for service-linked roles."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-024655eb",
+          "fc-12bba687"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST sts:GetCallerIdentity",
+            "reveals": "Account, ARN, user/role ID",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetCallerIdentity",
+            "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GetAccountAuthorizationDetails",
+            "reveals": "All IAM users, groups, roles, policies",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetAccountAuthorizationDetails",
+            "log_notes": "IAM management event."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET / (s3:ListBuckets)",
+            "reveals": "All buckets owned by the account",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": "ListBuckets",
+            "log_notes": "Management/data classification not verified on fetched pages."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /{Key} (s3:GetObject)",
+            "reveals": "Object contents",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "GetObject",
+            "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-024655eb",
+          "fc-bcd7adf9",
+          "fc-3ae233ca",
+          "fc-e422ae4f",
+          "fc-0ec1c9ec",
+          "fc-a8e9c769"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "AWS Console GetSigninToken Potential Abuse",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_console_getsignintoken.yml",
+          "detects": "GetSigninToken from a non-SSO user agent, used to turn CLI credentials into a console session."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS Console GetSigninToken Potential Abuse",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_console_getsignintoken.yml",
+          "detects": "GetSigninToken from a user agent other than the console federation endpoint."
+        },
+        {
+          "source": "Panther",
+          "title": "AWS IMDS Credential Usage Outside Expected Services",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_imds_credential_exfiltration.yml",
+          "detects": "EC2 instance role credentials used from a public IP outside expected AWS services, indicating stolen IMDS credentials."
+        },
+        {
+          "source": "Sigma",
+          "title": "Malicious Usage Of IMDS Credentials Outside Of AWS Infrastructure",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_cloudtrail_imds_malicious_usage.yml",
+          "detects": "EC2 instance role session credentials used outside AWS infrastructure."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS STS AssumeRole Misuse",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_sts_assumerole_misuse.yml",
+          "detects": "Activity by an assumed-role session whose issuer is a role (role temporary credentials in use)."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS ECS Task Definition That Queries The Credential Endpoint",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_ecs_task_definition_cred_endpoint_query.yml",
+          "detects": "ECS task definitions whose command reads the container credentials endpoint ($AWS_CONTAINER_CREDENTIALS_RELATIVE_URI)."
+        },
+        {
+          "source": "Panther",
+          "title": "IAM Assume Role Blocklist Ignored",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_iam_assume_role_blocklist_ignored.yml",
+          "detects": "An IAM user or federated user assumed a role on a blocklist (disabled by default)."
+        },
+        {
+          "source": "Panther",
+          "title": "RoleAssumes by Multiple Useragents",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/aws_queries/anomalous_role_assume_query.yml",
+          "detects": "Saved query: AssumeRole calls for one role and principal from more than one user agent in a day."
+        },
+        {
+          "source": "Panther",
+          "title": "AWS Potentially Stolen Service Role",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/aws_queries/aws_potentially_compromised_service_role.yml",
+          "detects": "Scheduled rule: a role assumed by an AWS service and also by a user within 24 hours."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-024655eb",
+      "title": "Logging IAM and AWS STS API calls with AWS CloudTrail - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-081441e9",
+      "title": "Service control policies (SCPs) - AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0b07a9e0",
+      "title": "Viewing recent management events with the console",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/view-cloudtrail-events-console.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0ec1c9ec",
+      "title": "GetObject - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-12bba687",
+      "title": "Revoke IAM role temporary security credentials - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_revoke-sessions.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-14f20066",
+      "title": "Adding and removing IAM identity permissions",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3ae233ca",
+      "title": "GetCallerIdentity - AWS Security Token Service",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-56f0ccfa",
+      "title": "Secure API access with MFA - IAM",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_configure-api-require.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-72343915",
+      "title": "Creating organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_create.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7de43c0b",
+      "title": "AssumeRole - AWS Security Token Service",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8307f06f",
+      "title": "Update a role trust policy",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_update-role-trust-policy.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8e9c769",
+      "title": "GetAccountAuthorizationDetails - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetAccountAuthorizationDetails.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a9f9573f",
+      "title": "Programmatic access with AWS security credentials - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds-programmatic-access.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae269843",
+      "title": "AWS global condition context keys - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9b7e785",
+      "title": "Attaching organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_attach.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bcd7adf9",
+      "title": "Logging data events - AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf544ac3",
+      "title": "AWS: Denies access to AWS based on the source IP - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_examples_aws_deny-ip.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e422ae4f",
+      "title": "ListBuckets - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e737228d",
+      "title": "Disabling permissions for temporary security credentials - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_control-access_disable-perms.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f8572ed3",
+      "title": "Update settings for a role - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_update-role-settings.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,602 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "azure",
+      "name": "Microsoft Azure",
+      "scope_notes": "Covers Microsoft Azure (Azure Storage, Azure Resource Manager, Microsoft Entra Workload ID, Azure DevOps Services). Azure Storage and ARM controls are per subscription/account; Conditional Access for workload identities needs Workload Identities Premium; Azure DevOps PAT policies need an Entra-backed organization. Entra delegated/app-only OAuth for Graph and managed identities are covered by the separate microsoft platform.",
+      "controls": [
+        {
+          "name": "Conditional Access for workload identities",
+          "effect": "limit_network",
+          "applies_to": [
+            "azure-3",
+            "azure-4"
+          ],
+          "what": "Blocks token requests by single-tenant service principals from outside named locations or when risky.",
+          "setting": "Entra admin center > Conditional Access > Workload identities",
+          "plan": "Workload Identities Premium",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn10search0"
+          ]
+        },
+        {
+          "name": "App management policy (passwordAddition, passwordLifetime, asymmetricKeyLifetime)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "azure-3"
+          ],
+          "what": "Blocks new password secrets or caps secret/certificate lifetimes for new or updated apps.",
+          "setting": "Microsoft Graph tenantAppManagementPolicy / appManagementPolicy",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-17a69382"
+          ]
+        },
+        {
+          "name": "Remove credential / disable service principal",
+          "effect": "revoke",
+          "applies_to": [
+            "azure-3",
+            "azure-4"
+          ],
+          "what": "Deleting the secret, certificate or federated credential stops new token requests; disabling the SP is a CAE revocation event for Microsoft Graph only.",
+          "setting": "App registrations > Certificates & secrets; Enterprise applications > Properties",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-9ad93cd2"
+          ]
+        },
+        {
+          "name": "Azure RBAC role assignment scope",
+          "effect": "limit_resources",
+          "applies_to": [
+            "azure-3",
+            "azure-4"
+          ],
+          "what": "Service principal ARM access is limited to its assigned roles and scopes.",
+          "setting": "az role assignment create --role --scopes",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-28f79469"
+          ]
+        },
+        {
+          "name": "Block password addition (passwordAddition restriction)",
+          "effect": "disable",
+          "applies_to": [
+            "azure-3"
+          ],
+          "what": "Blocks adding new client secrets to applications and service principals; certificates are not blocked by this restriction.",
+          "setting": "Entra ID > Enterprise apps > Application policies > Block password addition (or tenantAppManagementPolicy via Microsoft Graph)",
+          "plan": "Not stated in cited docs",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ad48752e"
+          ]
+        },
+        {
+          "name": "Users can register applications",
+          "effect": "disable",
+          "applies_to": [
+            "azure-3",
+            "azure-4"
+          ],
+          "what": "Set to No so only admins and Application Developer role holders can create app registrations (and so add secrets, certificates or federated credentials to new apps).",
+          "setting": "Entra ID > Users > User settings > Users can register applications",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-660153dd"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "azure-3",
+          "what": "CAE for workload identities does not cover Azure Resource Manager; ARM tokens survive SP disable until expiry.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-9ad93cd2"
+          ]
+        },
+        {
+          "path_id": "azure-3",
+          "what": "App management policies do not affect existing credentials or token issuance for existing apps.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-17a69382"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether Azure Activity Log records the service principal identity for ARM read calls made with azure-3/azure-4 tokens (Activity log typically skips reads).",
+        "Exact Entra audit activity name for adding/removing a federated identity credential.",
+        "Default of the Azure DevOps \"IP Conditional Access policy validation on non-interactive flows\" policy.",
+        "Maximum Azure DevOps PAT lifetime when no tenant policy is set.",
+        "Token format or prefix for storage keys, SAS, client secrets or Azure DevOps PATs.",
+        "Whether app management policies require a specific license."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "azure-3",
+      "provider_id": "azure",
+      "name": "Service principal client secrets and certificates (used against Azure Resource Manager)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "App registration secret or certificate used in the client credentials flow to get an Entra access token for Azure Resource Manager; access is set by Azure RBAC role assignments.",
+        "evidence_refs": [
+          "fc-297a8af2",
+          "fc-28f79469"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "Not a user sign-in. Conditional Access for workload identities can block by location or risk, but only at token request and only for single-tenant SPs, and needs Workload Identities Premium.",
+        "evidence_refs": [
+          "turn10search0"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "token_issuance",
+        "boundary": "Location-based Conditional Access for workload identities blocks token requests from outside allowed ranges. Already-issued ARM tokens are not re-checked (CAE for workload identities is Microsoft Graph only).",
+        "evidence_refs": [
+          "turn10search0",
+          "fc-9ad93cd2"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 63072000,
+        "configurable": "yes",
+        "summary": "Secret up to 24 months; access tokens 60-90 min",
+        "evidence_refs": [
+          "fc-51e9d3f4",
+          "turn1search0"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "secret/certificate expiry",
+        "summary": "Secret or certificate is reused to request new access tokens until it expires or is removed.",
+        "evidence_refs": [
+          "turn1search0",
+          "fc-51e9d3f4"
+        ]
+      },
+      "administration": {
+        "summary": "App management policies can block new password secrets or cap secret/certificate lifetimes; they do not affect existing apps. Credentials are removed in the app registration; the SP can be disabled.",
+        "conditions": "Tenant default policy is disabled by default.",
+        "evidence_refs": [
+          "fc-17a69382"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Conditional Access for workload identities applies to single-tenant service principals only and needs Workload Identities Premium; multitenant apps are not covered.",
+          "evidence_refs": [
+            "turn10search0"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Client secrets and certificates belong to the application/service principal, not a user.",
+          "evidence_refs": [
+            "fc-d98c0825"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Each application object exposes its passwordCredentials and keyCredentials collections through Microsoft Graph (GET /applications).",
+          "evidence_refs": [
+            "fc-d98c0825"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Entra admin center > Entra ID > Conditional Access > Policies > New policy > Users or workload identities > What does this policy apply to? = Workload identities > select service principals",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "turn10search0"
+          ]
+        },
+        "expiry": {
+          "ui": "Entra admin center > Entra ID > Enterprise apps > Application policies > Restrict max password lifetime / Restrict max certificate lifetime",
+          "api": "PATCH https://graph.microsoft.com/v1.0/policies/defaultAppManagementPolicy (passwordLifetime, asymmetricKeyLifetime restrictions)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ad48752e",
+            "fc-abc80c86"
+          ]
+        },
+        "usage": {
+          "ui": "Entra admin center > Entra ID > Monitoring & health > Sign-in logs > Service principal sign-ins; filter by application ID",
+          "api": "GET https://graph.microsoft.com/beta/auditLogs/signIns?$filter=signInEventTypes/any(t: t eq 'servicePrincipal') (clientCredentialType = clientSecret / certificate)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-03e51a70",
+            "fc-73c97002",
+            "fc-196e2df6"
+          ]
+        },
+        "reads": {
+          "ui": "Storage account (or subscription) > Activity log; filter Operation to listkeys action and caller = the app ID",
+          "api": null,
+          "cli": "az monitor activity-log list --resource-id <storage-account-id>",
+          "evidence_refs": [
+            "fc-fbfd318a",
+            "fc-fb7064cb"
+          ]
+        },
+        "kill": {
+          "ui": "Disable the service principal (accountEnabled = false) and delete the secret/certificate on the app registration",
+          "api": "POST /applications/{id}/removePassword; PATCH /servicePrincipals/{id} {\"accountEnabled\": false}",
+          "cli": "az ad app credential delete --id <appId> --key-id <keyId>",
+          "evidence_refs": [
+            "fc-abc76ff1",
+            "fc-59d947ae",
+            "fc-e02bba6f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Microsoft Entra service principal sign-in logs",
+            "notes": "Token requests with secret/certificate; 7 days (Free) or 30 days (P1/P2)."
+          },
+          {
+            "name": "Microsoft Entra audit logs",
+            "notes": "ApplicationManagement category; 7 days (Free) or 30 days (P1/P2)."
+          },
+          {
+            "name": "Azure Activity Log",
+            "notes": "Control-plane writes/actions (e.g. listKeys, regenerateKey); 90 days free; reads typically not captured."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "service principal / app ID",
+            "log": "Entra service principal sign-in logs",
+            "notes": "Credential used is a secret or certificate."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Update application - Certificates and secrets management",
+            "stage": "create",
+            "notes": "ApplicationManagement audit."
+          },
+          {
+            "event": "Add service principal credentials",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "Remove service principal credentials",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "appId",
+          "service principal object ID",
+          "IP address"
+        ],
+        "anomaly_cues": [
+          "Token requests from new IPs",
+          "New secret added to a privileged app"
+        ],
+        "containment": {
+          "steps": "Remove the secret/certificate, disable the SP, and remove role assignments.",
+          "kills_existing": "partial",
+          "notes": "ARM access tokens remain valid until expiry (60-90 min); CAE for workload identities covers Microsoft Graph only."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-297a8af2",
+          "fc-9ad93cd2",
+          "turn1search0",
+          "fc-e9a0ad21",
+          "fc-863c8321"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET https://management.azure.com/subscriptions",
+            "reveals": "Subscriptions the SP can see",
+            "bulk": false,
+            "scope": "https://management.azure.com/.default",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Activity log typically does not capture reads; token request is in SP sign-in logs."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET https://management.azure.com/subscriptions/{id}/resources",
+            "reveals": "All resources",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Read."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET .../providers/Microsoft.Authorization/roleAssignments",
+            "reveals": "Role assignments",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Read."
+          },
+          {
+            "stage": "collection",
+            "call": "POST .../storageAccounts/{name}/listKeys",
+            "reveals": "Storage account keys (pivot to azure-1)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "Microsoft.Storage/storageAccounts/listkeys/action",
+            "log_notes": "Activity log action."
+          }
+        ],
+        "unknown": [
+          "Exact Activity Log behavior for listKeys not quoted on fetched page."
+        ],
+        "evidence_refs": [
+          "fc-a60cdc83",
+          "fc-425d48c0",
+          "fc-fbfd318a",
+          "fc-21b77ece",
+          "fc-917f1112",
+          "fc-a6422a97"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Azure Service Principal Credentials Added",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_signin_rules/azure_service_principal_credentials_added.yml",
+          "detects": "Client secrets or certificates were added to an Entra ID service principal or application."
+        },
+        {
+          "source": "Sigma",
+          "title": "Added Credentials to Existing Application",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_credential_added.yml",
+          "detects": "Certificates or secrets were added to an existing application."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-03e51a70",
+      "title": "Sign-in logs in Microsoft Entra ID",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-sign-ins",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-17a69382",
+      "title": "Microsoft Entra application management policy API overview - Microsoft Graph v1.0 | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/graph/api/resources/applicationauthenticationmethodpolicy",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-196e2df6",
+      "title": "signIn resource type (beta)",
+      "url": "https://learn.microsoft.com/en-us/graph/api/resources/signin?view=graph-rest-beta",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-21b77ece",
+      "title": "Subscriptions - List - Azure Resource Management",
+      "url": "https://learn.microsoft.com/en-us/rest/api/resources/subscriptions/list",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-28f79469",
+      "title": "Create Azure service principals using the Azure CLI | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/cli/azure/azure-cli-sp-tutorial-1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-297a8af2",
+      "title": "Service principal sign-in logs - Microsoft Entra ID | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-service-principal-sign-ins",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-425d48c0",
+      "title": "Azure permissions for Storage - Azure RBAC | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/storage",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-51e9d3f4",
+      "title": "Add and manage app credentials in Microsoft Entra ID",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/how-to-add-credentials",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-59d947ae",
+      "title": "Update servicePrincipal",
+      "url": "https://learn.microsoft.com/en-us/graph/api/serviceprincipal-update",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-660153dd",
+      "title": "Delegate application management administrator permissions",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/delegate-app-roles",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-73c97002",
+      "title": "List signIns (beta)",
+      "url": "https://learn.microsoft.com/en-us/graph/api/signin-list?view=graph-rest-beta",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-863c8321",
+      "title": "Microsoft Entra data retention",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/monitoring-health/reference-reports-data-retention",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-917f1112",
+      "title": "Resources - List - REST API (Azure Resource Management) | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/resources/resources/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9ad93cd2",
+      "title": "Continuous access evaluation for workload identities in Microsoft Entra ID",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-continuous-access-evaluation-workload",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a60cdc83",
+      "title": "Storage Accounts - List Keys - REST API (Azure Storage Resource Provider) | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storagerp/storage-accounts/list-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a6422a97",
+      "title": "Role Assignments - List For Subscription - REST API (Azure Authorization) | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/authorization/role-assignments/list-for-subscription",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-abc76ff1",
+      "title": "application: removePassword",
+      "url": "https://learn.microsoft.com/en-us/graph/api/application-removepassword",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-abc80c86",
+      "title": "Update tenantAppManagementPolicy",
+      "url": "https://learn.microsoft.com/en-us/graph/api/tenantappmanagementpolicy-update",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ad48752e",
+      "title": "Configure restrictions on how applications can be configured",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-app-management-policies",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d98c0825",
+      "title": "application resource type - Microsoft Graph v1.0",
+      "url": "https://learn.microsoft.com/en-us/graph/api/resources/application?view=graph-rest-1.0",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e02bba6f",
+      "title": "az ad app credential",
+      "url": "https://learn.microsoft.com/en-us/cli/azure/ad/app/credential",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9a0ad21",
+      "title": "Microsoft Entra audit log activity reference",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/monitoring-health/reference-audit-activities",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fb7064cb",
+      "title": "az monitor activity-log",
+      "url": "https://learn.microsoft.com/en-us/cli/azure/monitor/activity-log",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fbfd318a",
+      "title": "Activity Log in Azure Monitor - Azure Monitor | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/activity-log",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search0",
+      "title": "Microsoft Entra Conditional Access for workload identities - Microsoft ...",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn1search0",
+      "title": "Access tokens in the Microsoft identity platform - Microsoft identity platform | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

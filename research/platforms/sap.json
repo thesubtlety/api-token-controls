@@ -1,0 +1,1325 @@
+{
+ "id": "sap",
+ "name": "SAP BTP and S/4HANA Cloud",
+ "scope_notes": "Covers SAP Business Technology Platform (XSUAA, Cloud Management service, btp CLI), SAP Cloud Identity Services, and SAP S/4HANA Cloud Public Edition. Covers BTP Cloud Foundry/multi-environment subaccounts, Identity Authentication tenants, and S/4HANA Cloud Public Edition communication management; BTP docs cited from SAP's official SAP-docs GitHub source of help.sap.com.",
+ "controls": [
+  {
+   "name": "credential-types (xs-security.json)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "sap-1"
+   ],
+   "what": "Restricts which secret types (binding-secret, x509) bindings and service keys of an XSUAA instance can use.",
+   "setting": "xs-security.json oauth2-configuration.credential-types",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-c27d4d0f"
+   ]
+  },
+  {
+   "name": "Delete binding / service key",
+   "effect": "revoke",
+   "applies_to": [
+    "sap-1",
+    "sap-3"
+   ],
+   "what": "Deleting the binding or service key makes XSUAA stop accepting its secret/certificate.",
+   "setting": "cf unbind-service / cf delete-service-key / cockpit",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-c27d4d0f",
+    "fc-1697835f"
+   ]
+  },
+  {
+   "name": "token-validity / refresh-token-validity",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "sap-1",
+    "sap-2",
+    "sap-3"
+   ],
+   "what": "Sets access/refresh token lifetime per XSUAA instance.",
+   "setting": "xs-security.json oauth2-configuration",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-763e16d9"
+   ]
+  },
+  {
+   "name": "Token Validity (subaccount security settings)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "sap-1",
+    "sap-2",
+    "sap-3"
+   ],
+   "what": "Sets default token lifetimes for all instances in a subaccount that don't set their own.",
+   "setting": "BTP cockpit > Subaccount > Security > Settings > Token Validity; Security Settings API",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-37a60c08"
+   ]
+  },
+  {
+   "name": "Token revoke endpoint",
+   "effect": "revoke",
+   "applies_to": [
+    "sap-1",
+    "sap-2",
+    "sap-3"
+   ],
+   "what": "Revokes an issued token, but apps validating offline keep accepting it until expiry.",
+   "setting": "Cloud Foundry UAA revoke endpoint",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-07f59e19"
+   ]
+  },
+  {
+   "name": "hide-secret",
+   "effect": "other",
+   "applies_to": [
+    "sap-1"
+   ],
+   "what": "Omits the client secret from a binding or service key that only needs authorization data.",
+   "setting": "binding parameters {\"credential-type\":\"binding-secret\",\"hide-secret\":\"true\"}",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-4c857534"
+   ]
+  },
+  {
+   "name": "btp delete security/api-credential",
+   "effect": "revoke",
+   "applies_to": [
+    "sap-2"
+   ],
+   "what": "Deletes XSUAA API credentials.",
+   "setting": "btp CLI",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-846d347a"
+   ]
+  },
+  {
+   "name": "Cloud Management service plan selection",
+   "effect": "limit_scope",
+   "applies_to": [
+    "sap-3"
+   ],
+   "what": "The cis plan (central, central-viewer, local, local-viewer) fixes the API scopes in the token.",
+   "setting": "Entitlements + cis instance plan",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-40b6f5f8",
+    "fc-743352ef"
+   ]
+  },
+  {
+   "name": "Secret 'Expire in'",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "sap-5"
+   ],
+   "what": "Sets IAS client secret expiry to 1 year, 2 years or Never.",
+   "setting": "Admin console > Applications > Trust > Client Authentication > Secrets > Add; Administrators > System > Secrets",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-07f44074",
+    "fc-2e2e1796"
+   ]
+  },
+  {
+   "name": "Secret scope (Application / Application Users / OpenID)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "sap-5"
+   ],
+   "what": "Limits which APIs an application secret may be used for; all scopes are selected by default.",
+   "setting": "Client Authentication > Secrets > Scope",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-07f44074"
+   ]
+  },
+  {
+   "name": "Administrator roles for systems",
+   "effect": "limit_scope",
+   "applies_to": [
+    "sap-5"
+   ],
+   "what": "Assigns only needed admin roles (e.g. Read Users) to a system administrator credential.",
+   "setting": "Admin console > Administrators > Add > System",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-2e2e1796"
+   ]
+  },
+  {
+   "name": "Client ID Lock",
+   "effect": "other",
+   "applies_to": [
+    "sap-5"
+   ],
+   "what": "Locks a technical user's client ID after 5 failed secret logons.",
+   "setting": "Users & Authorizations > Technical User > Details > Client ID",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-5dbd736a"
+   ]
+  },
+  {
+   "name": "Lock / delete communication user",
+   "effect": "disable",
+   "applies_to": [
+    "sap-6"
+   ],
+   "what": "Locks or deletes a communication user in the Maintain Communication Users app.",
+   "setting": "Maintain Communication Users app",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-6211b5e5"
+   ]
+  },
+  {
+   "name": "Communication scenario / arrangement",
+   "effect": "limit_scope",
+   "applies_to": [
+    "sap-6"
+   ],
+   "what": "The arrangement's communication scenario defines which inbound services and auth methods the user can use.",
+   "setting": "Communication Arrangements app (SAP recommends one comm user per arrangement)",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-2cf7fdc8",
+    "fc-05cc6ab0"
+   ]
+  },
+  {
+   "name": "Communication user password policy",
+   "effect": "other",
+   "applies_to": [
+    "sap-6"
+   ],
+   "what": "Requires 20+ character passwords with a special character and locks after 3 failed logons.",
+   "setting": "Built in (view in Display Static System Audit > Password Policy Technical User)",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-34c952b0"
+   ]
+  },
+  {
+   "name": "Entitlements (SAP Cloud Management service plans)",
+   "effect": "disable",
+   "applies_to": [
+    "sap-3"
+   ],
+   "what": "A cis service instance and key can only be created in a subaccount where the global account admin has entitled a Cloud Management service plan.",
+   "setting": "Global account > Entitlements",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-743352ef"
+   ]
+  },
+  {
+   "name": "Manage Applications / Manage Tenant Configuration administrator roles",
+   "effect": "disable",
+   "applies_to": [
+    "sap-5"
+   ],
+   "what": "Only administrators with Manage Applications can configure applications (including client secrets), and only Manage Tenant Configuration can add systems as administrators.",
+   "setting": "Administration console > Administrators > authorizations",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-9f555536",
+    "fc-2e2e1796"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "sap-1",
+   "what": "XSUAA does not check certificate revocation; a compromised X.509 binding cert stays valid until the binding is deleted.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-c27d4d0f"
+   ]
+  },
+  {
+   "path_id": "sap-1",
+   "what": "Revoked access tokens keep working in apps that validate offline until they expire.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-07f59e19"
+   ]
+  },
+  {
+   "path_id": "sap-1",
+   "what": "Legacy instance secrets cannot be rotated without recreating the instance.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-763e16d9"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Any IP/network allowlist for XSUAA clients, btp API credentials, IAS API secrets or S/4HANA communication users.",
+  "Whether XSUAA password-grant tokens (cis service keys) honor IAS/corporate IdP MFA or conditional access.",
+  "Exact audit message for service key deletion and for API credential create/delete in XSUAA audit log.",
+  "Whether communication user passwords expire.",
+  "Org-wide switch to block creation of service keys or API credentials (none found).",
+  "IAS audit event emitted on client secret creation/deletion (change log covers admin CREATE/UPDATE/DELETE generally)."
+ ],
+ "credentials": [
+  {
+   "id": "sap-1",
+   "name": "XSUAA service key / service binding (OAuth client credentials: binding-secret or X.509)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Binding an app to an XSUAA (SAP Authorization and Trust Management) instance, or creating a service key, issues a client ID plus a binding secret or X.509 certificate. The holder calls the token endpoint (client_credentials) and gets a JWT access token.",
+    "evidence_refs": [
+     "fc-c27d4d0f"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Client-credential flows involve no user, so the identity provider is not consulted; audit entries show UNKNOWN_USER. No doc statement on conditional access was found.",
+    "evidence_refs": [
+     "fc-b76f0ff6"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No IP allowlist for OAuth clients/tokens found in the XSUAA docs reviewed.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": 43200,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Secret lives as long as the binding/key; X.509 until cert expiry; access token 12h default",
+    "evidence_refs": [
+     "fc-c27d4d0f",
+     "fc-763e16d9"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "Access token validity (token-validity in xs-security.json or subaccount Token Validity setting)",
+    "summary": "Client re-requests tokens with the long-lived secret; rotate the secret by unbind/rebind or new service key.",
+    "evidence_refs": [
+     "fc-1697835f",
+     "fc-763e16d9",
+     "fc-37a60c08"
+    ]
+   },
+   "administration": {
+    "summary": "Developers with Space Developer-level access create bindings/keys; credential-types in xs-security.json restricts which secret types can be issued. Legacy instance secrets are shared by all bindings and cannot be rotated.",
+    "conditions": "Cloud Foundry/Kyma environments; instance-secret not allowed for new bindings since 2026-01-19.",
+    "evidence_refs": [
+     "fc-c27d4d0f",
+     "fc-763e16d9"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The client ID and secret identify the application, not a person.",
+     "evidence_refs": [
+      "fc-c27d4d0f"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Client IDs look like sb-<xsappname>!t<n>; access token is a signed JWT."
+    },
+    "log_sources": [
+     {
+      "name": "SAP Audit Log service (BTP subaccount)",
+      "notes": "Audit Log Viewer or Retrieval API GET <url>/auditlog/v2/auditlogrecords; 90 days free, longer with Audit Log service premium edition (support ticket)."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Client ID",
+      "log": "UAA ClientAuthenticationSuccess",
+      "notes": "Recorded data per UAA audit spec"
+     },
+     {
+      "field": "Principal ID (client or user ID)",
+      "log": "UAA TokenIssuedEvent",
+      "notes": "Also records scopes"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "binding entry created (XSUAA instance audit)",
+      "stage": "create",
+      "notes": "New binding secret appears in subaccount audit log; exact message text not given"
+     },
+     {
+      "event": "TokenIssuedEvent",
+      "stage": "use",
+      "notes": "UAA event"
+     },
+     {
+      "event": "ClientAuthenticationSuccess",
+      "stage": "use",
+      "notes": "UAA event"
+     },
+     {
+      "event": "ClientDeleteSuccess",
+      "stage": "revoke",
+      "notes": "UAA event when a client is deleted"
+     }
+    ],
+    "correlation_keys": [
+     "client ID",
+     "subaccount/zone ID",
+     "service instance ID"
+    ],
+    "anomaly_cues": [
+     "UNKNOWN_USER entries mark client-credential flows",
+     "Token issuance for a client from a new caller pattern",
+     "New service keys on high-privilege instances (apiaccess, cis central)"
+    ],
+    "containment": {
+     "steps": "Delete the binding or service key (cf unbind-service / delete-service-key); create a replacement first. Shorten token-validity; for apps validating offline, wait for expiry or rotate signing keys.",
+     "kills_existing": "partial",
+     "notes": "Secret stops working at once, but already-issued JWTs remain valid in offline-validating apps until expiry."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether API data reads by the client are logged by consuming apps"
+    ],
+    "evidence_refs": [
+     "fc-c27d4d0f",
+     "fc-07f59e19",
+     "fc-b76f0ff6",
+     "fc-f217d031",
+     "fc-2a9b5d1b",
+     "fc-391814bc",
+     "fc-d7580551"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST <uaa url>/oauth/token (grant_type=client_credentials)",
+      "reveals": "Access token and granted scopes",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "TokenIssuedEvent",
+      "log_notes": "UAA event, principal = client ID"
+     }
+    ],
+    "unknown": [
+     "Data reads depend on the bound application; not logged by XSUAA"
+    ],
+    "evidence_refs": [
+     "fc-f217d031"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "sap-2",
+   "name": "XSUAA API credentials (btp security/api-credential)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An admin runs `btp create security/api-credential` to get a client ID with secret or certificate for the XSUAA REST APIs (users, role collections, trust) at global account, directory or subaccount level.",
+    "evidence_refs": [
+     "fc-846d347a",
+     "fc-40d59d08"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "OAuth client credential; no user/IdP step. No explicit doc statement on conditional access.",
+    "evidence_refs": [
+     "fc-b76f0ff6"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No IP allowlist for OAuth clients/tokens found in the XSUAA docs reviewed.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No documented expiry for the credential itself",
+    "evidence_refs": [
+     "fc-846d347a"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "XSUAA access token validity",
+    "summary": "Secret shown once; create a new credential and delete the old one to rotate.",
+    "evidence_refs": [
+     "fc-846d347a"
+    ]
+   },
+   "administration": {
+    "summary": "Created, listed and deleted with btp CLI (`btp list|get|delete security/api-credential`). Sample output shows a Read-only flag.",
+    "conditions": "Requires admin of the targeted global account/directory/subaccount.",
+    "evidence_refs": [
+     "fc-846d347a",
+     "fc-40d59d08"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "API credentials are a client ID with secret or certificate scoped to an account, not a user.",
+     "evidence_refs": [
+      "fc-40d59d08"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "btp list security/api-credential shows all API credentials in the targeted global account, directory, or subaccount.",
+     "evidence_refs": [
+      "fc-846d347a"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Sample client ID sb-full-access!a76125"
+    },
+    "log_sources": [
+     {
+      "name": "SAP Audit Log service (BTP subaccount)",
+      "notes": "Audit Log Viewer or Retrieval API GET <url>/auditlog/v2/auditlogrecords; 90 days free, longer with Audit Log service premium edition (support ticket)."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Client ID",
+      "log": "UAA ClientAuthenticationSuccess",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "TokenIssuedEvent",
+      "stage": "use",
+      "notes": "UAA"
+     },
+     {
+      "event": "tableName \"xs_rolecollection2user\", crudType \"CREATE\"",
+      "stage": "use",
+      "notes": "Role collection assignment done with the credential"
+     }
+    ],
+    "correlation_keys": [
+     "client ID",
+     "zone ID"
+    ],
+    "anomaly_cues": [
+     "Role collection assignments or trust changes logged with UNKNOWN_USER"
+    ],
+    "containment": {
+     "steps": "btp delete security/api-credential",
+     "kills_existing": "unknown",
+     "notes": "Issued tokens follow XSUAA token validity."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit event for API credential creation/deletion"
+    ],
+    "evidence_refs": [
+     "fc-846d347a",
+     "fc-b76f0ff6",
+     "fc-f217d031"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "enumeration",
+      "call": "GET /sap/rest/authorization/v2/roles",
+      "reveals": "Roles in the subaccount",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Read events not listed in XSUAA audit page"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-b76f0ff6",
+     "fc-5161b1c9"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "sap-3",
+   "name": "SAP Cloud Management service (cis) service key",
+   "family": "oauth",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A service key on a `cis` instance gives an OAuth client for the Accounts/Entitlements/Provisioning APIs. Default grant is password (a user's credentials plus client); client credentials is available when requested at instance creation.",
+    "evidence_refs": [
+     "fc-743352ef"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Password grant sends a user's password directly to XSUAA; docs reviewed do not say whether IdP MFA/conditional access applies. Client-credential instances have no user.",
+    "evidence_refs": [
+     "fc-743352ef"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No IP allowlist for OAuth clients/tokens found in the XSUAA docs reviewed.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": 43200,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Key lives until deleted; tokens follow XSUAA validity",
+    "evidence_refs": [
+     "fc-c27d4d0f",
+     "fc-763e16d9"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "XSUAA token validity",
+    "summary": "Re-request token with key (and user password for password grant).",
+    "evidence_refs": [
+     "fc-743352ef"
+    ]
+   },
+   "administration": {
+    "summary": "Global account admin must entitle a cis plan to the subaccount; the plan (central, central-viewer, local, local-viewer) sets the scopes. `central` can create/delete subaccounts and set entitlements.",
+    "conditions": "Entitlement required.",
+    "evidence_refs": [
+     "fc-743352ef",
+     "fc-40b6f5f8"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "With the Password grant the user's password plus 2FA passcode is needed; the Client Credentials grant has no user check.",
+     "evidence_refs": [
+      "fc-743352ef"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "BTP cockpit > global account > Security > Trust Configuration > Establish Trust (custom IdP for platform users; enforce MFA there). Client Credentials grant bypasses this.",
+     "api": "POST <uaa_url>/oauth/token grant_type=password, username, password=<password><2FA passcode>",
+     "cli": null,
+     "evidence_refs": [
+      "fc-99050aa5",
+      "fc-743352ef"
+     ]
+    },
+    "usage": {
+     "ui": "Account Explorer header > SAP Audit Log Viewer (global account); filter retrieved records for the service key's client ID",
+     "api": "GET <url_from_service_key>/auditlog/v2/auditlogrecords?time_from=...&time_to=... (Auditlog Management, Central plan); filter on clientId",
+     "cli": null,
+     "evidence_refs": [
+      "fc-60b0f09a",
+      "fc-154997ee"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "XSUAA JWT"
+    },
+    "log_sources": [
+     {
+      "name": "SAP Audit Log service (global account and subaccount)",
+      "notes": "Cloud Management service events via Audit Log Retrieval API for global accounts"
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Client ID",
+      "log": "UAA ClientAuthenticationSuccess",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "\"type\":\"CREATE\" \"entity\":\"Subaccount",
+      "stage": "use",
+      "notes": "Cloud Management service audit message text"
+     }
+    ],
+    "correlation_keys": [
+     "client ID",
+     "global account ID",
+     "subaccount ID"
+    ],
+    "anomaly_cues": [
+     "Subaccount/directory create or delete via API",
+     "Entitlement changes outside change windows"
+    ],
+    "containment": {
+     "steps": "Delete the cis service key (and instance if needed); reset the user's password for password-grant keys.",
+     "kills_existing": "partial",
+     "notes": "Issued tokens live until expiry."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-80959e15",
+     "fc-743352ef",
+     "fc-c27d4d0f"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "btp list accounts/subaccount",
+      "reveals": "Subaccounts in the global account",
+      "bulk": true,
+      "scope": "global-account.subaccount.read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit page lists create/update/delete only"
+     }
+    ],
+    "unknown": [
+     "Equivalent raw Accounts API path not verified"
+    ],
+    "evidence_refs": [
+     "fc-40b6f5f8",
+     "fc-80959e15",
+     "fc-6bb5ba0d"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "sap-4",
+   "name": "btp CLI session token",
+   "family": "jwt",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "`btp login` stores a session token in the local config file (e.g. ~/Library/Application Support/.btp/config.json on macOS). Login can be SSO via browser (`--sso`, `--idp`) or user/password.",
+    "evidence_refs": [
+     "fc-51d4161e"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "SSO login goes through the IdP; password login against SAP ID service is also documented. Once issued, the token is reused for 12h without re-checking the IdP (not stated explicitly).",
+    "evidence_refs": [
+     "fc-51d4161e"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No btp CLI IP restriction documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 43200,
+    "maximum_seconds": 43200,
+    "configurable": "no",
+    "summary": "12h max session",
+    "evidence_refs": [
+     "fc-51d4161e"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "12h session",
+    "summary": "User logs in again after 12h.",
+    "evidence_refs": [
+     "fc-51d4161e"
+    ]
+   },
+   "administration": {
+    "summary": "No admin control specific to CLI sessions found; access follows the user's role collections. `btp logout` ends the session locally.",
+    "conditions": "",
+    "evidence_refs": [
+     "fc-51d4161e"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Login can go through the IdP with --sso (recommended), but password login against SAP ID service is also allowed.",
+     "evidence_refs": [
+      "fc-51d4161e"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "BTP cockpit > global account > Security > Trust Configuration > Establish Trust (custom IdP for platform users)",
+     "api": null,
+     "cli": "btp login --sso [--idp <TENANT>]; make default: btp set config --login.sso browser",
+     "evidence_refs": [
+      "fc-9043a264",
+      "fc-99050aa5"
+     ]
+    },
+    "expiry": {
+     "ui": "Fixed: max session 12 hours, not configurable in docs",
+     "api": null,
+     "cli": "btp logout (ends session early)",
+     "evidence_refs": [
+      "fc-51d4161e"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Stored in local btp config.json"
+    },
+    "log_sources": [
+     {
+      "name": "SAP Audit Log service (BTP subaccount)",
+      "notes": "Audit Log Viewer or Retrieval API GET <url>/auditlog/v2/auditlogrecords; 90 days free, longer with Audit Log service premium edition (support ticket)."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "user name",
+     "origin key"
+    ],
+    "anomaly_cues": [
+     "Copied config.json reused from another host"
+    ],
+    "containment": {
+     "steps": "Remove the user's role collections or disable the user at the IdP; token expires within 12h.",
+     "kills_existing": "unknown",
+     "notes": "No server-side session revocation documented."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether btp CLI session use is audit logged"
+    ],
+    "evidence_refs": [
+     "fc-51d4161e"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "btp get accounts/global-account",
+      "reveals": "Global account details",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-51d4161e",
+     "fc-6bb5ba0d"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "sap-5",
+   "name": "SAP Cloud Identity Services client ID/secret or certificate (applications, systems as administrators, technical users)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "In the Identity Authentication admin console, admins generate client secrets or certificates for an application (Trust > Client Authentication), for a system added as an administrator, or for a technical user. These authenticate to the SCIM/user-management REST APIs and OIDC token endpoint.",
+    "evidence_refs": [
+     "fc-07f44074",
+     "fc-2e2e1796",
+     "fc-5dbd736a"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Client authentication; a system administrator 'can perform the same actions as the human administrator' without an interactive IdP login. Conditional-access behavior not documented.",
+    "evidence_refs": [
+     "fc-2e2e1796"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Risk-based authentication applies to user logons; no IP restriction for API client secrets found.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "1 year, 2 years, or Never",
+    "evidence_refs": [
+     "fc-07f44074",
+     "fc-2e2e1796"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Secret 'Expire in' choice",
+    "summary": "Add a new secret (up to 20 per app, 2 per system), switch clients, delete the old one.",
+    "evidence_refs": [
+     "fc-07f44074",
+     "fc-2e2e1796"
+    ]
+   },
+   "administration": {
+    "summary": "Requires tenant admin roles (Manage Applications / Manage Tenant Configuration). Secret scopes: Application, Application Users, OpenID (all selected by default). System admins get explicit admin roles. Client ID lock after 5 failures is off by default for technical users.",
+    "conditions": "",
+    "evidence_refs": [
+     "fc-07f44074",
+     "fc-2e2e1796",
+     "fc-5dbd736a"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Systems as administrators and application clients are not persons.",
+     "evidence_refs": [
+      "fc-2e2e1796"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Administrators tile lists all administrators including systems; client secrets are shown per application (Trust > Client Authentication), with no tenant-wide secret list.",
+     "evidence_refs": [
+      "fc-732c6b70",
+      "fc-07f44074"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Cloud Identity Services admin console > Audit and Change Logs > Audit Logs > Cloud Foundry (opens BTP Audit Log Viewer); filter on caller. Admin changes: Audit and Change Logs > Export Change Logs > Export (CSV, Administrator's ID)",
+     "api": "GET <url_from_service_key>/auditlog/v2/auditlogrecords (subaccount Audit Log Retrieval API)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-9fe82ba5",
+      "fc-0d8a203a",
+      "fc-d6ade17b",
+      "fc-154997ee"
+     ]
+    },
+    "reads": {
+     "ui": "Audit Log Viewer for the mapped subaccount; filter category audit.authentication and caller = client ID",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-9fe82ba5",
+      "fc-d6ade17b"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Client ID is a UUID"
+    },
+    "log_sources": [
+     {
+      "name": "Identity Authentication audit log (via BTP Audit Log Viewer)",
+      "notes": "90 days"
+     },
+     {
+      "name": "IAS change logs",
+      "notes": "CSV export, admin CREATE/UPDATE/DELETE, 24 months"
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "caller",
+      "log": "IAS audit log",
+      "notes": "Identifier of the subject"
+     },
+     {
+      "field": "Administrator's ID",
+      "log": "Change log",
+      "notes": "User or system that made the change"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "action=issueJwtToken",
+      "stage": "use",
+      "notes": "IAS audit action value"
+     },
+     {
+      "event": "action=search objectType=scimUser(s)",
+      "stage": "use",
+      "notes": "Possible audit values; exact pairing not documented"
+     }
+    ],
+    "correlation_keys": [
+     "client ID",
+     "caller",
+     "objectId"
+    ],
+    "anomaly_cues": [
+     "Secrets set to Never",
+     "System administrators with Manage Tenant Configuration",
+     "Bulk user export/search by a system"
+    ],
+    "containment": {
+     "steps": "Delete the secret/certificate, the system administrator, or the technical user in the admin console.",
+     "kills_existing": "unknown",
+     "notes": "Effect on already-issued tokens not documented."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact event when a secret is added or deleted"
+    ],
+    "evidence_refs": [
+     "fc-d6ade17b",
+     "fc-0d8a203a",
+     "fc-9fe82ba5",
+     "fc-2e2e1796"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /scim/Users (Identity Authentication SCIM API)",
+      "reveals": "Tenant users",
+      "bulk": true,
+      "scope": "Read Users admin role",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "IAS audit actions include search/read/export but mapping not documented"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /scim/Users (Identity Directory API)",
+      "reveals": "All users in the tenant",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "audit.authentication",
+      "log_notes": "Docs say all authentication and authorization checks are audit logged; they do not say the read itself is recorded as a data-access event."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-2e2e1796",
+     "fc-d6ade17b",
+     "fc-9a4948a8"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "sap-6",
+   "name": "S/4HANA Cloud Public Edition communication user (basic auth or X.509) in a communication arrangement",
+   "family": "basic",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A communication user is a technical user assigned to a communication system and used by a communication arrangement for inbound API calls. It authenticates with user/password (basic) or an X.509 client certificate.",
+    "evidence_refs": [
+     "fc-6211b5e5",
+     "fc-34c952b0",
+     "fc-2cf7fdc8"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "SAP: sessions using certificate-based or basic authentication 'run in the context of a technical communication user', not a business user, so business-user SSO is not involved.",
+    "evidence_refs": [
+     "fc-2cf7fdc8"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No IP allowlist for communication users found in the pages reviewed.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Password expiry not stated; cert valid until its expiry",
+    "evidence_refs": [
+     "fc-34c952b0",
+     "fc-2cf7fdc8"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Certificate validity; password policy in Display Static System Audit",
+    "summary": "Change the password or present a new cert with the same subject/issuer; both certs work until each expires.",
+    "evidence_refs": [
+     "fc-2cf7fdc8"
+    ]
+   },
+   "administration": {
+    "summary": "Administrators create/lock/delete comm users in Maintain Communication Users. The communication scenario of the arrangement bounds which APIs the user can reach. Password needs 20+ chars; 3 failures lock the user.",
+    "conditions": "Admin business role (SAP_BR_ADMINISTRATOR).",
+    "evidence_refs": [
+     "fc-6211b5e5",
+     "fc-34c952b0",
+     "fc-2cf7fdc8"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Basic/certificate sessions run as a technical communication user, not a business user.",
+     "evidence_refs": [
+      "fc-2cf7fdc8"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Maintain Communication Users app lists users and can download all of them to a spreadsheet.",
+     "evidence_refs": [
+      "fc-6211b5e5"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Maintain Communication Users app > download list to spreadsheet",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-6211b5e5"
+     ]
+    },
+    "usage": {
+     "ui": "Display Security Audit Log app; filter by user and logon events (e.g. AU1)",
+     "api": "GET <host>/sap/opu/odata4/sap/rsau_log_api/srvd_a2x/sap/rsau_log_api/0001/SecurityAuditLog?$filter=log_tstmp ge ... (comm. arrangement SAP_COM_0750)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-a99537a3",
+      "fc-53dba3ff",
+      "fc-177e477a"
+     ]
+    },
+    "reads": {
+     "ui": "Enable: Read Access Logging Configuration app > Enabling in Client > Edit > select checkbox. Review: Read Access Logging: Monitor app > search by time range and log domain/purpose",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-93029d6f",
+      "fc-89016889"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "User name/password or X.509 subject/issuer"
+    },
+    "log_sources": [
+     {
+      "name": "Security Audit Log (Display Security Audit Log app; SAL API SAP_COM_0750)",
+      "notes": "45 days default retention, configurable; archiving object BC_SAL"
+     },
+     {
+      "name": "Read Access Logging",
+      "notes": "Only if configured by customer"
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "user name",
+      "log": "Security Audit Log",
+      "notes": "Logon attempts"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "successful and unsuccessful logon attempts",
+      "stage": "use",
+      "notes": "Event IDs listed in SAP Note 2903873"
+     }
+    ],
+    "correlation_keys": [
+     "communication user name",
+     "communication system",
+     "communication arrangement"
+    ],
+    "anomaly_cues": [
+     "Logons from a comm user outside its integration schedule",
+     "Lockouts after 3 failed attempts",
+     "Comm user shared across several arrangements"
+    ],
+    "containment": {
+     "steps": "Lock or delete the user in Maintain Communication Users; change its password; remove its certificate.",
+     "kills_existing": "unknown",
+     "notes": "Security sessions created with x-sap-security-session may persist; effect of lock on them not documented."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether OData reads by comm users are logged without Read Access Logging"
+    ],
+    "evidence_refs": [
+     "fc-6211b5e5",
+     "fc-a99537a3",
+     "fc-6ff1335a",
+     "fc-26eac531"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "Inbound OData/SOAP services of the arranged communication scenario",
+      "reveals": "Business data in scope of the scenario",
+      "bulk": true,
+      "scope": "Communication scenario",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "Logon in Security Audit Log; reads only if Read Access Logging configured"
+     }
+    ],
+    "unknown": [
+     "Generic whoami endpoint"
+    ],
+    "evidence_refs": [
+     "fc-2cf7fdc8",
+     "fc-a99537a3",
+     "fc-26eac531"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

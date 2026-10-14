@@ -1,0 +1,573 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "dropbox",
+      "name": "Dropbox",
+      "scope_notes": "Business SSO/app-management entitlement varies by plan. Dropbox Sign is a separate API and is excluded.",
+      "controls": [
+        {
+          "name": "Default connection permissions: Connecting registered integrations = Block",
+          "effect": "disable",
+          "applies_to": [
+            "dropbox-1"
+          ],
+          "what": "Blocks team members from connecting any registered (App Center) app to their work account.",
+          "setting": "Admin console > Products > Dropbox > Settings > Integrations > Default connection permissions",
+          "plan": "Standard, Business, Advanced, Business Plus, Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "turn11search22"
+          ],
+          "quote": "Under Default connection permissions , click the dropdown next to Connecting registered integrations ."
+        },
+        {
+          "name": "Block specific apps",
+          "effect": "disable",
+          "applies_to": [
+            "dropbox-1"
+          ],
+          "what": "Blocks team members from connecting the selected apps; already-connected members stay connected.",
+          "setting": "Admin console > Products > Dropbox > Settings > Integrations > app list > Block",
+          "plan": "Standard, Business, Advanced, Business Plus, Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn11search22"
+          ],
+          "quote": "You can choose to block your team from connecting to any apps or just block them from connecting to specific apps."
+        },
+        {
+          "name": "Manage custom apps (Not in App Center) - Allow/Block by app key or app ID",
+          "effect": "disable",
+          "applies_to": [
+            "dropbox-1"
+          ],
+          "what": "Allows or blocks a specific non-App Center app (e.g. an internal or unlisted OAuth app) by its app key or app ID.",
+          "setting": "Admin console > Products > Dropbox > Settings > Integrations > filter Not in App Center > enter app key/ID > Allow or Block",
+          "plan": "Standard, Business, Advanced, Business Plus, Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "turn11search22"
+          ],
+          "quote": "Enter the app key or app ID. If you don't know the app key or app ID, follow the instructions below to find it."
+        },
+        {
+          "name": "Team app installation is admin-only",
+          "effect": "require_approval",
+          "applies_to": [
+            "dropbox-1"
+          ],
+          "what": "Only team admins can install team-scoped apps; members who try get an error.",
+          "setting": "Admin console > Integrations (team apps); not a toggle",
+          "plan": "Business, Business Plus",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-add4268c"
+          ],
+          "quote": "At this time, only Dropbox Business admins can enable third-party solutions. If any team members attempt to add a team app, they'll receive this error message: ”Only admins can install team apps”."
+        },
+        {
+          "name": "Revoke a member-linked app (team API)",
+          "effect": "revoke",
+          "applies_to": [
+            "dropbox-1"
+          ],
+          "what": "Revokes an app that a team member linked to their own account; requires a team-authorized admin app with sessions.modify.",
+          "setting": "API: POST /2/team/linked_apps/revoke_linked_app (and revoke_linked_app_batch); list with /2/team/linked_apps/list_members_linked_apps",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6bdd5f1c"
+          ],
+          "quote": "route linked_apps/revoke_linked_app (RevokeLinkedApiAppArg, Void, RevokeLinkedAppError) \"Revoke a linked application of the team member.\" attrs auth = \"team\" scope = \"sessions.modify\""
+        },
+        {
+          "name": "Single sign-on (SSO): Required",
+          "effect": "require_sso",
+          "applies_to": [
+            "dropbox-1"
+          ],
+          "what": "Team members must sign in through the IdP, so new OAuth authorizations require an IdP login; already-linked devices keep working.",
+          "setting": "Admin console > Settings > Authentication > Single sign-on (SSO) > Required",
+          "plan": "Advanced, Business Plus, Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn13search19"
+          ],
+          "quote": "Required (for production): Team members must log in to Dropbox using SSO, and their Dropbox password will no longer work. Admins can still use their Dropbox admin credentials to log in."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "dropbox-1",
+          "what": "Blocking an app does not revoke existing connections to it.",
+          "evidence_refs": [
+            "turn11search22"
+          ],
+          "quote": "Blocking apps doesn’t disconnect team members who are already connected to an app.",
+          "kind": "kill"
+        },
+        {
+          "path_id": "dropbox-1",
+          "what": "Some calendar/contacts integrations cannot be blocked.",
+          "evidence_refs": [
+            "turn11search22"
+          ],
+          "quote": "Google Calendar and Outlook Calendar and Contacts are allowed by default and can’t be blocked, even if you choose to block your team from connecting to any apps.",
+          "kind": "disable"
+        },
+        {
+          "path_id": "dropbox-1",
+          "what": "Apps members linked individually cannot be managed from the App permissions page (only via activity log / team API).",
+          "evidence_refs": [
+            "fc-add4268c"
+          ],
+          "quote": "Individually connected apps cannot be managed from the app permissions page. However, you can manage these apps via your team's activity log.",
+          "kind": "other"
+        }
+      ],
+      "controls_unknown": [
+        "Default value of \"Connecting registered integrations\" (allow vs block) is not stated.",
+        "Whether switching SSO to Required revokes existing OAuth access/refresh tokens; docs only say linked devices keep working.",
+        "No admin control found to restrict OAuth scope or force app-folder-only access, set token lifetime, or IP-restrict API calls.",
+        "Exact plan coverage of the team linked-apps API endpoints is not stated in the spec."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "dropbox-1",
+      "provider_id": "dropbox",
+      "name": "User / team OAuth",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth 2.0 bearer for user/team access, with PKCE and scopes. App key/secret identifies the OAuth application.",
+        "evidence_refs": [
+          "turn12search2",
+          "turn27search1",
+          "turn27search9"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Delegated user/team authorization is documented; no general external workload-token exchange established for file APIs.",
+        "evidence_refs": [
+          "turn12search2",
+          "turn27search1",
+          "turn27search9"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No general per-token or tenant API source-IP allowlist established in the reviewed public docs.",
+        "evidence_refs": [
+          "turn11search22",
+          "turn12search2"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Short-lived; honor expires_in",
+        "evidence_refs": [
+          "turn12search2",
+          "turn27search1",
+          "turn27search9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "none",
+        "summary": "Offline refresh tokens do not expire automatically; revocation and continued approval still apply.",
+        "evidence_refs": [
+          "turn12search2",
+          "turn27search1",
+          "turn27search9"
+        ]
+      },
+      "administration": {
+        "summary": "OAuth scopes, app-folder vs full-Dropbox access, team app approval/blocking, unlink/revoke app credentials.",
+        "conditions": "Business SSO/app-management entitlement varies by plan. Dropbox Sign is a separate API and is excluded.",
+        "evidence_refs": [
+          "turn11search22",
+          "turn12search2"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "POST /2/team/linked_apps/list_members_linked_apps lists apps linked to members' accounts but does not list team-linked apps.",
+          "evidence_refs": [
+            "fc-9d286337"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "Read expires_in from the /oauth2/token response (authorization_code or refresh_token grant)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-86bf6df4"
+          ]
+        },
+        "usage": {
+          "ui": "Admin console > Activity; filter by Date, Activities, People",
+          "api": "team_log/get_events (scope events.read, Team Auditing); filter results on actor.app.app_id / details.app_info.app_id",
+          "cli": "Python SDK: dbx.team_log_get_events(category=..., time=...)",
+          "evidence_refs": [
+            "fc-fe0d74a4",
+            "fc-0989ff9f",
+            "fc-8b0b8afc",
+            "fc-35f25ed8"
+          ]
+        },
+        "reads": {
+          "ui": "Admin console > Activity; filter Activities",
+          "api": "team_log/get_events with event_type=file_download (not combinable with category)",
+          "cli": "Python SDK: dbx.team_log_get_events(event_type=EventTypeArg.file_download)",
+          "evidence_refs": [
+            "fc-fe0d74a4",
+            "fc-0989ff9f",
+            "fc-8b0b8afc",
+            "fc-35f25ed8"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Short-lived access tokens plus optional refresh token (token_access_type=offline). No prefix documented in fetched Dropbox docs. GitHub secret scanning covers 'Dropbox Access Token' and 'Dropbox Short-Lived Access Token' (partner + push protection)."
+        },
+        "log_sources": [
+          {
+            "name": "Dropbox team activity log (team_log/get_events)",
+            "notes": "Team admin API, scope events.read, 'Team Auditing' permission. Records app link/unlink and actions taken via API (origin.access_method = api). Does not log every API read. Retention not established."
+          },
+          {
+            "name": "team linked_apps/list_members_linked_apps",
+            "notes": "Inventory of apps linked by team members (scope sessions.list). Excludes team-linked apps."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "details.app_info.app_id",
+            "log": "team_log",
+            "notes": "App ID (dbaid:...) on app_link_user/app_unlink_user/app_link_team/app_unlink_team"
+          },
+          {
+            "field": "details.app_info.display_name",
+            "log": "team_log",
+            "notes": "App display name"
+          },
+          {
+            "field": "origin.access_method.api.request_id",
+            "log": "team_log",
+            "notes": "API request ID (dbarid:...) when the action came through the API"
+          },
+          {
+            "field": "actor.app.app_id",
+            "log": "team_log",
+            "notes": "Set when the actor is an app (ActorLogInfo.app)"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "app_link_user",
+            "stage": "create",
+            "notes": "(apps) Linked app for member: user granted OAuth"
+          },
+          {
+            "event": "app_link_team",
+            "stage": "create",
+            "notes": "(apps) Linked app for team: team-scoped app authorized"
+          },
+          {
+            "event": "app_unlink_user",
+            "stage": "revoke",
+            "notes": "(apps) Unlinked app for member"
+          },
+          {
+            "event": "app_unlink_team",
+            "stage": "revoke",
+            "notes": "(apps) Unlinked app for team"
+          }
+        ],
+        "correlation_keys": [
+          "actor.user.account_id",
+          "actor.user.team_member_id",
+          "actor.user.email",
+          "context",
+          "origin.geo_location.ip_address",
+          "origin.geo_location.country",
+          "origin.access_method.api.request_id",
+          "details.app_info.app_id",
+          "event_category",
+          "timestamp"
+        ],
+        "anomaly_cues": [
+          "app_link_user for an app_id never seen in the team before, especially followed soon by bulk file/sharing events with access_method api",
+          "API-origin events from a new country or IP for a member who rarely uses integrations",
+          "app_link_user shortly after a password reset or sign-in from a new location",
+          "Many members linking the same unfamiliar app_id within a short window (consent phishing)",
+          "API-origin activity for a member after offboarding or suspension"
+        ],
+        "containment": {
+          "steps": "Admin: POST team/linked_apps/revoke_linked_app (app_id + team_member_id) or revoke_linked_app_batch; app owner: auth/token/revoke with the token; user: unlink in account settings. Rotate the app secret if the app key/secret leaked. Blocking the app in App permissions does not disconnect existing users.",
+          "kills_existing": "unknown",
+          "notes": "Docs do not say whether unlinking immediately invalidates issued short-lived access tokens; token/revoke disables only the token used for the call."
+        },
+        "sample_query": {
+          "language": "Dropbox team_log/get_events request (JSON body)",
+          "query": "POST https://api.dropboxapi.com/2/team_log/get_events {\"limit\": 1000, \"category\": \"apps\"}  -- then page with get_events/continue and group by details.app_info.app_id, actor.user.account_id",
+          "purpose": "List all app link/unlink events to find newly authorized OAuth apps per member."
+        },
+        "unknown": [
+          "Activity log retention period",
+          "Whether revoke_linked_app or app_unlink kills already-issued access tokens immediately",
+          "Token prefix/regex",
+          "User agent field in team_log (none found)",
+          "Exact serialized shape of origin.access_method for app-originated calls (only api.request_id documented)"
+        ],
+        "evidence_refs": [
+          "fc-95fa8c0f",
+          "fc-d2359ffe",
+          "fc-95be4de4",
+          "fc-5220af82",
+          "turn12search2",
+          "fc-80b77894",
+          "fc-48413982",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /2/files/download",
+            "reveals": "File contents from a user's Dropbox",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "file_download",
+            "log_notes": "Team activity log (team_log/get_events) has a file_download event; actor can be an Application and origin access_method api with a request ID. Docs do not explicitly promise every API download emits it."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-d5fc3801",
+          "fc-188cb14c",
+          "fc-05140203"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Dropbox Linked Team Application Added",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/dropbox_rules/dropbox_linked_team_application_added.yml",
+          "detects": "An app was linked to the Dropbox team (team-level OAuth grant)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-05140203",
+      "title": "Get Events v2 Migration Guide",
+      "url": "https://www.dropbox.com/developers/reference/events-migration-guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0989ff9f",
+      "title": "Dropbox Python SDK team_log.py (official)",
+      "url": "https://raw.githubusercontent.com/dropbox/dropbox-sdk-python/main/dropbox/team_log.py",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-188cb14c",
+      "title": "Dropbox API spec (official, GitHub) - team_log event types",
+      "url": "https://raw.githubusercontent.com/dropbox/dropbox-api-spec/master/team_log_generated.stone",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-35f25ed8",
+      "title": "Dropbox Python SDK base_team.py (official)",
+      "url": "https://raw.githubusercontent.com/dropbox/dropbox-sdk-python/main/dropbox/base_team.py",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-48413982",
+      "title": "Stone JSON serializer",
+      "url": "https://github.com/dropbox/stone/blob/main/docs/json_serializer.rst",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5220af82",
+      "title": "Dropbox API spec: auth.stone",
+      "url": "https://github.com/dropbox/dropbox-api-spec/blob/master/auth.stone",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6bdd5f1c",
+      "title": "dropbox-api-spec team.stone (official Dropbox API spec)",
+      "url": "https://github.com/dropbox/dropbox-api-spec/blob/main/team.stone",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-80b77894",
+      "title": "How to manage apps for your Dropbox team",
+      "url": "https://help.dropbox.com/teams-admins/admin/app-integrations",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-86bf6df4",
+      "title": "Dropbox OAuth Guide",
+      "url": "https://developers.dropbox.com/oauth-guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8b0b8afc",
+      "title": "View team activity in the admin console",
+      "url": "https://help.dropbox.com/account-access/view-activity",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-95be4de4",
+      "title": "Dropbox API spec: team_linked_apps.stone",
+      "url": "https://github.com/dropbox/dropbox-api-spec/blob/master/team_linked_apps.stone",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-95fa8c0f",
+      "title": "Dropbox API spec: team_log_generated.stone (TeamEvent)",
+      "url": "https://github.com/dropbox/dropbox-api-spec/blob/master/team_log_generated.stone",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9d286337",
+      "title": "Dropbox API spec (official, GitHub) - linked_apps/list_members_linked_apps",
+      "url": "https://raw.githubusercontent.com/dropbox/dropbox-api-spec/master/team_linked_apps.stone",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-add4268c",
+      "title": "What is the Dropbox Business API, and what apps are available for my team?",
+      "url": "https://help.dropbox.com/integrations/business-api",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d2359ffe",
+      "title": "Dropbox API spec: team_log.stone (get_events)",
+      "url": "https://github.com/dropbox/dropbox-api-spec/blob/master/team_log.stone",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d5fc3801",
+      "title": "Dropbox API spec (official, GitHub) - files/download",
+      "url": "https://raw.githubusercontent.com/dropbox/dropbox-api-spec/master/files.stone",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fe0d74a4",
+      "title": "Dropbox API spec: team_log.stone (official)",
+      "url": "https://raw.githubusercontent.com/dropbox/dropbox-api-spec/master/team_log.stone",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn11search22",
+      "title": "How to manage apps for your Dropbox team - Dropbox Help",
+      "url": "https://help.dropbox.com/integrations/app-integrations",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn12search2",
+      "title": "Dropbox OAuth Guide - Dropbox",
+      "url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn13search19",
+      "title": "How to enable single sign-on (SSO) for your team - Dropbox Help",
+      "url": "https://help.dropbox.com/security/sso-admin",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn27search1",
+      "title": "Using OAuth 2.0 with offline access - Dropbox",
+      "url": "https://dropbox.tech/developers/using-oauth-2-0-with-offline-access",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn27search9",
+      "title": "Dropbox API v2 HTTP documentation (formerly the Paper API alpha page)",
+      "url": "https://www.dropbox.com/developers/paper-api-alpha",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

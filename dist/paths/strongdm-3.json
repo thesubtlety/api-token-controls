@@ -1,0 +1,370 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "strongdm",
+      "name": "StrongDM",
+      "scope_notes": "SaaS control plane (US/UK/EU); Log Stream and 13-month log viewing require the Enterprise plan, other plans see 30 days in the Admin UI.",
+      "controls": [
+        {
+          "name": "Role membership",
+          "effect": "limit_resources",
+          "applies_to": [
+            "strongdm-3"
+          ],
+          "what": "Service accounts only reach resources granted through their roles.",
+          "setting": "Principals > Users > service account > Roles",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-eaf262e3"
+          ]
+        },
+        {
+          "name": "Suspend user",
+          "effect": "disable",
+          "applies_to": [
+            "strongdm-3"
+          ],
+          "what": "Suspending an account revokes its access to infrastructure.",
+          "setting": "Users > Actions > Suspend user",
+          "plan": null,
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-68698b81"
+          ]
+        },
+        {
+          "name": "Permission level: Manage service accounts, admin tokens, and API keys",
+          "effect": "other",
+          "applies_to": [
+            "strongdm-1",
+            "strongdm-2",
+            "strongdm-3"
+          ],
+          "what": "Only the Administrator permission level can create or manage admin tokens, API keys, and service accounts; other levels cannot.",
+          "setting": "Principals > Users > (user) > Settings > Permission Level",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-087adfd5"
+          ]
+        },
+        {
+          "name": "Policies (Location::IP context)",
+          "effect": "limit_network",
+          "applies_to": [
+            "strongdm-3"
+          ],
+          "what": "Cedar policy statements can permit or forbid a principal's resource actions based on the source IP or location.",
+          "setting": "Access > Policies",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-b2378380",
+            "fc-e8b1a2e9"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP allowlist for admin tokens, API keys, service accounts, or SCIM tokens (docs silent).",
+        "Any org-wide switch to block creation of admin tokens or API keys, or a maximum expiry policy.",
+        "Whether SSO-required or MFA settings apply to service account token logins.",
+        "SCIM token rotation, revocation, and lifetime.",
+        "Service account token lifetime and rekey procedure.",
+        "Whether read-only SDK/API calls (e.g. listing accounts or resources) are recorded as Activities.",
+        "Whether API key creation logs as 'Admin token created' or a separate event."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "strongdm-3",
+      "provider_id": "strongdm",
+      "name": "Service account token",
+      "family": "pat",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A service account is a non-human user that logs in with its token (sdm login --admin-token or the desktop app) and then gets resource access through role membership.",
+        "evidence_refs": [
+          "fc-eaf262e3"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "No documented OIDC/workload federation for service accounts.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "mixed",
+        "boundary": "Enterprise Policies (Cedar) can permit/forbid resource actions by context.location IP for any principal, including service accounts. No documented IP restriction on the token login itself.",
+        "evidence_refs": [
+          "fc-b2378380",
+          "fc-e8b1a2e9"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Optional expiration set when creating the service account (CLI CSV name,expiration); 'Service account expired' activity is logged",
+        "evidence_refs": [
+          "fc-19267efe",
+          "fc-7b10eb9f"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "unknown",
+        "summary": "Activities include 'Service account rekeyed'; rekey procedure not documented on the service account page.",
+        "evidence_refs": [
+          "fc-7b10eb9f"
+        ]
+      },
+      "administration": {
+        "summary": "Admins create service accounts in Principals > Users > Add service; access is limited by role membership; accounts can be suspended.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-eaf262e3"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Service accounts authenticate with tokens instead of username/password, and session/idle timeouts apply only to human users.",
+          "evidence_refs": [
+            "fc-5eee6544",
+            "fc-859b5e24"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service accounts are machine principals, not tied to a human user.",
+          "evidence_refs": [
+            "fc-5eee6544"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "`sdm admin services list` lists all service accounts; Principals > Users shows them with a Service Account label.",
+          "evidence_refs": [
+            "fc-13c44880"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": null,
+          "cli": "sdm admin services add --csv (CSV columns name,expiration); expiry is logged as activity 'Service account expired'",
+          "evidence_refs": [
+            "fc-19267efe",
+            "fc-7b10eb9f"
+          ]
+        },
+        "usage": {
+          "ui": "Logs > Activities (and Logs > Queries) filtered by Account = service account",
+          "api": null,
+          "cli": "sdm audit activities --json (filter actorAccountID); sdm audit queries --from <date>",
+          "evidence_refs": [
+            "fc-7b10eb9f",
+            "fc-88dfb281",
+            "fc-ed22169d"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Activities",
+            "notes": "Plus Queries and Replays for resource sessions when StrongDM log retention is enabled."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actorAccountID",
+            "log": "Activities",
+            "notes": "Service account ID."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Service account created",
+            "stage": "create",
+            "notes": null
+          },
+          {
+            "event": "Service account rekeyed",
+            "stage": "rotate",
+            "notes": null
+          },
+          {
+            "event": "Service account expired",
+            "stage": "expire",
+            "notes": null
+          },
+          {
+            "event": "Attempted to login by a suspended service account from the Admin UI",
+            "stage": "use",
+            "notes": "Failed use after suspension"
+          }
+        ],
+        "correlation_keys": [
+          "actorAccountID",
+          "ipAddress"
+        ],
+        "anomaly_cues": [
+          "Service account logins from new IPs",
+          "Resource queries outside normal job windows"
+        ],
+        "containment": {
+          "steps": "Suspend the service account in Users, or rekey it.",
+          "kills_existing": "unknown",
+          "notes": "Effect on open resource sessions not documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether suspension ends live client sessions"
+        ],
+        "evidence_refs": [
+          "fc-7b10eb9f",
+          "fc-68698b81"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "sdm status",
+            "reveals": "Resources the service account can reach",
+            "bulk": true,
+            "scope": "role membership",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Resource connections are logged as queries/replays, not Activities."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-eaf262e3",
+          "fc-7b10eb9f"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-087adfd5",
+      "title": "Permission Level",
+      "url": "https://docs.strongdm.com/admin/access/permission-level",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-13c44880",
+      "title": "sdm admin services list",
+      "url": "https://docs.strongdm.com/references/cli/admin/services/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-19267efe",
+      "title": "sdm admin services add",
+      "url": "https://docs.strongdm.com/references/cli/admin/services/add",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5eee6544",
+      "title": "Principals",
+      "url": "https://docs.strongdm.com/admin/principals",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-68698b81",
+      "title": "Users",
+      "url": "https://docs.strongdm.com/admin/principals/users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7b10eb9f",
+      "title": "View Logs from the Admin UI",
+      "url": "https://docs.strongdm.com/admin/audit/logs/view-adminui",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-859b5e24",
+      "title": "Authentication",
+      "url": "https://docs.strongdm.com/admin/principals/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-88dfb281",
+      "title": "Log Stream - Activities",
+      "url": "https://docs.strongdm.com/admin/audit/logs/references/logstream-activities",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b2378380",
+      "title": "Policy Taxonomy",
+      "url": "https://docs.strongdm.com/admin/access/policies/policy-taxonomy",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e8b1a2e9",
+      "title": "Policies",
+      "url": "https://docs.strongdm.com/admin/access/policies",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eaf262e3",
+      "title": "Service Accounts",
+      "url": "https://docs.strongdm.com/admin/principals/service-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed22169d",
+      "title": "View Logs from the CLI",
+      "url": "https://docs.strongdm.com/admin/audit/logs/view-cli",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

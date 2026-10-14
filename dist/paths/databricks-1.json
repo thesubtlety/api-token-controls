@@ -1,0 +1,481 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "databricks",
+      "name": "Databricks (AWS baseline)",
+      "scope_notes": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+      "controls": [
+        {
+          "name": "IP access lists",
+          "effect": "limit_network",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2",
+            "databricks-3",
+            "databricks-4"
+          ],
+          "what": "Restrict account console/account APIs and workspace/workspace APIs to approved IPs.",
+          "setting": "Account console IP access lists; workspace IP Access List API",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "workspace",
+          "evidence_refs": [
+            "turn5search18"
+          ],
+          "quote": "The default allows connections from any IP address."
+        },
+        {
+          "name": "Context-based ingress policies",
+          "effect": "limit_network",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2",
+            "databricks-3",
+            "databricks-4"
+          ],
+          "what": "Account-level allow/deny rules combining identity, network source and request scope, e.g. pinning service principals to trusted networks.",
+          "setting": "Account console network policies (account admin)",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-d0d16207"
+          ],
+          "quote": "allow and deny rules that combine who is calling, from where they are calling, and what they can reach"
+        },
+        {
+          "name": "Service principal OAuth secret lifetime",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "databricks-1"
+          ],
+          "what": "Each OAuth secret gets a lifetime set at creation, max 730 days.",
+          "setting": "Service principal > Secrets > Generate secret (account or workspace admin)",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search26"
+          ],
+          "quote": "Set the secret’s lifetime in days (maximum 730 days)."
+        },
+        {
+          "name": "OAuth secret scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "databricks-1"
+          ],
+          "what": "Admins choose API scopes when generating a secret; they cannot be changed later.",
+          "setting": "Service principal > Secrets > Generate secret",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search26"
+          ],
+          "quote": "Scopes are set when you generate the secret and can’t be changed afterward."
+        },
+        {
+          "name": "Deactivate a service principal",
+          "effect": "revoke",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2"
+          ],
+          "what": "Deactivated service principals cannot authenticate; their OAuth secrets and tokens stop working until reactivated.",
+          "setting": "Account Service Principals API (account level); Workspace Service Principals API (workspace level)",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-d777e026"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No account-wide switch to disable PATs across all workspaces was found; the toggle is per workspace.",
+        "Whether IP access lists explicitly cover PAT/OAuth API calls is implied (workspace-level APIs) but not stated.",
+        "Whether context-based ingress rules can distinguish auth method (PAT vs OAuth) is not stated.",
+        "How to update or delete federation policies, and how to revoke an individual OAuth secret, were not covered on the fetched pages.",
+        "TTL min/max ranges, and whether built-in databricks-cli app follows app-connection TTL defaults, not confirmed.",
+        "Single-use refresh token details page returned 404; defaults per app not confirmed.",
+        "Azure/GCP capabilities and tiers not checked."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "databricks-1",
+      "provider_id": "databricks",
+      "name": "OAuth M2M",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth user-to-machine and machine-to-machine, external token federation, and legacy personal access tokens.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "External IdP tokens exchange into Databricks OAuth using configured issuer/audience/subject trust; workload CI/runtime federation supported.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Enterprise tier. Separate account/workspace IP lists protect public UI/API access; PrivateLink traffic is not filtered by them. Context-based ingress (Enterprise) can add rules combining identity (e.g. service principal), network source and access type.",
+        "evidence_refs": [
+          "turn5search18",
+          "turn24search7",
+          "turn24search1",
+          "fc-d0d16207"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 3600,
+        "configurable": "no",
+        "summary": "1 hour",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "absolute",
+        "summary": "Re-mint a 1-hour access token with the service principal client ID and OAuth secret (SDK/CLI do this automatically). The OAuth secret has a set lifetime of up to 730 days and can be scoped.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "administration": {
+        "summary": "Service principals, entitlements/resource ACLs, federation policies, PAT controls and context-based ingress controls.",
+        "conditions": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+        "evidence_refs": [
+          "turn5search18",
+          "turn24search7",
+          "turn24search1"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Credential belongs to a service principal, not a user.",
+          "evidence_refs": [
+            "turn5search26"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "OAuth secrets are listed per service principal on its Credentials & secrets tab; no account-wide secret report found.",
+          "evidence_refs": [
+            "turn5search26"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Account console > User management > Service principals > <SP> > Credentials & secrets (per SP)",
+          "api": "GET /api/2.0/accounts/{account_id}/servicePrincipals/{service_principal}/credentials/secrets",
+          "cli": "databricks account service-principal-secrets list SERVICE_PRINCIPAL_ID",
+          "evidence_refs": [
+            "turn5search26",
+            "fc-8f2795ab",
+            "fc-c8296a1a"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "SQL: SELECT * FROM system.access.audit WHERE service_name='workspace' AND action_name='workspaceExport' (filter user_identity.email)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ae5ed64d",
+            "fc-1f6728c3"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Client secret format not documented by Databricks. GitHub scans it as databricks_oauth_secret_token (no push protection). Client ID = service principal application ID."
+        },
+        "log_sources": [
+          {
+            "name": "Databricks audit logs (system.access.audit system table / audit log delivery)",
+            "notes": "Account- and workspace-level events; account-level rows have workspace_id 0. No general retention stated on the table page; events of a deleted workspace older than 14 days are removed."
+          },
+          {
+            "name": "Service principal secrets list API",
+            "notes": "Returns id, secret_hash, status, create_time, expire_time per secret; metadata only."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "request_params.client_id",
+            "log": "system.access.audit (accounts.mintOAuthToken)",
+            "notes": "Service principal application ID used in the client_credentials grant"
+          },
+          {
+            "field": "request_params.secret_id",
+            "log": "system.access.audit (servicePrincipalCredentials.create/delete)",
+            "notes": "Which OAuth secret was created or deleted"
+          },
+          {
+            "field": "request_params.service_principal",
+            "log": "system.access.audit (servicePrincipalCredentials)",
+            "notes": "Owning service principal"
+          },
+          {
+            "field": "identity_metadata.run_as",
+            "log": "system.access.audit",
+            "notes": "Identity used for authorization on API calls"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "servicePrincipalCredentials.create",
+            "stage": "create",
+            "notes": "OAuth secret generated; params include lifetime"
+          },
+          {
+            "event": "accounts.mintOAuthToken",
+            "stage": "use",
+            "notes": "Token minted; params grant_type, scope, expires_in, client_id"
+          },
+          {
+            "event": "accounts.accountInHouseOAuthClientAuthentication",
+            "stage": "use",
+            "notes": "OAuth client authenticated at account level"
+          },
+          {
+            "event": "accounts.oidcTokenAuthorization",
+            "stage": "use",
+            "notes": "API call authorized with an OAuth token"
+          },
+          {
+            "event": "servicePrincipalCredentials.list",
+            "stage": "change",
+            "notes": "Admin enumerated secrets"
+          },
+          {
+            "event": "servicePrincipalCredentials.delete",
+            "stage": "revoke",
+            "notes": "Secret deleted"
+          }
+        ],
+        "correlation_keys": [
+          "user_identity.email",
+          "identity_metadata.run_by",
+          "identity_metadata.run_as",
+          "source_ip_address",
+          "user_agent",
+          "session_id",
+          "workspace_id",
+          "request_params",
+          "request_params.client_id",
+          "request_params.secret_id"
+        ],
+        "anomaly_cues": [
+          "mintOAuthToken for a client_id from a source_ip_address outside the workload's known egress range",
+          "new servicePrincipalCredentials.create on a long-lived SP shortly followed by token minting from a new IP",
+          "SP secret created by a non-automation admin identity",
+          "mintOAuthToken with grant_type client_credentials at unusual volume or hours for a batch SP",
+          "servicePrincipalCredentials.list by an unexpected admin (reconnaissance)"
+        ],
+        "containment": {
+          "steps": "Delete the secret (DELETE /api/2.0/accounts/{account_id}/servicePrincipals/{service_principal}/credentials/secrets/{secret_id}); to stop tokens already minted, deactivate the service principal via the Account Service Principals API, then rotate.",
+          "kills_existing": "partial",
+          "notes": "Docs do not say whether deleting a secret invalidates issued access tokens (1-hour lifetime). SP deactivation blocks all its tokens."
+        },
+        "sample_query": {
+          "language": "Databricks SQL (system.access.audit)",
+          "query": "SELECT event_time, request_params['client_id'] AS client_id, source_ip_address, user_agent, response.statusCode FROM system.access.audit WHERE service_name = 'accounts' AND action_name = 'mintOAuthToken' AND event_date >= current_date() - INTERVAL 30 DAYS AND request_params['client_id'] = '<sp-application-id>' ORDER BY event_time DESC",
+          "purpose": "See where and how often a service principal mints OAuth tokens"
+        },
+        "unknown": [
+          "OAuth secret prefix/regex",
+          "whether deleting a secret revokes issued access tokens",
+          "which secret_id was used to mint a given token (mintOAuthToken params list no secret_id)",
+          "authenticationMethod values",
+          "exact retention of system.access.audit"
+        ],
+        "evidence_refs": [
+          "fc-1f6728c3",
+          "fc-ae5ed64d",
+          "turn5search26",
+          "fc-475582d1",
+          "fc-d777e026",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /api/2.0/workspace/export",
+            "reveals": "Notebook or whole-directory contents (source code, sometimes embedded secrets/results)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "workspace.workspaceExport",
+            "log_notes": "Audit log / system.access.audit; user_identity shows the caller. Docs describe the event as a notebook export."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-0c3101b7",
+          "fc-1f6728c3",
+          "fc-ae5ed64d"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0c3101b7",
+      "title": "Export a workspace object | Databricks API Reference",
+      "url": "https://docs.databricks.com/api/workspace/workspace/export",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1f6728c3",
+      "title": "Audit log reference (Account-level authentication events)",
+      "url": "https://docs.databricks.com/aws/en/admin/account-settings/audit-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-475582d1",
+      "title": "Service Principal Secrets API - Delete",
+      "url": "https://docs.databricks.com/api/account/serviceprincipalsecrets/delete",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8f2795ab",
+      "title": "List service principal secrets (Account API)",
+      "url": "https://docs.databricks.com/api/account/serviceprincipalsecrets/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae5ed64d",
+      "title": "Audit log system table reference",
+      "url": "https://docs.databricks.com/aws/en/admin/system-tables/audit-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c8296a1a",
+      "title": "account service-principal-secrets command group",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/cli/reference/account-service-principal-secrets-commands",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d0d16207",
+      "title": "Context-based ingress control - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/network/front-end/context-based-ingress",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d777e026",
+      "title": "Manage service principals",
+      "url": "https://docs.databricks.com/aws/en/admin/users-groups/manage-service-principals",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn24search1",
+      "title": "Monitor and revoke personal access tokens - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/admin/access-control/tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn24search7",
+      "title": "Manage personal access token permissions - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/auth/api-access-permissions",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search18",
+      "title": "Manage IP access lists - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/network/front-end/ip-access-list",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search2",
+      "title": "Authenticate access to Databricks using OAuth token federation ...",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-federation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search26",
+      "title": "Authorize service principal access to Databricks with OAuth ...",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-m2m",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search6",
+      "title": "Authenticate with an identity provider token - Databricks",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-federation-exchange",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

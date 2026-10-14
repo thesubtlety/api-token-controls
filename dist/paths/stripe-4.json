@@ -1,0 +1,308 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "scope_notes": "Separate Dashboard SSO/session controls from key access policies. OAuth Connect and Apps are different authorization surfaces.",
+      "controls": [
+        {
+          "name": "Access policies (IP addresses / Advanced)",
+          "effect": "limit_network",
+          "applies_to": [
+            "stripe-1",
+            "stripe-4"
+          ],
+          "what": "Blocks key use outside allowed IPs/CIDRs, ASNs or countries, or from VPNs, proxies and Tor.",
+          "setting": "Developers > Access policies; API keys > key ⋯ > Manage access policy",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search3"
+          ],
+          "quote": "If someone attempts a request using a key they can’t access, Stripe blocks the request and notifies you."
+        },
+        {
+          "name": "Approval rules (agent-tagged keys)",
+          "effect": "other",
+          "applies_to": [
+            "stripe-1",
+            "stripe-4"
+          ],
+          "what": "Pauses or blocks sensitive actions by agent-tagged keys until a reviewer approves; default rules cover refunds and subscription cancellations.",
+          "setting": "Settings > Approvals > Create rule (Administrator by default)",
+          "plan": null,
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-55e7a044"
+          ],
+          "quote": "Stripe maintains default approval rules for the following sensitive actions taken by agent-tagged API keys"
+        },
+        {
+          "name": "Service principal subject and permissions",
+          "effect": "limit_resources",
+          "applies_to": [
+            "stripe-4"
+          ],
+          "what": "Only workloads matching the trusted IdP and subject get tokens, limited to assigned permissions.",
+          "setting": "Organization > Developers > API authentication > Service principals",
+          "plan": "Private preview; requires a Stripe organization",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-29a3be8d"
+          ],
+          "quote": "Assign permissions to the service principal in the same way you would when creating an API key."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No account setting found to forbid creating unrestricted secret keys or to require key expiry.",
+        "Whether access policies and approval rules can be attached to organization API keys.",
+        "Whether uninstalling a Stripe App immediately revokes its OAuth refresh tokens is not stated.",
+        "Which organization roles can create org API keys or service principals, and how to disable a service principal.",
+        "Approval rules' actor condition for service principals is mentioned on the service principals page but not described on the approvals page."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "stripe-4",
+      "provider_id": "stripe",
+      "name": "Workload Identity Federation (service principal)",
+      "family": "federation",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A workload on AWS or Google Cloud gets an identity token from its cloud provider and exchanges it, using the service principal's client ID (oacli_...), for a short-lived Stripe access token used to call the API. During the preview, the Ruby and TypeScript SDKs handle the exchange; requests name the target account with Stripe-Context.",
+        "evidence_refs": [
+          "fc-e56c55ba"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "Trust is set on an organization-level service principal by the provider's issuer URL and the workload's subject: the IAM role ARN on AWS (outbound identity federation, audience https://access.stripe.com/wif) or the service account's numeric unique ID on Google Cloud.",
+        "evidence_refs": [
+          "fc-e56c55ba"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "Stripe says access policies can be applied to service principals, but the WIF page does not describe how they are enforced on exchanged tokens. Without a policy, tokens can be used from anywhere; only a trusted workload can obtain them.",
+        "evidence_refs": [
+          "fc-29a3be8d",
+          "fc-e56c55ba"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "1 hour",
+        "evidence_refs": [
+          "fc-e56c55ba"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "policy",
+        "summary": "No refresh token is documented; the SDK exchanges a fresh cloud identity token for a new access token, so continued access depends on the workload keeping its cloud identity and on the service principal's trust settings.",
+        "evidence_refs": [
+          "fc-e56c55ba"
+        ]
+      },
+      "administration": {
+        "summary": "Service principals are created in the organization Dashboard (Organization > Developers > API authentication > Service principals) with a trusted identity provider, one or more subjects, and permissions assigned like an API key. Stripe says activity can be monitored per service principal and controls such as access policies and approval rules can be applied.",
+        "conditions": "Private preview; requires a Stripe organization. Only the Ruby and TypeScript SDKs (preview builds) are supported, and service principals support only WIF as an authentication method during the preview. Which roles can create service principals, and how to revoke or disable one, were not found.",
+        "evidence_refs": [
+          "fc-29a3be8d",
+          "fc-e56c55ba"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "A service principal is a non-human identity.",
+          "evidence_refs": [
+            "fc-29a3be8d"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Organization > Developers > API authentication > Service principals page.",
+          "evidence_refs": [
+            "fc-29a3be8d"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Workbench > Logs; filter Method GET, API endpoint /v1/customers, Account",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-a3c07fae"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "oacli_ (client ID, not a secret)",
+          "notes": "Client ID oacli_... (example oacli_live_...). Issued Stripe access token format not documented; lifetime 1 hour. Cloud identity token audience https://access.stripe.com/wif."
+        },
+        "log_sources": [
+          {
+            "name": "Workbench request logs",
+            "notes": "Requests made with the exchanged token; service-principal attribution fields not documented."
+          },
+          {
+            "name": "AWS CloudTrail / Google Cloud audit logs",
+            "notes": "Workload side: AWS sts:GetWebIdentityToken calls with audience https://access.stripe.com/wif; GCP identity token minting for the service account."
+          },
+          {
+            "name": "Activity Logs API",
+            "notes": "No documented service principal action types."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "sts:IdentityTokenAudience",
+            "log": "AWS IAM policy condition (CloudTrail context)",
+            "notes": "Value https://access.stripe.com/wif identifies Stripe-bound token requests"
+          },
+          {
+            "field": "sub",
+            "log": "Cloud identity token",
+            "notes": "IAM role ARN (AWS) or numeric service account unique ID (GCP) registered as the service principal subject"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "sub",
+          "Stripe-Context",
+          "request.id",
+          "context"
+        ],
+        "anomaly_cues": [
+          "sts:GetWebIdentityToken for audience https://access.stripe.com/wif from a role/session that is not the expected workload",
+          "New subject added to a service principal, or new trusted identity provider issuer URL",
+          "GCP: unexpected principals granted Service Account OpenID Connect Identity Token Creator on the Stripe-caller service account",
+          "Stripe API calls with Stripe-Context for accounts the workload never targets",
+          "Local/laptop assumption of the workload role (assumed-role session names from humans)"
+        ],
+        "containment": {
+          "steps": "Cloud side: remove the WIF inline policy / revoke role sessions (AWS) or remove token-creator grants and disable the service account (GCP). Stripe side: edit or delete the service principal / subject in Organization > Developers > API authentication > Service principals.",
+          "kills_existing": "unknown",
+          "notes": "Exchanged tokens expire in 1 hour; docs do not say whether deleting the service principal revokes tokens already issued."
+        },
+        "sample_query": {
+          "language": "Stripe Events API (HTTP GET)",
+          "query": "curl -G https://api.stripe.com/v1/events -H \"Authorization: Bearer $WIF_ACCESS_TOKEN\" -H \"Stripe-Context: acct_EXAMPLE0001\" -d \"type=payout.*\" -d \"created[gte]=1788998400\"",
+          "purpose": "Per-account sweep of recent payouts in accounts the service principal can reach; no Stripe-side service-principal filter is documented."
+        },
+        "unknown": [
+          "Stripe-side log fields identifying a service principal on requests",
+          "Lifecycle events for service principal/identity provider changes",
+          "Token exchange endpoint and failure logging",
+          "Whether deleting a service principal revokes live tokens",
+          "Issued access token prefix",
+          "CloudTrail field names for GetWebIdentityToken (not researched; vendor-side hunt query omitted)"
+        ],
+        "evidence_refs": [
+          "fc-e56c55ba",
+          "fc-29a3be8d"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /v1/customers",
+            "reveals": "Customer records, if the service principal was granted that permission",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Workbench request log (Dashboard > Workbench > Logs), not Security history; retention not stated. Private preview; docs do not say how service-principal requests are labeled."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-29a3be8d",
+          "fc-1562f317",
+          "fc-a3c07fae"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1562f317",
+      "title": "List all customers | Stripe API Reference",
+      "url": "https://docs.stripe.com/api/customers/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-29a3be8d",
+      "title": "Service principals | Stripe Documentation",
+      "url": "https://docs.stripe.com/service-principals",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-55e7a044",
+      "title": "Set up two-party approvals",
+      "url": "https://docs.stripe.com/account/approvals",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a3c07fae",
+      "title": "How Workbench works",
+      "url": "https://docs.stripe.com/workbench/overview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e56c55ba",
+      "title": "Workload Identity Federation | Stripe Documentation",
+      "url": "https://docs.stripe.com/workload-identity-federation",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search3",
+      "title": "API keys | Stripe Documentation",
+      "url": "https://docs.stripe.com/keys",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

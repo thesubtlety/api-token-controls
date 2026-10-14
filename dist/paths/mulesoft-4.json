@@ -1,0 +1,222 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "mulesoft",
+      "name": "MuleSoft Anypoint",
+      "scope_notes": "Covers MuleSoft Anypoint Platform. Anypoint Platform control plane (US/EU/Gov); IP allowlist only US/EU commercial; audit export needs Anypoint Integration Advanced or Titanium.",
+      "controls": [
+        {
+          "name": "Reset environment client_secret",
+          "effect": "require_rotation",
+          "applies_to": [
+            "mulesoft-4"
+          ],
+          "what": "Change environment secret via KB procedure or support.",
+          "setting": "Salesforce Help article / support",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8f7e07d9"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether IP allowlist applies to connected app token requests or API calls with an issued token",
+        "Whether deleting a client-credentials app or rotating its secret invalidates unexpired access tokens",
+        "Whether a client-credentials app's tokens can be revoked without deleting it (Revoke Authorization is documented for user authorizations)",
+        "Exact UI setting name for disabling connected apps org-wide",
+        "Whether read/GET API calls are audit logged",
+        "Environment client secret rotation procedure (help.salesforce.com KB 001115221 did not render)",
+        "Bearer token format/prefix",
+        "Whether IdP conditional access applies to connected app tokens (not stated)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "mulesoft-4",
+      "provider_id": "mulesoft",
+      "name": "Environment / business group client ID and client secret",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Each environment and the root business group has a client ID/secret used to pair customer-hosted Mule runtimes and API gateways; organization clients can get tokens via client_credentials. Root business group credentials grant permissions across all child business groups.",
+        "evidence_refs": [
+          "fc-8f7e07d9",
+          "fc-eeca1b60",
+          "fc-8fc611df"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static shared secret.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "excluded",
+        "enforcement_stage": "login_only",
+        "boundary": "The org IP allowlist covers only user sign-ins with Anypoint credentials; environment credentials are not covered. No other IP control documented.",
+        "evidence_refs": [
+          "fc-8a84839a"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "not documented",
+        "summary": "Secret is reused; reset via KB procedure or support.",
+        "evidence_refs": [
+          "fc-8f7e07d9"
+        ]
+      },
+      "administration": {
+        "summary": "Org admins can view the values; changing the secret points to a Salesforce Help article or support.",
+        "conditions": "Organization Administrator permission.",
+        "evidence_refs": [
+          "fc-8f7e07d9",
+          "fc-eeca1b60"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Credentials belong to an environment or business group, not a user.",
+          "evidence_refs": [
+            "fc-8f7e07d9"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Access Management > Environments shows each environment's client ID; Organization tab shows org/business group credentials.",
+          "evidence_refs": [
+            "fc-e4cc6b0a",
+            "fc-8f7e07d9"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Anypoint Platform audit log (Access Management > Audit Log, Audit Log Query API)",
+            "notes": "Default retention 1 year (6 years for orgs before 2023-07-10), configurable 30-2190 days; export via Telemetry Exporter needs Anypoint Integration Advanced or Titanium."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "Environment"
+        ],
+        "anomaly_cues": [
+          "Unknown Mule runtime or gateway registering to an environment"
+        ],
+        "containment": {
+          "steps": "Reset environment client_secret per KB or contact support.",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "No audit event documented for viewing or resetting environment client secrets"
+        ],
+        "evidence_refs": [
+          "fc-8f7e07d9"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST https://anypoint.mulesoft.com/accounts/oauth2/token (client_credentials)",
+            "reveals": "Bearer token for org client",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "What APIs an environment client token can call"
+        ],
+        "evidence_refs": [
+          "fc-8fc611df"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-8a84839a",
+      "title": "Managing IP Allowlists in Access Management",
+      "url": "https://docs.mulesoft.com/access-management/managing-ip-allowlists",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8f7e07d9",
+      "title": "Anypoint Platform Environments",
+      "url": "https://docs.mulesoft.com/access-management/environments",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8fc611df",
+      "title": "Access Management API - Authentication",
+      "url": "https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/access-management-api/minor/1.0/pages/Authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e4cc6b0a",
+      "title": "Configuring Organization Credentials in Mule Runtime 4",
+      "url": "https://docs.mulesoft.com/mule-gateway/mule-gateway-org-credentials-mule4",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eeca1b60",
+      "title": "Managing Business Groups in Anypoint Platform",
+      "url": "https://docs.mulesoft.com/access-management/organization",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

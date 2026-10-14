@@ -1,0 +1,1287 @@
+{
+ "id": "pagerduty",
+ "name": "PagerDuty",
+ "scope_notes": "SaaS; REST API on current plans, user token keys need Advanced Permissions, Audit Trail on Business/Enterprise for Incident Management/Digital Operations (legacy); SCIM uses general access keys or app OAuth tokens.",
+ "controls": [
+  {
+   "name": "Disable general access REST API key",
+   "effect": "disable",
+   "applies_to": [
+    "pagerduty-1"
+   ],
+   "what": "Stops the key working with the REST API without deleting it; can be re-enabled.",
+   "setting": "Integrations > Developer Tools > API Access Keys > Disable",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-d45e559a"
+   ]
+  },
+  {
+   "name": "Delete (Remove) general access REST API key",
+   "effect": "revoke",
+   "applies_to": [
+    "pagerduty-1"
+   ],
+   "what": "Permanently removes the key.",
+   "setting": "Integrations > Developer Tools > API Access Keys > Remove",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-d45e559a"
+   ]
+  },
+  {
+   "name": "Read-only API Key",
+   "effect": "limit_scope",
+   "applies_to": [
+    "pagerduty-1"
+   ],
+   "what": "Restricts a general access key to GET calls.",
+   "setting": "Create New API Key > Read-only API Key checkbox",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-d45e559a"
+   ]
+  },
+  {
+   "name": "Delete another user's API user token",
+   "effect": "revoke",
+   "applies_to": [
+    "pagerduty-2"
+   ],
+   "what": "Admins/Account Owner can delete other users' personal keys, except keys of Account Owner, Admins or Global Admins.",
+   "setting": "User Settings > API Access > Remove",
+   "plan": "Advanced Permissions accounts",
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-d45e559a"
+   ]
+  },
+  {
+   "name": "User permissions bound user tokens",
+   "effect": "limit_scope",
+   "applies_to": [
+    "pagerduty-2"
+   ],
+   "what": "User token requests are limited to the user's own permissions.",
+   "setting": "User role / Advanced Permissions",
+   "plan": "Advanced Permissions accounts",
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-d45e559a"
+   ]
+  },
+  {
+   "name": "Install (admin approval) of public OAuth apps",
+   "effect": "require_approval",
+   "applies_to": [
+    "pagerduty-4"
+   ],
+   "what": "A public Scoped OAuth app cannot access the account until an Admin installs it and approves its scopes.",
+   "setting": "App installation page > Install on your account",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-fe7d09ba"
+   ]
+  },
+  {
+   "name": "Revoke All User Tokens",
+   "effect": "revoke",
+   "applies_to": [
+    "pagerduty-4"
+   ],
+   "what": "Admin revokes every user token issued for an installed app; runs in the background.",
+   "setting": "Integrations > OAuth Apps > (app) > Revoke All User Tokens",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-fe7d09ba"
+   ]
+  },
+  {
+   "name": "Uninstall",
+   "effect": "revoke",
+   "applies_to": [
+    "pagerduty-4"
+   ],
+   "what": "Revokes all user tokens for the app and blocks reauthorization until reinstalled.",
+   "setting": "Integrations > OAuth Apps > (app) > Uninstall",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-fe7d09ba"
+   ]
+  },
+  {
+   "name": "Revoke All Tokens (App Registration)",
+   "effect": "revoke",
+   "applies_to": [
+    "pagerduty-3",
+    "pagerduty-4"
+   ],
+   "what": "App owner invalidates all OAuth tokens issued to the app.",
+   "setting": "Integrations > Developer Tools > App Registration > app > OAuth Client > Revoke All Tokens",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-583edb81"
+   ]
+  },
+  {
+   "name": "Scoped OAuth scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "pagerduty-3",
+    "pagerduty-4"
+   ],
+   "what": "Per-resource read/write scopes (e.g. incidents.read) limit what the token can call.",
+   "setting": "App Registration > OAuth > Scoped OAuth",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-51494aac"
+   ]
+  },
+  {
+   "name": "Delete all OAuth delegations",
+   "effect": "revoke",
+   "applies_to": [
+    "pagerduty-4"
+   ],
+   "what": "Revokes a user's mobile or web delegations (signs them out).",
+   "setting": "DELETE /oauth_delegations?user_id=..&type=mobile,web",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-47e47aba"
+   ]
+  },
+  {
+   "name": "Change Another User's Password",
+   "effect": "revoke",
+   "applies_to": [
+    "pagerduty-4"
+   ],
+   "what": "Admin password change also revokes the user's OAuth tokens.",
+   "setting": "People > Users > user > User Settings > Change Password",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-03f349c8"
+   ]
+  },
+  {
+   "name": "Generate a new integration key",
+   "effect": "require_rotation",
+   "applies_to": [
+    "pagerduty-5"
+   ],
+   "what": "Overwrites the integration key immediately.",
+   "setting": "Services > Service Directory > service > Integrations > Edit Integration > Generate a new integration key",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-74172493"
+   ]
+  },
+  {
+   "name": "Delete Integration",
+   "effect": "revoke",
+   "applies_to": [
+    "pagerduty-5"
+   ],
+   "what": "Deletes the integration and its key; cannot be recovered.",
+   "setting": "Services > service > Integrations > Delete Integration",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-74172493"
+   ]
+  },
+  {
+   "name": "Base role: personal REST API key permission",
+   "effect": "disable",
+   "applies_to": [
+    "pagerduty-2"
+   ],
+   "what": "Under Advanced Permissions, every base role except Limited Stakeholder can create personal REST API keys; assigning Limited Stakeholder removes the ability.",
+   "setting": "People > Users > user base role",
+   "plan": "Plans with Advanced Permissions (Professional, Business, Enterprise for Incident Management, Digital Operations legacy, PD Reliability Platform)",
+   "default": "varies",
+   "level": "user",
+   "evidence_refs": [
+    "fc-0c0dbee0"
+   ]
+  },
+  {
+   "name": "App Registration role requirement",
+   "effect": "other",
+   "applies_to": [
+    "pagerduty-3"
+   ],
+   "what": "Only Manager, Global Admin, or Account Owner base roles can register apps, so lower roles cannot create private OAuth apps.",
+   "setting": "Integrations > Developer Tools > App Registration",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-6ba98dee"
+   ]
+  },
+  {
+   "name": "Manager role required for integration keys",
+   "effect": "other",
+   "applies_to": [
+    "pagerduty-5"
+   ],
+   "what": "Only users with a Manager role or above can generate Events API integration keys.",
+   "setting": "User base role",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "fc-d45e559a"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "pagerduty-1",
+   "what": "No IP/network restriction for REST API keys; the IP allow list explicitly excludes REST API calls.",
+   "kind": "network",
+   "evidence_refs": [
+    "fc-67bc3044"
+   ]
+  },
+  {
+   "path_id": "pagerduty-2",
+   "what": "No IP/network restriction for user token keys.",
+   "kind": "network",
+   "evidence_refs": [
+    "fc-67bc3044"
+   ]
+  },
+  {
+   "path_id": "pagerduty-3",
+   "what": "No IP/network restriction for OAuth app tokens.",
+   "kind": "network",
+   "evidence_refs": [
+    "fc-67bc3044"
+   ]
+  },
+  {
+   "path_id": "pagerduty-4",
+   "what": "No IP/network restriction for OAuth user tokens.",
+   "kind": "network",
+   "evidence_refs": [
+    "fc-67bc3044"
+   ]
+  },
+  {
+   "path_id": "pagerduty-5",
+   "what": "No IP restriction on Events API traffic.",
+   "kind": "network",
+   "evidence_refs": [
+    "fc-67bc3044"
+   ]
+  },
+  {
+   "path_id": "pagerduty-4",
+   "what": "Deleting an app's OAuth functionality does not revoke tokens already issued.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-6ba98dee"
+   ]
+  },
+  {
+   "path_id": "pagerduty-2",
+   "what": "Admins cannot delete user token keys belonging to the Account Owner, Admins or Global Admins.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-d45e559a"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether general access or user token keys can be given an expiry, or ever expire.",
+  "Whether SSO enforcement or deprovisioning in the IdP affects existing API keys (only \"user leaves the account\" disables user keys).",
+  "Any admin setting to block users from creating user token keys or to block Classic User OAuth app authorization.",
+  "Whether API key create/disable/delete events appear in the Audit Trail (the tracked resource list does not include API keys).",
+  "Whether disabling/deleting a key or Revoke All User Tokens ends in-flight access immediately (Revoke All runs in the background).",
+  "Whether private app (client credentials) tokens can be revoked by admins other than the app owner; client secret expiry/rotation.",
+  "Whether read (GET) API calls are logged anywhere customer-visible.",
+  "Whether integration key creation/rotation appears in audit records (support page says integration add/remove is not captured; Audit API lists Integrations as an associated resource of Services)."
+ ],
+ "credentials": [
+  {
+   "id": "pagerduty-1",
+   "name": "General Access REST API Key (account API key)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "20-character account-level key created by an Admin or Account Owner, sent as 'Authorization: Token token=<key>'. Not tied to the creating user; full or read-only access to all account data.",
+    "evidence_refs": [
+     "fc-7b9b83d0",
+     "fc-d45e559a"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static shared secret; no workload/OIDC federation documented.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "excluded",
+    "enforcement_stage": "login_only",
+    "boundary": "IP Allow List for User Sessions covers web/mobile logins only; REST API calls are explicitly excluded.",
+    "evidence_refs": [
+     "fc-67bc3044"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented",
+    "evidence_refs": [
+     "fc-583edb81"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "No documented expiry; key works until disabled or deleted.",
+    "summary": "Rotate manually: create new key, update clients, delete old.",
+    "evidence_refs": [
+     "fc-a75d8495",
+     "fc-583edb81"
+    ]
+   },
+   "administration": {
+    "summary": "Admins/Account Owner create, disable, re-enable and delete under Integrations > Developer Tools > API Access Keys. Table shows description, creation date, access level, disabled status; no last-used date documented.",
+    "conditions": "REST API available on current pricing plans; also used for SCIM provisioning.",
+    "evidence_refs": [
+     "fc-d45e559a",
+     "fc-fa96a78a",
+     "fc-7546e794"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Account API keys are tied to the account, not to the user who created them.",
+     "evidence_refs": [
+      "fc-7b9b83d0"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Integrations > Developer Tools > API Access Keys table lists every general access key with status.",
+     "evidence_refs": [
+      "fc-d45e559a"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "20-character string; no documented prefix."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Trail (UI + GET /audit/records)",
+      "notes": "Business, Enterprise for Incident Management, Digital Operations (legacy); 12-month retention; config changes on users, teams, schedules, escalation policies, services, IP allow lists only. Admin / global API token, scope audit_records.read."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "method.truncated_token",
+      "log": "Audit record",
+      "notes": "Last 4 chars of the token when method.type=api_token."
+     },
+     {
+      "field": "actors[] (api_key_reference)",
+      "log": "Audit record",
+      "notes": "Actor type for API-key actions."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "action=create|update|delete with method.type=api_token",
+      "stage": "use",
+      "notes": "Config changes made with the key; reads not documented as logged."
+     }
+    ],
+    "correlation_keys": [
+     "method.type",
+     "method.truncated_token",
+     "actors[].type/id",
+     "execution_context.request_id",
+     "execution_context.remote_address"
+    ],
+    "anomaly_cues": [
+     "Config changes with method.type=api_token from unexpected remote_address",
+     "Changes to IP allow lists, users or roles via api_token",
+     "Bulk incident or user reads (not visible in audit)"
+    ],
+    "containment": {
+     "steps": "Integrations > Developer Tools > API Access Keys: Disable (reversible) or Remove (permanent). Issue a replacement key first if SCIM or recovery depends on it.",
+     "kills_existing": "unknown",
+     "notes": "Docs say a disabled key stops working with the REST API; timing not stated. Keep one key for IP-allow-list lockout recovery."
+    },
+    "sample_query": null,
+    "unknown": [
+     "API key create/disable/delete audit events",
+     "Last-used timestamp for account keys"
+    ],
+    "evidence_refs": [
+     "fc-62771079",
+     "fc-f760aba4",
+     "fc-47e47aba",
+     "fc-d45e559a"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /abilities",
+      "reveals": "Account features/plan capabilities",
+      "bulk": false,
+      "scope": "abilities.read",
+      "rate_limit": "960 req/min per account key",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit records cover config changes only."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /users",
+      "reveals": "All users, emails, roles",
+      "bulk": true,
+      "scope": "users.read",
+      "rate_limit": "960 req/min per account key",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not documented as audited."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /incidents",
+      "reveals": "All incidents",
+      "bulk": true,
+      "scope": "incidents.read",
+      "rate_limit": "960 req/min per account key",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /log_entries",
+      "reveals": "Incident log entries across the account",
+      "bulk": true,
+      "scope": "incidents.read",
+      "rate_limit": "960 req/min per account key",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /analytics/raw/incidents",
+      "reveals": "Enriched incident data; account keys need no team/service filter",
+      "bulk": true,
+      "scope": "analytics.write",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /users",
+      "reveals": "All users on the account (names, emails, roles)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Audit records cover configuration changes only; reads are not listed as audited."
+     }
+    ],
+    "unknown": [
+     "GET /users/me does not work with account keys, so no whoami for this credential."
+    ],
+    "evidence_refs": [
+     "fc-47e47aba",
+     "fc-27211ae1",
+     "fc-f760aba4",
+     "fc-079a8df5"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "pagerduty-2",
+   "name": "User Token REST API Key (personal REST API key)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "20-character key created by a user in My Profile > User Settings > API Access; requests run with that user's permissions. Same Token header format as account keys.",
+    "evidence_refs": [
+     "fc-d45e559a",
+     "fc-7b9b83d0"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static secret; none documented.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "excluded",
+    "enforcement_stage": "login_only",
+    "boundary": "IP allow list does not restrict REST API calls.",
+    "evidence_refs": [
+     "fc-67bc3044"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented; disabled if user leaves",
+    "evidence_refs": [
+     "fc-583edb81"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "No documented expiry.",
+    "summary": "Lost or rotated keys are deleted and recreated.",
+    "evidence_refs": [
+     "fc-d45e559a"
+    ]
+   },
+   "administration": {
+    "summary": "Requires Advanced Permissions. Any base role from Restricted Access up can create their own keys. Admins can delete other users' keys except those of Account Owner, Admins or Global Admins. Table shows last used date.",
+    "conditions": "Advanced Permissions accounts only. No admin setting to disable user key creation is documented.",
+    "evidence_refs": [
+     "fc-d45e559a",
+     "fc-f97376ea"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Docs say a user API key is disabled when the user leaves the account.",
+     "evidence_refs": [
+      "fc-583edb81"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "offboard": {
+     "ui": "People > Users > user name > Delete User (Advanced Permissions accounts go through the Offboarding flow)",
+     "api": "DELETE /users/{id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ac94729d",
+      "fc-079a8df5"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "20-character string; no documented prefix."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Trail (UI + GET /audit/records)",
+      "notes": "Business, Enterprise for Incident Management, Digital Operations (legacy); 12-month retention; config changes on users, teams, schedules, escalation policies, services, IP allow lists only. Admin / global API token, scope audit_records.read."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "method.truncated_token",
+      "log": "Audit record",
+      "notes": "Last 4 chars."
+     },
+     {
+      "field": "actors[] (user_reference)",
+      "log": "Audit record",
+      "notes": "Presumed acting user; not explicitly documented for user keys."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "action=create|update|delete with method.type=api_token",
+      "stage": "use",
+      "notes": "Config changes only."
+     }
+    ],
+    "correlation_keys": [
+     "method.type",
+     "method.truncated_token",
+     "actors[].type/id",
+     "execution_context.request_id",
+     "execution_context.remote_address"
+    ],
+    "anomaly_cues": [
+     "Check last used date in User Settings API Access table",
+     "Admin-user tokens used for config changes"
+    ],
+    "containment": {
+     "steps": "User or Admin: User Settings > API Access > Remove. Removing the user from the account disables their keys.",
+     "kills_existing": "unknown",
+     "notes": "Admins cannot remove keys of Admins/Global Admins/Account Owner; those users must remove their own."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Key create/delete audit events"
+    ],
+    "evidence_refs": [
+     "fc-62771079",
+     "fc-f760aba4",
+     "fc-47e47aba",
+     "fc-d45e559a",
+     "fc-583edb81"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /users/me",
+      "reveals": "Owning user and role",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "960 req/min per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /users",
+      "reveals": "Users visible to the owner",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "960 req/min per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /incidents",
+      "reveals": "Incidents the user can see",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "960 req/min per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /users",
+      "reveals": "Users the key owner can see",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Audit records cover configuration changes only."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-47e47aba",
+     "fc-27211ae1",
+     "fc-d45e559a",
+     "fc-079a8df5",
+     "fc-f760aba4"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "pagerduty-3",
+   "name": "Scoped OAuth app token (private app, client credentials)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A private app with Scoped OAuth exchanges client_id/client_secret at https://identity.pagerduty.com/oauth/token (client_credentials) for a Bearer token limited only by the app's scopes, not by any user.",
+    "evidence_refs": [
+     "fc-51494aac",
+     "fc-fe7d09ba"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "No workload identity federation documented; client secret only.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "excluded",
+    "enforcement_stage": "login_only",
+    "boundary": "IP allow list does not restrict REST API calls.",
+    "evidence_refs": [
+     "fc-67bc3044"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 86400,
+    "maximum_seconds": 86400,
+    "configurable": "no",
+    "summary": "Access token 1 day; client secret no documented expiry",
+    "evidence_refs": [
+     "fc-51494aac"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "Access token expires after 1 day.",
+    "summary": "App requests a new token with its client secret; no refresh token.",
+    "evidence_refs": [
+     "fc-51494aac"
+    ]
+   },
+   "administration": {
+    "summary": "Manager, Global Admin or Account Owner can register apps under Integrations > Developer Tools > App Registration. Private apps need no install review and are not in the OAuth Apps list (Manage Private Apps instead).",
+    "conditions": "App tokens are only issued on the account that created the app.",
+    "evidence_refs": [
+     "fc-6ba98dee",
+     "fc-fe7d09ba"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Client-credentials app tokens have no user involved.",
+     "evidence_refs": [
+      "fc-583edb81"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Private apps are listed under OAuth Apps > Manage Private Apps (and App Registration > My Apps); issued app tokens are not listed.",
+     "evidence_refs": [
+      "fc-fe7d09ba"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "Fixed 1-day lifetime; POST https://identity.pagerduty.com/oauth/token response field expires_in",
+     "cli": null,
+     "evidence_refs": [
+      "fc-51494aac"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "pdus+",
+     "notes": "Documented example access token is \"pdus+_EXAMPLE_KEY_ID_EXAMPLE_TOKEN\"; prefix not formally specified."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Trail (UI + GET /audit/records)",
+      "notes": "Business, Enterprise for Incident Management, Digital Operations (legacy); 12-month retention; config changes on users, teams, schedules, escalation policies, services, IP allow lists only. Admin / global API token, scope audit_records.read."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "method.truncated_token",
+      "log": "Audit record",
+      "notes": "Last 4 chars when method.type=oauth."
+     },
+     {
+      "field": "actors[] (app_reference)",
+      "log": "Audit record",
+      "notes": "Actor type for app actions."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "action=create|update|delete with method.type=oauth",
+      "stage": "use",
+      "notes": "Config changes."
+     }
+    ],
+    "correlation_keys": [
+     "method.type",
+     "method.truncated_token",
+     "actors[].type/id",
+     "execution_context.request_id",
+     "execution_context.remote_address"
+    ],
+    "anomaly_cues": [
+     "app_reference actors you do not recognize",
+     "Private apps created by Managers without review"
+    ],
+    "containment": {
+     "steps": "App Registration > app > OAuth Client > Revoke All Tokens, then delete and recreate OAuth functionality to replace the client secret (revoke first: deleting does not revoke tokens).",
+     "kills_existing": "yes",
+     "notes": "Docs say Revoke All Tokens invalidates all tokens; app tokens otherwise expire in 1 day."
+    },
+    "sample_query": null,
+    "unknown": [
+     "App registration/secret events in audit"
+    ],
+    "evidence_refs": [
+     "fc-62771079",
+     "fc-f760aba4",
+     "fc-47e47aba",
+     "fc-583edb81",
+     "fc-6ba98dee",
+     "fc-51494aac"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /abilities",
+      "reveals": "Account features",
+      "bulk": false,
+      "scope": "abilities.read",
+      "rate_limit": "960 req/min per app per account",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /incidents",
+      "reveals": "All incidents (app token not user-bounded)",
+      "bulk": true,
+      "scope": "incidents.read",
+      "rate_limit": "960 req/min per app per account",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /users",
+      "reveals": "All users (needs users.read scope)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Audit records cover configuration changes only."
+     }
+    ],
+    "unknown": [
+     "Whether GET /users/me works with an app token."
+    ],
+    "evidence_refs": [
+     "fc-51494aac",
+     "fc-079a8df5",
+     "fc-f760aba4"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "pagerduty-4",
+   "name": "User OAuth token (Scoped OAuth and Classic User OAuth apps)",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Authorization-code + PKCE flow; the user logs in and consents, and the app gets a Bearer token acting as that user, limited to the intersection of app scopes and user permissions. Classic apps use coarse read/write scopes.",
+    "evidence_refs": [
+     "fc-583edb81",
+     "fc-51494aac"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "The grant requires an interactive user login, which goes through the account login (SSO if configured); whether SSO policy is rechecked on refresh is not documented.",
+    "evidence_refs": [
+     "fc-583edb81"
+    ]
+   },
+   "ip_restriction": {
+    "status": "excluded",
+    "enforcement_stage": "login_only",
+    "boundary": "IP allow list applies to web/mobile sessions, not REST API calls or integrations.",
+    "evidence_refs": [
+     "fc-67bc3044"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 86400,
+    "maximum_seconds": 2592000,
+    "configurable": "no",
+    "summary": "Scoped: 1-day access, 30-day refresh, 1-year window. Classic: 30-day access, 210-day refresh, 3-year window.",
+    "evidence_refs": [
+     "fc-51494aac",
+     "fc-583edb81"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "Refresh token inactivity (30 d scoped / 210 d classic) within a rolling window (1 y / 3 y).",
+    "summary": "Refresh grant returns new access and refresh tokens.",
+    "evidence_refs": [
+     "fc-583edb81",
+     "fc-51494aac"
+    ]
+   },
+   "administration": {
+    "summary": "Public Scoped OAuth apps must be installed by an Admin, who approves scopes; Admins see who authorized, revoke all tokens, or uninstall. Classic apps work across accounts once created and appear in the installed list once authorized.",
+    "conditions": "Admin install gate applies to public Scoped OAuth apps; Classic app gating not stated.",
+    "evidence_refs": [
+     "fc-fe7d09ba",
+     "fc-583edb81"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Integrations > OAuth Apps: for each installed app admins see everyone who authorized it and when. Private apps are managed on a separate page.",
+     "evidence_refs": [
+      "fc-fe7d09ba"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "Fixed lifetimes (Scoped 1 day/30 days/1 year; Classic 30 days/210 days/3 years); token response from https://identity.pagerduty.com/oauth/token field expires_in",
+     "cli": null,
+     "evidence_refs": [
+      "fc-51494aac",
+      "fc-583edb81"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "pdus+",
+     "notes": "Example tokens \"pdus+_EXAMPLE_KEY_ID_EXAMPLE_TOKEN\"; an id_token JWT is also returned."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Trail (UI + GET /audit/records)",
+      "notes": "Business, Enterprise for Incident Management, Digital Operations (legacy); 12-month retention; config changes on users, teams, schedules, escalation policies, services, IP allow lists only. Admin / global API token, scope audit_records.read."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "method.truncated_token",
+      "log": "Audit record",
+      "notes": "Last 4 chars when method.type=oauth."
+     },
+     {
+      "field": "actors[]",
+      "log": "Audit record",
+      "notes": "Authorizing user and/or app reference."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "App install (audit trail event)",
+      "stage": "create",
+      "notes": "Installing an app creates an audit trail event; exact name not documented."
+     },
+     {
+      "event": "action=create|update|delete with method.type=oauth",
+      "stage": "use",
+      "notes": "Config changes."
+     }
+    ],
+    "correlation_keys": [
+     "method.type",
+     "method.truncated_token",
+     "actors[].type/id",
+     "execution_context.request_id",
+     "execution_context.remote_address"
+    ],
+    "anomaly_cues": [
+     "New installs or unknown authorizers on OAuth Apps page",
+     "Classic apps with write scope"
+    ],
+    "containment": {
+     "steps": "Integrations > OAuth Apps > app > Revoke All User Tokens or Uninstall; per-user: DELETE /oauth_delegations or admin password change.",
+     "kills_existing": "partial",
+     "notes": "Revoke All runs in the background; delegation deletion is synchronous."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact audit event names for install/uninstall/revoke"
+    ],
+    "evidence_refs": [
+     "fc-62771079",
+     "fc-f760aba4",
+     "fc-47e47aba",
+     "fc-fe7d09ba",
+     "fc-03f349c8"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /users/me",
+      "reveals": "Authorizing user",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "960 req/min per app per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /incidents",
+      "reveals": "Incidents visible to user within scopes",
+      "bulk": true,
+      "scope": "incidents.read",
+      "rate_limit": "960 req/min per app per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /users",
+      "reveals": "Users the authorizing person can see (needs users.read scope)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Audit records cover configuration changes only."
+     }
+    ],
+    "unknown": [
+     "Scope required for GET /users/me under Scoped OAuth."
+    ],
+    "evidence_refs": [
+     "fc-47e47aba",
+     "fc-51494aac",
+     "fc-079a8df5",
+     "fc-f760aba4"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "pagerduty-5",
+   "name": "Events API integration key (routing key)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "32-character key on a service (or Event Orchestration) integration, sent in the event body as routing_key to https://events.pagerduty.com/v2/enqueue. Can only send events (create/ack/resolve alerts, change events), not read data.",
+    "evidence_refs": [
+     "fc-d45e559a",
+     "fc-3e9c6e89"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key in payload.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "excluded",
+    "enforcement_stage": "login_only",
+    "boundary": "IP allow list does not affect Events API traffic.",
+    "evidence_refs": [
+     "fc-67bc3044"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "No documented expiry.",
+    "summary": "'Generate a new integration key' overwrites the key immediately.",
+    "evidence_refs": [
+     "fc-74172493"
+    ]
+   },
+   "administration": {
+    "summary": "Manager role or above can create integrations and keys; rotate or delete on the service Integrations tab.",
+    "conditions": "Events API available on all accounts.",
+    "evidence_refs": [
+     "fc-d45e559a",
+     "fc-74172493"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Integration keys belong to a service integration, not a user.",
+     "evidence_refs": [
+      "fc-d45e559a"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Keys are shown per service on the service's Integrations tab; no account-wide key list found.",
+     "evidence_refs": [
+      "fc-d45e559a"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Services > Service Directory > service > Integrations tab > expand integration > Integration Key (per service)",
+     "api": "GET /services?include[]=integrations (per-service integrations); GET /event_orchestrations/{id}/integrations (orchestration routing keys)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-74172493",
+      "fc-d45e559a",
+      "fc-079a8df5"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "32-character string; ruleset keys begin with R."
+    },
+    "log_sources": [
+     {
+      "name": "Incident/alert log entries (GET /log_entries)",
+      "notes": "Events produce alerts/incidents; no per-key audit documented. Audit Trail does not capture integration add/remove."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "method.type",
+     "method.truncated_token",
+     "actors[].type/id",
+     "execution_context.request_id",
+     "execution_context.remote_address"
+    ],
+    "anomaly_cues": [
+     "Unexpected incidents/alerts or change events on a service",
+     "Spikes near 120 events/min per key"
+    ],
+    "containment": {
+     "steps": "Services > service > Integrations > Edit Integration > Generate a new integration key, or Delete Integration.",
+     "kills_existing": "yes",
+     "notes": "Rotation overwrites the key immediately; old key presumably rejected (not stated)."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Any log of Events API sends by key beyond the resulting alerts/incidents",
+     "Audit coverage of key rotation"
+    ],
+    "evidence_refs": [
+     "fc-62771079",
+     "fc-74172493",
+     "fc-d45e559a",
+     "fc-53ac0b95"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST https://events.pagerduty.com/v2/enqueue",
+      "reveals": "Key validity (202 vs error); cannot read data",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "~120 calls/min per integration key",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Creates alerts/incidents visible in the service."
+     }
+    ],
+    "unknown": [
+     "No read endpoints for integration keys."
+    ],
+    "evidence_refs": [
+     "fc-3e9c6e89",
+     "fc-53ac0b95"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

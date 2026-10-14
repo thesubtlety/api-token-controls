@@ -1,0 +1,868 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "microsoft",
+      "name": "Microsoft 365 / Entra / Graph",
+      "scope_notes": "Workload Conditional Access requires Workload ID Premium. Do not treat a token-issuance IP check as universal per-request Graph enforcement.",
+      "controls": [
+        {
+          "name": "User consent for applications",
+          "effect": "require_approval",
+          "applies_to": [
+            "microsoft-1"
+          ],
+          "what": "Turns off or narrows user self-consent so delegated permission grants need an admin (or only low-impact permissions for verified publishers).",
+          "setting": "Entra admin center > Enterprise apps > Consent and permissions > User consent settings; Graph authorizationPolicy.defaultUserRolePermissions.permissionGrantPoliciesAssigned",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-80f9611a"
+          ],
+          "quote": "By default, all users are allowed to consent to applications for permissions that don't require administrator consent."
+        },
+        {
+          "name": "Admin consent workflow",
+          "effect": "require_approval",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2"
+          ],
+          "what": "Lets users request consent they cannot grant; designated reviewers approve or deny, and only Global Admins can approve Graph application permissions.",
+          "setting": "Entra admin center > Enterprise apps > Consent and permissions > Admin consent settings; Graph adminConsentRequestPolicy",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-dc9eb97e"
+          ],
+          "quote": "only Global Administrators can approve admin consent requests for apps requesting for Microsoft Graph app roles (application permissions)."
+        },
+        {
+          "name": "Users can register applications",
+          "effect": "disable",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2"
+          ],
+          "what": "Stops ordinary users from creating app registrations (and their client credentials); only Application Developer or admin roles can.",
+          "setting": "Entra admin center > Users > User settings > Users can register applications",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-660153dd"
+          ],
+          "quote": "By default in Microsoft Entra ID, all users can register applications and manage all aspects of applications they create."
+        },
+        {
+          "name": "Assignment required?",
+          "effect": "limit_scope",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2"
+          ],
+          "what": "Only users, groups or client service principals explicitly assigned to the resource app can get tokens for it; also blocks user consent for that app.",
+          "setting": "Entra admin center > Enterprise apps > [app] > Properties > Assignment required?; Graph servicePrincipal.appRoleAssignmentRequired",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-278fd2be"
+          ],
+          "quote": "Users and services attempting to access the application or services need to be assigned to the application, or they won't be able to sign-in or obtain an access token."
+        },
+        {
+          "name": "Enabled for users to sign-in?",
+          "effect": "disable",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2",
+            "microsoft-3"
+          ],
+          "what": "Disables the service principal in the tenant so no new tokens are issued for that application.",
+          "setting": "Entra admin center > Enterprise apps > [app] > Properties; Graph servicePrincipal.accountEnabled=false",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-5e8a79c1"
+          ],
+          "quote": "To block user access to an application, you can disable user sign-in for the application, which prevents all tokens from being issued for that application."
+        },
+        {
+          "name": "Revoke permission (admin consent / app role assignments)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2",
+            "microsoft-3"
+          ],
+          "what": "Removes granted delegated permissions (oauth2PermissionGrants) and application permissions (appRoleAssignments) from a service principal.",
+          "setting": "Entra admin center > Enterprise apps > [app] > Permissions > Admin consent > Revoke permission; Graph DELETE oAuth2PermissionGrants/{id} and appRoleAssignedTo/{id}",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-729794da"
+          ],
+          "quote": "You can revoke permissions granted by admins for your entire organization, and you can get contextual PowerShell scripts to perform other actions."
+        },
+        {
+          "name": "Application policies: Block multitenant applications",
+          "effect": "limit_scope",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2"
+          ],
+          "what": "Blocks creating or promoting app registrations to multitenant or consumer-account audiences.",
+          "setting": "Entra admin center > Enterprise apps > Application policies; Graph appManagementPolicy audiences restriction",
+          "plan": "Not established",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ad48752e"
+          ],
+          "quote": "Restricts creation or promotion of apps based on signInAudience values."
+        },
+        {
+          "name": "Conditional Access (users)",
+          "effect": "limit_network",
+          "applies_to": [
+            "microsoft-1"
+          ],
+          "what": "Applies location, device, MFA, risk and block conditions when a user obtains delegated tokens for targeted resources.",
+          "setting": "Entra admin center > Entra ID > Conditional Access > Policies",
+          "plan": "Microsoft Entra ID P1 (risk conditions need P2)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-0166aec9"
+          ],
+          "quote": "Using this feature requires Microsoft Entra ID P1 licenses."
+        },
+        {
+          "name": "Continuous access evaluation / strict location enforcement",
+          "effect": "limit_network",
+          "applies_to": [
+            "microsoft-1"
+          ],
+          "what": "Lets Exchange, SharePoint, Teams and Graph reject user tokens mid-lifetime on IP-location change or critical events like account disable.",
+          "setting": "Conditional Access > session control 'Customize continuous access evaluation'; strict location enforcement (preview)",
+          "plan": "Microsoft Entra ID P1 for location policies; critical events in any tenant",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-47ad02b0"
+          ],
+          "quote": "Exchange Online, SharePoint Online, Teams, and MS Graph can synchronize key Conditional Access policies for evaluation within the service itself."
+        },
+        {
+          "name": "Sites.Selected and other *.Selected scopes",
+          "effect": "limit_resources",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2",
+            "microsoft-3"
+          ],
+          "what": "An app consented to Selected scopes has no SharePoint/OneDrive access until an admin grants it a role on a specific site, list, item or file.",
+          "setting": "Consent Sites.Selected in Entra, then Graph POST /sites/{siteId}/permissions (and lists/items/files)",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d5d982c9"
+          ],
+          "quote": "Selected scopes require an explicit assignment action; an application consented for Lists.SelectedOperations.Selected would initially have no access."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Licensing for app management policies (Application policies): fetched pages list only role prerequisites; Microsoft has previously tied them to Workload ID Premium, not confirmed here.",
+        "Whether 'Assignment required' is enforced for managed identities calling Microsoft Graph (doc covers client apps generally).",
+        "Exchange RBAC for Applications license requirement not stated on the fetched page; it does not constrain unscoped Entra grants, which must be removed."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "microsoft-1",
+      "provider_id": "microsoft",
+      "name": "Delegated OAuth",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth 2.0 delegated and app-only bearer tokens. Apps authenticate with a secret, certificate, managed identity, or federated credential.",
+        "evidence_refs": [
+          "turn26view0",
+          "turn1search0"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "Delegated tokens can be obtained by exchanging an AD FS-issued SAMLv1 assertion (SAML bearer assertion grant) for a Graph token. Workload identity federation (issuer/subject/audience match) applies to app-only and managed-identity paths, not delegated user tokens.",
+        "evidence_refs": [
+          "turn26view0",
+          "turn1search0",
+          "fc-8ffec097"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "mixed",
+        "boundary": "User Conditional Access can restrict locations. Workload CA blocks token issuance for eligible single-tenant service principals; excludes managed identities and third-party multi-tenant apps.",
+        "evidence_refs": [
+          "turn10search0",
+          "turn10search4"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": 100800,
+        "configurable": "conditional",
+        "summary": "Default random 60–90 min; CTL can set 10 min–1 day; CAE sessions can get 20–28 h tokens",
+        "evidence_refs": [
+          "turn26view0",
+          "turn1search0",
+          "fc-3d76644a"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "inactivity",
+        "summary": "Refresh tokens roll over on each use; default 90 days (24 hours for SPAs), max age until revoked, not configurable. Sign-in frequency is controlled with Conditional Access.",
+        "evidence_refs": [
+          "turn26view0",
+          "turn1search0",
+          "fc-3d76644a",
+          "fc-ac9c680b"
+        ]
+      },
+      "administration": {
+        "summary": "Delegated scopes vs application permissions, admin consent, app-role grants, app/service-principal disablement and credential revocation.",
+        "conditions": "Workload Conditional Access requires Workload ID Premium. Do not treat a token-issuance IP check as universal per-request Graph enforcement.",
+        "evidence_refs": [
+          "turn10search0",
+          "turn10search4"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "yes",
+          "details": "Delegated tokens are issued to users, and Conditional Access policies apply to users when they access apps.",
+          "evidence_refs": [
+            "turn10search0"
+          ]
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Disabling the user blocks new sign-ins and refresh tokens can be revoked, but issued access tokens keep working until they expire (default 1 hour) unless the app supports CAE.",
+          "evidence_refs": [
+            "fc-8b4eb537"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "GET /oauth2PermissionGrants lists delegated consent grants org-wide; issued tokens themselves are not listed.",
+          "evidence_refs": [
+            "fc-abac31d2"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Entra admin center > Entra ID > Conditional Access > Policies > New policy (target users, grant require MFA)",
+          "api": "POST /identity/conditionalAccess/policies",
+          "cli": null,
+          "evidence_refs": [
+            "fc-c3a42178",
+            "fc-c41cd5c3"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "POST /policies/tokenLifetimePolicies (AccessTokenLifetime), then POST /servicePrincipals/{id}/tokenLifetimePolicies/$ref",
+          "cli": "New-MgPolicyTokenLifetimePolicy -BodyParameter $params",
+          "evidence_refs": [
+            "fc-b953826c",
+            "fc-3d76644a"
+          ]
+        },
+        "reads": {
+          "ui": "Purview portal > Audit > Search; Activities - operations names: MailItemsAccessed",
+          "api": null,
+          "cli": "Search-UnifiedAuditLog -StartDate <d> -EndDate <d> -UserIds <user> -Operations MailItemsAccessed",
+          "evidence_refs": [
+            "fc-d7daa2b2",
+            "fc-c78ac493"
+          ]
+        },
+        "kill": {
+          "ui": "Entra ID > Users > All users > [user] > Overview > Revoke sessions",
+          "api": "POST /users/{id}/revokeSignInSessions",
+          "cli": "Revoke-MgUserSignInSession -UserId <id>",
+          "evidence_refs": [
+            "fc-ab61998e",
+            "fc-8b4eb537"
+          ]
+        },
+        "offboard": {
+          "ui": "Entra ID > Users > All users > [user] > Account status > Edit > clear Account enabled > Save; then Revoke sessions",
+          "api": "PATCH /users/{id} {\"accountEnabled\": false}; POST /users/{id}/revokeSignInSessions",
+          "cli": "Update-MgUser -UserId <id> -AccountEnabled:$false; Revoke-MgUserSignInSession -UserId <id>",
+          "evidence_refs": [
+            "fc-8b4eb537",
+            "fc-fcfe60eb",
+            "fc-ab61998e"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Access tokens are JWTs; GitHub scans microsoft_azure_entra_id_token. Client secrets: azure_active_directory_application_secret (no documented regex fetched)."
+        },
+        "log_sources": [
+          {
+            "name": "Entra sign-in logs (SigninLogs / AADNonInteractiveUserSignInLogs)",
+            "notes": "Token issuance per user+app; refresh-token redemptions land in non-interactive. 7 days Free, 30 days P1/P2 in portal; export via diagnostic settings for longer."
+          },
+          {
+            "name": "MicrosoftGraphActivityLogs",
+            "notes": "Every Graph request with AppId, UserId, IP, scopes. Needs Entra ID P1/P2 and a diagnostic setting; nothing retained unless exported."
+          },
+          {
+            "name": "Entra audit logs (AuditLogs)",
+            "notes": "Consent, permission grants, credential add/remove on apps and service principals. 7/30 days in portal."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "UniqueTokenIdentifier",
+            "log": "SigninLogs",
+            "notes": "Per-token request ID; joins to Graph SignInActivityId"
+          },
+          {
+            "field": "SignInActivityId",
+            "log": "MicrosoftGraphActivityLogs",
+            "notes": "Sign-in that issued the token used"
+          },
+          {
+            "field": "AppId",
+            "log": "SigninLogs / MicrosoftGraphActivityLogs",
+            "notes": "Client application"
+          },
+          {
+            "field": "SessionId",
+            "log": "SigninLogs / MicrosoftGraphActivityLogs",
+            "notes": "Authentication session"
+          },
+          {
+            "field": "TokenIssuedAt",
+            "log": "MicrosoftGraphActivityLogs",
+            "notes": "Token issue time; use after revocation is a red flag"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Consent to application",
+            "stage": "create",
+            "notes": "AuditLogs; user or admin consent"
+          },
+          {
+            "event": "Add delegated permission grant",
+            "stage": "create",
+            "notes": "AuditLogs; scopes granted to client"
+          },
+          {
+            "event": "Remove delegated permission grant",
+            "stage": "revoke",
+            "notes": "AuditLogs"
+          },
+          {
+            "event": "Update StsRefreshTokenValidFrom Timestamp",
+            "stage": "revoke",
+            "notes": "AuditLogs UserManagement; expected after session revocation (mapping not stated in docs)"
+          },
+          {
+            "event": "Disable account",
+            "stage": "revoke",
+            "notes": "AuditLogs UserManagement"
+          }
+        ],
+        "correlation_keys": [
+          "UserId",
+          "UserPrincipalName",
+          "AppId",
+          "ServicePrincipalId",
+          "IPAddress",
+          "UserAgent",
+          "AutonomousSystemNumber",
+          "SessionId",
+          "UniqueTokenIdentifier",
+          "SignInActivityId",
+          "CorrelationId"
+        ],
+        "anomaly_cues": [
+          "Consent to application by non-admin followed by Graph mail/files reads from new IP",
+          "Non-interactive refresh for the user+AppId from an ASN never seen in interactive sign-ins",
+          "Graph calls with TokenIssuedAt earlier than the revocation time",
+          "Same SessionId seen from two countries",
+          "High-volume Graph reads (ResponseSizeBytes) from an app the user rarely uses"
+        ],
+        "containment": {
+          "steps": "Call revokeSignInSessions for the user; remove the delegated permission grant / user consent; disable the service principal or block the app if malicious; reset password if user is compromised.",
+          "kills_existing": "partial",
+          "notes": "Refresh tokens die (few-minute delay). Issued access tokens live 60-90 min unless client and resource support CAE, which revokes in near real time."
+        },
+        "sample_query": {
+          "language": "Entra KQL (Log Analytics)",
+          "query": "MicrosoftGraphActivityLogs | where TimeGenerated > ago(7d) | where isnotempty(UserId) and AppId == \"<app-id>\" | join kind=leftouter (union SigninLogs, AADNonInteractiveUserSignInLogs | where TimeGenerated > ago(7d)) on $left.SignInActivityId == $right.UniqueTokenIdentifier | summarize Requests=count() by UserId, IPAddress, UserAgent, TokenIssuedAt",
+          "purpose": "Tie each delegated Graph call by one app to the sign-in that issued its token"
+        },
+        "unknown": [
+          "Documented regex/prefix for Entra client secrets",
+          "Exact AuditLogs TargetResources fields carrying granted scopes",
+          "Field schema of AADNonInteractiveUserSignInLogs (assumed same as SigninLogs; not fetched)"
+        ],
+        "evidence_refs": [
+          "fc-4b7bb161",
+          "fc-d9abb879",
+          "fc-e9a0ad21",
+          "fc-e827f1dd",
+          "fc-9a4da67c",
+          "fc-3d76644a",
+          "fc-863c8321",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /me",
+            "reveals": "Signed-in user's profile (displayName, mail, userPrincipalName, id); confirms delegated token and identity",
+            "bulk": false,
+            "scope": "User.Read (delegated)",
+            "rate_limit": "Outlook: 10,000 API requests per 10 minutes per app+mailbox",
+            "logged": "plan",
+            "log_event": "MicrosoftGraphActivityLogs",
+            "log_notes": "Graph activity logs capture all HTTP requests but require Entra ID P1/P2 plus a diagnostic setting to Log Analytics/Storage/Event Hubs; not on by default"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /organization/{id}",
+            "reveals": "Tenant details, verifiedDomains, assignedPlans; tenant footprint",
+            "bulk": false,
+            "scope": "User.Read returns id/displayName/verifiedDomains only; Organization.Read.All for all",
+            "rate_limit": "150,000 ResourceUnits per 20 seconds per app (identity limits)",
+            "logged": "plan",
+            "log_event": "MicrosoftGraphActivityLogs",
+            "log_notes": "Logged only when Graph activity logs are enabled (Entra P1/P2 + diagnostic setting)"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /me/messages",
+            "reveals": "Signed-in user's mail messages (sender, subject, body HTML); mailbox contents",
+            "bulk": true,
+            "scope": "Mail.ReadBasic (delegated); Mail.Read for body",
+            "rate_limit": "Outlook: 10,000 requests/10 min and 4 concurrent per app+mailbox; default page 10, $top up to 1000",
+            "logged": "yes",
+            "log_event": "MailItemsAccessed",
+            "log_notes": "Exchange mailbox auditing (Audit Standard, on by default with E3/E5) records mail access over all protocols including REST; bind aggregated per 2 min, sync per folder. Graph activity logs also capture the HTTP call if enabled."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /users/delta",
+            "reveals": "Directory users with change tracking; deltaLink for incremental re-pulls",
+            "bulk": true,
+            "scope": "User.Read.All (delegated)",
+            "rate_limit": "150,000 ResourceUnits per 20 seconds per app",
+            "logged": "plan",
+            "log_event": "MicrosoftGraphActivityLogs",
+            "log_notes": "Directory reads appear in Graph activity logs only when enabled; no mailbox-style read audit for directory objects"
+          }
+        ],
+        "unknown": [
+          "Whether a given tenant has enabled Graph activity logs (off by default)",
+          "Whether MailItemsAccessed sync records are generated for pure Graph/REST pulls (docs tie sync records to Outlook desktop clients; Graph reads land as bind)"
+        ],
+        "evidence_refs": [
+          "fc-6d510dae",
+          "fc-80d4956e",
+          "fc-d7daa2b2",
+          "fc-4b7bb161",
+          "fc-65cfa309",
+          "fc-e89b3daa",
+          "fc-3e401f4d"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Sigma",
+          "title": "App Granted Microsoft Permissions",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_permissions_msft.yml",
+          "detects": "Delegated permission grants or app role assignments to a service principal."
+        },
+        {
+          "source": "Sigma",
+          "title": "Delegated Permissions Granted For All Users",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_delegated_permissions_all_users.yml",
+          "detects": "Delegated permission grants (scopes given to a client app)."
+        },
+        {
+          "source": "Sigma",
+          "title": "End User Consent",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_end_user_consent.yml",
+          "detects": "Non-admin user consent to an application."
+        },
+        {
+          "source": "Sigma",
+          "title": "End User Consent Blocked",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_end_user_consent_blocked.yml",
+          "detects": "User consent blocked because the app was flagged as risky."
+        },
+        {
+          "source": "Panther",
+          "title": "Microsoft Entra ID Anomalous Application Consent",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/azure_queries/Entra_ID_Anomalous_Application_Consent_Query.yml",
+          "detects": "Saved query: a user consented to an app they had not consented to in the prior 14 days."
+        },
+        {
+          "source": "Panther",
+          "title": "Microsoft Entra ID Graph Email Access by Unusual Public Client",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/azure_queries/Entra_ID_Graph_Email_Access_Unusual_Public_Client_Query.yml",
+          "detects": "Saved query: a public client app newly reading or sending a user mail through Microsoft Graph (MicrosoftGraphActivityLogs)."
+        },
+        {
+          "source": "Panther",
+          "title": "Azure Microsoft Graph Single Session from Multiple IP Addresses",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_signin_rules/azure_graph_session_multiple_ips.yml",
+          "detects": "The same sign-in session ID used to reach Microsoft Graph from multiple IPs by a non-allowlisted app, a sign of token replay."
+        },
+        {
+          "source": "Panther",
+          "title": "Azure VS Code OAuth Phishing",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_signin_rules/azure_vscode_oauth_phishing.yml",
+          "detects": "Successful VS Code (first-party public client) OAuth sign-ins to Microsoft Graph, a pattern used in OAuth token phishing."
+        },
+        {
+          "source": "Sigma",
+          "title": "Anomalous Token",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/identity_protection/azure_identity_protection_anomalous_token.yml",
+          "detects": "Identity Protection anomalous token risk detections (unusual token lifetime or replay)."
+        },
+        {
+          "source": "Sigma",
+          "title": "Applications That Are Using ROPC Authentication Flow",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/signin_logs/azure_app_ropc_authentication.yml",
+          "detects": "Apps using the resource owner password credentials (ROPC) OAuth flow."
+        },
+        {
+          "source": "Sigma",
+          "title": "Application Using Device Code Authentication Flow",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/signin_logs/azure_app_device_code_authentication.yml",
+          "detects": "Apps using the OAuth device code flow."
+        },
+        {
+          "source": "Sigma",
+          "title": "Application URI Configuration Changes",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_uri_modifications.yml",
+          "detects": "Changes to an application reply/redirect URI (AppAddress)."
+        },
+        {
+          "source": "Sigma",
+          "title": "Suspicious OAuth App File Download Activities",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/m365/threat_management/microsoft365_susp_oauth_app_file_download_activities.yml",
+          "detects": "Defender for Cloud Apps alert for unusual file downloads by an OAuth app."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0166aec9",
+      "title": "Microsoft Entra Conditional Access: Zero Trust Policy Engine",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/overview",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-278fd2be",
+      "title": "Restrict a Microsoft Entra app to a set of users",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/howto-restrict-your-app-to-a-set-of-users",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3d76644a",
+      "title": "Configurable Token Lifetimes - Microsoft identity platform",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/configurable-token-lifetimes",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3e401f4d",
+      "title": "user: delta - Microsoft Graph v1.0",
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-delta?view=graph-rest-1.0",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-47ad02b0",
+      "title": "Continuous access evaluation in Microsoft Entra",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-continuous-access-evaluation",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4b7bb161",
+      "title": "Access Microsoft Graph activity logs",
+      "url": "https://learn.microsoft.com/en-us/graph/microsoft-graph-activity-logs-overview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5e8a79c1",
+      "title": "Disable user sign-in for application",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/disable-user-sign-in-portal",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-65cfa309",
+      "title": "Microsoft Graph throttling limits",
+      "url": "https://learn.microsoft.com/en-us/graph/throttling-limits",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-660153dd",
+      "title": "Delegate application management administrator permissions",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/delegate-app-roles",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6d510dae",
+      "title": "Get user - Microsoft Graph v1.0",
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-729794da",
+      "title": "Review permissions granted to enterprise applications",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-application-permissions",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-80d4956e",
+      "title": "List messages - Microsoft Graph v1.0",
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-list-messages?view=graph-rest-1.0",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-80f9611a",
+      "title": "Configure how users consent to applications",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-863c8321",
+      "title": "Microsoft Entra data retention",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/monitoring-health/reference-reports-data-retention",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8b4eb537",
+      "title": "Revoke user access in an emergency in Microsoft Entra ID",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/users/users-revoke-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8ffec097",
+      "title": "Exchange a SAML token issued by AD FS for a Microsoft Graph access token",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/v2-saml-bearer-assertion",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9a4da67c",
+      "title": "user: revokeSignInSessions",
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-revokesigninsessions?view=graph-rest-1.0",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ab61998e",
+      "title": "user: revokeSignInSessions",
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-revokesigninsessions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-abac31d2",
+      "title": "List oauth2PermissionGrants",
+      "url": "https://learn.microsoft.com/en-us/graph/api/oauth2permissiongrant-list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac9c680b",
+      "title": "Refresh tokens in the Microsoft identity platform",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ad48752e",
+      "title": "Configure restrictions on how applications can be configured",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-app-management-policies",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b953826c",
+      "title": "Set lifetimes for tokens",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/configure-token-lifetimes",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c3a42178",
+      "title": "Require MFA for all users (Conditional Access)",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-all-users-mfa-strength",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c41cd5c3",
+      "title": "Create conditionalAccessPolicy (Microsoft Graph)",
+      "url": "https://learn.microsoft.com/en-us/graph/api/conditionalaccessroot-post-policies",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c78ac493",
+      "title": "Search the audit log",
+      "url": "https://learn.microsoft.com/en-us/purview/audit-search",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d5d982c9",
+      "title": "Overview of Selected Permissions in OneDrive and SharePoint",
+      "url": "https://learn.microsoft.com/en-us/graph/permissions-selected-overview",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7daa2b2",
+      "title": "Use MailItemsAccessed to investigate compromised accounts",
+      "url": "https://learn.microsoft.com/en-us/purview/audit-log-investigate-accounts",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d9abb879",
+      "title": "SigninLogs table reference",
+      "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/signinlogs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dc9eb97e",
+      "title": "Configure the admin consent workflow",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-admin-consent-workflow",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e827f1dd",
+      "title": "AuditLogs table reference",
+      "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/auditlogs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e89b3daa",
+      "title": "Get organization - Microsoft Graph v1.0",
+      "url": "https://learn.microsoft.com/en-us/graph/api/organization-get?view=graph-rest-1.0",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9a0ad21",
+      "title": "Microsoft Entra audit log activity reference",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/monitoring-health/reference-audit-activities",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fcfe60eb",
+      "title": "Update user (Microsoft Graph)",
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-update",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search0",
+      "title": "Microsoft Entra Conditional Access for workload identities - Microsoft ...",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search4",
+      "title": "Microsoft Entra Workload ID documentation",
+      "url": "https://learn.microsoft.com/en-us/entra/workload-id/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn1search0",
+      "title": "Access tokens in the Microsoft identity platform - Microsoft identity platform | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn26view0",
+      "title": "Workload Identity Federation - Microsoft Entra Workload ID | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

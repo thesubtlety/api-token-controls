@@ -1,0 +1,277 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "circleci",
+      "name": "CircleCI",
+      "scope_notes": "Covers CircleCI Cloud. CircleCI cloud (Free, Performance, Scale); SAML SSO and audit log streaming need Scale, context security-group restrictions only on github-type orgs; CircleCI Server is out of scope.",
+      "controls": [
+        {
+          "name": "Context restrictions (security group, project, expression)",
+          "effect": "limit_resources",
+          "applies_to": [
+            "circleci-4",
+            "circleci-3"
+          ],
+          "what": "Limit which users, projects and pipeline conditions can use a context.",
+          "setting": "Org > Contexts; POST /context/{context_id}/restrictions",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ebe16a43"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any org-admin setting to block, list or revoke members' personal API tokens.",
+        "Any org setting to disable OAuth Dynamic Client Registration tokens.",
+        "Any inbound IP allowlist for the CircleCI API or web app.",
+        "Whether personal API token create/delete or API reads appear in audit logs (not in the published event list).",
+        "Whether an SSO-authorized token stops working when the IdP session ends or the user is removed from the IdP.",
+        "Project API token expiry."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "circleci-4",
+      "provider_id": "circleci",
+      "name": "Contexts and project environment variables (stored secrets)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Third-party secrets stored in CircleCI and injected into jobs. The API returns only names or masked values; the realistic way to read them is to run a job that uses them.",
+        "evidence_refs": [
+          "fc-b27cdb24",
+          "fc-05bf1236"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Secrets for external systems.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "The target system enforces network rules. With the IP ranges feature (Performance or Scale), job traffic comes from published CircleCI ranges that the target can allowlist.",
+        "evidence_refs": [
+          "fc-d7fcdb72"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Static until rotated",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "Rotate at source and update the variable.",
+        "evidence_refs": [
+          "fc-c98db406"
+        ]
+      },
+      "administration": {
+        "summary": "Any org member can create contexts; contexts default to 'All members'. Admins can add security-group (github orgs only), project and expression restrictions, which combine with AND. Org admins have unrestricted context access.",
+        "conditions": "Security group restrictions only for github-type orgs.",
+        "evidence_refs": [
+          "fc-ebe16a43"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Secrets belong to the context or project. To use a context, the actor running the workflow must be an org member with access to the context.",
+          "evidence_refs": [
+            "fc-ebe16a43"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /context and GET /context/{context_id}/environment-variable, GET /project/{project-slug}/envvar, and the CircleCI Environment Inspector list variable names (values are masked).",
+          "evidence_refs": [
+            "fc-05bf1236"
+          ]
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "In .circleci/config.yml set circleci_ip_ranges: true on the job; allowlist jobs.knownips.circleci.com ranges at the target",
+          "api": null,
+          "cli": "dig all.knownips.circleci.com A +short",
+          "evidence_refs": [
+            "fc-d7fcdb72"
+          ]
+        },
+        "usage": {
+          "ui": "Org > Security > Audit Logs > Request audit logs (CSV); filter action context.secrets.accessed, target = context",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-00a430b7"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Third-party secret formats."
+        },
+        "log_sources": [
+          {
+            "name": "CircleCI audit logs",
+            "notes": "context and env var change events; context.secrets.accessed."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "target",
+            "log": "audit log",
+            "notes": "Context or project."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "context.env_var.store",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "context.env_var.delete",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "context.secrets.accessed",
+            "stage": "use",
+            "notes": ""
+          },
+          {
+            "event": "project.env_var.create",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "project.env_var.delete",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "context id",
+          "project",
+          "actor.id"
+        ],
+        "anomaly_cues": [
+          "Context accessed by a new project or branch",
+          "Masking bypass in step output (base64, reformatting)"
+        ],
+        "containment": {
+          "steps": "Block new work, rotate the secret at its source, update the variable, add context restrictions.",
+          "kills_existing": "no",
+          "notes": "Leaked values stay valid until rotated at the issuing system."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-ebe16a43",
+          "fc-00a430b7",
+          "fc-05bf1236",
+          "fc-c98db406"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v2/context/{context_id}/environment-variable",
+            "reveals": "variable names only",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-b27cdb24",
+          "fc-05bf1236"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-00a430b7",
+      "title": "Audit logs",
+      "url": "https://circleci.com/docs/guides/security/audit-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-05bf1236",
+      "title": "Analyze pipelines during an incident",
+      "url": "https://circleci.com/docs/guides/orchestrate/analyze-pipelines-during-an-incident/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b27cdb24",
+      "title": "CircleCI API v2 OpenAPI",
+      "url": "https://circleci.com/api/v2/openapi.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c98db406",
+      "title": "Pause or stop pipelines during an incident",
+      "url": "https://circleci.com/docs/guides/orchestrate/pause-pipelines-during-an-incident/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7fcdb72",
+      "title": "Restrict your pipeline traffic to specific IP ranges",
+      "url": "https://circleci.com/docs/guides/security/ip-ranges/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ebe16a43",
+      "title": "Using contexts",
+      "url": "https://circleci.com/docs/guides/security/contexts/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

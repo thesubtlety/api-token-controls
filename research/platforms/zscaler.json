@@ -1,0 +1,1389 @@
+{
+ "id": "zscaler",
+ "name": "Zscaler",
+ "scope_notes": "Covers Zscaler (ZIA, ZPA, OneAPI via Authentication Service / ZIdentity). SaaS; OneAPI needs services linked to Authentication Service; legacy ZIA API needs an API subscription; Workflow Automation, Client Connector and ZDX API keys not covered.",
+ "controls": [
+  {
+   "name": "API client Status (enable/disable)",
+   "effect": "disable",
+   "applies_to": [
+    "zscaler-1",
+    "zscaler-2"
+   ],
+   "what": "A disabled client cannot get tokens, and its issued tokens are revoked.",
+   "setting": "Administration > API > API Clients > Edit",
+   "plan": "Authentication Service (ZIdentity)",
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-00e25470",
+    "fc-97c9b5b3",
+    "fc-83844d0e"
+   ]
+  },
+  {
+   "name": "Delete API client",
+   "effect": "revoke",
+   "applies_to": [
+    "zscaler-1",
+    "zscaler-2"
+   ],
+   "what": "Deleting a client revokes its tokens.",
+   "setting": "Administration > API > API Clients",
+   "plan": "Authentication Service (ZIdentity)",
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-97c9b5b3",
+    "fc-83844d0e"
+   ]
+  },
+  {
+   "name": "Revoke access token",
+   "effect": "revoke",
+   "applies_to": [
+    "zscaler-1",
+    "zscaler-2"
+   ],
+   "what": "Revoke a single active token by Client ID or JTI.",
+   "setting": "Administration > API > Tokens > Revoke",
+   "plan": "Authentication Service (ZIdentity)",
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-83844d0e",
+    "fc-e8c92a49"
+   ]
+  },
+  {
+   "name": "Access Token Validity",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "zscaler-1",
+    "zscaler-2"
+   ],
+   "what": "Sets token lifetime from 1 minute to 24 hours.",
+   "setting": "Add/Edit API Client > Access Token Validity",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-00e25470"
+   ]
+  },
+  {
+   "name": "Client secret validity",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "zscaler-1"
+   ],
+   "what": "Secrets expire after 30-365 days.",
+   "setting": "Add API Client > Secret",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-00e25470"
+   ]
+  },
+  {
+   "name": "API resources (scope)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "zscaler-1",
+    "zscaler-2"
+   ],
+   "what": "Client gets one API role per Zscaler service.",
+   "setting": "Add API Client > Resources tab",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-00e25470",
+    "fc-e252abe2"
+   ]
+  },
+  {
+   "name": "API Client Access Policy",
+   "effect": "limit_scope",
+   "applies_to": [
+    "zscaler-1",
+    "zscaler-2"
+   ],
+   "what": "Allow/Block rules by API resource and time window, one rule per client.",
+   "setting": "Administration > API > API Client Access Policy",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-8e3fd2eb",
+    "fc-a25210c2"
+   ]
+  },
+  {
+   "name": "Delete / regenerate / edit Cloud Service API Key",
+   "effect": "revoke",
+   "applies_to": [
+    "zscaler-3"
+   ],
+   "what": "Any of these immediately invalidates the old key.",
+   "setting": "Administration > API > Internet & SaaS API > Cloud Service API Key",
+   "plan": "API subscription",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-669097ac",
+    "fc-771beedb"
+   ]
+  },
+  {
+   "name": "Admin role functional scope",
+   "effect": "limit_scope",
+   "applies_to": [
+    "zscaler-3",
+    "zscaler-6"
+   ],
+   "what": "Key access is given only to admins with functional scope for API services.",
+   "setting": "ZIA admin roles",
+   "plan": "API subscription",
+   "default": "varies",
+   "level": "user",
+   "evidence_refs": [
+    "fc-669097ac",
+    "fc-9551bdd1"
+   ]
+  },
+  {
+   "name": "OAuth 2.0 Authorization Server status / delete",
+   "effect": "disable",
+   "applies_to": [
+    "zscaler-4"
+   ],
+   "what": "Disable or delete a trusted external authorization server.",
+   "setting": "Administration > API > Internet & SaaS API > OAuth 2.0 Authorization Servers",
+   "plan": "API subscription",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-79d90bfe"
+   ]
+  },
+  {
+   "name": "Required JWT claims (audience, issuer, client ID)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "zscaler-4"
+   ],
+   "what": "Mandate claim checks on external tokens.",
+   "setting": "OAuth 2.0 Authorization Servers > Add/Edit",
+   "plan": "API subscription",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-79d90bfe"
+   ]
+  },
+  {
+   "name": "API Roles",
+   "effect": "limit_scope",
+   "applies_to": [
+    "zscaler-4"
+   ],
+   "what": "Per-category Full/View Only/None permissions; cannot modify admins.",
+   "setting": "Administration > Role Management > Internet & SaaS > Add API Role",
+   "plan": "API subscription",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-73c26698"
+   ]
+  },
+  {
+   "name": "ZPA API key Status",
+   "effect": "disable",
+   "applies_to": [
+    "zscaler-5"
+   ],
+   "what": "Disabled keys cannot be used.",
+   "setting": "Administration > API > Private Access API > Edit",
+   "plan": null,
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-1027e5e4",
+    "fc-53381e39"
+   ]
+  },
+  {
+   "name": "Delete ZPA API key",
+   "effect": "revoke",
+   "applies_to": [
+    "zscaler-5"
+   ],
+   "what": "Remove a key.",
+   "setting": "Administration > API > Private Access API",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-1027e5e4"
+   ]
+  },
+  {
+   "name": "ZPA API key Role",
+   "effect": "limit_scope",
+   "applies_to": [
+    "zscaler-5"
+   ],
+   "what": "Predefined or custom role (e.g. API Read Only) enforces RBAC on ZPA API operations.",
+   "setting": "Add API Keys > Role",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-53381e39"
+   ]
+  },
+  {
+   "name": "Session Validity Interval",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "zscaler-5"
+   ],
+   "what": "Token lifetime up to 3,600 s.",
+   "setting": "Add API Keys > Session Validity Interval",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-53381e39"
+   ]
+  },
+  {
+   "name": "Regenerate / delete Sandbox API token",
+   "effect": "revoke",
+   "applies_to": [
+    "zscaler-6"
+   ],
+   "what": "Regenerating immediately invalidates the old token.",
+   "setting": "Administration > API > Internet & SaaS API > Sandbox API Token",
+   "plan": "Sandbox subscription",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-da430b9a"
+   ]
+  },
+  {
+   "name": "Delete the API key",
+   "effect": "revoke",
+   "applies_to": [
+    "zscaler-3"
+   ],
+   "what": "Deleting the organization's only Cloud Service API key stops all legacy ZIA API requests until a new key is added.",
+   "setting": "Administration > API > Internet & SaaS API > Cloud Service API Key > Delete",
+   "plan": "API subscription",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-669097ac"
+   ]
+  },
+  {
+   "name": "Delete the API token",
+   "effect": "revoke",
+   "applies_to": [
+    "zscaler-6"
+   ],
+   "what": "Deleting the Sandbox API tokens stops Sandbox Submission API requests.",
+   "setting": "Administration > API > Internet & SaaS API > Sandbox API Token > Delete",
+   "plan": "Sandbox subscription",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-da430b9a"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "zscaler-3",
+   "what": "Admins provisioned through a third-party IdP cannot use the legacy ZIA API, so this path needs a password admin hosted in Authentication Service outside IdP SSO.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-9551bdd1"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Source-IP restriction for OneAPI clients, ZPA keys or legacy ZIA sessions (Admin Sign-On Policy and ZIA restricted admin access pages do not state API coverage)",
+  "Whether the Authentication Service Admin Sign-On Policy or MFA applies to legacy ZIA API password logins",
+  "Whether deleting/disabling a ZPA API key or ZIA authorization server ends already-issued bearer tokens",
+  "Whether API client create/delete and token revoke appear as named actions in Authentication Service audit logs (documented actions are generic Create/Update/Delete)",
+  "Whether read-only (GET) API calls are recorded in any audit log",
+  "Expiry of JWT key pairs (zscaler-2) and Sandbox tokens",
+  "OneAPI rate limits (only legacy limits fetched)"
+ ],
+ "credentials": [
+  {
+   "id": "zscaler-1",
+   "name": "OneAPI API client (client secret)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An API client in Authentication Service (ZIdentity) uses the OAuth 2.0 client credentials grant with a client ID and secret at <tenant>.zslogin.net/oauth2/v1/token (audience https://api.zscaler.com) and gets a JWT access token for OneAPI.",
+    "evidence_refs": [
+     "fc-00e25470",
+     "fc-bddc2f06",
+     "fc-8944bdea"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Docs do not describe workload/OIDC federation for secret-based clients.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "API Client Access Policy criteria are time and API resources only; no source-IP criterion is documented. Whether the Admin Sign-On Policy applies to API clients is not stated.",
+    "evidence_refs": [
+     "fc-8e3fd2eb",
+     "fc-a25210c2"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 31536000,
+    "configurable": "yes",
+    "summary": "Secret 30-365 days; access token 1 min-24 h",
+    "evidence_refs": [
+     "fc-00e25470"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "Access token validity set per client (1 min-24 h); secret has its own 30-365 day validity",
+    "summary": "Request a new token with the secret; rotate by adding a second secret (max two; a third replaces the most recent).",
+    "evidence_refs": [
+     "fc-00e25470"
+    ]
+   },
+   "administration": {
+    "summary": "Admins with API Clients & Resources permission create, edit, enable/disable, delete clients and revoke tokens. Scope is one API resource (role) per Zscaler service.",
+    "conditions": "Zscaler services must be linked to Authentication Service; up to 256 API clients per tenant.",
+    "evidence_refs": [
+     "fc-00e25470",
+     "fc-97c9b5b3",
+     "fc-e252abe2",
+     "fc-0f6fa4e4",
+     "fc-227077e4"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "An API client represents an application or service, not a user.",
+     "evidence_refs": [
+      "fc-97c9b5b3"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "API Clients page (Administration > API > API Clients) lists all clients and exports CSV; issued tokens on Administration > API > Tokens.",
+     "evidence_refs": [
+      "fc-97c9b5b3",
+      "fc-83844d0e"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "JWT access token (bearer); client ID auto-generated."
+    },
+    "log_sources": [
+     {
+      "name": "Authentication Service Issued Tokens page",
+      "notes": "Administration > API > Tokens; lists Client ID, JTI, issued/expires, status."
+     },
+     {
+      "name": "Authentication Service audit logs",
+      "notes": "Data Explorer > Audit Logs > Authentication Service; Interface field shows API-based; stream to SIEM via NSS (auditlogtype ZID)."
+     },
+     {
+      "name": "ZIA audit logs",
+      "notes": "Data Explorer > Audit Logs > Internet & SaaS; records Admin UI and API actions; 6-month retention; NSS admin audit feed."
+     },
+     {
+      "name": "ZPA audit logs",
+      "notes": "Records admin and API actions; Client ID column; 6-month retention."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Client ID / JTI",
+      "log": "Issued Tokens page",
+      "notes": "Search tokens by either"
+     },
+     {
+      "field": "Trace ID",
+      "log": "ZIA audit logs",
+      "notes": "Generated for ZIA requests via OneAPI"
+     },
+     {
+      "field": "Client ID",
+      "log": "ZPA audit logs",
+      "notes": "API key client ID that made changes"
+     },
+     {
+      "field": "Transaction ID",
+      "log": "ZPA audit logs",
+      "notes": "Created by OneAPI; visible when Authentication Service enabled"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Create",
+      "stage": "create",
+      "notes": "Generic Authentication Service audit action; client-specific category not listed"
+     },
+     {
+      "event": "Delete",
+      "stage": "revoke",
+      "notes": "Generic action"
+     }
+    ],
+    "correlation_keys": [
+     "Client ID",
+     "JTI",
+     "Trace ID",
+     "Transaction ID",
+     "Client IP"
+    ],
+    "anomaly_cues": [
+     "Tokens issued for a client outside its normal schedule (Issued At filter)",
+     "ZIA/ZPA changes with Interface API from unexpected Client IP",
+     "New secret added to an existing client"
+    ],
+    "containment": {
+     "steps": "Disable or delete the API client (revokes its tokens), or revoke individual tokens on the Tokens page; remove secrets/keys.",
+     "kills_existing": "yes",
+     "notes": "Revoked tokens can no longer be used; disabling the client revokes its tokens."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact audit event name for API client and token actions",
+     "Whether token issuance is itself audited"
+    ],
+    "evidence_refs": [
+     "fc-97c9b5b3",
+     "fc-83844d0e",
+     "fc-e8c92a49",
+     "fc-4cb16bf9",
+     "fc-3af5385d",
+     "fc-2dd48d6f",
+     "fc-a9786e44"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST <tenant>.zslogin.net/oauth2/v1/token",
+      "reveals": "Access token; resources granted",
+      "bulk": false,
+      "scope": "API resource roles",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Visible on Issued Tokens page"
+     }
+    ],
+    "unknown": [
+     "Documented OneAPI whoami endpoint",
+     "Whether OneAPI GET calls are logged"
+    ],
+    "evidence_refs": [
+     "fc-83844d0e",
+     "fc-8944bdea"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "zscaler-2",
+   "name": "OneAPI API client (JWKS URL or certificate/public key)",
+   "family": "jwt",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Same API client type, but the client signs a JWT with its private key; Authentication Service verifies it using a hosted JWKS URL or an uploaded .pem public key, then issues an access token.",
+    "evidence_refs": [
+     "fc-00e25470",
+     "fc-bddc2f06"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "Keys can be served from a customer-hosted JWKS URL, but no workload identity federation (e.g. cloud OIDC tokens) is documented.",
+    "evidence_refs": [
+     "fc-00e25470",
+     "fc-bddc2f06"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Same as zscaler-1: no IP criterion documented in API Client Access Policy.",
+    "evidence_refs": [
+     "fc-a25210c2"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": 86400,
+    "configurable": "conditional",
+    "summary": "Key pair has no documented expiry; access token 1 min-24 h",
+    "evidence_refs": [
+     "fc-00e25470"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "Access token validity per client",
+    "summary": "Client signs a new JWT assertion to get a new token; key rotation via JWKS URL or new .pem.",
+    "evidence_refs": [
+     "fc-00e25470",
+     "fc-bddc2f06"
+    ]
+   },
+   "administration": {
+    "summary": "Managed on the same API Clients page as zscaler-1.",
+    "conditions": "Same as zscaler-1.",
+    "evidence_refs": [
+     "fc-97c9b5b3"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "An API client represents an application or service, not a user.",
+     "evidence_refs": [
+      "fc-97c9b5b3"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "API Clients page (Administration > API > API Clients); issued tokens on Administration > API > Tokens.",
+     "evidence_refs": [
+      "fc-97c9b5b3",
+      "fc-83844d0e"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "JWT access token; client authenticates with signed JWT assertion."
+    },
+    "log_sources": [
+     {
+      "name": "Authentication Service Issued Tokens page",
+      "notes": "Administration > API > Tokens; lists Client ID, JTI, issued/expires, status."
+     },
+     {
+      "name": "Authentication Service audit logs",
+      "notes": "Data Explorer > Audit Logs > Authentication Service; Interface field shows API-based; stream to SIEM via NSS (auditlogtype ZID)."
+     },
+     {
+      "name": "ZIA audit logs",
+      "notes": "Data Explorer > Audit Logs > Internet & SaaS; records Admin UI and API actions; 6-month retention; NSS admin audit feed."
+     },
+     {
+      "name": "ZPA audit logs",
+      "notes": "Records admin and API actions; Client ID column; 6-month retention."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Client ID / JTI",
+      "log": "Issued Tokens page",
+      "notes": "Search tokens by either"
+     },
+     {
+      "field": "Trace ID",
+      "log": "ZIA audit logs",
+      "notes": "Generated for ZIA requests via OneAPI"
+     },
+     {
+      "field": "Client ID",
+      "log": "ZPA audit logs",
+      "notes": "API key client ID that made changes"
+     },
+     {
+      "field": "Transaction ID",
+      "log": "ZPA audit logs",
+      "notes": "Created by OneAPI; visible when Authentication Service enabled"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Create",
+      "stage": "create",
+      "notes": "Generic Authentication Service audit action; client-specific category not listed"
+     },
+     {
+      "event": "Delete",
+      "stage": "revoke",
+      "notes": "Generic action"
+     }
+    ],
+    "correlation_keys": [
+     "Client ID",
+     "JTI",
+     "Trace ID",
+     "Transaction ID",
+     "Client IP"
+    ],
+    "anomaly_cues": [
+     "Tokens issued for a client outside its normal schedule (Issued At filter)",
+     "ZIA/ZPA changes with Interface API from unexpected Client IP",
+     "New secret added to an existing client"
+    ],
+    "containment": {
+     "steps": "Disable or delete the API client (revokes its tokens), or revoke individual tokens on the Tokens page; remove secrets/keys.",
+     "kills_existing": "yes",
+     "notes": "Revoked tokens can no longer be used; disabling the client revokes its tokens."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact audit event name for API client and token actions",
+     "Whether token issuance is itself audited"
+    ],
+    "evidence_refs": [
+     "fc-97c9b5b3",
+     "fc-83844d0e",
+     "fc-e8c92a49",
+     "fc-4cb16bf9",
+     "fc-3af5385d",
+     "fc-2dd48d6f",
+     "fc-a9786e44"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST <tenant>.zslogin.net/oauth2/v1/token",
+      "reveals": "Access token; resources granted",
+      "bulk": false,
+      "scope": "API resource roles",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Visible on Issued Tokens page"
+     }
+    ],
+    "unknown": [
+     "Documented OneAPI whoami endpoint",
+     "Whether OneAPI GET calls are logged"
+    ],
+    "evidence_refs": [
+     "fc-83844d0e",
+     "fc-8944bdea"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "zscaler-3",
+   "name": "Cloud Service API Key with ZIA admin credentials (legacy ZIA API)",
+   "family": "basic",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Legacy ZIA API: POST /api/v1/authenticatedSession with admin username, password, an obfuscated 12-character org API key and timestamp; returns a JSESSIONID cookie.",
+    "evidence_refs": [
+     "fc-669097ac",
+     "fc-9551bdd1"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Password-based; in Authentication Service tenants, users provisioned via third-party IdPs cannot authenticate to the APIs.",
+    "evidence_refs": [
+     "fc-9551bdd1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No IP restriction for API sessions is documented on the API pages fetched.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "inactivity",
+    "default_seconds": 300,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Org key never expires; session cookie expires in 5 minutes by default",
+    "evidence_refs": [
+     "fc-9551bdd1",
+     "fc-771beedb"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "JSESSIONID 5-minute default expiry",
+    "summary": "Re-POST /authenticatedSession with the same key and password.",
+    "evidence_refs": [
+     "fc-9551bdd1"
+    ]
+   },
+   "administration": {
+    "summary": "One key per org, provisioned by Zscaler with an API subscription. Admins with the needed role can edit, regenerate or delete it; access is also limited by the admin's role.",
+    "conditions": "Requires API subscription; Zscaler may disable the key for abuse.",
+    "evidence_refs": [
+     "fc-669097ac",
+     "fc-771beedb",
+     "fc-9551bdd1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "API login uses a username and password for an admin hosted on Authentication Service; IdP-provisioned admins cannot use the API, so IdP SSO is not in the path.",
+     "evidence_refs": [
+      "fc-9551bdd1"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "One key per organization, shown on the Cloud Service API Key page.",
+     "evidence_refs": [
+      "fc-669097ac"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "12-character alphanumeric org key, sent obfuscated with a timestamp; session is a JSESSIONID cookie."
+    },
+    "log_sources": [
+     {
+      "name": "ZIA audit logs",
+      "notes": "Data Explorer > Audit Logs > Internet & SaaS; records Admin UI and API actions; 6-month retention; NSS admin audit feed."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Admin ID",
+      "log": "ZIA audit logs",
+      "notes": "Admin login used with the key"
+     },
+     {
+      "field": "Client IP",
+      "log": "ZIA audit logs",
+      "notes": "Source IP"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Sign In",
+      "stage": "use",
+      "notes": "ZIA audit action"
+     },
+     {
+      "event": "Sign Out",
+      "stage": "use",
+      "notes": "ZIA audit action"
+     },
+     {
+      "event": "Cloud Service API Key",
+      "stage": "create",
+      "notes": "Audit sub-category for key changes"
+     }
+    ],
+    "correlation_keys": [
+     "Admin ID",
+     "Client IP",
+     "Interface=API"
+    ],
+    "anomaly_cues": [
+     "Sign In with Interface API from an unexpected IP",
+     "Key regenerate/edit by an unexpected admin"
+    ],
+    "containment": {
+     "steps": "Regenerate, edit or delete the Cloud Service API Key; reset or remove the admin account used.",
+     "kills_existing": "yes",
+     "notes": "Docs: deleting the key ensures no further API requests are possible; old key invalidated immediately."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether an existing JSESSIONID survives key deletion for its remaining minutes"
+    ],
+    "evidence_refs": [
+     "fc-669097ac",
+     "fc-771beedb",
+     "fc-3af5385d"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST /api/v1/authenticatedSession",
+      "reveals": "Session cookie",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "Sign In",
+      "log_notes": "ZIA audit Sign In action; Interface API"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /api/v1/status",
+      "reveals": "Activation status",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit logs record actions; GETs not confirmed"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /api/v1/urlLookup",
+      "reveals": "URL categories (up to 100 URLs per request)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "Whether GET calls are audited"
+    ],
+    "evidence_refs": [
+     "fc-9551bdd1",
+     "fc-3af5385d"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "zscaler-4",
+   "name": "ZIA OAuth 2.0 with external authorization server (PingFederate, Okta, Entra ID)",
+   "family": "federation",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A client app registered in the customer's IdP gets a client-credentials JWT with scope <cloud>::<orgid>::<API role>; ZIA validates the signature via the server's JWKS and the scope claim.",
+    "evidence_refs": [
+     "fc-9551bdd1",
+     "fc-79d90bfe"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "ZIA trusts tokens issued by the customer's PingFederate, Okta or Entra ID; audience, issuer and client ID claims can be required.",
+    "evidence_refs": [
+     "fc-79d90bfe"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented on the ZIA side; any IP policy would be the external IdP's.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Token lifetime set in the external OAuth service",
+    "evidence_refs": [
+     "fc-9551bdd1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "IdP token lifetime",
+    "summary": "Client requests a new token from its IdP.",
+    "evidence_refs": [
+     "fc-9551bdd1"
+    ]
+   },
+   "administration": {
+    "summary": "Admins add, edit, enable/disable or delete authorization servers; API roles (up to 16, rank 7, cannot modify admins) set what the client can do.",
+    "conditions": "Requires API subscription and API roles; cloud service API only.",
+    "evidence_refs": [
+     "fc-9551bdd1",
+     "fc-79d90bfe",
+     "fc-73c26698"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Client-credentials grant works outside the context of users.",
+     "evidence_refs": [
+      "fc-9551bdd1"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Zscaler lists configured authorization servers; the individual OAuth clients live in the external IdP.",
+     "evidence_refs": [
+      "fc-79d90bfe"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "ZIA Admin Portal > Administration > Cloud Service API Security > OAuth 2.0 Authorization Servers tab (servers only; list OAuth clients in the external IdP)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-d3dae351"
+     ]
+    },
+    "expiry": {
+     "ui": "Set in the external OAuth service, e.g. Okta: authorization server > Access Policies > rule > Access token lifetime is. Check expires_in in the token response",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-d3dae351",
+      "fc-e41f3fdd"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "JWT issued by the customer's IdP."
+    },
+    "log_sources": [
+     {
+      "name": "ZIA audit logs",
+      "notes": "Data Explorer > Audit Logs > Internet & SaaS; records Admin UI and API actions; 6-month retention; NSS admin audit feed."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Admin ID",
+      "log": "ZIA audit logs",
+      "notes": "Internal API user oauth-<rolename>$@<orgid>.<cloud-domain>"
+     },
+     {
+      "field": "Client IP",
+      "log": "ZIA audit logs",
+      "notes": "Client application's IP"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "OAuth 2.0 Authorization Servers",
+      "stage": "create",
+      "notes": "Audit sub-category for server changes"
+     }
+    ],
+    "correlation_keys": [
+     "Admin ID (oauth-<rolename>)",
+     "Client IP"
+    ],
+    "anomaly_cues": [
+     "API changes by oauth-<role> user from unknown IPs",
+     "New authorization server added"
+    ],
+    "containment": {
+     "steps": "Disable or delete the authorization server in ZIA; disable the client in the IdP; tighten the API role.",
+     "kills_existing": "unknown",
+     "notes": "Docs do not say whether ZIA rejects already-issued, unexpired JWTs after IdP-side revocation."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Effect of disabling the server on live tokens",
+     "Which IdP client made a call (only role user is logged)"
+    ],
+    "evidence_refs": [
+     "fc-79d90bfe",
+     "fc-3af5385d"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/v1/status",
+      "reveals": "Activation status",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit logs record actions; GETs not confirmed"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /api/v1/urlLookup",
+      "reveals": "URL categories (up to 100 URLs per request)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "Whether GET calls are audited"
+    ],
+    "evidence_refs": [
+     "fc-9551bdd1",
+     "fc-3af5385d"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "zscaler-5",
+   "name": "ZPA API key (client ID and client secret, legacy ZPA API)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "ZPA API key = client ID + secret, posted to https://config.private.zscaler.com/signin to get a bearer token for /mgmtconfig endpoints.",
+    "evidence_refs": [
+     "fc-1027e5e4",
+     "fc-7b0fe8f3"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Not documented.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented for ZPA API keys.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 3600,
+    "configurable": "yes",
+    "summary": "Key itself has no documented expiry; session validity up to 3,600 s",
+    "evidence_refs": [
+     "fc-53381e39",
+     "fc-7b0fe8f3"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Session Validity Interval",
+    "summary": "Call /signin again with the same client ID and secret.",
+    "evidence_refs": [
+     "fc-7b0fe8f3"
+    ]
+   },
+   "administration": {
+    "summary": "Admins with full API Key Management access create keys with a status and RBAC role (e.g. API Read Only); keys can be edited, disabled or deleted. Authentication Service keys show read-only here.",
+    "conditions": "Keys created via Zscaler Deception cannot be edited or deleted here.",
+    "evidence_refs": [
+     "fc-1027e5e4",
+     "fc-53381e39",
+     "fc-7b0fe8f3"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The key carries its own API role and is not tied to an admin user.",
+     "evidence_refs": [
+      "fc-1027e5e4"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "API Keys page (Administration > API > Private Access API) lists all keys with status, role and validity.",
+     "evidence_refs": [
+      "fc-1027e5e4"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Zscaler Admin Console > Data Explorer > Audit Logs > Private Access; filter Client ID; Download for CSV",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-2dd48d6f"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Bearer token from /signin."
+    },
+    "log_sources": [
+     {
+      "name": "ZPA audit logs",
+      "notes": "Records admin and API actions; Client ID column; 6-month retention."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Client ID",
+      "log": "ZPA audit logs",
+      "notes": "API key's client ID that made changes"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Sign In",
+      "stage": "use",
+      "notes": "ZPA audit action"
+     },
+     {
+      "event": "Sign In Failure",
+      "stage": "use",
+      "notes": "ZPA audit action"
+     },
+     {
+      "event": "Delete",
+      "stage": "revoke",
+      "notes": "Generic action"
+     }
+    ],
+    "correlation_keys": [
+     "Client ID",
+     "Request ID",
+     "Transaction ID"
+    ],
+    "anomaly_cues": [
+     "Changes by an unfamiliar Client ID",
+     "Sign In Failure bursts"
+    ],
+    "containment": {
+     "steps": "Disable or delete the ZPA API key.",
+     "kills_existing": "unknown",
+     "notes": "Docs do not say whether issued tokens end before their validity interval (max 3,600 s)."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether data reads are audited"
+    ],
+    "evidence_refs": [
+     "fc-1027e5e4",
+     "fc-53381e39",
+     "fc-2dd48d6f"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST https://config.private.zscaler.com/signin",
+      "reveals": "Bearer token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "Sign In",
+      "log_notes": "ZPA audit action list includes Sign In"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /mgmtconfig/v1/admin/customers/{customerId}/application",
+      "reveals": "All application segments",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "Light (GET): 2 req/s, 1000 req/hr typical",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "ZPA audit log documents changes and sign-ins, not reads"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-7b0fe8f3",
+     "fc-2dd48d6f",
+     "fc-566a8d2a"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "zscaler-6",
+   "name": "Sandbox API Token with ZIA admin credentials",
+   "family": "basic",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Sandbox Submission API uses an org API token plus ZIA admin username and password to create a session.",
+    "evidence_refs": [
+     "fc-da430b9a"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Password-based; same Authentication Service restriction as zscaler-3.",
+    "evidence_refs": [
+     "fc-9551bdd1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No token expiry documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Session",
+    "summary": "Reuse token and admin credentials to create a new session.",
+    "evidence_refs": [
+     "fc-da430b9a"
+    ]
+   },
+   "administration": {
+    "summary": "Up to 5 tokens per org; regenerate or delete from the Sandbox API Token page.",
+    "conditions": "Requires Sandbox subscription.",
+    "evidence_refs": [
+     "fc-da430b9a"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Sandbox API Token page (Administration > API > Internet & SaaS API > Sandbox API Token).",
+     "evidence_refs": [
+      "fc-da430b9a"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Org-level sandbox token plus admin credentials."
+    },
+    "log_sources": [
+     {
+      "name": "ZIA audit logs",
+      "notes": "Data Explorer > Audit Logs > Internet & SaaS; records Admin UI and API actions; 6-month retention; NSS admin audit feed."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "Admin ID",
+      "log": "ZIA audit logs",
+      "notes": "Admin login used"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Sandbox",
+      "stage": "use",
+      "notes": "ZIA audit category/sub-category; exact token events not documented"
+     }
+    ],
+    "correlation_keys": [
+     "Admin ID",
+     "Client IP"
+    ],
+    "anomaly_cues": [
+     "Sandbox submissions from unexpected admins"
+    ],
+    "containment": {
+     "steps": "Regenerate or delete the Sandbox API token.",
+     "kills_existing": "unknown",
+     "notes": "Regeneration immediately invalidates the old token; effect on open sessions not stated."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Token-specific audit events"
+    ],
+    "evidence_refs": [
+     "fc-da430b9a",
+     "fc-3af5385d"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Sandbox API endpoints not reviewed"
+    ],
+    "evidence_refs": [
+     "fc-da430b9a"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

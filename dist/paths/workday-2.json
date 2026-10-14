@@ -1,0 +1,395 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "workday",
+      "name": "Workday",
+      "scope_notes": "Covers Workday (HCM/Financials tenant APIs: SOAP WWS, REST, RaaS). Covers core Workday tenants; many authentication-policy, OAuth and REST API reference pages on doc.workday.com and Community require customer login and were not readable, so several items are unknown.",
+      "controls": [
+        {
+          "name": "OAuth 2.0 Clients Enabled",
+          "effect": "disable",
+          "applies_to": [
+            "workday-2",
+            "workday-3",
+            "workday-4"
+          ],
+          "what": "Tenant-wide switch that allows OAuth 2.0 clients to call the Workday API.",
+          "setting": "Edit Tenant Setup - Security > OAuth 2.0 Settings",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f1eb658f"
+          ]
+        },
+        {
+          "name": "Disable OAuth 2.0 client",
+          "effect": "revoke",
+          "applies_to": [
+            "workday-2",
+            "workday-3",
+            "workday-4"
+          ],
+          "what": "Disable a compromised API client to stop further use of its credentials.",
+          "setting": "API client related actions (exact task name not public)",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-b7d6607b"
+          ]
+        },
+        {
+          "name": "Scope (Functional Areas)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "workday-2",
+            "workday-3",
+            "workday-4"
+          ],
+          "what": "Limits an API client to selected functional areas.",
+          "setting": "Register API Client / Register API Client for Integrations",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-e46ddd1f"
+          ]
+        },
+        {
+          "name": "Integration System Security Group domain permissions",
+          "effect": "limit_resources",
+          "applies_to": [
+            "workday-1",
+            "workday-2",
+            "workday-3"
+          ],
+          "what": "ISU access is limited to domains granted to its security group.",
+          "setting": "Create Security Group (Integration System Security Group) + Maintain Permissions for Security Group",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-6fb644f5"
+          ]
+        },
+        {
+          "name": "Non-Expiring Refresh Tokens",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "workday-2",
+            "workday-4"
+          ],
+          "what": "When checked, refresh tokens do not expire; leave unchecked to keep expiry.",
+          "setting": "Register API Client for Integrations > Non-Expiring Refresh Tokens",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-e46ddd1f",
+            "fc-b7d6607b"
+          ]
+        },
+        {
+          "name": "Manage Refresh Tokens for Integrations",
+          "effect": "require_rotation",
+          "applies_to": [
+            "workday-2"
+          ],
+          "what": "Regenerates the refresh token for a client and ISU.",
+          "setting": "API client related actions > API Client > Manage Refresh Tokens for Integrations",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-e46ddd1f"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether authentication-policy IP rules are enforced on each API request or only at sign-in/token issuance (authentication policy pages require login).",
+        "Whether disabling an API client or regenerating a refresh token invalidates already-issued access tokens (docs say tokens can be replayed within their lifetime).",
+        "Exact task names to disable/delete an API client and to revoke a refresh token.",
+        "Default access-token lifetime for integration clients.",
+        "Whether ISU password authentication bypasses SAML SSO / IdP conditional access.",
+        "Whether User Activity Logging records web service (SOAP/REST) calls made by ISUs; the activityLogging REST API reference requires login.",
+        "Audit event names for API client creation, refresh token generation, or client disablement."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "workday-2",
+      "provider_id": "workday",
+      "name": "API Client for Integrations with refresh token (Manage Refresh Tokens for Integrations)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Admin registers an API Client for Integrations, then generates a refresh token bound to an ISU. The holder exchanges client ID, secret and refresh token for access tokens at /ccx/oauth2/<tenant>/token.",
+        "evidence_refs": [
+          "fc-e46ddd1f",
+          "fc-d1927f9e"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Refresh token is minted by an admin for the ISU without an interactive sign-in; docs do not address IdP conditional access.",
+        "evidence_refs": [
+          "fc-e46ddd1f"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Public docs do not say whether authentication policy IP rules apply to OAuth token issuance or bearer requests.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Non-Expiring Refresh Tokens option; access/refresh expiry configurable",
+        "evidence_refs": [
+          "fc-e46ddd1f",
+          "fc-b7d6607b"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "client token settings",
+        "summary": "Access tokens are obtained with the refresh token; admins can regenerate the refresh token from the client.",
+        "evidence_refs": [
+          "fc-e46ddd1f"
+        ]
+      },
+      "administration": {
+        "summary": "Register API Client for Integrations task; Scope (Functional Areas) limits the client; data access comes from the ISU's security groups.",
+        "conditions": "OAuth 2.0 Clients Enabled must be on in tenant setup.",
+        "evidence_refs": [
+          "fc-e46ddd1f",
+          "fc-f1eb658f",
+          "fc-6fb644f5"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The refresh token is generated for an ISU, not a person.",
+          "evidence_refs": [
+            "fc-6fb644f5",
+            "fc-e46ddd1f"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "A View API Clients report exists; docs only show it used to find the REST endpoint, not to list every client and token.",
+          "evidence_refs": [
+            "fc-ab5e554f"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "View API Clients report; per client: related actions > API Client > Manage Refresh Tokens for Integrations",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-2b5f1648",
+            "fc-e46ddd1f"
+          ]
+        },
+        "usage": {
+          "ui": "View User Activity report (filter System Account = the bound ISU)",
+          "api": "GET https://<tenantHostname>/privacy/v1/activityLogging (spec basePath)?from=...&to=...&systemAccount=<account>",
+          "cli": null,
+          "evidence_refs": [
+            "fc-7a74b5d0",
+            "fc-7726818f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Client ID is a base64 string; refresh token is an opaque string."
+        },
+        "log_sources": [
+          {
+            "name": "View User Activity / /activityLogging",
+            "notes": "Records acting account (the bound ISU); opt-in; 30 days."
+          },
+          {
+            "name": "View User or Task or Object Audit Trail",
+            "notes": "Configuration changes by account/task/object; event names for API clients not public."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "System Account",
+            "log": "User Activity",
+            "notes": "Shows the ISU, not the API client ID (client field not documented)."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "ISU user name",
+          "Client ID",
+          "IP Address"
+        ],
+        "anomaly_cues": [
+          "Refresh token regenerated outside change windows",
+          "Client with Non-Expiring Refresh Tokens used from new IPs"
+        ],
+        "containment": {
+          "steps": "Disable the affected OAuth 2.0 client; regenerate the refresh token; review the ISU's security groups.",
+          "kills_existing": "unknown",
+          "notes": "Workday says compromised access tokens can be replayed within their lifetime."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether disabling the client revokes outstanding access tokens",
+          "Audit event names"
+        ],
+        "evidence_refs": [
+          "fc-e46ddd1f",
+          "fc-b7d6607b",
+          "fc-7a74b5d0",
+          "fc-b14c0028"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "SOAP Human_Resources Get_Workers (bearer token)",
+            "reveals": "Worker data within ISU security",
+            "bulk": true,
+            "scope": "Functional areas on the client",
+            "rate_limit": "429 for REST/RaaS under load",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "GET requests are not logged per web service limits page."
+          }
+        ],
+        "unknown": [
+          "REST whoami endpoint not readable in public docs"
+        ],
+        "evidence_refs": [
+          "fc-1cbbaa57",
+          "fc-2aa3cd99"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1cbbaa57",
+      "title": "Workday Web Services v47.0 Human_Resources Get_Workers",
+      "url": "https://community.workday.com/sites/default/files/file-hosting/productionapi/Human_Resources/v47.0/Get_Workers.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2aa3cd99",
+      "title": "Reference: Integrations, EIB, and Web Service Limits",
+      "url": "https://doc.workday.com/admin-guide/en-us/manage-workday/tenant-configuration/it-administrator-resources/limitations-and-availability/dan1370797408285.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2b5f1648",
+      "title": "Obtain the Workday REST API Endpoint",
+      "url": "https://doc.workday.com/admin-guide/en-us/workday-studio/integration-design/common-components/the-prismanalytics-subassembly/qjw1533213809425.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6fb644f5",
+      "title": "Set Up Live Data Query ISU Authentication in Workday",
+      "url": "https://doc.workday.com/admin-guide/en-us/workday-data-cloud/data-out/workday-live-data-query-/set-up-live-data-query-isu-authentication.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7726818f",
+      "title": "Workday REST API reference: privacy v1 GET /activityLogging",
+      "url": "https://community.workday.com/sites/default/files/file-hosting/restapi/index.html#privacy/v1/get-/activityLogging",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7a74b5d0",
+      "title": "Concept: User Activity Logging",
+      "url": "https://doc.workday.com/admin-guide/en-us/manage-workday/tenant-configuration/user-activity-logging/unv1636547598141.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ab5e554f",
+      "title": "Connect to Workday Using ISU Name and Password (Peakon)",
+      "url": "https://doc.workday.com/peakon/en-us/workday-peakon-employee-voice/integrations/workday-integration/gen1667304794785.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b14c0028",
+      "title": "Reference: Auditing-Related Reports",
+      "url": "https://doc.workday.com/admin-guide/en-us/manage-workday/tenant-configuration/auditing/wln1467042699742.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b7d6607b",
+      "title": "Workday AI Admin Guide PDF (FAQ: Agent Security)",
+      "url": "https://doc.workday.com/content/dam/fmdita-outputs/pdfs/admin-guide/en-us/Admin-Guide-Workday-AI.pdf",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d1927f9e",
+      "title": "Register API Client for Data Lake (JWT Bearer Grant)",
+      "url": "https://doc.workday.com/admin-guide/en-us/workday-data-cloud/data-out/workday-data-lake/register-api-client-for-data-lake--jwt-bearer-gran.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e46ddd1f",
+      "title": "Register API Client for Data Lake (Refresh Token Grant)",
+      "url": "https://doc.workday.com/admin-guide/en-us/workday-data-cloud/data-out/workday-data-lake/register-api-client-for-data-lake--refresh-token-g.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f1eb658f",
+      "title": "Reference: Edit Tenant Setup - Security",
+      "url": "https://doc.workday.com/admin-guide/en-us/manage-workday/tenant-configuration/tenant-setup/dan1370796470031.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

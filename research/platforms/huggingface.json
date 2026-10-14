@@ -1,0 +1,1237 @@
+{
+ "id": "huggingface",
+ "name": "Hugging Face",
+ "scope_notes": "Covers Hugging Face Hub (Team / Enterprise / Enterprise Plus). Hosted Hub; token management needs Team or Enterprise, org revoke and service accounts need Enterprise, IP ranges need Enterprise Plus. Inference Endpoints use the same user access tokens.",
+ "controls": [
+  {
+   "name": "Token Policy: Require administrator approval",
+   "effect": "require_approval",
+   "applies_to": [
+    "huggingface-1",
+    "huggingface-2"
+   ],
+   "what": "Fine-grained tokens need admin approval for org resources; read/write tokens are blocked.",
+   "setting": "Organization settings > Tokens Management > Token Policy",
+   "plan": "Team or Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-97bec736"
+   ]
+  },
+  {
+   "name": "Token Policy: Only access via fine-grained tokens",
+   "effect": "disable",
+   "applies_to": [
+    "huggingface-2"
+   ],
+   "what": "Read/write tokens get 403 on org resources.",
+   "setting": "Organization settings > Tokens Management > Token Policy",
+   "plan": "Team or Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ad2e83b2",
+    "fc-97bec736"
+   ]
+  },
+  {
+   "name": "Deny token",
+   "effect": "disable",
+   "applies_to": [
+    "huggingface-1"
+   ],
+   "what": "Removes approval-based org access immediately; reversible.",
+   "setting": "Token review page",
+   "plan": "Team or Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-97bec736"
+   ]
+  },
+  {
+   "name": "Revoke token (org)",
+   "effect": "revoke",
+   "applies_to": [
+    "huggingface-1",
+    "huggingface-2"
+   ],
+   "what": "Permanently removes a member token's access to the org only.",
+   "setting": "Token detail page or POST /api/organizations/{name}/settings/tokens/{tokenId}/revoke",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-97bec736",
+    "fc-5fdecf58"
+   ]
+  },
+  {
+   "name": "Revoke leaked token everywhere",
+   "effect": "revoke",
+   "applies_to": [
+    "huggingface-1",
+    "huggingface-2",
+    "huggingface-3"
+   ],
+   "what": "Anyone can submit a raw token value; matching tokens are invalidated everywhere immediately.",
+   "setting": "POST /api/credentials/revoke",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-ad2e83b2"
+   ]
+  },
+  {
+   "name": "Restrict organization access to your IP ranges only",
+   "effect": "limit_network",
+   "applies_to": [
+    "huggingface-1",
+    "huggingface-2",
+    "huggingface-3"
+   ],
+   "what": "Org resources reachable only from listed CIDRs, including via tokens.",
+   "setting": "Organization settings > Network Security (or PATCH /api/organizations/{name}/settings/network-security)",
+   "plan": "Enterprise Plus",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-772a90c6"
+   ]
+  },
+  {
+   "name": "Bypass IP restrictions and the Content Access Policy",
+   "effect": "other",
+   "applies_to": [
+    "huggingface-3"
+   ],
+   "what": "Per-token exemption from IP ranges and content policy; admin-only.",
+   "setting": "Service account token form",
+   "plan": "Enterprise Plus",
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-dfefebc4"
+   ]
+  },
+  {
+   "name": "Service account token rotate / delete",
+   "effect": "revoke",
+   "applies_to": [
+    "huggingface-3"
+   ],
+   "what": "Rotate invalidates the old value immediately; delete revokes permanently.",
+   "setting": "Organization settings > Service Accounts",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-dfefebc4"
+   ]
+  },
+  {
+   "name": "Token Exchange token duration",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "huggingface-5"
+   ],
+   "what": "Admins set issued token duration (8 h default, max 30 days) and can refresh the client secret.",
+   "setting": "OAuth app settings",
+   "plan": "Enterprise",
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-6bd457a1"
+   ]
+  },
+  {
+   "name": "Fine-grained token permissions",
+   "effect": "limit_resources",
+   "applies_to": [
+    "huggingface-1",
+    "huggingface-3"
+   ],
+   "what": "Limit token to specific repos/orgs and actions.",
+   "setting": "Token creation form",
+   "plan": null,
+   "default": "varies",
+   "level": "user",
+   "evidence_refs": [
+    "fc-ad2e83b2",
+    "fc-dfefebc4"
+   ]
+  },
+  {
+   "name": "Service Accounts (org admin only)",
+   "effect": "other",
+   "applies_to": [
+    "huggingface-3"
+   ],
+   "what": "Only organization administrators can create service accounts and issue their tokens.",
+   "setting": "Organization settings > Service Accounts",
+   "plan": "Enterprise",
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-dfefebc4"
+   ]
+  },
+  {
+   "name": "Token Exchange OAuth app set up by Hugging Face support",
+   "effect": "other",
+   "applies_to": [
+    "huggingface-5"
+   ],
+   "what": "Token Exchange only works through an org-bound OAuth app with the token-exchange privilege, which Hugging Face support sets up on request.",
+   "setting": "Contact Hugging Face support",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6bd457a1"
+   ]
+  },
+  {
+   "name": "Write role required to manage trusted publishers",
+   "effect": "disable",
+   "applies_to": [
+    "huggingface-6"
+   ],
+   "what": "Only users with the Write role on a repo can add or remove its trusted publishers.",
+   "setting": "Repo Settings > Trusted Publishers",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-b439e6e1"
+   ]
+  },
+  {
+   "name": "hf_oauth_expiration_minutes",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "huggingface-4"
+   ],
+   "what": "Sets OAuth token lifetime for a Space's Sign in with HF (default 480 min, max 43200 min).",
+   "setting": "Space README.md metadata",
+   "plan": null,
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-393b24b6"
+   ]
+  }
+ ],
+ "no_control": [],
+ "controls_unknown": [
+  "Admin-enforced expiry for user access tokens or service account tokens (no setting found; PATs are valid until revoked).",
+  "Whether access tokens require or bypass an SSO session under Basic or Managed SSO.",
+  "Org-level allowlist or block for third-party OAuth apps.",
+  "Org-level control over who can configure Trusted Publishers on org repos.",
+  "Exact audit event name for OAuth Token Exchange issuance (docs say exchanges are logged).",
+  "Whether IP ranges apply to OAuth, Token Exchange and Trusted Publisher tokens."
+ ],
+ "credentials": [
+  {
+   "id": "huggingface-1",
+   "name": "User access token (fine-grained)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "hf_ token created by a user with per-resource permissions; sent as bearer token or used as git password. Also used to call private Inference Endpoints.",
+    "evidence_refs": [
+     "fc-ad2e83b2",
+     "fc-f1ed4b89"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Basic SSO prompts members when accessing org resources; docs do not say whether access tokens require an SSO session.",
+    "evidence_refs": [
+     "fc-497f8174"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Enterprise Plus 'Restrict organization access to your IP ranges only' applies to access tokens for org resources only.",
+    "evidence_refs": [
+     "fc-772a90c6"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Valid until revoked",
+    "evidence_refs": [
+     "fc-b439e6e1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "No expiry",
+    "summary": "User can refresh (rotate) or delete from settings.",
+    "evidence_refs": [
+     "fc-ad2e83b2"
+    ]
+   },
+   "administration": {
+    "summary": "Team/Enterprise admins can list member tokens, require approval for fine-grained tokens touching org resources, and deny them; Enterprise admins can revoke a token's org access.",
+    "conditions": "Org deny/revoke only cuts off that org; token keeps working elsewhere. Admin-created tokens are auto-approved.",
+    "evidence_refs": [
+     "fc-97bec736",
+     "fc-ad2e83b2"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Token access to org resources follows org membership, and SCIM deprovisioning revokes the user's access; the token may still work for the user's own resources.",
+     "evidence_refs": [
+      "fc-ad2e83b2",
+      "fc-15476517"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Org settings token listing and GET /api/organizations/{org}/settings/tokens list all member access tokens.",
+     "evidence_refs": [
+      "fc-97bec736"
+     ]
+    }
+   },
+   "how": {
+    "offboard": {
+     "ui": "Organization settings > Members > revoke membership; with SCIM, deprovision in the IdP. For immediate cut-off: revoke the token from Tokens Management",
+     "api": "SCIM: set user active=false or delete the user via SCIM; POST /api/organizations/{org}/settings/tokens/{token_id}/revoke",
+     "cli": null,
+     "evidence_refs": [
+      "fc-f5309a6f",
+      "fc-15476517",
+      "fc-97bec736"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "hf_",
+     "notes": ""
+    },
+    "log_sources": [
+     {
+      "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+      "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "token id",
+      "log": "Org token listing API",
+      "notes": "Used for org revoke"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "org.token_approval.authorization_request",
+      "stage": "create",
+      "notes": "Only with approval policy"
+     },
+     {
+      "event": "org.token_approval.authorization_request.authorized",
+      "stage": "approve",
+      "notes": ""
+     },
+     {
+      "event": "org.token_approval.authorization_request.denied",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "org.token_approval.authorization_request.revoked",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "token id (24-char, org token settings)",
+     "username",
+     "anonymized IP/location"
+    ],
+    "anomaly_cues": [
+     "Token never rotated or unused for long periods in org token listing",
+     "Unexpected org.token_approval.authorization_request"
+    ],
+    "containment": {
+     "steps": "Enterprise: revoke org access via API; for full kill submit the token to POST /api/credentials/revoke or have owner delete it.",
+     "kills_existing": "yes",
+     "notes": "Org revoke stops org access; credentials/revoke invalidates everywhere immediately."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Token creation/use events are not in the org audit log event list"
+    ],
+    "evidence_refs": [
+     "fc-ad2e83b2",
+     "fc-97bec736",
+     "fc-e1e6add6"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/whoami-v2",
+      "reveals": "User, orgs and auth method of the token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not among the documented audit event types"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /api/models/{namespace}/{repo}/tree/{rev}/{path}",
+      "reveals": "Files in a repo",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not among documented audit event types"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+      "reveals": "File contents (models, datasets)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Org audit log has no download events"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-e1e6add6",
+     "fc-5fdecf58"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "huggingface-2",
+   "name": "User access token (read / write)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Unscoped hf_ token with read or write role across everything the user can read or write, including org repos per membership role.",
+    "evidence_refs": [
+     "fc-ad2e83b2"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Basic SSO prompts members when accessing org resources; docs do not say whether access tokens require an SSO session.",
+    "evidence_refs": [
+     "fc-497f8174"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Enterprise Plus 'Restrict organization access to your IP ranges only' applies to access tokens for org resources only.",
+    "evidence_refs": [
+     "fc-772a90c6"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Valid until revoked",
+    "evidence_refs": [
+     "fc-b439e6e1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "No expiry",
+    "summary": "User refreshes or deletes in settings.",
+    "evidence_refs": [
+     "fc-ad2e83b2"
+    ]
+   },
+   "administration": {
+    "summary": "Org policy 'Only access via fine-grained tokens' or 'Require administrator approval' makes read/write tokens unauthorized for org resources (403).",
+    "conditions": "Team & Enterprise plans.",
+    "evidence_refs": [
+     "fc-ad2e83b2",
+     "fc-97bec736"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Same as fine-grained tokens: org access follows membership, which SCIM deprovisioning revokes.",
+     "evidence_refs": [
+      "fc-ad2e83b2",
+      "fc-15476517"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Org settings token listing and GET /api/organizations/{org}/settings/tokens.",
+     "evidence_refs": [
+      "fc-97bec736"
+     ]
+    }
+   },
+   "how": {
+    "offboard": {
+     "ui": "Organization settings > Members > revoke membership; with SCIM, deprovision in the IdP",
+     "api": "SCIM: set user active=false or delete the user via SCIM",
+     "cli": null,
+     "evidence_refs": [
+      "fc-f5309a6f",
+      "fc-15476517"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "hf_",
+     "notes": ""
+    },
+    "log_sources": [
+     {
+      "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+      "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "token id",
+      "log": "Org token listing API",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "token id (24-char, org token settings)",
+     "username",
+     "anonymized IP/location"
+    ],
+    "anomaly_cues": [
+     "Token never rotated or unused for long periods in org token listing",
+     "Unexpected org.token_approval.authorization_request"
+    ],
+    "containment": {
+     "steps": "Enable fine-grained-only policy, revoke org access (Enterprise), or global revoke via POST /api/credentials/revoke.",
+     "kills_existing": "yes",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "No audit events for read/write token creation or use"
+    ],
+    "evidence_refs": [
+     "fc-ad2e83b2",
+     "fc-e1e6add6"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/whoami-v2",
+      "reveals": "User, orgs and auth method of the token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not among the documented audit event types"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /api/models/{namespace}/{repo}/tree/{rev}/{path}",
+      "reveals": "Files in a repo",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not among documented audit event types"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+      "reveals": "File contents (models, datasets)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Org audit log has no download events"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /api/organizations/{name}/members",
+      "reveals": "Org members",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-e1e6add6",
+     "fc-5fdecf58"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "huggingface-3",
+   "name": "Service account access token",
+   "family": "pat",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Fine-grained token issued by admins to an organization-owned service account that cannot sign in interactively.",
+    "evidence_refs": [
+     "fc-dfefebc4"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Non-interactive identity; no SSO login.",
+    "evidence_refs": [
+     "fc-dfefebc4"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Subject to org IP ranges (Enterprise Plus) unless an admin enables 'Bypass IP restrictions and the Content Access Policy' on that token.",
+    "evidence_refs": [
+     "fc-772a90c6",
+     "fc-dfefebc4"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "Manual rotate",
+    "summary": "Rotate replaces the value; old value stops working immediately.",
+    "evidence_refs": [
+     "fc-dfefebc4"
+    ]
+   },
+   "administration": {
+    "summary": "Admins create, update, rotate and delete tokens with org-wide or per-repo permissions.",
+    "conditions": "Enterprise / Enterprise Plus.",
+    "evidence_refs": [
+     "fc-dfefebc4"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Service accounts belong to the org, not a person.",
+     "evidence_refs": [
+      "fc-dfefebc4"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Org settings > Service Accounts, where admins see and manage each account's tokens.",
+     "evidence_refs": [
+      "fc-dfefebc4"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": "hf_",
+     "notes": "Assumed same hf_ format; not stated"
+    },
+    "log_sources": [
+     {
+      "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+      "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "token id (24-char, org token settings)",
+     "username",
+     "anonymized IP/location"
+    ],
+    "anomaly_cues": [
+     "Token never rotated or unused for long periods in org token listing",
+     "Unexpected org.token_approval.authorization_request"
+    ],
+    "containment": {
+     "steps": "Rotate or delete the token in Service Accounts settings.",
+     "kills_existing": "yes",
+     "notes": "Old value stops working immediately on rotate."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Service account token lifecycle events are not in the audit log event list"
+    ],
+    "evidence_refs": [
+     "fc-dfefebc4",
+     "fc-e1e6add6"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/whoami-v2",
+      "reveals": "User, orgs and auth method of the token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not among the documented audit event types"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /api/models/{namespace}/{repo}/tree/{rev}/{path}",
+      "reveals": "Files in a repo",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not among documented audit event types"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+      "reveals": "File contents (models, datasets)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Org audit log has no download events"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-e1e6add6",
+     "fc-5fdecf58"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "huggingface-4",
+   "name": "OAuth app access token (Sign in with HF)",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "User authorizes an OAuth/OIDC app (with or without client secret, incl. device code) for scopes such as read-repos, write-repos, inference-api.",
+    "evidence_refs": [
+     "fc-6bd457a1"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Basic SSO prompts members when accessing org resources; docs do not say whether access tokens require an SSO session.",
+    "evidence_refs": [
+     "fc-497f8174"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Network Security text names access tokens generally; OAuth tokens not addressed.",
+    "evidence_refs": [
+     "fc-772a90c6"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 28800,
+    "maximum_seconds": 2592000,
+    "configurable": "conditional",
+    "summary": "Spaces OAuth: default 8 h, max 30 days via hf_oauth_expiration_minutes; non-Spaces apps not stated",
+    "evidence_refs": [
+     "fc-393b24b6"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "unknown",
+    "summary": "Not documented for interactive flows.",
+    "evidence_refs": []
+   },
+   "administration": {
+    "summary": "User chooses which orgs to grant at consent. No org-admin app allowlist documented.",
+    "conditions": "",
+    "evidence_refs": [
+     "fc-6bd457a1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Space README.md YAML metadata: hf_oauth_expiration_minutes (default 480, max 43200)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-393b24b6"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "hf_oauth_",
+     "notes": "Prefix shown for token-exchange and user-resource tokens"
+    },
+    "log_sources": [
+     {
+      "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+      "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "token id (24-char, org token settings)",
+     "username",
+     "anonymized IP/location"
+    ],
+    "anomaly_cues": [
+     "Token never rotated or unused for long periods in org token listing",
+     "Unexpected org.token_approval.authorization_request"
+    ],
+    "containment": {
+     "steps": "User revokes the app in their settings (path not documented).",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Admin revocation of user-granted OAuth apps"
+    ],
+    "evidence_refs": [
+     "fc-6bd457a1",
+     "fc-e1e6add6"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/whoami-v2",
+      "reveals": "User, orgs and auth method of the token",
+      "bulk": false,
+      "scope": "openid profile",
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not among the documented audit event types"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+      "reveals": "File contents (models, datasets)",
+      "bulk": true,
+      "scope": "read-repos",
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Org audit log has no download events"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-e1e6add6",
+     "fc-6bd457a1",
+     "fc-5fdecf58"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "huggingface-5",
+   "name": "OAuth Token Exchange (org-bound app, RFC 8693)",
+   "family": "oauth",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Backend uses an org-bound OAuth app's client credentials to mint hf_oauth_ tokens for any member by email, without the member's consent.",
+    "evidence_refs": [
+     "fc-6bd457a1"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "Bridges an internal directory by email; not OIDC federation.",
+    "evidence_refs": [
+     "fc-6bd457a1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not addressed in docs.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 28800,
+    "maximum_seconds": 2592000,
+    "configurable": "yes",
+    "summary": "8 h default, up to 30 days; no refresh",
+    "evidence_refs": [
+     "fc-6bd457a1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_in",
+    "summary": "Re-run the exchange.",
+    "evidence_refs": [
+     "fc-6bd457a1"
+    ]
+   },
+   "administration": {
+    "summary": "App set up through HF support; org admins can refresh the client secret and set token duration. Tokens are limited to org resources.",
+    "conditions": "Enterprise plan.",
+    "evidence_refs": [
+     "fc-6bd457a1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Issuance checks current org membership, so a removed user gets no new tokens; already-issued tokens are not addressed (they expire after 8 h by default).",
+     "evidence_refs": [
+      "fc-6bd457a1"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "No token list; all token exchanges appear in the org audit logs.",
+     "evidence_refs": [
+      "fc-6bd457a1"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Organization settings > Audit Logs (token exchanges are logged); download as JSON",
+     "api": "GET https://huggingface.co/api/organizations/{org}/audit-log/export",
+     "cli": null,
+     "evidence_refs": [
+      "fc-6bd457a1",
+      "fc-e1e6add6"
+     ]
+    },
+    "offboard": {
+     "ui": "Organization settings > Members > revoke membership (or SCIM deprovision). Issued tokens are not revoked; they expire per the OAuth app's duration (8 h default)",
+     "api": "SCIM: set user active=false or delete the user via SCIM",
+     "cli": null,
+     "evidence_refs": [
+      "fc-f5309a6f",
+      "fc-15476517",
+      "fc-6bd457a1"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "hf_oauth_",
+     "notes": ""
+    },
+    "log_sources": [
+     {
+      "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+      "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [
+     {
+      "event": "token exchange (name not documented)",
+      "stage": "create",
+      "notes": "Docs say all exchanges are logged in org audit logs"
+     }
+    ],
+    "correlation_keys": [
+     "token id (24-char, org token settings)",
+     "username",
+     "anonymized IP/location"
+    ],
+    "anomaly_cues": [
+     "Token exchanges for members who are not using the integration"
+    ],
+    "containment": {
+     "steps": "Refresh the OAuth app client secret; issued tokens expire per configured duration.",
+     "kills_existing": "unknown",
+     "notes": "Effect of secret refresh on issued tokens not stated."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Event name for exchanges"
+    ],
+    "evidence_refs": [
+     "fc-6bd457a1"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/whoami-v2",
+      "reveals": "User, orgs and auth method of the token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not among the documented audit event types"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+      "reveals": "File contents (models, datasets)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Org audit log has no download events"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-e1e6add6",
+     "fc-6bd457a1",
+     "fc-5fdecf58"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "huggingface-6",
+   "name": "Trusted Publisher / CI/CD identity token",
+   "family": "federation",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "CI job exchanges its OIDC ID token at /oauth/token for a 1-hour hf_jwt_ (repo write) or hf_oauth_ (user read-only) token.",
+    "evidence_refs": [
+     "fc-b439e6e1"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "GitHub Actions, GitLab CI, CircleCI, Bitbucket, any OIDC provider; exact claim matching.",
+    "evidence_refs": [
+     "fc-b439e6e1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not addressed.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 3600,
+    "configurable": "no",
+    "summary": "60 minutes",
+    "evidence_refs": [
+     "fc-b439e6e1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "Re-exchange",
+    "summary": "No refresh token; re-exchange.",
+    "evidence_refs": [
+     "fc-b439e6e1"
+    ]
+   },
+   "administration": {
+    "summary": "Anyone with Write role on a repo can add a trusted publisher; users add CI/CD identities on their own account.",
+    "conditions": "No org-level policy documented.",
+    "evidence_refs": [
+     "fc-b439e6e1"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Publishers are listed per repo under Settings > Trusted Publishers (and per account under CI/CD Access); no org-wide list documented.",
+     "evidence_refs": [
+      "fc-b439e6e1"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Fixed at 60 minutes from exchange; not configurable",
+     "api": "POST https://huggingface.co/oauth/token response field expires_in (3600)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-b439e6e1"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "hf_jwt_",
+     "notes": "hf_oauth_ for user-scoped tokens"
+    },
+    "log_sources": [
+     {
+      "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+      "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "[OIDC] system user with issuer/subject",
+      "log": "Repo commit history",
+      "notes": "Push attribution"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "publisher added/removed (name not documented)",
+      "stage": "create",
+      "notes": "Docs say adding/removing is logged"
+     }
+    ],
+    "correlation_keys": [
+     "token id (24-char, org token settings)",
+     "username",
+     "anonymized IP/location"
+    ],
+    "anomaly_cues": [
+     "Token never rotated or unused for long periods in org token listing",
+     "Unexpected org.token_approval.authorization_request"
+    ],
+    "containment": {
+     "steps": "Remove the trusted publisher from repo settings (or CI/CD identity from account).",
+     "kills_existing": "unknown",
+     "notes": "Tokens expire within 60 minutes."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit event names"
+    ],
+    "evidence_refs": [
+     "fc-b439e6e1"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+      "reveals": "File contents (models, datasets)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Org audit log has no download events"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-e1e6add6",
+     "fc-5fdecf58"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

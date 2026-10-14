@@ -1,0 +1,458 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "zscaler",
+      "name": "Zscaler",
+      "scope_notes": "Covers Zscaler (ZIA, ZPA, OneAPI via Authentication Service / ZIdentity). SaaS; OneAPI needs services linked to Authentication Service; legacy ZIA API needs an API subscription; Workflow Automation, Client Connector and ZDX API keys not covered.",
+      "controls": [
+        {
+          "name": "API client Status (enable/disable)",
+          "effect": "disable",
+          "applies_to": [
+            "zscaler-1",
+            "zscaler-2"
+          ],
+          "what": "A disabled client cannot get tokens, and its issued tokens are revoked.",
+          "setting": "Administration > API > API Clients > Edit",
+          "plan": "Authentication Service (ZIdentity)",
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-00e25470",
+            "fc-97c9b5b3",
+            "fc-83844d0e"
+          ]
+        },
+        {
+          "name": "Delete API client",
+          "effect": "revoke",
+          "applies_to": [
+            "zscaler-1",
+            "zscaler-2"
+          ],
+          "what": "Deleting a client revokes its tokens.",
+          "setting": "Administration > API > API Clients",
+          "plan": "Authentication Service (ZIdentity)",
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-97c9b5b3",
+            "fc-83844d0e"
+          ]
+        },
+        {
+          "name": "Revoke access token",
+          "effect": "revoke",
+          "applies_to": [
+            "zscaler-1",
+            "zscaler-2"
+          ],
+          "what": "Revoke a single active token by Client ID or JTI.",
+          "setting": "Administration > API > Tokens > Revoke",
+          "plan": "Authentication Service (ZIdentity)",
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-83844d0e",
+            "fc-e8c92a49"
+          ]
+        },
+        {
+          "name": "Access Token Validity",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "zscaler-1",
+            "zscaler-2"
+          ],
+          "what": "Sets token lifetime from 1 minute to 24 hours.",
+          "setting": "Add/Edit API Client > Access Token Validity",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-00e25470"
+          ]
+        },
+        {
+          "name": "Client secret validity",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "zscaler-1"
+          ],
+          "what": "Secrets expire after 30-365 days.",
+          "setting": "Add API Client > Secret",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-00e25470"
+          ]
+        },
+        {
+          "name": "API resources (scope)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "zscaler-1",
+            "zscaler-2"
+          ],
+          "what": "Client gets one API role per Zscaler service.",
+          "setting": "Add API Client > Resources tab",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-00e25470",
+            "fc-e252abe2"
+          ]
+        },
+        {
+          "name": "API Client Access Policy",
+          "effect": "limit_scope",
+          "applies_to": [
+            "zscaler-1",
+            "zscaler-2"
+          ],
+          "what": "Allow/Block rules by API resource and time window, one rule per client.",
+          "setting": "Administration > API > API Client Access Policy",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8e3fd2eb",
+            "fc-a25210c2"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Source-IP restriction for OneAPI clients, ZPA keys or legacy ZIA sessions (Admin Sign-On Policy and ZIA restricted admin access pages do not state API coverage)",
+        "Whether the Authentication Service Admin Sign-On Policy or MFA applies to legacy ZIA API password logins",
+        "Whether deleting/disabling a ZPA API key or ZIA authorization server ends already-issued bearer tokens",
+        "Whether API client create/delete and token revoke appear as named actions in Authentication Service audit logs (documented actions are generic Create/Update/Delete)",
+        "Whether read-only (GET) API calls are recorded in any audit log",
+        "Expiry of JWT key pairs (zscaler-2) and Sandbox tokens",
+        "OneAPI rate limits (only legacy limits fetched)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "zscaler-1",
+      "provider_id": "zscaler",
+      "name": "OneAPI API client (client secret)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An API client in Authentication Service (ZIdentity) uses the OAuth 2.0 client credentials grant with a client ID and secret at <tenant>.zslogin.net/oauth2/v1/token (audience https://api.zscaler.com) and gets a JWT access token for OneAPI.",
+        "evidence_refs": [
+          "fc-00e25470",
+          "fc-bddc2f06",
+          "fc-8944bdea"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Docs do not describe workload/OIDC federation for secret-based clients.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "API Client Access Policy criteria are time and API resources only; no source-IP criterion is documented. Whether the Admin Sign-On Policy applies to API clients is not stated.",
+        "evidence_refs": [
+          "fc-8e3fd2eb",
+          "fc-a25210c2"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 31536000,
+        "configurable": "yes",
+        "summary": "Secret 30-365 days; access token 1 min-24 h",
+        "evidence_refs": [
+          "fc-00e25470"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "Access token validity set per client (1 min-24 h); secret has its own 30-365 day validity",
+        "summary": "Request a new token with the secret; rotate by adding a second secret (max two; a third replaces the most recent).",
+        "evidence_refs": [
+          "fc-00e25470"
+        ]
+      },
+      "administration": {
+        "summary": "Admins with API Clients & Resources permission create, edit, enable/disable, delete clients and revoke tokens. Scope is one API resource (role) per Zscaler service.",
+        "conditions": "Zscaler services must be linked to Authentication Service; up to 256 API clients per tenant.",
+        "evidence_refs": [
+          "fc-00e25470",
+          "fc-97c9b5b3",
+          "fc-e252abe2",
+          "fc-0f6fa4e4",
+          "fc-227077e4"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "An API client represents an application or service, not a user.",
+          "evidence_refs": [
+            "fc-97c9b5b3"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "API Clients page (Administration > API > API Clients) lists all clients and exports CSV; issued tokens on Administration > API > Tokens.",
+          "evidence_refs": [
+            "fc-97c9b5b3",
+            "fc-83844d0e"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "JWT access token (bearer); client ID auto-generated."
+        },
+        "log_sources": [
+          {
+            "name": "Authentication Service Issued Tokens page",
+            "notes": "Administration > API > Tokens; lists Client ID, JTI, issued/expires, status."
+          },
+          {
+            "name": "Authentication Service audit logs",
+            "notes": "Data Explorer > Audit Logs > Authentication Service; Interface field shows API-based; stream to SIEM via NSS (auditlogtype ZID)."
+          },
+          {
+            "name": "ZIA audit logs",
+            "notes": "Data Explorer > Audit Logs > Internet & SaaS; records Admin UI and API actions; 6-month retention; NSS admin audit feed."
+          },
+          {
+            "name": "ZPA audit logs",
+            "notes": "Records admin and API actions; Client ID column; 6-month retention."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Client ID / JTI",
+            "log": "Issued Tokens page",
+            "notes": "Search tokens by either"
+          },
+          {
+            "field": "Trace ID",
+            "log": "ZIA audit logs",
+            "notes": "Generated for ZIA requests via OneAPI"
+          },
+          {
+            "field": "Client ID",
+            "log": "ZPA audit logs",
+            "notes": "API key client ID that made changes"
+          },
+          {
+            "field": "Transaction ID",
+            "log": "ZPA audit logs",
+            "notes": "Created by OneAPI; visible when Authentication Service enabled"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Create",
+            "stage": "create",
+            "notes": "Generic Authentication Service audit action; client-specific category not listed"
+          },
+          {
+            "event": "Delete",
+            "stage": "revoke",
+            "notes": "Generic action"
+          }
+        ],
+        "correlation_keys": [
+          "Client ID",
+          "JTI",
+          "Trace ID",
+          "Transaction ID",
+          "Client IP"
+        ],
+        "anomaly_cues": [
+          "Tokens issued for a client outside its normal schedule (Issued At filter)",
+          "ZIA/ZPA changes with Interface API from unexpected Client IP",
+          "New secret added to an existing client"
+        ],
+        "containment": {
+          "steps": "Disable or delete the API client (revokes its tokens), or revoke individual tokens on the Tokens page; remove secrets/keys.",
+          "kills_existing": "yes",
+          "notes": "Revoked tokens can no longer be used; disabling the client revokes its tokens."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact audit event name for API client and token actions",
+          "Whether token issuance is itself audited"
+        ],
+        "evidence_refs": [
+          "fc-97c9b5b3",
+          "fc-83844d0e",
+          "fc-e8c92a49",
+          "fc-4cb16bf9",
+          "fc-3af5385d",
+          "fc-2dd48d6f",
+          "fc-a9786e44"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST <tenant>.zslogin.net/oauth2/v1/token",
+            "reveals": "Access token; resources granted",
+            "bulk": false,
+            "scope": "API resource roles",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Visible on Issued Tokens page"
+          }
+        ],
+        "unknown": [
+          "Documented OneAPI whoami endpoint",
+          "Whether OneAPI GET calls are logged"
+        ],
+        "evidence_refs": [
+          "fc-83844d0e",
+          "fc-8944bdea"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-00e25470",
+      "title": "Adding an API Client",
+      "url": "https://help.zscaler.com/authentication-service/adding-api-client",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0f6fa4e4",
+      "title": "Admin Roles and Permissions",
+      "url": "https://help.zscaler.com/authentication-service/admin-roles-and-permissions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-227077e4",
+      "title": "Ranges & Limitations",
+      "url": "https://help.zscaler.com/unified/ranges-limitations",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2dd48d6f",
+      "title": "About Audit Logs (Private Access)",
+      "url": "https://help.zscaler.com/zpa/about-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3af5385d",
+      "title": "About Audit Logs (Internet & SaaS)",
+      "url": "https://help.zscaler.com/zia/about-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4cb16bf9",
+      "title": "About Audit Logs",
+      "url": "https://help.zscaler.com/authentication-service/about-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-83844d0e",
+      "title": "About Access Tokens",
+      "url": "https://help.zscaler.com/authentication-service/about-access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8944bdea",
+      "title": "Using Zscaler Microsegmentation API",
+      "url": "https://help.zscaler.com/legacy-apis/using-zscaler-microsegmentation-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8e3fd2eb",
+      "title": "About the API Client Access Policy",
+      "url": "https://help.zscaler.com/authentication-service/about-api-client-access-policy",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-97c9b5b3",
+      "title": "About API Clients",
+      "url": "https://help.zscaler.com/authentication-service/about-api-clients",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a25210c2",
+      "title": "Adding API Client Access Policy Rule",
+      "url": "https://help.zscaler.com/authentication-service/adding-api-client-access-policy-rule",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a9786e44",
+      "title": "NSS Feed Output Format: Admin Audit Logs",
+      "url": "https://help.zscaler.com/zia/nss-feed-output-format-admin-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bddc2f06",
+      "title": "Understanding OneAPI Authentication",
+      "url": "https://help.zscaler.com/authentication-service/understanding-oneapi-authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e252abe2",
+      "title": "Viewing API Resources",
+      "url": "https://help.zscaler.com/authentication-service/viewing-api-resources",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e8c92a49",
+      "title": "Revoking Access Tokens",
+      "url": "https://help.zscaler.com/authentication-service/revoking-access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

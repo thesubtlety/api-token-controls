@@ -1,0 +1,512 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "azure",
+      "name": "Microsoft Azure",
+      "scope_notes": "Covers Microsoft Azure (Azure Storage, Azure Resource Manager, Microsoft Entra Workload ID, Azure DevOps Services). Azure Storage and ARM controls are per subscription/account; Conditional Access for workload identities needs Workload Identities Premium; Azure DevOps PAT policies need an Entra-backed organization. Entra delegated/app-only OAuth for Graph and managed identities are covered by the separate microsoft platform.",
+      "controls": [
+        {
+          "name": "Restrict global personal access token creation",
+          "effect": "limit_scope",
+          "applies_to": [
+            "azure-5"
+          ],
+          "what": "New PATs must target specific organizations.",
+          "setting": "Organization settings > Microsoft Entra",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4b9bfb26"
+          ]
+        },
+        {
+          "name": "Restrict full-scoped personal access token creation",
+          "effect": "limit_scope",
+          "applies_to": [
+            "azure-5"
+          ],
+          "what": "New PATs must use custom scopes.",
+          "setting": "Organization settings > Microsoft Entra",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4b9bfb26"
+          ]
+        },
+        {
+          "name": "Enforce maximum personal access token lifespan",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "azure-5"
+          ],
+          "what": "Caps lifetime of new or renewed PATs in days.",
+          "setting": "Organization settings > Microsoft Entra",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4b9bfb26"
+          ]
+        },
+        {
+          "name": "Restrict personal access token creation",
+          "effect": "disable",
+          "applies_to": [
+            "azure-5"
+          ],
+          "what": "Only allowlisted users (or packaging-only) can create or regenerate PATs; existing PATs keep working.",
+          "setting": "Organization settings > Policies",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4b9bfb26"
+          ]
+        },
+        {
+          "name": "Automatically revoke leaked personal access tokens",
+          "effect": "revoke",
+          "applies_to": [
+            "azure-5"
+          ],
+          "what": "PATs found in public GitHub repos are revoked automatically.",
+          "setting": "Organization settings > Microsoft Entra",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4b9bfb26"
+          ]
+        },
+        {
+          "name": "Enable IP Conditional Access policy validation on non-interactive flows",
+          "effect": "limit_network",
+          "applies_to": [
+            "azure-5"
+          ],
+          "what": "Checks Entra IP-based Conditional Access on PAT REST calls.",
+          "setting": "Organization settings > Policies",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-97a40aec"
+          ]
+        },
+        {
+          "name": "Token Admin revoke authorizations",
+          "effect": "revoke",
+          "applies_to": [
+            "azure-5"
+          ],
+          "what": "Admins revoke users' PATs by authorization ID; disabling a user also revokes their PATs.",
+          "setting": "POST /_apis/tokenadmin/revocations",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-fbae0461",
+            "fc-a9c5754f"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "azure-5",
+          "what": "PAT use (token access) is not recorded in the Azure DevOps audit log.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-608c4281"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether Azure Activity Log records the service principal identity for ARM read calls made with azure-3/azure-4 tokens (Activity log typically skips reads).",
+        "Exact Entra audit activity name for adding/removing a federated identity credential.",
+        "Default of the Azure DevOps \"IP Conditional Access policy validation on non-interactive flows\" policy.",
+        "Maximum Azure DevOps PAT lifetime when no tenant policy is set.",
+        "Token format or prefix for storage keys, SAS, client secrets or Azure DevOps PATs.",
+        "Whether app management policies require a specific license."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "azure-5",
+      "provider_id": "azure",
+      "name": "Azure DevOps personal access tokens (PATs)",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "User-owned token for Azure DevOps REST, Git and package feeds; scoped to one organization (global PATs stop working Dec 1, 2026) and limited to the owner's permissions.",
+        "evidence_refs": [
+          "fc-608c4281"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "PATs must meet Entra sign-in policies on REST calls; IP-based Conditional Access is checked on PAT calls only if the org enables \"IP Conditional Access policy validation on non-interactive flows\".",
+        "evidence_refs": [
+          "fc-97a40aec"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Enforced on PAT REST calls only with the org policy enabled and an Entra IP-based Conditional Access policy.",
+        "evidence_refs": [
+          "fc-97a40aec"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Expiry chosen at creation; tenant max-lifespan policy; becomes inactive if owner does not sign in within 90 days (Entra-backed orgs)",
+        "evidence_refs": [
+          "fc-608c4281",
+          "fc-4b9bfb26"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "expiration date",
+        "summary": "Reused until expiry; regenerating issues a new value and invalidates the old one.",
+        "evidence_refs": [
+          "fc-608c4281"
+        ]
+      },
+      "administration": {
+        "summary": "Tenant policies: restrict global PATs, restrict full-scoped PATs, max lifespan, auto-revoke leaked PATs (on by default). Org policy: restrict PAT creation with allowlist. Admins can revoke users' PATs via Token Admin API.",
+        "conditions": "Policies require an Entra-backed organization; restricting creation does not stop existing PATs.",
+        "evidence_refs": [
+          "fc-4b9bfb26",
+          "fc-a9c5754f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Conditional Access MFA applies to web flows only; IP-based policies apply to PAT REST calls only if the org enables IP Conditional Access policy validation on non-interactive flows.",
+          "evidence_refs": [
+            "fc-97a40aec"
+          ]
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "PATs stop working when the account is disabled or removed (up to one hour delay), but are not deleted and work again if access is restored.",
+          "evidence_refs": [
+            "fc-608c4281",
+            "fc-e97000e2"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Project Collection Administrators can list PATs per user with GET .../_apis/tokenadmin/personalaccesstokens/{subjectDescriptor}; no single org-wide list.",
+          "evidence_refs": [
+            "fc-deb02693"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "dev.azure.com/{org} > Organization settings > Policies > Enable IP Conditional Access policy validation on non-interactive flows = On",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-f7262257"
+          ]
+        },
+        "usage": {
+          "ui": "Organization settings > Policies > Log Audit Events = On; then Organization settings > Auditing (PAT create/modify/revoke events; docs say token access events are not logged)",
+          "api": "GET https://auditservice.dev.azure.com/{organization}/_apis/audit/auditlog?api-version=7.1-preview.1",
+          "cli": null,
+          "evidence_refs": [
+            "fc-33aacdfe",
+            "fc-dccdce00",
+            "fc-b47d1bc7"
+          ]
+        },
+        "offboard": {
+          "ui": "Organization settings > Users > ... > Remove from organization",
+          "api": "DELETE https://vsaex.dev.azure.com/{organization}/_apis/userentitlements/{userId}?api-version=7.1",
+          "cli": null,
+          "evidence_refs": [
+            "fc-811724fe",
+            "fc-eb479deb"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented on fetched pages."
+        },
+        "log_sources": [
+          {
+            "name": "Azure DevOps audit log",
+            "notes": "Off by default; 90-day retention, not configurable; export or stream for longer."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "DisplayName / OwnerName",
+            "log": "Azure DevOps audit log",
+            "notes": "Token events name the PAT and owner."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Token.PatCreateEvent",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "Token.PatRevokeEvent",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "Token.PatSystemRevokeEvent",
+            "stage": "revoke",
+            "notes": "System revocation (e.g. leak)."
+          },
+          {
+            "event": "Token.PatPublicDiscoveryEvent",
+            "stage": "leak",
+            "notes": "Found in a public repo."
+          }
+        ],
+        "correlation_keys": [
+          "PAT display name",
+          "owner"
+        ],
+        "anomaly_cues": [
+          "PAT discovered in public repo",
+          "New full-scoped PAT"
+        ],
+        "containment": {
+          "steps": "Owner revokes in user settings; admins revoke via Token Admin API or disable the user.",
+          "kills_existing": "partial",
+          "notes": "Up to 1 h delay for admin revocation; established connections may persist."
+        },
+        "sample_query": null,
+        "unknown": [
+          "PAT use is not logged."
+        ],
+        "evidence_refs": [
+          "fc-608c4281",
+          "fc-fbae0461",
+          "fc-dccdce00",
+          "fc-33aacdfe",
+          "fc-a9c5754f"
+        ],
+        "use_not_logged": {
+          "notes": "Azure DevOps audit log records PAT create, change and revoke, not each use: \"Token access events aren't currently logged.\"",
+          "evidence_refs": [
+            "fc-dccdce00"
+          ]
+        }
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET https://app.vssps.visualstudio.com/_apis/profile/profiles/me",
+            "reveals": "Owner profile",
+            "bulk": false,
+            "scope": "vso.profile",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Token access events are not logged."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET https://dev.azure.com/{org}/_apis/projects",
+            "reveals": "Projects",
+            "bulk": true,
+            "scope": "vso.project",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Not logged."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://dev.azure.com/{org}/{project}/_apis/git/repositories",
+            "reveals": "Repos (then clone)",
+            "bulk": true,
+            "scope": "vso.code",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Repo reads are not listed as audit events on fetched pages."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://dev.azure.com/{organization}/{project}/_apis/git/repositories/{repositoryId}/items?path={path}&api-version=7.1",
+            "reveals": "Repository file content and metadata",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Audit log Token area says token access events aren't logged; Git area covers repository create/modify/delete, not reads."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-608c4281",
+          "fc-b6d82034",
+          "fc-fb329564",
+          "fc-842f0e44",
+          "fc-5463da4c",
+          "fc-dccdce00"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-33aacdfe",
+      "title": "Access Azure DevOps Audit Logs, Export, and Filter - Azure DevOps | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/devops/organizations/audit/azure-devops-auditing",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4b9bfb26",
+      "title": "Manage personal access tokens using policies - Azure DevOps | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/manage-pats-with-policies-for-administrators",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5463da4c",
+      "title": "Items - Get (Azure DevOps Git)",
+      "url": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/items/get?view=azure-devops-rest-7.1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-608c4281",
+      "title": "Use personal access tokens - Azure DevOps | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-811724fe",
+      "title": "Remove users from Azure DevOps",
+      "url": "https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/delete-organization-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-842f0e44",
+      "title": "Repositories - List - REST API (Azure DevOps Git) | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-97a40aec",
+      "title": "Conditional Access policies on Azure DevOps - Azure DevOps Services | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/conditional-access-policies",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a9c5754f",
+      "title": "Revocations - Revoke Authorizations - REST API (Azure DevOps Token Admin) | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/azure/devops/tokenadmin/revocations/revoke-authorizations",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b47d1bc7",
+      "title": "Audit Log - Query",
+      "url": "https://learn.microsoft.com/en-us/rest/api/azure/devops/audit/audit-log/query?view=azure-devops-rest-7.1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b6d82034",
+      "title": "Profiles - Get - REST API (Azure DevOps Profile) | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/azure/devops/profile/profiles/get",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dccdce00",
+      "title": "Auditing events list - Azure DevOps | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/devops/organizations/audit/auditing-events",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-deb02693",
+      "title": "Personal Access Tokens - List (Azure DevOps Token Admin)",
+      "url": "https://learn.microsoft.com/en-us/rest/api/azure/devops/tokenadmin/personal-access-tokens/list?view=azure-devops-rest-7.1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e97000e2",
+      "title": "Revoke personal access tokens for users",
+      "url": "https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/admin-revoke-user-pats?view=azure-devops",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eb479deb",
+      "title": "User Entitlements - Delete",
+      "url": "https://learn.microsoft.com/en-us/rest/api/azure/devops/memberentitlementmanagement/user-entitlements/delete?view=azure-devops-rest-7.1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f7262257",
+      "title": "Change application connection and security policies (Azure DevOps)",
+      "url": "https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/change-application-access-policies",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fb329564",
+      "title": "Projects - List - REST API (Azure DevOps Core) | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/azure/devops/core/projects/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fbae0461",
+      "title": "Revoke personal access tokens for users - Azure DevOps | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/admin-revoke-user-pats",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

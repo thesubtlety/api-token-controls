@@ -1,0 +1,455 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "openai",
+      "name": "OpenAI API",
+      "scope_notes": "OpenAI API Platform organizations and projects (platform.openai.com); ChatGPT workspace and Codex credentials out of scope except where shared WIF docs mention them.",
+      "controls": [
+        {
+          "name": "API Key Governance",
+          "effect": "disable",
+          "applies_to": [
+            "openai-1",
+            "openai-2"
+          ],
+          "what": "Allow only service-account keys, only user-owned project keys, or disable all new API key creation at org or project level.",
+          "setting": "Platform settings > API Key Governance",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-cda4b87e"
+          ]
+        },
+        {
+          "name": "Maximum API key lifetime",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "openai-1",
+            "openai-2"
+          ],
+          "what": "New keys must expire within the configured limit; project limit cannot exceed org limit.",
+          "setting": "Platform settings (organization/general)",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-cda4b87e"
+          ]
+        },
+        {
+          "name": "IP allowlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "openai-1",
+            "openai-2",
+            "openai-4"
+          ],
+          "what": "Reject API requests from IPs outside up to 50 addresses/CIDRs; org or project level.",
+          "setting": "Settings > Security > IP allowlist",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4f6c0e89"
+          ]
+        },
+        {
+          "name": "Project API Keys permission (RBAC)",
+          "effect": "other",
+          "applies_to": [
+            "openai-1"
+          ],
+          "what": "Custom-role-eligible permission that lets a user manage their own API keys; assign roles without it to limit who can create keys.",
+          "setting": "Organization/Project settings > Roles",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-aabf5d67"
+          ]
+        },
+        {
+          "name": "API key permissions (scopes)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "openai-1",
+            "openai-2"
+          ],
+          "what": "Key permissions are intersected with the owner's project role.",
+          "setting": "Key create/edit",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-aabf5d67",
+            "fc-637c5e12"
+          ]
+        },
+        {
+          "name": "Delete project API key",
+          "effect": "revoke",
+          "applies_to": [
+            "openai-1",
+            "openai-2"
+          ],
+          "what": "Admin deletes a project key; takes effect within a few seconds.",
+          "setting": "DELETE /v1/organization/projects/{project_id}/api_keys/{api_key_id}",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-a8249c0b",
+            "fc-a738cffa"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether API keys are subject to SSO or IdP conditional access (no statement found).",
+        "Whether the IP allowlist covers Administration API calls made with admin keys.",
+        "Whether audit logging must be activated and its retention period (help center pages blocked to fetch).",
+        "Whether inference/data-read API calls (e.g. GET /v1/files) appear in the audit log; it is described as user actions and configuration changes.",
+        "Whether deleting a service account or WIF mapping invalidates already-issued WIF tokens before expiry.",
+        "Lifetime, listing and admin revocation of legacy user API keys.",
+        "API key secret prefix format (not stated in fetched docs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "openai-1",
+      "provider_id": "openai",
+      "name": "Project API key (user-owned)",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Static secret created in a project and sent as a bearer token. It acts for its owning user; its scopes are checked against the user's project role.",
+        "evidence_refs": [
+          "fc-a738cffa",
+          "fc-aabf5d67"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "OpenAI docs fetched do not say whether API keys are subject to SSO or IdP conditional access.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Org or project IP allowlist applies to API requests made with the key. Does not cover dashboard sign-in. Changes take up to 15 minutes.",
+        "evidence_refs": [
+          "fc-4f6c0e89"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Optional expiry per key; admins can cap max lifetime per org/project",
+        "evidence_refs": [
+          "fc-cda4b87e",
+          "fc-a8249c0b"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "expires_at set at creation, or null",
+        "summary": "Create a replacement key and revoke the old one; full value shown only once.",
+        "evidence_refs": [
+          "fc-637c5e12",
+          "fc-cda4b87e"
+        ]
+      },
+      "administration": {
+        "summary": "Admins can list, update and delete project keys via the Administration API, restrict who can create keys through roles, and block user-owned key creation via API Key Governance.",
+        "conditions": "Governance only affects new keys. If the owner loses project access the key reports owner_project_access inactive.",
+        "evidence_refs": [
+          "fc-cda4b87e",
+          "fc-aabf5d67",
+          "fc-a8249c0b"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Requests with a user-owned project key also require the owning user to hold a project role with the same permissions, so removing the user removes the key's effective access; the key record stays listed as owner access 'inactive' until deleted, and role changes take up to 30 minutes to propagate.",
+          "evidence_refs": [
+            "fc-aabf5d67",
+            "fc-89be87f8"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admin API GET /v1/organization/projects/{project_id}/api_keys lists keys per project (owner_project_access=any includes keys whose owner lost access); iterate over projects.",
+          "evidence_refs": [
+            "fc-89be87f8"
+          ]
+        }
+      },
+      "how": {
+        "offboard": {
+          "ui": "API Platform settings > People > Members > Remove > Confirm removal; project only: project Members page",
+          "api": "DELETE /organization/users/{user_id}; DELETE /organization/projects/{project_id}/users/{user_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-6a206783",
+            "fc-fce47a96",
+            "fc-56b9f937"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented; only redacted_value is returned after creation."
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs (GET /v1/organization/audit_logs)",
+            "notes": "User actions and configuration changes; actor is session or api_key with key tracking id. Read with an admin key. Activation and retention not verified."
+          },
+          {
+            "name": "Usage API (GET /v1/organization/usage/*)",
+            "notes": "Aggregated usage groupable by api_key_id; not per-request. Old pre-Dec-2023 keys may be untracked."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.api_key.id",
+            "log": "Audit logs",
+            "notes": "Tracking id of the API key used"
+          },
+          {
+            "field": "api_key_id",
+            "log": "Usage API",
+            "notes": "When group_by=api_key_id"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "api_key.created",
+            "stage": "create",
+            "notes": "data.scopes lists allowed scopes"
+          },
+          {
+            "event": "api_key.updated",
+            "stage": "update",
+            "notes": ""
+          },
+          {
+            "event": "api_key.deleted",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "tenant.project_api_key.created",
+            "stage": "create",
+            "notes": "Tenant-level variant; semantics not described"
+          }
+        ],
+        "correlation_keys": [
+          "actor.api_key.id (tracking id)",
+          "actor.api_key.service_account.id",
+          "actor.session.ip_address",
+          "project_id"
+        ],
+        "anomaly_cues": [
+          "Key used from IP that triggers ip_not_authorized",
+          "api_key.created by unexpected user or outside change window",
+          "Usage spike grouped by api_key_id"
+        ],
+        "containment": {
+          "steps": "Delete the key in the dashboard or DELETE /v1/organization/projects/{project_id}/api_keys/{api_key_id}.",
+          "kills_existing": "yes",
+          "notes": "Revocations take effect within a few seconds."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether individual inference requests are logged anywhere customer-visible"
+        ],
+        "evidence_refs": [
+          "fc-a738cffa",
+          "fc-a8249c0b",
+          "fc-fdef42f5",
+          "fc-924489d8",
+          "fc-fdd1f387"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/models",
+            "reveals": "Key is valid; models visible to the project",
+            "bulk": false,
+            "scope": "api.model.read",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit log covers config changes; inference/read calls not stated"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+            "reveals": "Uploaded files (fine-tuning, batch, assistants data)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not listed as an audit event"
+          }
+        ],
+        "unknown": [
+          "Per-request access logs for customers"
+        ],
+        "evidence_refs": [
+          "fc-aabf5d67",
+          "fc-126e5cb0",
+          "fc-85c173d1",
+          "fc-fdef42f5"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "OpenAI Anomalous API Key Activity",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/openai_rules/openai_api_key_anomalous_activity.yml",
+          "detects": "An OpenAI API key was created or updated with elevated scopes (all, admin, models:write, organization:write, api_keys:write)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-126e5cb0",
+      "title": "Models reference",
+      "url": "https://developers.openai.com/api/reference/resources/models",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4f6c0e89",
+      "title": "IP allowlist",
+      "url": "https://developers.openai.com/api/docs/guides/ip-allowlist",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-56b9f937",
+      "title": "Delete project user",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/projects/subresources/users/methods/delete",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-637c5e12",
+      "title": "Manage service accounts with Terraform",
+      "url": "https://developers.openai.com/api/docs/guides/terraform/service-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6a206783",
+      "title": "Managing members in an API organization",
+      "url": "https://help.openai.com/en/articles/4936812-how-do-i-add-change-or-remove-members-on-my-openai-api-account",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-85c173d1",
+      "title": "Files reference",
+      "url": "https://developers.openai.com/api/reference/resources/files",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-89be87f8",
+      "title": "List project API keys",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/projects/subresources/api_keys/methods/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-924489d8",
+      "title": "List audit logs",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/audit_logs/methods/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a738cffa",
+      "title": "API Overview - Authentication",
+      "url": "https://developers.openai.com/api/reference/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8249c0b",
+      "title": "Project API Keys reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/projects/subresources/api_keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aabf5d67",
+      "title": "Manage permissions in the OpenAI platform",
+      "url": "https://developers.openai.com/api/docs/guides/rbac",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cda4b87e",
+      "title": "Production best practices - API keys",
+      "url": "https://developers.openai.com/api/docs/guides/production-best-practices",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fce47a96",
+      "title": "Delete user",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/users/methods/delete",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fdd1f387",
+      "title": "Usage reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/usage",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fdef42f5",
+      "title": "Audit Logs reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/audit_logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

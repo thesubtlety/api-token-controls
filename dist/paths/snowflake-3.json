@@ -1,0 +1,581 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "snowflake",
+      "name": "Snowflake",
+      "scope_notes": "Avoid treating default PAT safeguards as immutable. Verify client/driver and cloud support for federation.",
+      "controls": [
+        {
+          "name": "Authentication policy AUTHENTICATION_METHODS",
+          "effect": "disable",
+          "applies_to": [
+            "snowflake-1",
+            "snowflake-3",
+            "snowflake-4",
+            "snowflake-5"
+          ],
+          "what": "Allow-list of auth methods; omitting PROGRAMMATIC_ACCESS_TOKEN, KEYPAIR, WORKLOAD_IDENTITY or OAUTH blocks that method for the account or user.",
+          "setting": "CREATE/ALTER AUTHENTICATION POLICY ... AUTHENTICATION_METHODS; ALTER ACCOUNT/USER SET AUTHENTICATION POLICY",
+          "plan": "not stated",
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-7efd1500"
+          ],
+          "quote": "PROGRAMMATIC_ACCESS_TOKEN: Allows users to authenticate with a programmatic access token."
+        },
+        {
+          "name": "MODIFY PROGRAMMATIC AUTHENTICATION METHODS privilege",
+          "effect": "limit_resources",
+          "applies_to": [
+            "snowflake-1",
+            "snowflake-3",
+            "snowflake-4"
+          ],
+          "what": "Only roles with OWNERSHIP or this privilege on a user can manage that user's PATs, key pairs or workload identities.",
+          "setting": "GRANT MODIFY PROGRAMMATIC AUTHENTICATION METHODS ON USER ... TO ROLE",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "turn5search13"
+          ],
+          "quote": "you must use a role that has the OWNERSHIP or MODIFY PROGRAMMATIC AUTHENTICATION METHODS privilege on that user."
+        },
+        {
+          "name": "Network policies (account / user / security integration)",
+          "effect": "limit_network",
+          "applies_to": [
+            "snowflake-1",
+            "snowflake-2",
+            "snowflake-3",
+            "snowflake-4",
+            "snowflake-5"
+          ],
+          "what": "Restrict inbound access by IP or private endpoint; integration-level policy overrides user and account policies.",
+          "setting": "CREATE NETWORK POLICY; ALTER ACCOUNT/USER/SECURITY INTEGRATION SET NETWORK_POLICY",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-87ff0aac"
+          ],
+          "quote": "the most specific network policy overrides more general network policies."
+        },
+        {
+          "name": "Named key pairs (role restriction and expiration)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "snowflake-3"
+          ],
+          "what": "Keys added with ADD KEY PAIR can carry a role restriction and expiry; legacy RSA_PUBLIC_KEY cannot.",
+          "setting": "ALTER USER ... ADD KEY PAIR / REMOVE KEY PAIR",
+          "plan": null,
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-410c61ff"
+          ],
+          "quote": "This approach does not support role restriction or expiration."
+        },
+        {
+          "name": "EXPIRE_ROTATED_KEY_PAIR_AFTER_HOURS",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "snowflake-3"
+          ],
+          "what": "Sets how long a rotated named key stays valid (default 24 hours, 0 = immediate).",
+          "setting": "Parameter EXPIRE_ROTATED_KEY_PAIR_AFTER_HOURS",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-410c61ff"
+          ],
+          "quote": "By default, the prior key remains valid for 24 hours."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Edition requirements for authentication policies are not stated on the reference pages.",
+        "Whether Snowflake OAuth (as opposed to External OAuth) can be disallowed via AUTHENTICATION_METHODS; the OAUTH value is documented as 'Allows External OAuth'.",
+        "No account-wide policy found to force named key pairs or cap key-pair lifetime; legacy RSA_PUBLIC_KEY keys never expire.",
+        "Docs differ on how to unblock privileged roles for custom OAuth clients (account parameter vs Snowflake Support).",
+        "Whether the WIF quote 'disable it' covers the DEFAULT identity (docs say DEFAULT must use SET/UNSET WORKLOAD_IDENTITY)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "snowflake-3",
+      "provider_id": "snowflake",
+      "name": "Key-pair JWT",
+      "family": "jwt",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Snowflake OAuth/External OAuth, key-pair JWT, programmatic access tokens (PATs), and workload identity federation.",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Native workload federation for supported cloud identities; External OAuth for external authorization servers. Driver/API support must match the method.",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24",
+          "fc-410c61ff"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "mixed",
+        "boundary": "Account/user/integration network policies. PAT defaults require network-policy protection, but authentication policy can relax enforcement.",
+        "evidence_refs": [
+          "turn5search13",
+          "turn16search12"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 3600,
+        "configurable": "yes",
+        "summary": "Client sets JWT exp; Snowflake caps it at 1 hour (documented for SQL API)",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24",
+          "fc-5371b82a"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "none",
+        "summary": "Client signs a new JWT with the private key. Keys do not expire by default; named key pairs can set DAYS_TO_EXPIRY and role restriction. The RSA_PUBLIC_KEY property supports neither.",
+        "evidence_refs": [
+          "turn5search1",
+          "turn5search13",
+          "turn16search24",
+          "fc-410c61ff",
+          "fc-5a0b3082"
+        ]
+      },
+      "administration": {
+        "summary": "Authentication policies restrict auth methods/security integrations; RBAC and PAT role restriction, blocked roles, expiry/revocation.",
+        "conditions": "Avoid treating default PAT safeguards as immutable. Verify client/driver and cloud support for federation.",
+        "evidence_refs": [
+          "turn5search13",
+          "turn16search12"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Key pairs are bound to a Snowflake user. Disabling that user, which SCIM deactivation does, aborts the user's queries and blocks new logins.",
+          "evidence_refs": [
+            "fc-817b452f",
+            "fc-c0be79cd"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "SNOWFLAKE.ACCOUNT_USAGE.CREDENTIALS includes key pairs.",
+          "evidence_refs": [
+            "fc-6ad68624"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: SELECT * FROM SNOWFLAKE.ACCOUNT_USAGE.CREDENTIALS WHERE type = 'KEYPAIR'",
+          "evidence_refs": [
+            "fc-6ad68624"
+          ]
+        },
+        "disable": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: CREATE AUTHENTICATION POLICY <p> AUTHENTICATION_METHODS = (... without 'KEYPAIR'); ALTER ACCOUNT|USER <name> SET AUTHENTICATION POLICY <policy>",
+          "evidence_refs": [
+            "fc-7efd1500",
+            "turn16search12"
+          ]
+        },
+        "network": {
+          "ui": "Snowsight > Governance & security > Network policies > Network Policies tab > + Network Policy, then activate",
+          "api": null,
+          "cli": "SQL: ALTER USER|ACCOUNT ... SET NETWORK_POLICY = <np>",
+          "evidence_refs": [
+            "fc-87ff0aac"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: ALTER USER <u> ADD KEY PAIR <name> PUBLIC_KEY = '...' DAYS_TO_EXPIRY = <n>; JWT exp claim capped at 1 hour",
+          "evidence_refs": [
+            "fc-5a0b3082",
+            "fc-5371b82a"
+          ]
+        },
+        "usage": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY WHERE first_authentication_factor_id = '<CREDENTIAL_ID from CREDENTIALS>'",
+          "evidence_refs": [
+            "fc-a3c06820",
+            "fc-6ad68624"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": null,
+          "cli": "SQL: SELECT ... FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah JOIN QUERY_HISTORY qh USING (query_id) JOIN LOGIN_HISTORY lh ON qh.authn_event_id = lh.event_id WHERE lh.first_authentication_factor_id = '<keypair_credential_id>'",
+          "evidence_refs": [
+            "fc-c4392740",
+            "fc-26b6697e",
+            "fc-a3c06820"
+          ]
+        },
+        "offboard": {
+          "ui": "Snowsight > Governance & security > Users & roles > (user) ... > Disable User",
+          "api": "PATCH /scim/v2/Users/{id} with {\"op\":\"replace\",\"value\":{\"active\":false}}",
+          "cli": "ALTER USER <name> SET DISABLED = TRUE",
+          "evidence_refs": [
+            "fc-5a418c44",
+            "fc-c0be79cd",
+            "fc-d32994ba",
+            "fc-817b452f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "RS256 JWT signed by the user's private key; iss = ACCOUNT.USER.SHA256:<public_key_fingerprint>, sub = ACCOUNT.USER; valid at most 1 hour. The long-lived secret is the RSA private key (PEM), which has no Snowflake-specific prefix."
+        },
+        "log_sources": [
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.LOGIN_HISTORY",
+            "notes": "Successful and failed logins, 365 days, up to 2h latency. INFORMATION_SCHEMA LOGIN_HISTORY table functions cover 7 days."
+          },
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.SESSIONS",
+            "notes": "One row per session, 1 year, up to 3h latency; links to login via LOGIN_EVENT_ID. Does not track SQL API transient sessions."
+          },
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY",
+            "notes": "Queries per SESSION_ID with AUTHN_EVENT_ID, 365 days, up to 45 min latency."
+          },
+          {
+            "name": "SNOWFLAKE.ACCOUNT_USAGE.CREDENTIALS",
+            "notes": "Current credential inventory (PAT, KEYPAIR, WIF types) with LAST_USED_ON; up to 2h latency; deleted credentials are not included. Named key pairs appear with TYPE/DOMAIN KEYPAIR and STATUS ACTIVE/EXPIRED/DISABLED."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "RSA_PUBLIC_KEY_FP",
+            "log": "DESCRIBE USER output",
+            "notes": "SHA256 fingerprint of key 1; matches the fingerprint in the JWT iss claim."
+          },
+          {
+            "field": "RSA_PUBLIC_KEY_2_FP",
+            "log": "DESCRIBE USER output",
+            "notes": "Fingerprint of second key slot."
+          },
+          {
+            "field": "CREDENTIAL_ID",
+            "log": "CREDENTIALS",
+            "notes": "ID of a named key pair (TYPE KEYPAIR)."
+          },
+          {
+            "field": "FIRST_AUTHENTICATION_FACTOR_ID",
+            "log": "LOGIN_HISTORY",
+            "notes": "Credential ID used to authenticate; population for key pairs not confirmed."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "ALTER USER … ADD KEY PAIR",
+            "stage": "create",
+            "notes": "Named key pair; legacy path is SET RSA_PUBLIC_KEY / RSA_PUBLIC_KEY_2."
+          },
+          {
+            "event": "ALTER USER … ROTATE KEY PAIR",
+            "stage": "change",
+            "notes": "Prior key valid 24h by default; EXPIRE_ROTATED_KEY_PAIR_AFTER_HOURS = 0 ends it now."
+          },
+          {
+            "event": "ALTER USER … MODIFY KEY PAIR",
+            "stage": "change",
+            "notes": ""
+          },
+          {
+            "event": "ALTER USER … REMOVE KEY PAIR",
+            "stage": "revoke",
+            "notes": "Or UNSET RSA_PUBLIC_KEY for legacy keys."
+          },
+          {
+            "event": "JWT_TOKEN_INVALID_PUBLIC_KEY_FINGERPRINT_MISMATCH",
+            "stage": "auth_fail",
+            "notes": "Error 394304; other JWT errors 390144, 394300-394307."
+          }
+        ],
+        "correlation_keys": [
+          "USER_NAME",
+          "CLIENT_IP",
+          "REPORTED_CLIENT_TYPE",
+          "REPORTED_CLIENT_VERSION",
+          "EVENT_ID",
+          "LOGIN_EVENT_ID",
+          "SESSION_ID",
+          "AUTHN_EVENT_ID",
+          "CLIENT_APPLICATION_ID",
+          "RSA_PUBLIC_KEY_FP",
+          "FIRST_AUTHENTICATION_FACTOR_ID"
+        ],
+        "anomaly_cues": [
+          "New RSA_PUBLIC_KEY / ADD KEY PAIR set on a user by someone other than the usual admin",
+          "Key-pair logins for a service user from a new CLIENT_IP or REPORTED_CLIENT_TYPE",
+          "Fingerprint-mismatch (394304) failures followed by success: attacker trying keys",
+          "Successful logins on the old key after ROTATE (grace period abuse)",
+          "Second key slot (RSA_PUBLIC_KEY_2) populated when the team uses only one"
+        ],
+        "containment": {
+          "steps": "ALTER USER <u> REMOVE KEY PAIR <name> or UNSET RSA_PUBLIC_KEY / RSA_PUBLIC_KEY_2; or ROTATE KEY PAIR with EXPIRE_ROTATED_KEY_PAIR_AFTER_HOURS = 0; ALTER USER <u> SET DISABLED = TRUE to abort running queries.",
+          "kills_existing": "unknown",
+          "notes": "Each JWT is valid at most 1 hour; docs do not say whether sessions opened with a removed key end."
+        },
+        "sample_query": {
+          "language": "Snowflake SQL (ACCOUNT_USAGE)",
+          "query": "SELECT query_id, start_time, user_name, role_name, query_text FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE (query_text ILIKE '%RSA_PUBLIC_KEY%' OR query_text ILIKE '%KEY PAIR%') AND query_type ILIKE 'ALTER%' AND start_time > DATEADD(day,-90,CURRENT_TIMESTAMP()) ORDER BY start_time DESC;",
+          "purpose": "Find key registrations, rotations and removals on users."
+        },
+        "unknown": [
+          "FIRST_AUTHENTICATION_FACTOR value for key-pair logins (sample leaves it null)",
+          "Whether FIRST_AUTHENTICATION_FACTOR_ID is populated for key pairs",
+          "SESSIONS.AUTHENTICATION_METHOD value",
+          "Exact QUERY_TYPE for ALTER USER statements"
+        ],
+        "evidence_refs": [
+          "fc-410c61ff",
+          "fc-9d413ef8",
+          "fc-5371b82a",
+          "fc-a3c06820",
+          "fc-69a9e246",
+          "fc-26b6697e",
+          "fc-6ad68624",
+          "fc-c0be79cd"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /api/v2/statements (SELECT)",
+            "reveals": "Any table data the user's role can read",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "QUERY_HISTORY view (join to LOGIN_HISTORY.first_authentication_factor_id)",
+            "log_notes": "QUERY_HISTORY keeps 365 days. ACCESS_HISTORY needs Enterprise Edition."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-6de35438",
+          "fc-5371b82a",
+          "fc-26b6697e",
+          "fc-a3c06820",
+          "fc-e3e502a4"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Snowflake user with key-based auth logged in with password auth",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/snowflake_queries/snowflake_key_user_password_login.yml",
+          "detects": "A user with an RSA public key configured logged in with a factor other than RSA_KEYPAIR (scheduled query on LOGIN_HISTORY)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-26b6697e",
+      "title": "QUERY_HISTORY view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/query_history",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-410c61ff",
+      "title": "Key-pair authentication and key-pair rotation - Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/key-pair-auth",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5371b82a",
+      "title": "Authenticating to the server (SQL API) - Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/developer-guide/sql-api/authenticating",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5a0b3082",
+      "title": "ALTER USER ... ADD KEY PAIR - Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/sql-reference/sql/alter-user-add-key-pair",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5a418c44",
+      "title": "User management",
+      "url": "https://docs.snowflake.com/en/user-guide/admin-user-management",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69a9e246",
+      "title": "SESSIONS view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/sessions",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6ad68624",
+      "title": "CREDENTIALS view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/credentials",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6de35438",
+      "title": "Submitting a request to execute SQL statements",
+      "url": "https://docs.snowflake.com/en/developer-guide/sql-api/submitting-requests",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7efd1500",
+      "title": "CREATE AUTHENTICATION POLICY | Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/sql-reference/sql/create-authentication-policy",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-817b452f",
+      "title": "Okta SCIM integration",
+      "url": "https://docs.snowflake.com/en/user-guide/scim-okta",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-87ff0aac",
+      "title": "Controlling network traffic with network policies | Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/network-policies",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9d413ef8",
+      "title": "Key-pair authentication troubleshooting",
+      "url": "https://docs.snowflake.com/en/user-guide/key-pair-auth-troubleshooting",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a3c06820",
+      "title": "LOGIN_HISTORY view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/login_history",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c0be79cd",
+      "title": "ALTER USER",
+      "url": "https://docs.snowflake.com/en/sql-reference/sql/alter-user",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c4392740",
+      "title": "ACCESS_HISTORY view",
+      "url": "https://docs.snowflake.com/en/sql-reference/account-usage/access_history",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d32994ba",
+      "title": "SCIM user API reference",
+      "url": "https://docs.snowflake.com/en/user-guide/scim-user-api-reference",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e3e502a4",
+      "title": "Access History",
+      "url": "https://docs.snowflake.com/en/user-guide/access-history",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn16search12",
+      "title": "Authentication policies - Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/authentication-policies",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn16search24",
+      "title": "Overview of Snowflake authentication",
+      "url": "https://docs.snowflake.com/en/user-guide/security-authentication-overview",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search1",
+      "title": "Workload identity federation | Snowflake Documentation",
+      "url": "https://docs.snowflake.com/en/user-guide/workload-identity-federation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search13",
+      "title": "Using programmatic access tokens for authentication | Snowflake ...",
+      "url": "https://docs.snowflake.com/en/user-guide/programmatic-access-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

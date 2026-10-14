@@ -1,0 +1,516 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "aws",
+      "name": "AWS",
+      "scope_notes": "Covers Amazon Web Services (IAM, STS, IAM Identity Center, IAM Roles Anywhere, Amazon Bedrock). All features are available in every AWS account; SCPs and centralized root access require AWS Organizations, and Control Tower controls require AWS Control Tower.",
+      "controls": [
+        {
+          "name": "aws:SourceIp deny policy",
+          "effect": "limit_network",
+          "applies_to": [
+            "aws-1",
+            "aws-2",
+            "aws-3",
+            "aws-4",
+            "aws-5",
+            "aws-6",
+            "aws-7",
+            "aws-8"
+          ],
+          "what": "Identity policy or SCP that denies any request from outside listed CIDR ranges.",
+          "setting": "IAM policy / SCP with NotIpAddress aws:SourceIp",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-ae269843"
+          ]
+        },
+        {
+          "name": "Permission set session duration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "aws-5"
+          ],
+          "what": "Sets how long Identity Center role credentials last (1-12 h, default 1 h).",
+          "setting": "IAM Identity Center > Permission sets > Session duration",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-25d38830"
+          ]
+        },
+        {
+          "name": "Deny policy for Identity Center user (SCP with user ID)",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-5"
+          ],
+          "what": "Pre-staged SCP deny that, once the user ID is added, blocks all actions from the user's active role sessions.",
+          "setting": "AWS Organizations SCP",
+          "plan": "AWS Organizations",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-123babcb",
+            "fc-03b338d6"
+          ]
+        },
+        {
+          "name": "Disable user access (IAM Identity Center)",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-5"
+          ],
+          "what": "Disabling or deleting an Identity Center user blocks new portal sign-in and new IAM role sessions.",
+          "setting": "IAM Identity Center console > Users",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-d7f8d081"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether long-term Bedrock API keys can be set to never expire, and their maximum lifetime.",
+        "Token format/prefix for Bedrock API keys (not documented on fetched pages).",
+        "Which CloudTrail field identifies the specific Bedrock API key on a request (key value is not logged).",
+        "Default session duration for IAM Roles Anywhere when durationSeconds is omitted.",
+        "Exact CloudTrail eventName strings for CreateAccessKey/UpdateAccessKey/DeleteAccessKey were not shown on fetched pages (they match the IAM API action names, which CloudTrail logs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "aws-5",
+      "provider_id": "aws",
+      "name": "IAM Identity Center credentials for AWS CLI/SDK",
+      "family": "federation",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "User signs in to the AWS access portal (device code flow via aws configure sso); the CLI calls GetRoleCredentials to get short-term STS credentials for a permission set role, refreshing them while the portal session is active.",
+        "evidence_refs": [
+          "fc-5b8a2195",
+          "fc-52d5fa8b"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "Credentials come from the Identity Center session, which follows the configured identity source. Disabling the user blocks new sessions, but existing IAM role sessions continue until their permission-set duration ends (max 12 h).",
+        "evidence_refs": [
+          "fc-d7f8d081"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Not a setting: an identity policy or SCP that denies requests when aws:SourceIp is outside allowed ranges. It is evaluated on every signed API request. aws:SourceIp is absent for calls through VPC endpoints (use aws:VpcSourceIp) and SCPs do not cover the management account.",
+        "evidence_refs": [
+          "fc-bf544ac3",
+          "fc-ae269843",
+          "fc-081441e9"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 43200,
+        "configurable": "yes",
+        "summary": "Role creds 1-12 h (default 1 h); portal session up to 90 days",
+        "evidence_refs": [
+          "fc-25d38830",
+          "fc-d7f8d081"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "Access portal session (up to 90 days)",
+        "summary": "CLI refreshes role credentials automatically while the portal session lasts.",
+        "evidence_refs": [
+          "fc-5b8a2195",
+          "fc-d7f8d081"
+        ]
+      },
+      "administration": {
+        "summary": "Admins set permission-set session duration and assignments. To cut live access, pre-stage an SCP deny keyed to the Identity Center user ID, then remove assignments.",
+        "conditions": "IAM revoke-sessions cannot be used on roles created from permission sets.",
+        "evidence_refs": [
+          "fc-25d38830",
+          "fc-123babcb",
+          "fc-03b338d6"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "yes",
+          "details": "CLI/SDK role credentials are obtained from the user's Identity Center sign-in session, which uses the org's identity source.",
+          "evidence_refs": [
+            "fc-d7f8d081"
+          ]
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Deleting or disabling the user blocks new sessions immediately, but existing IAM role sessions continue for up to 12 hours.",
+          "evidence_refs": [
+            "fc-d7f8d081"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "IAM Identity Center console > Settings > Authentication tab > Multi-factor authentication > Configure (external IdP: set MFA in the IdP)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-9b0edcd9"
+          ]
+        },
+        "network": {
+          "ui": "AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account (roles created by permission sets cannot be edited in IAM)",
+          "api": null,
+          "cli": "aws organizations attach-policy",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-72343915",
+            "fc-b9b7e785",
+            "fc-12bba687"
+          ]
+        },
+        "reads": {
+          "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+          "api": null,
+          "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+          "evidence_refs": [
+            "fc-bcd7adf9",
+            "fc-0b07a9e0"
+          ]
+        },
+        "kill": {
+          "ui": "Add user ID to the pre-staged SCP Deny; IAM Identity Center > AWS accounts > account > Assigned users and groups > Remove access; Users > user > Disable user access; keep the deny for 12 h",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-03b338d6",
+            "fc-462065cd"
+          ]
+        },
+        "offboard": {
+          "ui": "IAM Identity Center console > Users > user > General information > Disable user access (or delete user)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-03b338d6",
+            "fc-b4eac9a3"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "ASIA",
+          "notes": "Role credentials are standard STS temporary credentials."
+        },
+        "log_sources": [
+          {
+            "name": "AWS CloudTrail event history",
+            "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+          },
+          {
+            "name": "CloudTrail trail / event data store",
+            "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "userIdentity.onBehalfOf.userId",
+            "log": "CloudTrail",
+            "notes": "Identity Center user ID for user-initiated events."
+          },
+          {
+            "field": "userIdentity.credentialId",
+            "log": "CloudTrail",
+            "notes": "Identity Center credential identifier."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "GetRoleCredentials",
+            "stage": "create",
+            "notes": "Portal API call that returns STS credentials (logging not verified on fetched pages)."
+          }
+        ],
+        "correlation_keys": [
+          "onBehalfOf.userId",
+          "credentialId",
+          "role session name"
+        ],
+        "anomaly_cues": [
+          "Role sessions after user is disabled"
+        ],
+        "containment": {
+          "steps": "Add user ID to pre-staged SCP deny, remove assignments, disable user.",
+          "kills_existing": "partial",
+          "notes": "Disabling the user alone leaves existing role sessions working up to 12 h."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact CloudTrail eventName for portal GetRoleCredentials."
+        ],
+        "evidence_refs": [
+          "fc-d7f8d081",
+          "fc-123babcb",
+          "fc-52d5fa8b",
+          "fc-d34f092b",
+          "fc-03b338d6"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST sts:GetCallerIdentity",
+            "reveals": "Account, ARN, user/role ID",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetCallerIdentity",
+            "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GetAccountAuthorizationDetails",
+            "reveals": "All IAM users, groups, roles, policies",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetAccountAuthorizationDetails",
+            "log_notes": "IAM management event."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET / (s3:ListBuckets)",
+            "reveals": "All buckets owned by the account",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": "ListBuckets",
+            "log_notes": "Management/data classification not verified on fetched pages."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /{Key} (s3:GetObject)",
+            "reveals": "Object contents",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "GetObject",
+            "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-024655eb",
+          "fc-bcd7adf9",
+          "fc-3ae233ca",
+          "fc-e422ae4f",
+          "fc-0ec1c9ec",
+          "fc-a8e9c769"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-024655eb",
+      "title": "Logging IAM and AWS STS API calls with AWS CloudTrail - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-03b338d6",
+      "title": "Revoke user access - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/revoke-user-permissions.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-081441e9",
+      "title": "Service control policies (SCPs) - AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0b07a9e0",
+      "title": "Viewing recent management events with the console",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/view-cloudtrail-events-console.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0ec1c9ec",
+      "title": "GetObject - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-123babcb",
+      "title": "Use a Deny policy to revoke active user permissions - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/prereqs-revoking-user-permissions.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-12bba687",
+      "title": "Revoke IAM role temporary security credentials - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_revoke-sessions.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-25d38830",
+      "title": "Set session duration for AWS accounts - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/howtosessionduration.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3ae233ca",
+      "title": "GetCallerIdentity - AWS Security Token Service",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-462065cd",
+      "title": "Remove user and group access to an AWS account",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/howtoremoveaccess.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-52d5fa8b",
+      "title": "GetRoleCredentials - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/PortalAPIReference/API_GetRoleCredentials.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5b8a2195",
+      "title": "Getting IAM Identity Center user credentials for the AWS CLI or AWS SDKs - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/howtogetcredentials.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-72343915",
+      "title": "Creating organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_create.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9b0edcd9",
+      "title": "Prompt users for MFA",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/mfa-getting-started.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8e9c769",
+      "title": "GetAccountAuthorizationDetails - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetAccountAuthorizationDetails.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae269843",
+      "title": "AWS global condition context keys - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b4eac9a3",
+      "title": "Disable user access in IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/disableuser.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9b7e785",
+      "title": "Attaching organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_attach.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bcd7adf9",
+      "title": "Logging data events - AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf544ac3",
+      "title": "AWS: Denies access to AWS based on the source IP - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_examples_aws_deny-ip.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d34f092b",
+      "title": "CloudTrail userIdentity element - AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-user-identity.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7f8d081",
+      "title": "Understanding authentication sessions in IAM Identity Center - AWS IAM Identity Center",
+      "url": "https://docs.aws.amazon.com/singlesignon/latest/userguide/authconcept.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e422ae4f",
+      "title": "ListBuckets - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

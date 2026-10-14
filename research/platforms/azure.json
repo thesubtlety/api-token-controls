@@ -1,0 +1,1601 @@
+{
+ "id": "azure",
+ "name": "Microsoft Azure",
+ "scope_notes": "Covers Microsoft Azure (Azure Storage, Azure Resource Manager, Microsoft Entra Workload ID, Azure DevOps Services). Azure Storage and ARM controls are per subscription/account; Conditional Access for workload identities needs Workload Identities Premium; Azure DevOps PAT policies need an Entra-backed organization. Entra delegated/app-only OAuth for Graph and managed identities are covered by the separate microsoft platform.",
+ "controls": [
+  {
+   "name": "Allow storage account key access (AllowSharedKeyAccess = false)",
+   "effect": "disable",
+   "applies_to": [
+    "azure-1",
+    "azure-2"
+   ],
+   "what": "Rejects all requests authorized with account keys, including account and service SAS; user delegation SAS still works.",
+   "setting": "Storage account > Configuration > Allow storage account key access; ARM property allowSharedKeyAccess",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-722fbc0c"
+   ]
+  },
+  {
+   "name": "Azure Policy: Storage accounts should prevent shared key access",
+   "effect": "disable",
+   "applies_to": [
+    "azure-1",
+    "azure-2"
+   ],
+   "what": "Audits or prevents storage accounts that permit Shared Key authorization.",
+   "setting": "Azure Policy assignment",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-722fbc0c"
+   ]
+  },
+  {
+   "name": "Regenerate key (RegenerateKey)",
+   "effect": "revoke",
+   "applies_to": [
+    "azure-1",
+    "azure-2"
+   ],
+   "what": "Replaces an account key and revokes SAS signed with that key.",
+   "setting": "Storage account > Access keys > Rotate key; POST .../regenerateKey",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-16c4599c",
+    "fc-be5920ad"
+   ]
+  },
+  {
+   "name": "Key expiration policy",
+   "effect": "require_rotation",
+   "applies_to": [
+    "azure-1"
+   ],
+   "what": "Shows a reminder and enables Azure Policy compliance checks when keys are not rotated in the interval; does not disable keys.",
+   "setting": "Storage account > Security + networking > Access keys > Set rotation reminder",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-16c4599c"
+   ]
+  },
+  {
+   "name": "Storage firewall network rules",
+   "effect": "limit_network",
+   "applies_to": [
+    "azure-1",
+    "azure-2"
+   ],
+   "what": "Limits which IPs, VNets and resource instances can reach the account endpoint.",
+   "setting": "Storage account > Networking",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-fe0e4c61"
+   ]
+  },
+  {
+   "name": "SAS expiration policy (Log / Block)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "azure-2"
+   ],
+   "what": "Sets a recommended max SAS interval for service and account SAS; Block denies out-of-policy SAS, default Log allows them.",
+   "setting": "Storage account > Configuration > SAS expiration; -SasExpirationPeriod / -SasExpirationAction",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-6325768d"
+   ]
+  },
+  {
+   "name": "Stored access policy",
+   "effect": "revoke",
+   "applies_to": [
+    "azure-2"
+   ],
+   "what": "Service SAS bound to a stored access policy can be revoked by changing or deleting the policy.",
+   "setting": "Container/share/queue/table ACL operation",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-bd395203",
+    "fc-ed5fcd91"
+   ]
+  },
+  {
+   "name": "Revoke user delegation keys",
+   "effect": "revoke",
+   "applies_to": [
+    "azure-2"
+   ],
+   "what": "Revokes all user delegation keys for the account, invalidating every user delegation SAS.",
+   "setting": "az storage account revoke-delegation-keys",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-93d1e669"
+   ]
+  },
+  {
+   "name": "Conditional Access for workload identities",
+   "effect": "limit_network",
+   "applies_to": [
+    "azure-3",
+    "azure-4"
+   ],
+   "what": "Blocks token requests by single-tenant service principals from outside named locations or when risky.",
+   "setting": "Entra admin center > Conditional Access > Workload identities",
+   "plan": "Workload Identities Premium",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "turn10search0"
+   ]
+  },
+  {
+   "name": "App management policy (passwordAddition, passwordLifetime, asymmetricKeyLifetime)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "azure-3"
+   ],
+   "what": "Blocks new password secrets or caps secret/certificate lifetimes for new or updated apps.",
+   "setting": "Microsoft Graph tenantAppManagementPolicy / appManagementPolicy",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-17a69382"
+   ]
+  },
+  {
+   "name": "Remove credential / disable service principal",
+   "effect": "revoke",
+   "applies_to": [
+    "azure-3",
+    "azure-4"
+   ],
+   "what": "Deleting the secret, certificate or federated credential stops new token requests; disabling the SP is a CAE revocation event for Microsoft Graph only.",
+   "setting": "App registrations > Certificates & secrets; Enterprise applications > Properties",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-9ad93cd2"
+   ]
+  },
+  {
+   "name": "Azure RBAC role assignment scope",
+   "effect": "limit_resources",
+   "applies_to": [
+    "azure-3",
+    "azure-4"
+   ],
+   "what": "Service principal ARM access is limited to its assigned roles and scopes.",
+   "setting": "az role assignment create --role --scopes",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-28f79469"
+   ]
+  },
+  {
+   "name": "Restrict global personal access token creation",
+   "effect": "limit_scope",
+   "applies_to": [
+    "azure-5"
+   ],
+   "what": "New PATs must target specific organizations.",
+   "setting": "Organization settings > Microsoft Entra",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-4b9bfb26"
+   ]
+  },
+  {
+   "name": "Restrict full-scoped personal access token creation",
+   "effect": "limit_scope",
+   "applies_to": [
+    "azure-5"
+   ],
+   "what": "New PATs must use custom scopes.",
+   "setting": "Organization settings > Microsoft Entra",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-4b9bfb26"
+   ]
+  },
+  {
+   "name": "Enforce maximum personal access token lifespan",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "azure-5"
+   ],
+   "what": "Caps lifetime of new or renewed PATs in days.",
+   "setting": "Organization settings > Microsoft Entra",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-4b9bfb26"
+   ]
+  },
+  {
+   "name": "Restrict personal access token creation",
+   "effect": "disable",
+   "applies_to": [
+    "azure-5"
+   ],
+   "what": "Only allowlisted users (or packaging-only) can create or regenerate PATs; existing PATs keep working.",
+   "setting": "Organization settings > Policies",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-4b9bfb26"
+   ]
+  },
+  {
+   "name": "Automatically revoke leaked personal access tokens",
+   "effect": "revoke",
+   "applies_to": [
+    "azure-5"
+   ],
+   "what": "PATs found in public GitHub repos are revoked automatically.",
+   "setting": "Organization settings > Microsoft Entra",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-4b9bfb26"
+   ]
+  },
+  {
+   "name": "Enable IP Conditional Access policy validation on non-interactive flows",
+   "effect": "limit_network",
+   "applies_to": [
+    "azure-5"
+   ],
+   "what": "Checks Entra IP-based Conditional Access on PAT REST calls.",
+   "setting": "Organization settings > Policies",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-97a40aec"
+   ]
+  },
+  {
+   "name": "Token Admin revoke authorizations",
+   "effect": "revoke",
+   "applies_to": [
+    "azure-5"
+   ],
+   "what": "Admins revoke users' PATs by authorization ID; disabling a user also revokes their PATs.",
+   "setting": "POST /_apis/tokenadmin/revocations",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-fbae0461",
+    "fc-a9c5754f"
+   ]
+  },
+  {
+   "name": "Block password addition (passwordAddition restriction)",
+   "effect": "disable",
+   "applies_to": [
+    "azure-3"
+   ],
+   "what": "Blocks adding new client secrets to applications and service principals; certificates are not blocked by this restriction.",
+   "setting": "Entra ID > Enterprise apps > Application policies > Block password addition (or tenantAppManagementPolicy via Microsoft Graph)",
+   "plan": "Not stated in cited docs",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ad48752e"
+   ]
+  },
+  {
+   "name": "Users can register applications",
+   "effect": "disable",
+   "applies_to": [
+    "azure-3",
+    "azure-4"
+   ],
+   "what": "Set to No so only admins and Application Developer role holders can create app registrations (and so add secrets, certificates or federated credentials to new apps).",
+   "setting": "Entra ID > Users > User settings > Users can register applications",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-660153dd"
+   ]
+  },
+  {
+   "name": "Not allowed resource types (Azure Policy) for userAssignedIdentities/federatedIdentityCredentials",
+   "effect": "disable",
+   "applies_to": [
+    "azure-4"
+   ],
+   "what": "Blocks creating federated identity credentials on user-assigned managed identities in a subscription or resource group; does not cover app registrations.",
+   "setting": "Azure Policy > Definitions > Not allowed resource types > Assign",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-12f4eb0e"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "azure-1",
+   "what": "Key expiration policy only reminds; keys never expire.",
+   "kind": "expiry",
+   "evidence_refs": [
+    "fc-16c4599c"
+   ]
+  },
+  {
+   "path_id": "azure-2",
+   "what": "Azure does not track issued SAS tokens, so there is no inventory or per-token revoke for account SAS.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-bd395203"
+   ]
+  },
+  {
+   "path_id": "azure-3",
+   "what": "CAE for workload identities does not cover Azure Resource Manager; ARM tokens survive SP disable until expiry.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-9ad93cd2"
+   ]
+  },
+  {
+   "path_id": "azure-3",
+   "what": "App management policies do not affect existing credentials or token issuance for existing apps.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-17a69382"
+   ]
+  },
+  {
+   "path_id": "azure-5",
+   "what": "PAT use (token access) is not recorded in the Azure DevOps audit log.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-608c4281"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether Azure Activity Log records the service principal identity for ARM read calls made with azure-3/azure-4 tokens (Activity log typically skips reads).",
+  "Exact Entra audit activity name for adding/removing a federated identity credential.",
+  "Default of the Azure DevOps \"IP Conditional Access policy validation on non-interactive flows\" policy.",
+  "Maximum Azure DevOps PAT lifetime when no tenant policy is set.",
+  "Token format or prefix for storage keys, SAS, client secrets or Azure DevOps PATs.",
+  "Whether app management policies require a specific license."
+ ],
+ "credentials": [
+  {
+   "id": "azure-1",
+   "name": "Storage account access keys (Shared Key)",
+   "family": "hmac",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Two account keys (key1/key2) per storage account; requests are HMAC-SHA256 signed in the SharedKey Authorization header. Keys give full data access and can mint SAS tokens.",
+    "evidence_refs": [
+     "fc-16c4599c",
+     "fc-955c09bb"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Shared Key does not use Microsoft Entra ID, so Entra Conditional Access does not apply; docs say Shared Key must be disallowed to protect an account with Conditional Access.",
+    "evidence_refs": [
+     "fc-722fbc0c"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Storage firewall network rules (IP, VNet, resource instance, trusted services) apply to requests to the account endpoint; default allows any network.",
+    "evidence_refs": [
+     "fc-fe0e4c61"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "No expiry; key expiration policy only shows a rotation reminder",
+    "evidence_refs": [
+     "fc-16c4599c"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "Keys stay valid until regenerated; rotate by switching to the second key, then regenerating the first.",
+    "evidence_refs": [
+     "fc-16c4599c"
+    ]
+   },
+   "administration": {
+    "summary": "Anyone with Microsoft.Storage/storageAccounts/listkeys/action can read keys. Admins can disallow Shared Key per account (AllowSharedKeyAccess=false) and enforce that with Azure Policy.",
+    "conditions": "Shared Key is allowed when the property is unset.",
+    "evidence_refs": [
+     "fc-16c4599c",
+     "fc-722fbc0c"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Docs say Conditional Access protects a storage account only after Shared Key authorization is disallowed.",
+     "evidence_refs": [
+      "fc-722fbc0c"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The two access keys belong to the storage account, not to a user.",
+     "evidence_refs": [
+      "fc-16c4599c"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Each account has exactly two keys, listed under Security + networking > Access keys or with az storage account keys list (per account).",
+     "evidence_refs": [
+      "fc-16c4599c"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Storage account > Monitoring > Diagnostic settings: send StorageBlobLogs to a Log Analytics workspace; then Logs: StorageBlobLogs | where AuthenticationType == \"AccountKey\"; group by AuthenticationHash to tell keys apart",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-722fbc0c",
+      "fc-e013ea13"
+     ]
+    },
+    "reads": {
+     "ui": "Log Analytics (after diagnostic setting): StorageBlobLogs | where AuthenticationType == \"AccountKey\" and OperationName == \"GetBlob\"",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-722fbc0c",
+      "fc-7801a81e",
+      "fc-e013ea13"
+     ]
+    },
+    "kill": {
+     "ui": "Storage account > Security + networking > Access keys > Regenerate (each key); or Settings > Configuration > Allow storage account key access = Disabled",
+     "api": "POST https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/regenerateKey",
+     "cli": "az storage account keys renew --resource-group <rg> --account-name <account> --key primary (then --key secondary); or az storage account update --name <account> --resource-group <rg> --allow-shared-key-access false",
+     "evidence_refs": [
+      "fc-16c4599c",
+      "fc-be5920ad",
+      "fc-722fbc0c"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Azure Activity Log",
+      "notes": "Control-plane writes/actions (e.g. listKeys, regenerateKey); 90 days free; reads typically not captured."
+     },
+     {
+      "name": "Azure Storage resource logs (StorageBlobLogs)",
+      "notes": "Data-plane requests incl. AuthenticationType and AuthenticationHash; not collected until a diagnostic setting routes them."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "AuthenticationHash",
+      "log": "StorageBlobLogs",
+      "notes": "key1|key2 plus SHA-256 hash of key."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Microsoft.Storage/storageAccounts/listkeys/action",
+      "stage": "create",
+      "notes": "Key read via ARM."
+     },
+     {
+      "event": "Microsoft.Storage/storageAccounts/regeneratekey/action",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "AuthenticationHash",
+     "CallerIpAddress",
+     "AccountName"
+    ],
+    "anomaly_cues": [
+     "AccountKey requests from new IPs",
+     "listKeys by an unusual principal"
+    ],
+    "containment": {
+     "steps": "Regenerate the exposed key (and the other if unsure); or set AllowSharedKeyAccess=false.",
+     "kills_existing": "yes",
+     "notes": "Regenerating also revokes SAS signed with that key; dependent apps break."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-16c4599c",
+     "fc-722fbc0c",
+     "fc-11e5a751",
+     "fc-3255e45c",
+     "fc-425d48c0",
+     "fc-fbfd318a"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "GET https://{account}.blob.core.windows.net/?comp=list",
+      "reveals": "All containers",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "StorageBlobLogs only if diagnostic setting configured."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET https://{account}.blob.core.windows.net/{container}?restype=container&comp=list",
+      "reveals": "Blob names",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "Same."
+     },
+     {
+      "stage": "collection",
+      "call": "GET https://{account}.blob.core.windows.net/{container}/{blob}",
+      "reveals": "Blob contents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "Same."
+     }
+    ],
+    "unknown": [
+     "No whoami call for Shared Key or SAS."
+    ],
+    "evidence_refs": [
+     "fc-3255e45c",
+     "fc-9da5e9a2",
+     "fc-8211d8c0",
+     "fc-afe1b0ea"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Azure Storage Account Keys Listed",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_storage_account_keys_listed.yml",
+     "detects": "Storage account access keys were listed."
+    },
+    {
+     "source": "Panther",
+     "title": "Azure Storage Account Key Regenerated",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_storage_account_key_regenerated.yml",
+     "detects": "A storage account access key was regenerated."
+    },
+    {
+     "source": "Panther",
+     "title": "Azure Storage Account Shared Key Access Enabled",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_storage_account_key_access_enabled.yml",
+     "detects": "Shared key access was turned on for an existing storage account (allowSharedKeyAccess true)."
+    }
+   ]
+  },
+  {
+   "id": "azure-2",
+   "name": "Shared access signatures (SAS): account SAS, service SAS, user delegation SAS",
+   "family": "hmac",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Signed URL token. Account and service SAS are signed with an account key; user delegation SAS is signed with a user delegation key obtained with Entra credentials (Blob only). Anyone holding the SAS can use it.",
+    "evidence_refs": [
+     "fc-722fbc0c",
+     "fc-bd395203"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "Account/service SAS rely on Shared Key and bypass Entra; user delegation SAS is authorized with Entra credentials and still works when Shared Key is disabled.",
+    "evidence_refs": [
+     "fc-722fbc0c"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Optional signed IP (sip) in the SAS plus the storage firewall; the SAS IP cannot grant access beyond firewall rules.",
+    "evidence_refs": [
+     "fc-fe0e4c61"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Expiry set by creator; user delegation key max 7 days; SAS expiration policy can Log or Block over-long SAS",
+    "evidence_refs": [
+     "fc-6325768d",
+     "fc-52950ccf"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "signed expiry (se)",
+    "summary": "Generate a new SAS client-side.",
+    "evidence_refs": [
+     "fc-bd395203"
+    ]
+   },
+   "administration": {
+    "summary": "SAS tokens are not tracked by Azure. Controls: disallow Shared Key (blocks account/service SAS), SAS expiration policy, stored access policies (service SAS only), revoke user delegation keys, regenerate account keys.",
+    "conditions": "Stored access policies not supported for account or user delegation SAS.",
+    "evidence_refs": [
+     "fc-bd395203",
+     "fc-722fbc0c"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "A user delegation SAS is secured with Entra credentials; account and service SAS are signed with Shared Key, which Conditional Access does not cover unless Shared Key is disallowed.",
+     "evidence_refs": [
+      "fc-bd395203",
+      "fc-722fbc0c"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "no",
+     "details": "SAS tokens are generated client-side and Azure Storage does not track them.",
+     "evidence_refs": [
+      "fc-bd395203"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Storage account > Settings > Configuration > Allow storage account key access = Disabled (leaves only Entra-backed user delegation SAS)",
+     "api": null,
+     "cli": "az storage account update --name <account> --resource-group <rg> --allow-shared-key-access false",
+     "evidence_refs": [
+      "fc-722fbc0c"
+     ]
+    },
+    "usage": {
+     "ui": "Log Analytics (after diagnostic setting): StorageBlobLogs | where AuthenticationType == \"SAS\"; AuthenticationHash identifies the SAS",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-722fbc0c",
+      "fc-e013ea13"
+     ]
+    },
+    "reads": {
+     "ui": "Log Analytics: StorageBlobLogs | where AuthenticationType == \"SAS\" and OperationName == \"GetBlob\"",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-722fbc0c",
+      "fc-7801a81e"
+     ]
+    },
+    "kill": {
+     "ui": "Account/service SAS: Storage account > Security + networking > Access keys > Regenerate the signing key, or change/delete the stored access policy. User delegation SAS: revoke delegation keys",
+     "api": "POST https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/revokeUserDelegationKeys",
+     "cli": "az storage account revoke-delegation-keys --name <account> --resource-group <rg>",
+     "evidence_refs": [
+      "fc-16c4599c",
+      "fc-bd395203",
+      "fc-93d1e669",
+      "fc-e82a1580"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "SAS is a query-string token appended to the resource URL."
+    },
+    "log_sources": [
+     {
+      "name": "Azure Storage resource logs (StorageBlobLogs)",
+      "notes": "Data-plane requests incl. AuthenticationType and AuthenticationHash; not collected until a diagnostic setting routes them."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "AuthenticationHash",
+      "log": "StorageBlobLogs",
+      "notes": "Key used plus SasSignature hash."
+     },
+     {
+      "field": "SasExpiryStatus",
+      "log": "Storage resource logs",
+      "notes": "Flags out-of-policy SAS."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "AuthenticationHash SasSignature",
+     "CallerIpAddress"
+    ],
+    "anomaly_cues": [
+     "AuthenticationType SAS from unknown IP",
+     "SasExpiryStatus entries"
+    ],
+    "containment": {
+     "steps": "Account/service SAS: regenerate signing key or change stored access policy. User delegation SAS: revoke-delegation-keys. Or disallow Shared Key.",
+     "kills_existing": "yes",
+     "notes": "User delegation revocation may be delayed by caching."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Creation of a SAS is client-side and not logged."
+    ],
+    "evidence_refs": [
+     "fc-16c4599c",
+     "fc-722fbc0c",
+     "fc-bd395203",
+     "fc-93d1e669",
+     "fc-11e5a751",
+     "fc-6325768d"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "GET https://{account}.blob.core.windows.net/?comp=list",
+      "reveals": "All containers",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "StorageBlobLogs only if diagnostic setting configured."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET https://{account}.blob.core.windows.net/{container}?restype=container&comp=list",
+      "reveals": "Blob names",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "Same."
+     },
+     {
+      "stage": "collection",
+      "call": "GET https://{account}.blob.core.windows.net/{container}/{blob}",
+      "reveals": "Blob contents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "Same."
+     }
+    ],
+    "unknown": [
+     "No whoami call for Shared Key or SAS."
+    ],
+    "evidence_refs": [
+     "fc-3255e45c",
+     "fc-9da5e9a2",
+     "fc-8211d8c0",
+     "fc-afe1b0ea"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Azure Storage SAS Token Access from External IP",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_storage_sas_external_access.yml",
+     "detects": "Successful storage requests signed with a SAS token (sig= in the URI) from a public IP."
+    },
+    {
+     "source": "Panther",
+     "title": "Azure VM Disk SAS URI Generated",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_vm_disk_sas_uri_generated.yml",
+     "detects": "A SAS URI was generated for a managed disk (download access to disk contents)."
+    }
+   ]
+  },
+  {
+   "id": "azure-3",
+   "name": "Service principal client secrets and certificates (used against Azure Resource Manager)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "App registration secret or certificate used in the client credentials flow to get an Entra access token for Azure Resource Manager; access is set by Azure RBAC role assignments.",
+    "evidence_refs": [
+     "fc-297a8af2",
+     "fc-28f79469"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "Not a user sign-in. Conditional Access for workload identities can block by location or risk, but only at token request and only for single-tenant SPs, and needs Workload Identities Premium.",
+    "evidence_refs": [
+     "turn10search0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "token_issuance",
+    "boundary": "Location-based Conditional Access for workload identities blocks token requests from outside allowed ranges. Already-issued ARM tokens are not re-checked (CAE for workload identities is Microsoft Graph only).",
+    "evidence_refs": [
+     "turn10search0",
+     "fc-9ad93cd2"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 63072000,
+    "configurable": "yes",
+    "summary": "Secret up to 24 months; access tokens 60-90 min",
+    "evidence_refs": [
+     "fc-51e9d3f4",
+     "turn1search0"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "secret/certificate expiry",
+    "summary": "Secret or certificate is reused to request new access tokens until it expires or is removed.",
+    "evidence_refs": [
+     "turn1search0",
+     "fc-51e9d3f4"
+    ]
+   },
+   "administration": {
+    "summary": "App management policies can block new password secrets or cap secret/certificate lifetimes; they do not affect existing apps. Credentials are removed in the app registration; the SP can be disabled.",
+    "conditions": "Tenant default policy is disabled by default.",
+    "evidence_refs": [
+     "fc-17a69382"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Conditional Access for workload identities applies to single-tenant service principals only and needs Workload Identities Premium; multitenant apps are not covered.",
+     "evidence_refs": [
+      "turn10search0"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Client secrets and certificates belong to the application/service principal, not a user.",
+     "evidence_refs": [
+      "fc-d98c0825"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Each application object exposes its passwordCredentials and keyCredentials collections through Microsoft Graph (GET /applications).",
+     "evidence_refs": [
+      "fc-d98c0825"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Entra admin center > Entra ID > Conditional Access > Policies > New policy > Users or workload identities > What does this policy apply to? = Workload identities > select service principals",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "turn10search0"
+     ]
+    },
+    "expiry": {
+     "ui": "Entra admin center > Entra ID > Enterprise apps > Application policies > Restrict max password lifetime / Restrict max certificate lifetime",
+     "api": "PATCH https://graph.microsoft.com/v1.0/policies/defaultAppManagementPolicy (passwordLifetime, asymmetricKeyLifetime restrictions)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ad48752e",
+      "fc-abc80c86"
+     ]
+    },
+    "usage": {
+     "ui": "Entra admin center > Entra ID > Monitoring & health > Sign-in logs > Service principal sign-ins; filter by application ID",
+     "api": "GET https://graph.microsoft.com/beta/auditLogs/signIns?$filter=signInEventTypes/any(t: t eq 'servicePrincipal') (clientCredentialType = clientSecret / certificate)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-03e51a70",
+      "fc-73c97002",
+      "fc-196e2df6"
+     ]
+    },
+    "reads": {
+     "ui": "Storage account (or subscription) > Activity log; filter Operation to listkeys action and caller = the app ID",
+     "api": null,
+     "cli": "az monitor activity-log list --resource-id <storage-account-id>",
+     "evidence_refs": [
+      "fc-fbfd318a",
+      "fc-fb7064cb"
+     ]
+    },
+    "kill": {
+     "ui": "Disable the service principal (accountEnabled = false) and delete the secret/certificate on the app registration",
+     "api": "POST /applications/{id}/removePassword; PATCH /servicePrincipals/{id} {\"accountEnabled\": false}",
+     "cli": "az ad app credential delete --id <appId> --key-id <keyId>",
+     "evidence_refs": [
+      "fc-abc76ff1",
+      "fc-59d947ae",
+      "fc-e02bba6f"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Microsoft Entra service principal sign-in logs",
+      "notes": "Token requests with secret/certificate; 7 days (Free) or 30 days (P1/P2)."
+     },
+     {
+      "name": "Microsoft Entra audit logs",
+      "notes": "ApplicationManagement category; 7 days (Free) or 30 days (P1/P2)."
+     },
+     {
+      "name": "Azure Activity Log",
+      "notes": "Control-plane writes/actions (e.g. listKeys, regenerateKey); 90 days free; reads typically not captured."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "service principal / app ID",
+      "log": "Entra service principal sign-in logs",
+      "notes": "Credential used is a secret or certificate."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Update application - Certificates and secrets management",
+      "stage": "create",
+      "notes": "ApplicationManagement audit."
+     },
+     {
+      "event": "Add service principal credentials",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "Remove service principal credentials",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "appId",
+     "service principal object ID",
+     "IP address"
+    ],
+    "anomaly_cues": [
+     "Token requests from new IPs",
+     "New secret added to a privileged app"
+    ],
+    "containment": {
+     "steps": "Remove the secret/certificate, disable the SP, and remove role assignments.",
+     "kills_existing": "partial",
+     "notes": "ARM access tokens remain valid until expiry (60-90 min); CAE for workload identities covers Microsoft Graph only."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-297a8af2",
+     "fc-9ad93cd2",
+     "turn1search0",
+     "fc-e9a0ad21",
+     "fc-863c8321"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET https://management.azure.com/subscriptions",
+      "reveals": "Subscriptions the SP can see",
+      "bulk": false,
+      "scope": "https://management.azure.com/.default",
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Activity log typically does not capture reads; token request is in SP sign-in logs."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET https://management.azure.com/subscriptions/{id}/resources",
+      "reveals": "All resources",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Read."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET .../providers/Microsoft.Authorization/roleAssignments",
+      "reveals": "Role assignments",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Read."
+     },
+     {
+      "stage": "collection",
+      "call": "POST .../storageAccounts/{name}/listKeys",
+      "reveals": "Storage account keys (pivot to azure-1)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "Microsoft.Storage/storageAccounts/listkeys/action",
+      "log_notes": "Activity log action."
+     }
+    ],
+    "unknown": [
+     "Exact Activity Log behavior for listKeys not quoted on fetched page."
+    ],
+    "evidence_refs": [
+     "fc-a60cdc83",
+     "fc-425d48c0",
+     "fc-fbfd318a",
+     "fc-21b77ece",
+     "fc-917f1112",
+     "fc-a6422a97"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Azure Service Principal Credentials Added",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_signin_rules/azure_service_principal_credentials_added.yml",
+     "detects": "Client secrets or certificates were added to an Entra ID service principal or application."
+    },
+    {
+     "source": "Sigma",
+     "title": "Added Credentials to Existing Application",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_credential_added.yml",
+     "detects": "Certificates or secrets were added to an existing application."
+    }
+   ]
+  },
+  {
+   "id": "azure-4",
+   "name": "Workload identity federation (federated identity credentials)",
+   "family": "federation",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An app registration or user-assigned managed identity trusts tokens from an external IdP (GitHub Actions, Kubernetes, other clouds); the workload exchanges that token for an Entra access token, then calls ARM.",
+    "evidence_refs": [
+     "turn26view0"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "No stored secret; trust is defined by issuer/subject matching, with no wildcards.",
+    "evidence_refs": [
+     "fc-a5949831",
+     "turn26view0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "token_issuance",
+    "boundary": "Same Conditional Access for workload identities limits as other app credentials (single-tenant SPs, token request only); managed identities are not covered.",
+    "evidence_refs": [
+     "turn10search0"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Entra access tokens 60-90 min; no long-lived secret",
+    "evidence_refs": [
+     "turn1search0",
+     "turn26view0"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "external IdP token and Entra access token expiry",
+    "summary": "Exchange a fresh external token for each new access token.",
+    "evidence_refs": [
+     "turn26view0"
+    ]
+   },
+   "administration": {
+    "summary": "Up to 20 federated identity credentials per app or user-assigned managed identity; admins add or remove them on the app/identity.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-a5949831"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Conditional Access for workload identities covers single-tenant service principals (app registrations) but not managed identities.",
+     "evidence_refs": [
+      "turn10search0"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Federated identity credentials are attached to an application or managed identity, not a user.",
+     "evidence_refs": [
+      "fc-9971364c"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "GET /applications/{id}/federatedIdentityCredentials lists credentials per application; no tenant-wide list was found.",
+     "evidence_refs": [
+      "fc-9971364c"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Entra admin center > Entra ID > Conditional Access > Policies > New policy > Users or workload identities > Workload identities > select service principals (app registrations only; not managed identities)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "turn10search0"
+     ]
+    },
+    "usage": {
+     "ui": "Entra admin center > Entra ID > Monitoring & health > Sign-in logs > Service principal sign-ins (or Managed identity sign-ins); filter by app ID",
+     "api": "GET https://graph.microsoft.com/beta/auditLogs/signIns?$filter=signInEventTypes/any(t: t eq 'servicePrincipal'); clientCredentialType eq 'federatedIdentityCredential'",
+     "cli": null,
+     "evidence_refs": [
+      "fc-03e51a70",
+      "fc-73c97002",
+      "fc-196e2df6"
+     ]
+    },
+    "reads": {
+     "ui": "Storage account (or subscription) > Activity log; filter Operation to listkeys action and caller = the app ID",
+     "api": null,
+     "cli": "az monitor activity-log list --resource-id <storage-account-id>",
+     "evidence_refs": [
+      "fc-fbfd318a",
+      "fc-fb7064cb"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "External IdP JWT exchanged for an Entra access token."
+    },
+    "log_sources": [
+     {
+      "name": "Microsoft Entra service principal sign-in logs",
+      "notes": "Token requests with secret/certificate; 7 days (Free) or 30 days (P1/P2)."
+     },
+     {
+      "name": "Microsoft Entra audit logs",
+      "notes": "ApplicationManagement category; 7 days (Free) or 30 days (P1/P2)."
+     },
+     {
+      "name": "Azure Activity Log",
+      "notes": "Control-plane writes/actions (e.g. listKeys, regenerateKey); 90 days free; reads typically not captured."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "appId / managed identity",
+      "log": "Entra sign-in logs",
+      "notes": "Specific FIC field not verified."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "appId",
+     "external subject (not verified in logs)"
+    ],
+    "anomaly_cues": [
+     "Token exchange from an unexpected repo/branch subject"
+    ],
+    "containment": {
+     "steps": "Delete the federated identity credential; remove role assignments.",
+     "kills_existing": "partial",
+     "notes": "Issued access tokens last 60-90 min."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Audit event name for FIC changes",
+     "Whether sign-in logs show which FIC matched"
+    ],
+    "evidence_refs": [
+     "fc-297a8af2",
+     "turn1search0",
+     "fc-a5949831"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET https://management.azure.com/subscriptions",
+      "reveals": "Subscriptions the SP can see",
+      "bulk": false,
+      "scope": "https://management.azure.com/.default",
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Activity log typically does not capture reads; token request is in SP sign-in logs."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET https://management.azure.com/subscriptions/{id}/resources",
+      "reveals": "All resources",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Read."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET .../providers/Microsoft.Authorization/roleAssignments",
+      "reveals": "Role assignments",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Read."
+     },
+     {
+      "stage": "collection",
+      "call": "POST .../storageAccounts/{name}/listKeys",
+      "reveals": "Storage account keys (pivot to azure-1)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "Microsoft.Storage/storageAccounts/listkeys/action",
+      "log_notes": "Activity log action."
+     }
+    ],
+    "unknown": [
+     "Exact Activity Log behavior for listKeys not quoted on fetched page."
+    ],
+    "evidence_refs": [
+     "fc-a60cdc83",
+     "fc-425d48c0",
+     "fc-fbfd318a",
+     "fc-21b77ece",
+     "fc-917f1112",
+     "fc-a6422a97"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Elastic",
+     "title": "Entra ID Federated Identity Credential Modified",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/azure/persistence_entra_id_federated_identity_credential_modified.toml",
+     "detects": "A federated identity credential was added to an application, or its issuer or subject changed."
+    },
+    {
+     "source": "Elastic",
+     "title": "Entra ID Service Principal Federated Credential Authentication by Unusual Client",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/azure/initial_access_entra_id_federated_login_by_unusual_client.toml",
+     "detects": "Successful service principal sign-ins using a federated identity credential by a non-Microsoft app (new-terms rule)."
+    }
+   ]
+  },
+  {
+   "id": "azure-5",
+   "name": "Azure DevOps personal access tokens (PATs)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "User-owned token for Azure DevOps REST, Git and package feeds; scoped to one organization (global PATs stop working Dec 1, 2026) and limited to the owner's permissions.",
+    "evidence_refs": [
+     "fc-608c4281"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "PATs must meet Entra sign-in policies on REST calls; IP-based Conditional Access is checked on PAT calls only if the org enables \"IP Conditional Access policy validation on non-interactive flows\".",
+    "evidence_refs": [
+     "fc-97a40aec"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Enforced on PAT REST calls only with the org policy enabled and an Entra IP-based Conditional Access policy.",
+    "evidence_refs": [
+     "fc-97a40aec"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Expiry chosen at creation; tenant max-lifespan policy; becomes inactive if owner does not sign in within 90 days (Entra-backed orgs)",
+    "evidence_refs": [
+     "fc-608c4281",
+     "fc-4b9bfb26"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "expiration date",
+    "summary": "Reused until expiry; regenerating issues a new value and invalidates the old one.",
+    "evidence_refs": [
+     "fc-608c4281"
+    ]
+   },
+   "administration": {
+    "summary": "Tenant policies: restrict global PATs, restrict full-scoped PATs, max lifespan, auto-revoke leaked PATs (on by default). Org policy: restrict PAT creation with allowlist. Admins can revoke users' PATs via Token Admin API.",
+    "conditions": "Policies require an Entra-backed organization; restricting creation does not stop existing PATs.",
+    "evidence_refs": [
+     "fc-4b9bfb26",
+     "fc-a9c5754f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Conditional Access MFA applies to web flows only; IP-based policies apply to PAT REST calls only if the org enables IP Conditional Access policy validation on non-interactive flows.",
+     "evidence_refs": [
+      "fc-97a40aec"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "PATs stop working when the account is disabled or removed (up to one hour delay), but are not deleted and work again if access is restored.",
+     "evidence_refs": [
+      "fc-608c4281",
+      "fc-e97000e2"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Project Collection Administrators can list PATs per user with GET .../_apis/tokenadmin/personalaccesstokens/{subjectDescriptor}; no single org-wide list.",
+     "evidence_refs": [
+      "fc-deb02693"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "dev.azure.com/{org} > Organization settings > Policies > Enable IP Conditional Access policy validation on non-interactive flows = On",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-f7262257"
+     ]
+    },
+    "usage": {
+     "ui": "Organization settings > Policies > Log Audit Events = On; then Organization settings > Auditing (PAT create/modify/revoke events; docs say token access events are not logged)",
+     "api": "GET https://auditservice.dev.azure.com/{organization}/_apis/audit/auditlog?api-version=7.1-preview.1",
+     "cli": null,
+     "evidence_refs": [
+      "fc-33aacdfe",
+      "fc-dccdce00",
+      "fc-b47d1bc7"
+     ]
+    },
+    "offboard": {
+     "ui": "Organization settings > Users > ... > Remove from organization",
+     "api": "DELETE https://vsaex.dev.azure.com/{organization}/_apis/userentitlements/{userId}?api-version=7.1",
+     "cli": null,
+     "evidence_refs": [
+      "fc-811724fe",
+      "fc-eb479deb"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented on fetched pages."
+    },
+    "log_sources": [
+     {
+      "name": "Azure DevOps audit log",
+      "notes": "Off by default; 90-day retention, not configurable; export or stream for longer."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "DisplayName / OwnerName",
+      "log": "Azure DevOps audit log",
+      "notes": "Token events name the PAT and owner."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Token.PatCreateEvent",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "Token.PatRevokeEvent",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "Token.PatSystemRevokeEvent",
+      "stage": "revoke",
+      "notes": "System revocation (e.g. leak)."
+     },
+     {
+      "event": "Token.PatPublicDiscoveryEvent",
+      "stage": "leak",
+      "notes": "Found in a public repo."
+     }
+    ],
+    "correlation_keys": [
+     "PAT display name",
+     "owner"
+    ],
+    "anomaly_cues": [
+     "PAT discovered in public repo",
+     "New full-scoped PAT"
+    ],
+    "containment": {
+     "steps": "Owner revokes in user settings; admins revoke via Token Admin API or disable the user.",
+     "kills_existing": "partial",
+     "notes": "Up to 1 h delay for admin revocation; established connections may persist."
+    },
+    "sample_query": null,
+    "unknown": [
+     "PAT use is not logged."
+    ],
+    "evidence_refs": [
+     "fc-608c4281",
+     "fc-fbae0461",
+     "fc-dccdce00",
+     "fc-33aacdfe",
+     "fc-a9c5754f"
+    ],
+    "use_not_logged": {
+     "notes": "Azure DevOps audit log records PAT create, change and revoke, not each use: \"Token access events aren't currently logged.\"",
+     "evidence_refs": [
+      "fc-dccdce00"
+     ]
+    }
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET https://app.vssps.visualstudio.com/_apis/profile/profiles/me",
+      "reveals": "Owner profile",
+      "bulk": false,
+      "scope": "vso.profile",
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Token access events are not logged."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET https://dev.azure.com/{org}/_apis/projects",
+      "reveals": "Projects",
+      "bulk": true,
+      "scope": "vso.project",
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not logged."
+     },
+     {
+      "stage": "collection",
+      "call": "GET https://dev.azure.com/{org}/{project}/_apis/git/repositories",
+      "reveals": "Repos (then clone)",
+      "bulk": true,
+      "scope": "vso.code",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Repo reads are not listed as audit events on fetched pages."
+     },
+     {
+      "stage": "collection",
+      "call": "GET https://dev.azure.com/{organization}/{project}/_apis/git/repositories/{repositoryId}/items?path={path}&api-version=7.1",
+      "reveals": "Repository file content and metadata",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Audit log Token area says token access events aren't logged; Git area covers repository create/modify/delete, not reads."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-608c4281",
+     "fc-b6d82034",
+     "fc-fb329564",
+     "fc-842f0e44",
+     "fc-5463da4c",
+     "fc-dccdce00"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

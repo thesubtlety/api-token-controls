@@ -1,0 +1,234 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "scope_notes": "Private-app and newer developer-platform static authentication coexist. SSO requires eligible Professional/Enterprise subscriptions.",
+      "controls": [
+        {
+          "name": "User permission: Developer tools access",
+          "effect": "disable",
+          "applies_to": [
+            "hubspot-5",
+            "hubspot-3",
+            "hubspot-4"
+          ],
+          "what": "Controls which non-Super Admin users can access developer features; creating service keys requires it.",
+          "setting": "Settings > Users & Teams > user > permissions (Settings access)",
+          "plan": null,
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-b4d7cd80"
+          ],
+          "quote": "Developer tools access : toggle the Developer tools access switch on to let the user access and manage developer features"
+        },
+        {
+          "name": "Developer API key deactivate/regenerate",
+          "effect": "revoke",
+          "applies_to": [
+            "hubspot-4"
+          ],
+          "what": "The single per-account developer API key can be deactivated and replaced at any time.",
+          "setting": "Development > Keys > Developer API key",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-5a7188c1"
+          ],
+          "quote": "You can deactivate your API key and generate a new one at any time."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No IP allowlist for API calls found; \"Allowed login IPs\" (Settings > Security > Login) is documented only for logins.",
+        "Whether app governance (approval) covers privately distributed OAuth apps and static-auth apps, or only HubSpot Marketplace listings.",
+        "No admin-set token lifetime or mandatory rotation policy found for private app tokens, static tokens, service keys or the developer API key (only manual rotation and reminders).",
+        "No account-wide switch found to block service key creation other than withholding Developer tools access / Super Admin."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "hubspot-4",
+      "provider_id": "hubspot",
+      "name": "Developer API key",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Account-level key passed as the hapikey query parameter, usually with appId, for app features and settings that require it (for example the custom channels API). It is not a general CRM data credential.",
+        "evidence_refs": [
+          "fc-5a7188c1",
+          "turn4search22"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static account key; no external identity exchange is documented.",
+        "evidence_refs": [
+          "fc-5a7188c1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "login_only",
+        "boundary": "HubSpot's trusted-IP setting limits account logins. Its effect on calls made with a developer API key is not documented.",
+        "evidence_refs": [
+          "turn11search1"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Static; expiry not documented",
+        "evidence_refs": [
+          "fc-5a7188c1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "unknown",
+        "summary": "The key is reused until deactivated; deactivate it and generate a new one to rotate.",
+        "evidence_refs": [
+          "fc-5a7188c1"
+        ]
+      },
+      "administration": {
+        "summary": "Managed under Development > Keys > Developer API key. One key per HubSpot account, not per user; it can be deactivated and regenerated at any time.",
+        "conditions": "Still documented in current developer-platform docs; no current deprecation notice found. Separate from the account API keys (hapikey) sunset in 2022.",
+        "evidence_refs": [
+          "fc-5a7188c1",
+          "turn4search22"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The developer API key belongs to the account, not to a user.",
+          "evidence_refs": [
+            "fc-5a7188c1"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Only one key per account; it is shown at Development > Keys > Developer API key.",
+          "evidence_refs": [
+            "fc-5a7188c1"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Account-level developer API key passed as hapikey query parameter (often with appId). One key per account. Format not documented in fetched docs. GitHub scans a 'Hubspot API Key' type; whether it matches developer keys is unconfirmed."
+        },
+        "log_sources": [
+          {
+            "name": "None documented for developer API key use",
+            "notes": "Fetched docs list no call log or audit events for developer API keys."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "appId (request parameter)"
+        ],
+        "anomaly_cues": [
+          "hapikey appearing in proxy/web server logs, referrers or URL-capturing tools (query-string credential)",
+          "Unexpected changes to app features that require the key (e.g., custom channels registrations) for an appId",
+          "Key not rotated after a developer leaves"
+        ],
+        "containment": {
+          "steps": "Development > Keys > Developer API key: deactivate the key and generate a new one.",
+          "kills_existing": "unknown",
+          "notes": "Docs say the key can be deactivated at any time; timing of enforcement not stated."
+        },
+        "sample_query": {
+          "language": "none (no vendor log)",
+          "query": "Search own proxy/web logs for 'hapikey=' in request URLs to api.hubapi.com",
+          "purpose": "Find where the query-string key was used or leaked."
+        },
+        "unknown": [
+          "Any HubSpot log of developer API key use or rotation",
+          "Key format/prefix",
+          "Whether deactivation is immediate"
+        ],
+        "evidence_refs": [
+          "fc-5a7188c1",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Not researched"
+        ],
+        "evidence_refs": []
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-5a7188c1",
+      "title": "Manage apps in HubSpot - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/manage-apps-in-hubspot",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b4d7cd80",
+      "title": "HubSpot user permissions guide",
+      "url": "https://knowledge.hubspot.com/user-management/hubspot-user-permissions-guide",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn11search1",
+      "title": "Manage login and account access settings",
+      "url": "https://knowledge.hubspot.com/account-security/limit-logins-to-trusted-ip-addresses",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn4search22",
+      "title": "Authentication overview - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/authentication/overview",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

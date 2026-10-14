@@ -1,0 +1,506 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "snyk",
+      "name": "Snyk",
+      "scope_notes": "Snyk SaaS; API access, service accounts and audit logs require the Enterprise plan, while Free/Team personal tokens work only for CLI/IDE/CI.",
+      "controls": [
+        {
+          "name": "Snyk App scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "snyk-5"
+          ],
+          "what": "App permissions are fixed Org-level scopes, and an installer cannot grant scopes beyond their own permissions.",
+          "setting": "scopes on POST /rest/orgs/{org_id}/apps/creations",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-40d4c08e"
+          ]
+        },
+        {
+          "name": "Revoke authorized Snyk App",
+          "effect": "revoke",
+          "applies_to": [
+            "snyk-5"
+          ],
+          "what": "User revokes an app from Authorized Snyk Apps; admins can delete Group/Org installs by API.",
+          "setting": "Account Settings > Authorized Snyk Apps > Revoke; DELETE /rest/groups/{group_id}/apps/installs/{install_id}; DELETE /rest/self/apps/installs/{install_id}",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-a9da62db",
+            "fc-6e08e2b2"
+          ]
+        },
+        {
+          "name": "Delete App / replace clientSecret",
+          "effect": "revoke",
+          "applies_to": [
+            "snyk-5"
+          ],
+          "what": "Deleting an app revokes its credentials and all installs; replacing the secret invalidates the old one at once.",
+          "setting": "DELETE /rest/orgs/{orgId}/apps/creations/{app_id}; POST .../apps/creations/{app_id}/secrets",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-e89d54ca"
+          ]
+        },
+        {
+          "name": "OAuth2 revoke endpoint",
+          "effect": "revoke",
+          "applies_to": [
+            "snyk-5"
+          ],
+          "what": "Revokes a specific refresh token immediately.",
+          "setting": "POST https://api.snyk.io/oauth2/revoke",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8633152f"
+          ]
+        },
+        {
+          "name": "Audit logs",
+          "effect": "other",
+          "applies_to": [
+            "snyk-1",
+            "snyk-2",
+            "snyk-3",
+            "snyk-4",
+            "snyk-5"
+          ],
+          "what": "Group and Org audit log search (90 days) incl. service account and app lifecycle and api.access events.",
+          "setting": "GET /rest/{groups|orgs}/{id}/audit_logs/search",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d03e3195",
+            "fc-6e08e2b2"
+          ]
+        },
+        {
+          "name": "Install Apps (Snyk Apps management permission)",
+          "effect": "disable",
+          "applies_to": [
+            "snyk-5"
+          ],
+          "what": "Role permission that allows installing Snyk Apps; the pre-defined Org Collaborator role does not have it, and custom roles can leave it off.",
+          "setting": "Group > Settings > Member roles > Snyk Apps management > Install Apps",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ff59126b",
+            "fc-09e5d7bb"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether PATs, legacy API tokens or service account tokens bypass SSO / IdP conditional access (not stated).",
+        "Any admin setting to disable PATs or legacy API tokens, or to revoke another user's personal token (none documented).",
+        "Whether removing a user from a Group/Org or the IdP invalidates their PAT/legacy token (not stated).",
+        "Any customer IP allowlist for API requests (none documented).",
+        "Audit event names for PAT and legacy token create/revoke (not in the documented event lists).",
+        "Contents of api.access events (which fields identify the token or service account).",
+        "Admin approval or allowlist for Snyk App installation.",
+        "Token string prefixes / formats.",
+        "Refresh token lifetime for Snyk Apps."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "snyk-5",
+      "provider_id": "snyk",
+      "name": "Snyk Apps (OAuth 2.0 apps: user or tenant context)",
+      "family": "oauth",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "OAuth 2.0 apps created in an Org. Interactive installs use authorization code (PKCE) and get access + refresh tokens sent as `Authorization: bearer`; apps can also be installed for unattended client_credentials use.",
+        "evidence_refs": [
+          "fc-a9da62db",
+          "fc-5d9e987b",
+          "fc-2823c750",
+          "fc-6e08e2b2"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Snyk docs describe no customer-configurable IP allowlist for API callers; IP lists in docs cover Snyk scanners reaching your targets.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 86400,
+        "configurable": "yes",
+        "summary": "Access token TTL set per app (1h-24h); refresh token single-use",
+        "evidence_refs": [
+          "fc-6e08e2b2",
+          "fc-2823c750",
+          "fc-07aab60a"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "refresh token expiry; rotates on each use",
+        "summary": "Refresh token exchanged for new pair; old one invalid.",
+        "evidence_refs": [
+          "fc-07aab60a"
+        ]
+      },
+      "administration": {
+        "summary": "Scopes are Org-level and capped by the installer's permissions. user-context apps lose access when the installer is deactivated; tenant-context installs persist with the Org. Users revoke in Authorized Snyk Apps; admins revoke installs via API; deleting the app revokes all installs. No documented admin approval or allowlist for app installs.",
+        "conditions": "",
+        "evidence_refs": [
+          "fc-40d4c08e",
+          "fc-a9da62db",
+          "fc-6e08e2b2",
+          "fc-e89d54ca"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "User-context apps lose access when the installing user deactivates their account; tenant-context apps are not tied to the user.",
+          "evidence_refs": [
+            "fc-a9da62db"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Admins can list apps the Organization created (GET /rest/orgs/{orgId}/apps/creations); the Authorized Snyk Apps page shows only the viewing user's authorizations.",
+          "evidence_refs": [
+            "fc-e89d54ca",
+            "fc-a9da62db"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "Set access_token_ttl_seconds (3600-86400) in POST https://api.snyk.io/rest/orgs/{org_id}/apps/creations or PATCH /rest/orgs/{org_id}/apps/creations/{app_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-08d7923f",
+            "fc-d5b1299b"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "GET https://api.snyk.io/rest/groups/{group_id}/audit_logs/search?version={version}&events=api.access&user_id={user_id} (or /rest/orgs/{org_id}/audit_logs/search)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-d03e3195",
+            "fc-44be6988",
+            "fc-3bb65c22",
+            "fc-08d7923f"
+          ]
+        },
+        "offboard": {
+          "ui": "Group > Members > Delete member (user-context apps lose access when the installing user deactivates); tenant-context: Authorized Snyk Apps page > Revoke",
+          "api": "DELETE https://api.snyk.io/rest/orgs/{org_id}/apps/installs/{install_id}?version={version}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ed3b9edf",
+            "fc-a9da62db",
+            "fc-08d7923f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Snyk audit logs (Group/Org search API)",
+            "notes": "Enterprise; past 90 days; GET /rest/groups/{group_id}/audit_logs/search and /rest/orgs/{org_id}/audit_logs/search; api.access hidden unless requested via events=api.access."
+          },
+          {
+            "name": "Event forwarding (Amazon EventBridge, AWS CloudTrail Lake)",
+            "notes": "Platform audit events, Enterprise; use for retention beyond 90 days."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "client_id / install_id",
+            "log": "apps installs API",
+            "notes": "Audit payload fields not documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "org.app.create",
+            "stage": "create",
+            "notes": "App created in Org"
+          },
+          {
+            "event": "org.app.edit",
+            "stage": "modify",
+            "notes": ""
+          },
+          {
+            "event": "org.app.delete",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "org.app_bot.create",
+            "stage": "create",
+            "notes": "Meaning not documented"
+          },
+          {
+            "event": "api.access",
+            "stage": "use",
+            "notes": "Exists in Group and Org event lists; excluded by default; described as high-volume low-information."
+          }
+        ],
+        "correlation_keys": [
+          "user_id",
+          "org_id",
+          "group_id",
+          "project_id",
+          "created"
+        ],
+        "anomaly_cues": [
+          "Tenant-context app with broad scopes",
+          "New install via client credentials",
+          "App installed by a user who later left (tenant context persists)"
+        ],
+        "containment": {
+          "steps": "Revoke the install (UI or DELETE /rest/groups/{group_id}/apps/installs/{install_id}), revoke refresh token via POST /oauth2/revoke, or delete the app.",
+          "kills_existing": "partial",
+          "notes": "Refresh token revoked immediately; whether issued access tokens die before TTL is not stated."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit events for app install/revoke",
+          "Access token invalidation on revoke"
+        ],
+        "evidence_refs": [
+          "fc-a9da62db",
+          "fc-e89d54ca",
+          "fc-8633152f",
+          "fc-6e08e2b2"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /rest/self",
+            "reveals": "Identity of the token holder",
+            "bulk": false,
+            "scope": "org.read",
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Enterprise; api.access hidden by default; per-call detail not documented."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /rest/orgs",
+            "reveals": "Organizations the token can access",
+            "bulk": true,
+            "scope": "org.read",
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Same as above."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /rest/orgs/{org_id}/projects",
+            "reveals": "Projects / monitored repos and images",
+            "bulk": true,
+            "scope": "org.project.read",
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Reads have no explicit action event."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /rest/orgs/{org_id}/issues",
+            "reveals": "All vulnerability findings for the Org",
+            "bulk": true,
+            "scope": "org.project.snapshot.read",
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Reads have no explicit action event."
+          }
+        ],
+        "unknown": [
+          "Whether GET /rest/orgs works for app tokens"
+        ],
+        "evidence_refs": [
+          "fc-6e08e2b2",
+          "fc-d74cf79a",
+          "fc-40d4c08e"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-07aab60a",
+      "title": "Set up the refresh token exchange",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/using-specific-snyk-apis/snyk-apps-apis/set-up-a-snyk-app-using-the-oauth2-api/set-up-the-refresh-token-exchange",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-08d7923f",
+      "title": "Snyk REST API spec (rest-spec.json, linked from docs.snyk.io API reference)",
+      "url": "https://558411700-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FIEEjSXQQu36y0vmFV8zf%2Fuploads%2Fgit-blob-c1151c14af94bd6daf3db0c2cf3424397eb0191a%2Frest-spec.json?alt=media",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-09e5d7bb",
+      "title": "Integration Editor/Implementor role template",
+      "url": "https://docs.snyk.io/platform-administration/user-management/custom-role-templates/integration-editor-implementor-role-template",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2823c750",
+      "title": "Set up the authorization code exchange",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/using-specific-snyk-apis/snyk-apps-apis/set-up-a-snyk-app-using-the-oauth2-api/set-up-the-authorization-code-exchange",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3bb65c22",
+      "title": "Audit Logs (API reference)",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/reference/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-40d4c08e",
+      "title": "Scopes to request",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/using-specific-snyk-apis/snyk-apps-apis/scopes-to-request",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-44be6988",
+      "title": "Search Audit Logs v1 to REST migration guide",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/api-end-of-life-eol-process-and-migration-guides/guides-to-migration/search-audit-logs-group-and-org-v1-api-to-ga-rest-audit-logs-api-migration-guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5d9e987b",
+      "title": "Authentication for API",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/authentication-for-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6e08e2b2",
+      "title": "Snyk REST API OpenAPI spec 2026-03-25 (AccessTokenTtlSeconds / service account attributes)",
+      "url": "https://api.snyk.io/rest/openapi/2026-03-25",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8633152f",
+      "title": "Revoke compromised refresh tokens",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/using-specific-snyk-apis/snyk-apps-apis/set-up-a-snyk-app-using-the-oauth2-api/revoke-compromised-refresh-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a9da62db",
+      "title": "About Snyk Apps",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/using-specific-snyk-apis/snyk-apps-apis/about-snyk-apps",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d03e3195",
+      "title": "Retrieve audit logs of user-initiated activity by API for an Org or Group",
+      "url": "https://docs.snyk.io/platform-administration/user-management/user-management-with-the-api/retrieve-audit-logs-of-user-initiated-activity-by-api-for-an-org-or-group",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d5b1299b",
+      "title": "Create a Snyk App using the Snyk API",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/using-specific-snyk-apis/snyk-apps-apis/create-a-snyk-app-using-the-snyk-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d74cf79a",
+      "title": "About the REST API",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/rest-api/about-the-rest-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e89d54ca",
+      "title": "Manage App details",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/using-specific-snyk-apis/snyk-apps-apis/manage-app-details",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed3b9edf",
+      "title": "Manage users in a Group",
+      "url": "https://docs.snyk.io/platform-administration/snyk-hierarchy/groups/manage-users-in-a-group",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ff59126b",
+      "title": "Pre-defined roles",
+      "url": "https://docs.snyk.io/platform-administration/user-management/pre-defined-roles",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

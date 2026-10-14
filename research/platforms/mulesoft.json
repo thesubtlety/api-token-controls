@@ -1,0 +1,1255 @@
+{
+ "id": "mulesoft",
+ "name": "MuleSoft Anypoint",
+ "scope_notes": "Covers MuleSoft Anypoint Platform. Anypoint Platform control plane (US/EU/Gov); IP allowlist only US/EU commercial; audit export needs Anypoint Integration Advanced or Titanium.",
+ "controls": [
+  {
+   "name": "Disable connected apps for the organization",
+   "effect": "disable",
+   "applies_to": [
+    "mulesoft-1",
+    "mulesoft-2"
+   ],
+   "what": "Org admin can turn off the connected apps feature for the whole org.",
+   "setting": "Access Management > Connected Apps (exact setting not named in docs)",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-c5f937ed"
+   ]
+  },
+  {
+   "name": "Authorization policy: Restricted (application allowlist)",
+   "effect": "require_approval",
+   "applies_to": [
+    "mulesoft-2"
+   ],
+   "what": "Only allowlisted apps can be authorized by org members; scope additions need re-approval.",
+   "setting": "Access Management > Connected Apps > authorization policy",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6cae46b9",
+    "fc-0a16eacf"
+   ]
+  },
+  {
+   "name": "Disable auto-approval of internal apps",
+   "effect": "require_approval",
+   "applies_to": [
+    "mulesoft-2"
+   ],
+   "what": "Under Restricted, internal apps must also be allowlisted.",
+   "setting": "Access Management > Connected Apps (Restricted policy)",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6cae46b9"
+   ]
+  },
+  {
+   "name": "Revoke Authorization",
+   "effect": "revoke",
+   "applies_to": [
+    "mulesoft-2"
+   ],
+   "what": "Removes an app's authorization and revokes its access and refresh tokens.",
+   "setting": "Access Management > Connected Apps > Authorizations > ... > Remove",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-6cae46b9"
+   ]
+  },
+  {
+   "name": "Scopes per business group and environment",
+   "effect": "limit_scope",
+   "applies_to": [
+    "mulesoft-1",
+    "mulesoft-2"
+   ],
+   "what": "App permissions are limited to chosen scopes, business groups and environments.",
+   "setting": "Access Management > Connected Apps > Add Scopes",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-d324b9e0",
+    "fc-6cae46b9"
+   ]
+  },
+  {
+   "name": "Client secret expiration date",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "mulesoft-1",
+    "mulesoft-2"
+   ],
+   "what": "Set an expiry on the connected app client secret.",
+   "setting": "Connected app settings",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-d324b9e0"
+   ]
+  },
+  {
+   "name": "Modify the Client Secret for a Connected App",
+   "effect": "require_rotation",
+   "applies_to": [
+    "mulesoft-1",
+    "mulesoft-2"
+   ],
+   "what": "Admin replaces the client secret manually or via Access Management API.",
+   "setting": "Access Management > Connected Apps > app > Secret",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-6cae46b9"
+   ]
+  },
+  {
+   "name": "Delete Connected Application",
+   "effect": "revoke",
+   "applies_to": [
+    "mulesoft-1",
+    "mulesoft-2"
+   ],
+   "what": "Deleting the app removes the client; effect on live tokens not documented.",
+   "setting": "Access Management > Connected Apps > Owned Apps",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-b98a9125"
+   ]
+  },
+  {
+   "name": "IP Allowlist (Enforce IP restrictions for login)",
+   "effect": "limit_network",
+   "applies_to": [
+    "mulesoft-3"
+   ],
+   "what": "Blocks sign-ins with Anypoint credentials from outside allowed IPv4 CIDRs; users can be exempted.",
+   "setting": "Access Management > Security Settings > IP Allowlist",
+   "plan": "US and EU commercial clouds only",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-8a84839a"
+   ]
+  },
+  {
+   "name": "Default session timeout",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "mulesoft-3"
+   ],
+   "what": "Sets inactivity timeout that bounds bearer token validity (15-180 min).",
+   "setting": "Access Management > Business Groups > root org > Settings",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-eeca1b60",
+    "fc-f15249df"
+   ]
+  },
+  {
+   "name": "Revoke API contract",
+   "effect": "revoke",
+   "applies_to": [
+    "mulesoft-5"
+   ],
+   "what": "Blocks a client application from calling the API instance.",
+   "setting": "API Manager > API instance > Contracts > Revoke",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-f2687271"
+   ]
+  },
+  {
+   "name": "Contract approval",
+   "effect": "require_approval",
+   "applies_to": [
+    "mulesoft-5"
+   ],
+   "what": "Instance owner approves access requests before credentials work against the API.",
+   "setting": "Exchange Request access / API Manager",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-f5ab3f95"
+   ]
+  },
+  {
+   "name": "Reset environment client_secret",
+   "effect": "require_rotation",
+   "applies_to": [
+    "mulesoft-4"
+   ],
+   "what": "Change environment secret via KB procedure or support.",
+   "setting": "Salesforce Help article / support",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-8f7e07d9"
+   ]
+  },
+  {
+   "name": "IP Allowlist policy",
+   "effect": "limit_network",
+   "applies_to": [
+    "mulesoft-5"
+   ],
+   "what": "Gateway policy that only lets listed IPs or ranges call a managed API instance.",
+   "setting": "API Manager > API instance > Policies > IP Allowlist",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-edee1e03"
+   ]
+  },
+  {
+   "name": "Revoke org connected app tokens",
+   "effect": "revoke",
+   "applies_to": [
+    "mulesoft-1",
+    "mulesoft-2"
+   ],
+   "what": "Revokes all access and refresh tokens issued to a connected app.",
+   "setting": "DELETE /accounts/api/organizations/{organizationId}/connectedApplications/{clientId}/revoke",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-2435f1b7"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "mulesoft-3",
+   "what": "IP allowlist does not apply to users who authenticate through SSO, so SAML-derived bearer tokens are not IP-restricted by it.",
+   "kind": "network",
+   "evidence_refs": [
+    "fc-8a84839a"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether IP allowlist applies to connected app token requests or API calls with an issued token",
+  "Whether deleting a client-credentials app or rotating its secret invalidates unexpired access tokens",
+  "Whether a client-credentials app's tokens can be revoked without deleting it (Revoke Authorization is documented for user authorizations)",
+  "Exact UI setting name for disabling connected apps org-wide",
+  "Whether read/GET API calls are audit logged",
+  "Environment client secret rotation procedure (help.salesforce.com KB 001115221 did not render)",
+  "Bearer token format/prefix",
+  "Whether IdP conditional access applies to connected app tokens (not stated)"
+ ],
+ "credentials": [
+  {
+   "id": "mulesoft-1",
+   "name": "Connected app that acts on its own behalf (client credentials)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "App posts client_id and client_secret to /accounts/api/v2/oauth2/token and gets a 60-minute bearer token; no user, SSO or MFA step is involved (MuleSoft points CI/CD to connected apps when enabling MFA; connected apps are exempt from reauthentication). Query results use the scope of the user who created the app.",
+    "evidence_refs": [
+     "fc-fb58f2ec",
+     "fc-d324b9e0",
+     "fc-cc4a2165"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "No inbound workload federation documented. The openid:google_wif scope is outbound: Anypoint acts as IdP for Google Cloud WIF.",
+    "evidence_refs": [
+     "fc-d324b9e0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "excluded",
+    "enforcement_stage": "login_only",
+    "boundary": "The org IP allowlist covers only user sign-ins with Anypoint credentials; client-credentials token requests are not user sign-ins. No per-app IP restriction documented.",
+    "evidence_refs": [
+     "fc-8a84839a"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "conditional",
+    "summary": "60-min access token; client secret no expiry by default, expiry settable",
+    "evidence_refs": [
+     "fc-fb58f2ec",
+     "fc-d324b9e0"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "client secret (no default expiry)",
+    "summary": "Re-run client_credentials grant with the secret.",
+    "evidence_refs": [
+     "fc-fb58f2ec",
+     "fc-d324b9e0"
+    ]
+   },
+   "administration": {
+    "summary": "Org admins in the root org or business group create, edit, rotate secret, and delete. Scopes map to platform permissions and can be limited per business group and environment.",
+    "conditions": "Organization Administrator permission; up to 2000 apps per org.",
+    "evidence_refs": [
+     "fc-d324b9e0",
+     "fc-6cae46b9"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "no",
+     "details": "When the creating user is deleted or removed, the app's ownership moves to the root org owner and the app keeps working; docs tell admins to rotate secrets manually.",
+     "evidence_refs": [
+      "fc-6cae46b9"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Access Management > Connected Apps (Owned Apps) and GET /accounts/api/organizations/{organizationId}/connectedApplications.",
+     "evidence_refs": [
+      "fc-6cae46b9",
+      "fc-2435f1b7"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque bearer; format not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Anypoint Platform audit log (Access Management > Audit Log, Audit Log Query API)",
+      "notes": "Default retention 1 year (6 years for orgs before 2023-07-10), configurable 30-2190 days; export via Telemetry Exporter needs Anypoint Integration Advanced or Titanium."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "clientID",
+      "log": "Connected Apps audit entries",
+      "notes": "Object of the entry; payload has clientName, clientIP, orgID, grantTypes"
+     },
+     {
+      "field": "Connected App",
+      "log": "all audit entries",
+      "notes": "Name of app that performed the action, N/A otherwise"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Create Connected Application",
+      "stage": "create",
+      "notes": "Action Create"
+     },
+     {
+      "event": "Update Scope Assignments",
+      "stage": "other",
+      "notes": "Action Permissions Change"
+     },
+     {
+      "event": "Token Retrieval Success",
+      "stage": "use",
+      "notes": "Action Login - Token, has clientIP"
+     },
+     {
+      "event": "Token Retrieval Failed",
+      "stage": "use",
+      "notes": "Includes error message"
+     },
+     {
+      "event": "Edit Connected Application",
+      "stage": "other",
+      "notes": ""
+     },
+     {
+      "event": "Revoke Access/Refresh Tokens",
+      "stage": "revoke",
+      "notes": "Action Revoke Tokens"
+     },
+     {
+      "event": "Delete Connected Application",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "clientID",
+     "clientIP",
+     "orgID",
+     "Connected App name"
+    ],
+    "anomaly_cues": [
+     "Token Retrieval Success from new clientIP",
+     "Burst of Token Retrieval Failed",
+     "Update Scope Assignments adding broad scopes",
+     "Actions attributed to a connected app outside its normal product area"
+    ],
+    "containment": {
+     "steps": "Rotate the secret (Modify the Client Secret) or delete the app in Access Management > Connected Apps; remove scopes.",
+     "kills_existing": "yes",
+     "notes": "DELETE /accounts/api/organizations/{organizationId}/connectedApplications/{clientId}/revoke revokes all access and refresh tokens issued to the app. Rotating the secret alone is not documented to kill issued tokens."
+    },
+    "sample_query": "POST /audit/v2/organizations/<orgId>/query with objectIds:[\"<clientID>\"] and a date range",
+    "unknown": [
+     "Whether per-API-call usage is logged"
+    ],
+    "evidence_refs": [
+     "fc-c5f937ed",
+     "fc-b98a9125",
+     "fc-01a74253",
+     "fc-fb58f2ec",
+     "fc-2435f1b7"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST /accounts/api/v2/oauth2/token",
+      "reveals": "Access token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "Token Retrieval Success",
+      "log_notes": "clientID, clientIP"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /accounts/api/me",
+      "reveals": "Caller identity and organization",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No read events documented"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /accounts/api/profile",
+      "reveals": "Profile (for CC apps: owner id)",
+      "bulk": false,
+      "scope": "profile",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /api/organizations/{orgId}/environments",
+      "reveals": "Environments",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "CLI equivalent: anypoint-cli-v4 account:environment:list"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /audit/v2/organizations/{orgId}/query",
+      "reveals": "Audit history",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "700/min/IP US; 40 EU and Gov",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Needs Audit Log Viewer or Org Admin"
+     }
+    ],
+    "unknown": [
+     "Which data reads appear in audit log"
+    ],
+    "evidence_refs": [
+     "fc-f15249df",
+     "fc-fb58f2ec",
+     "fc-42b27fda",
+     "fc-880a9252",
+     "fc-b98a9125"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "mulesoft-2",
+   "name": "Connected app that acts on behalf of a user (authorization code, refresh token, password, JWT bearer)",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "User authorizes the app (or app uses password or JWT bearer grant) and it gets bearer tokens with the user's permissions limited to app scopes. The password grant precludes MFA; JWT bearer gets tokens without user authorization.",
+    "evidence_refs": [
+     "fc-d324b9e0"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "JWT bearer grant: app signs an assertion whose sub names identityProviderId and username; trusted-client design, not workload federation.",
+    "evidence_refs": [
+     "fc-d324b9e0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "login_only",
+    "boundary": "IP allowlist covers interactive sign-ins with Anypoint credentials only; SSO users excluded; token use by the app not documented.",
+    "evidence_refs": [
+     "fc-8a84839a"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Access token tied to user session (~60 min); refresh token 90 days",
+    "evidence_refs": [
+     "fc-d324b9e0",
+     "fc-fb58f2ec"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "refresh token 90 days; offline_access scope needed",
+    "summary": "App exchanges refresh token for new access tokens while user is signed out.",
+    "evidence_refs": [
+     "fc-d324b9e0"
+    ]
+   },
+   "administration": {
+    "summary": "Admins set Unrestricted (default) or Restricted authorization policy; Restricted enables an app allowlist. Internal apps are auto-approved unless that is disabled.",
+    "conditions": "Allowlist changes do not cut existing authorizations.",
+    "evidence_refs": [
+     "fc-6cae46b9",
+     "fc-0a16eacf"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Access Management > Connected Apps > Authorizations lists authorized apps; GET /accounts/api/organizations/{organizationId}/connectedApplications lists apps.",
+     "evidence_refs": [
+      "fc-6cae46b9",
+      "fc-2435f1b7"
+     ]
+    }
+   },
+   "how": {
+    "network": {
+     "ui": "Access Management > Security Settings > IP Allowlist (add CIDR) > Enforce IP restrictions for login > Save. Covers sign-in with Anypoint credentials only, not SSO or token use",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-8a84839a"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque bearer; format not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Anypoint Platform audit log (Access Management > Audit Log, Audit Log Query API)",
+      "notes": "Default retention 1 year (6 years for orgs before 2023-07-10), configurable 30-2190 days; export via Telemetry Exporter needs Anypoint Integration Advanced or Titanium."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "clientID",
+      "log": "Connected Apps audit entries",
+      "notes": "Object of the entry; payload has clientName, clientIP, orgID, grantTypes"
+     },
+     {
+      "field": "Connected App",
+      "log": "all audit entries",
+      "notes": "Name of app that performed the action, N/A otherwise"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Create Connected Application",
+      "stage": "create",
+      "notes": "Action Create"
+     },
+     {
+      "event": "Update Scope Assignments",
+      "stage": "other",
+      "notes": "Action Permissions Change"
+     },
+     {
+      "event": "Token Retrieval Success",
+      "stage": "use",
+      "notes": "Action Login - Token, has clientIP"
+     },
+     {
+      "event": "Token Retrieval Failed",
+      "stage": "use",
+      "notes": "Includes error message"
+     },
+     {
+      "event": "Edit Connected Application",
+      "stage": "other",
+      "notes": ""
+     },
+     {
+      "event": "Revoke Access/Refresh Tokens",
+      "stage": "revoke",
+      "notes": "Action Revoke Tokens"
+     },
+     {
+      "event": "Delete Connected Application",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "Application Authorization Approved",
+      "stage": "create",
+      "notes": "Object type External Authorization"
+     },
+     {
+      "event": "Application Authorization Denied",
+      "stage": "other",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "clientID",
+     "clientIP",
+     "orgID",
+     "Connected App name"
+    ],
+    "anomaly_cues": [
+     "Token Retrieval Success from new clientIP",
+     "Burst of Token Retrieval Failed",
+     "Update Scope Assignments adding broad scopes",
+     "Actions attributed to a connected app outside its normal product area",
+     "Password or JWT bearer grant used by an app not expected to (grantTypes field)"
+    ],
+    "containment": {
+     "steps": "Access Management > Connected Apps > Authorizations > Remove; also rotate secret.",
+     "kills_existing": "yes",
+     "notes": "Docs: access and refresh tokens are revoked; cannot be undone."
+    },
+    "sample_query": "POST /audit/v2/organizations/<orgId>/query with objectIds:[\"<clientID>\"] and a date range",
+    "unknown": [
+     "Whether per-API-call usage is logged"
+    ],
+    "evidence_refs": [
+     "fc-c5f937ed",
+     "fc-b98a9125",
+     "fc-01a74253",
+     "fc-fb58f2ec",
+     "fc-6cae46b9"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST /accounts/api/v2/oauth2/token",
+      "reveals": "Access token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "Token Retrieval Success",
+      "log_notes": "clientID, clientIP"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /accounts/api/me",
+      "reveals": "Caller identity and organization",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No read events documented"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /accounts/api/profile",
+      "reveals": "Profile (for CC apps: owner id)",
+      "bulk": false,
+      "scope": "profile",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /api/organizations/{orgId}/environments",
+      "reveals": "Environments",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "CLI equivalent: anypoint-cli-v4 account:environment:list"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /audit/v2/organizations/{orgId}/query",
+      "reveals": "Audit history",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "700/min/IP US; 40 EU and Gov",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Needs Audit Log Viewer or Org Admin"
+     }
+    ],
+    "unknown": [
+     "Which data reads appear in audit log"
+    ],
+    "evidence_refs": [
+     "fc-f15249df",
+     "fc-fb58f2ec",
+     "fc-42b27fda",
+     "fc-880a9252",
+     "fc-b98a9125"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "mulesoft-3",
+   "name": "Anypoint Platform bearer token (user token from /accounts/login or SAML assertion)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A user exchanges username/password at /accounts/login, or an IdP-initiated SAML response at the provider receive-id endpoint, for a bearer token with that user's permissions. Used by the CLI --bearer option.",
+    "evidence_refs": [
+     "fc-8fc611df",
+     "fc-f15249df",
+     "fc-880a9252"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "User token; SAML exchange requires IdP-initiated SSO.",
+    "evidence_refs": [
+     "fc-f15249df"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "login_only",
+    "boundary": "Applies to sign-ins with Anypoint credentials; not to SSO users. Not documented for API calls with an issued token.",
+    "evidence_refs": [
+     "fc-8a84839a"
+    ]
+   },
+   "lifetime": {
+    "basis": "inactivity",
+    "default_seconds": 3600,
+    "maximum_seconds": 10800,
+    "configurable": "yes",
+    "summary": "Default Session Timeout (15-180 min)",
+    "evidence_refs": [
+     "fc-f15249df",
+     "fc-eeca1b60"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "session timeout",
+    "summary": "Log in again to get a new token.",
+    "evidence_refs": [
+     "fc-880a9252",
+     "fc-f15249df"
+    ]
+   },
+   "administration": {
+    "summary": "Only controlled through org session timeout, MFA on direct sign-ins, and IP allowlist at login.",
+    "conditions": "MuleSoft says CLI use moves to connected apps.",
+    "evidence_refs": [
+     "fc-eeca1b60",
+     "fc-6a067824"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Federated users get the token through an IdP-initiated SAML assertion, but non-federated users keep using Anypoint credentials and /accounts/login.",
+     "evidence_refs": [
+      "fc-f15249df",
+      "fc-a59b79fe"
+     ]
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Deleting a user in the IdP does not remove them from Anypoint; they must be deleted manually. Token validity follows the Default Session Timeout.",
+     "evidence_refs": [
+      "fc-a59b79fe",
+      "fc-f15249df"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Access Management > Identity Providers > SAML 2.0 (configure IdP); MFA for SSO users is set in the IdP",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-17dcb445",
+      "fc-6a067824"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Anypoint Platform audit log (Access Management > Audit Log, Audit Log Query API)",
+      "notes": "Default retention 1 year (6 years for orgs before 2023-07-10), configurable 30-2190 days; export via Telemetry Exporter needs Anypoint Integration Advanced or Titanium."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "User Name",
+      "log": "audit log",
+      "notes": "Actions attributed to the user; no token ID documented"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Login success",
+      "stage": "create",
+      "notes": "Logged only at org level"
+     },
+     {
+      "event": "Login failure",
+      "stage": "other",
+      "notes": "SSO via LDAP/OIDC failures not logged"
+     }
+    ],
+    "correlation_keys": [
+     "User Name",
+     "Time"
+    ],
+    "anomaly_cues": [
+     "Login from unexpected IP (IP allowlist blocks are logged)",
+     "API-style activity under a human account"
+    ],
+    "containment": {
+     "steps": "Disable/remove the user or wait for session timeout.",
+     "kills_existing": "partial",
+     "notes": "The user can end their own session with GET /accounts/logout; no admin-side per-token revoke is documented. Otherwise the token lasts until the Default Session Timeout."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether disabling a user kills live bearer tokens",
+     "Token identifier in logs"
+    ],
+    "evidence_refs": [
+     "fc-b98a9125",
+     "fc-8a84839a",
+     "fc-f15249df",
+     "fc-01a74253",
+     "fc-2435f1b7"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /accounts/api/me",
+      "reveals": "Caller identity and organization",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No read events documented"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /accounts/api/profile",
+      "reveals": "Profile (for CC apps: owner id)",
+      "bulk": false,
+      "scope": "profile",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /api/organizations/{orgId}/environments",
+      "reveals": "Environments",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "CLI equivalent: anypoint-cli-v4 account:environment:list"
+     },
+     {
+      "stage": "collection",
+      "call": "POST /audit/v2/organizations/{orgId}/query",
+      "reveals": "Audit history",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": "700/min/IP US; 40 EU and Gov",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Needs Audit Log Viewer or Org Admin"
+     }
+    ],
+    "unknown": [
+     "Which data reads appear in audit log"
+    ],
+    "evidence_refs": [
+     "fc-f15249df",
+     "fc-42b27fda",
+     "fc-880a9252",
+     "fc-b98a9125"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "mulesoft-4",
+   "name": "Environment / business group client ID and client secret",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Each environment and the root business group has a client ID/secret used to pair customer-hosted Mule runtimes and API gateways; organization clients can get tokens via client_credentials. Root business group credentials grant permissions across all child business groups.",
+    "evidence_refs": [
+     "fc-8f7e07d9",
+     "fc-eeca1b60",
+     "fc-8fc611df"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static shared secret.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "excluded",
+    "enforcement_stage": "login_only",
+    "boundary": "The org IP allowlist covers only user sign-ins with Anypoint credentials; environment credentials are not covered. No other IP control documented.",
+    "evidence_refs": [
+     "fc-8a84839a"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "not documented",
+    "summary": "Secret is reused; reset via KB procedure or support.",
+    "evidence_refs": [
+     "fc-8f7e07d9"
+    ]
+   },
+   "administration": {
+    "summary": "Org admins can view the values; changing the secret points to a Salesforce Help article or support.",
+    "conditions": "Organization Administrator permission.",
+    "evidence_refs": [
+     "fc-8f7e07d9",
+     "fc-eeca1b60"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Credentials belong to an environment or business group, not a user.",
+     "evidence_refs": [
+      "fc-8f7e07d9"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Access Management > Environments shows each environment's client ID; Organization tab shows org/business group credentials.",
+     "evidence_refs": [
+      "fc-e4cc6b0a",
+      "fc-8f7e07d9"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Anypoint Platform audit log (Access Management > Audit Log, Audit Log Query API)",
+      "notes": "Default retention 1 year (6 years for orgs before 2023-07-10), configurable 30-2190 days; export via Telemetry Exporter needs Anypoint Integration Advanced or Titanium."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "Environment"
+    ],
+    "anomaly_cues": [
+     "Unknown Mule runtime or gateway registering to an environment"
+    ],
+    "containment": {
+     "steps": "Reset environment client_secret per KB or contact support.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "No audit event documented for viewing or resetting environment client secrets"
+    ],
+    "evidence_refs": [
+     "fc-8f7e07d9"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST https://anypoint.mulesoft.com/accounts/oauth2/token (client_credentials)",
+      "reveals": "Bearer token for org client",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "What APIs an environment client token can call"
+    ],
+    "evidence_refs": [
+     "fc-8fc611df"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "mulesoft-5",
+   "name": "API client application credentials (client ID / secret for API instances)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Client applications registered in Exchange get a client ID and optional secret to call customer APIs protected by a client ID enforcement policy. These authenticate to customer APIs, not to Anypoint Platform APIs.",
+    "evidence_refs": [
+     "fc-f5ab3f95"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static credentials; external client providers (e.g. Entra ID, PingFederate) can be used instead.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Only if the API owner applies the IP Allowlist policy to the API instance; applies to calls to that API, not platform-wide.",
+    "evidence_refs": [
+     "fc-edee1e03"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "not documented",
+    "summary": "Secret reusable; reset is an audited action.",
+    "evidence_refs": [
+     "fc-b98a9125"
+    ]
+   },
+   "administration": {
+    "summary": "API instance owner approves access requests (contracts) and can revoke, restore, or delete contracts in API Manager.",
+    "conditions": "Root org Organization Administrator for revoke/delete.",
+    "evidence_refs": [
+     "fc-f5ab3f95",
+     "fc-f2687271"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "API Manager > API instance > Contracts lists contracts per instance; not all clients appear in the UI, and GET /accounts/api/organizations/{orgId}/clients is documented for the org-wide client count.",
+     "evidence_refs": [
+      "fc-b742ca5f",
+      "fc-cc88c5be"
+     ]
+    }
+   },
+   "how": {
+    "disable": {
+     "ui": "API Manager > (API instance) > SLA tiers: set tier to manual approval; then API Manager > API Administration > (instance) > Contracts > Approve / Reject",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-0ba05477",
+      "fc-6cdae195"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Anypoint Platform audit log (Access Management > Audit Log, Audit Log Query API)",
+      "notes": "Default retention 1 year (6 years for orgs before 2023-07-10), configurable 30-2190 days; export via Telemetry Exporter needs Anypoint Integration Advanced or Titanium."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "App ID",
+      "log": "audit log Application entries",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Create application",
+      "stage": "create",
+      "notes": "Logged at root org"
+     },
+     {
+      "event": "Reset client secret",
+      "stage": "rotate",
+      "notes": "Action Edit - reset client secret"
+     },
+     {
+      "event": "Approve application",
+      "stage": "other",
+      "notes": "Action Edit - contract approval"
+     },
+     {
+      "event": "Revoke application",
+      "stage": "revoke",
+      "notes": "Action Edit - contract revoke"
+     },
+     {
+      "event": "Delete application",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "App ID",
+     "API version ID"
+    ],
+    "anomaly_cues": [
+     "Contract requests or tier changes for sensitive API instances"
+    ],
+    "containment": {
+     "steps": "Revoke the contract in API Manager, then reset secret or delete the app.",
+     "kills_existing": "unknown",
+     "notes": "Revoke blocks the client app from the API."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Gateway-side request logging depends on customer runtime"
+    ],
+    "evidence_refs": [
+     "fc-b98a9125",
+     "fc-f2687271"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Calls depend on the customer's own APIs"
+    ],
+    "evidence_refs": [
+     "fc-f5ab3f95"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

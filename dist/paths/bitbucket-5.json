@@ -1,0 +1,297 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "bitbucket",
+      "name": "Bitbucket Cloud",
+      "scope_notes": "Bitbucket Cloud SaaS; workspace/project access tokens and IP allowlisting need Premium, org-level audit log needs Atlassian Guard; API tokens are Atlassian-account tokens shared with Jira/Confluence.",
+      "controls": [
+        {
+          "name": "Restrict access to certain IP addresses",
+          "effect": "limit_network",
+          "applies_to": [
+            "bitbucket-1",
+            "bitbucket-3",
+            "bitbucket-4",
+            "bitbucket-5"
+          ],
+          "what": "Only allowlisted IPs can view private content or clone/push/pull private repos.",
+          "setting": "Workspace settings > Access controls > Restrict access to certain IP addresses",
+          "plan": "Premium",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-b50f7c86"
+          ]
+        },
+        {
+          "name": "Delete deploy key / SSH key",
+          "effect": "revoke",
+          "applies_to": [
+            "bitbucket-5"
+          ],
+          "what": "Remove an SSH or deploy key via UI or API.",
+          "setting": "DELETE /repositories/{workspace}/{repo_slug}/deploy-keys/{key_id}; DELETE /users/{selected_user}/ssh-keys/{key_id}",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-10bbedb6",
+            "fc-1df51c71"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether the workspace IP allowlist is enforced on REST API calls (docs only mention viewing content and Git clone/push/pull).",
+        "Whether API tokens or OAuth tokens are checked against IdP SSO or conditional access at use time.",
+        "Whether the workspace audit log records access token creation, rotation or revocation (no such events listed).",
+        "Lifetime of the Pipelines OIDC token.",
+        "OAuth access token lifetime: developer docs say 1 hour, support docs say 2 hours.",
+        "Any admin approval workflow for users authorizing third-party OAuth consumers."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "bitbucket-5",
+      "provider_id": "bitbucket",
+      "name": "SSH keys (personal SSH keys and repository/project access keys)",
+      "family": "api_key",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Public keys registered on a user account (Git access as that user) or as repository/project access keys (deploy keys) for Git over SSH.",
+        "evidence_refs": [
+          "fc-10bbedb6",
+          "fc-1df51c71",
+          "fc-38d52c30"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Docs reviewed do not state whether SSO applies to SSH Git access.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Premium allowlist blocks clone/push/pull of private repositories from non-allowlisted IPs.",
+        "evidence_refs": [
+          "fc-b50f7c86"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Personal SSH keys accept an optional expires_on date when added via API; default no expiry. Not documented for access keys.",
+        "evidence_refs": [
+          "fc-113b64f9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none documented",
+        "summary": "Key stays valid until removed.",
+        "evidence_refs": []
+      },
+      "administration": {
+        "summary": "Users manage own keys; repo/project admins manage access keys; keys can be listed and deleted via API.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-10bbedb6",
+          "fc-1df51c71"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Per user via GET /users/{selected_user}/ssh-keys, or per repository/project settings; no org-wide list.",
+          "evidence_refs": [
+            "fc-113b64f9"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Personal Bitbucket settings > Security > SSH keys > Add key > Expiry: Expires on (date picker)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-67fe44a1"
+          ]
+        },
+        "usage": {
+          "ui": "Workspace settings > Security: Audit log; filter 'SSH key added/removed', 'Repository/Project Access key added/removed'",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-4e80eaad"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "OpenSSH public key formats Ed25519, ECDSA, RSA, DSA."
+        },
+        "log_sources": [
+          {
+            "name": "Bitbucket workspace audit log",
+            "notes": "30 days."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "key",
+            "log": "workspace audit log",
+            "notes": "Field names not documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "SSH key added",
+            "stage": "create",
+            "notes": "User key."
+          },
+          {
+            "event": "SSH key removed",
+            "stage": "revoke",
+            "notes": "User key."
+          },
+          {
+            "event": "Repository Access key added",
+            "stage": "create",
+            "notes": "Deploy key."
+          },
+          {
+            "event": "Repository Access key removed",
+            "stage": "revoke",
+            "notes": "Deploy key."
+          }
+        ],
+        "correlation_keys": [
+          "key fingerprint",
+          "user",
+          "repository"
+        ],
+        "anomaly_cues": [
+          "SSH or access key added outside change windows",
+          "Access keys added to many repositories"
+        ],
+        "containment": {
+          "steps": "Delete key via UI or DELETE API.",
+          "kills_existing": "unknown",
+          "notes": "In-flight SSH sessions not documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Git clone/pull activity logging"
+        ],
+        "evidence_refs": [
+          "fc-4e80eaad",
+          "fc-1df51c71",
+          "fc-38d52c30"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "git clone git@bitbucket.org:{workspace}/{repo}.git",
+            "reveals": "source code",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-38d52c30"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-10bbedb6",
+      "title": "Bitbucket REST API - SSH",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/api-group-ssh/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-113b64f9",
+      "title": "Bitbucket Cloud OpenAPI spec (POST /users/{selected_user}/ssh-keys)",
+      "url": "https://dac-static.atlassian.com/cloud/bitbucket/swagger.v3.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1df51c71",
+      "title": "Bitbucket REST API - Deployments",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/api-group-deployments/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-38d52c30",
+      "title": "Configure SSH and two-step verification",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/configure-ssh-and-two-step-verification/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4e80eaad",
+      "title": "Bitbucket Cloud audit log events",
+      "url": "https://support.atlassian.com/bitbucket-cloud/kb/bitbucket-cloud-audit-log-events/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-67fe44a1",
+      "title": "Set up personal SSH keys on Linux",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/set-up-personal-ssh-keys-on-linux/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b50f7c86",
+      "title": "Control access to private content in a workspace",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/control-access-to-private-content-in-a-workspace/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

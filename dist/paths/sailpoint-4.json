@@ -1,0 +1,186 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "sailpoint",
+      "name": "SailPoint Identity Security Cloud",
+      "scope_notes": "Covers SailPoint Identity Security Cloud (SailPoint Human Fabric). SaaS tenant (docs now branded SailPoint Human Fabric); VA is customer-hosted; no plan gating found for these token controls.",
+      "controls": [
+        {
+          "name": "Delete VA",
+          "effect": "revoke",
+          "applies_to": [
+            "sailpoint-4"
+          ],
+          "what": "Deleting the VA removes its VA key.",
+          "setting": "Admin > Connections > Virtual Appliances > Edit > Virtual Appliances > Delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-2aa386d6",
+            "fc-8589ad72"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any org setting to disable PAT creation or require approval for PATs/API clients",
+        "Any admin-enforced maximum PAT lifetime (API states no upper limit on expirationDate but the doc only says this, not that no policy exists)",
+        "Whether Network Settings IP/geo restrictions apply to /oauth/token or API calls",
+        "Whether deleting a PAT or API client invalidates already-issued bearer tokens (scope changes do not affect existing bearer tokens)",
+        "Audit event names for PAT/API client create, use, delete (published sample list is partial and lists none)",
+        "Whether API read calls (search, list identities) produce audit events",
+        "Whether disabling the owning identity stops its PATs",
+        "VA key lifetime, rotation and use logging"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "sailpoint-4",
+      "provider_id": "sailpoint",
+      "name": "Virtual appliance (VA) key and keyPassphrase",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Creating a VA generates a VA key that appears as type VA on the API Management page. Each VA holds an RSA private key derived from the cluster keyPassphrase that decrypts source credentials.",
+        "evidence_refs": [
+          "fc-2aa386d6",
+          "fc-5a00280a"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Machine credential on customer-hosted appliance.",
+        "evidence_refs": [
+          "fc-2aa386d6"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No documented IP binding for VA keys.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Not documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "not documented",
+        "summary": "Not documented.",
+        "evidence_refs": []
+      },
+      "administration": {
+        "summary": "VA key cannot be created or deleted on API Management; delete the VA to remove it, then shut down the VA instance.",
+        "conditions": "Admin access to Connections > Virtual Appliances",
+        "evidence_refs": [
+          "fc-2aa386d6",
+          "fc-8589ad72"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The VA key is created with the virtual appliance, not tied to a user.",
+          "evidence_refs": [
+            "fc-2aa386d6"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "VA keys appear on the API Management page with Type 'VA'.",
+          "evidence_refs": [
+            "fc-2aa386d6"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "VA key listed as Type VA on API Management."
+        },
+        "log_sources": [],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [],
+        "anomaly_cues": [
+          "VA key use from outside the appliance network"
+        ],
+        "containment": {
+          "steps": "Delete the VA, then shut down the VA instance.",
+          "kills_existing": "unknown",
+          "notes": "Rotation of keyPassphrase not covered here."
+        },
+        "sample_query": null,
+        "unknown": [
+          "VA key logging",
+          "VA key rotation"
+        ],
+        "evidence_refs": [
+          "fc-2aa386d6",
+          "fc-8589ad72"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Not researched"
+        ],
+        "evidence_refs": []
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-2aa386d6",
+      "title": "Managing API Keys and Personal Access Tokens",
+      "url": "https://documentation.sailpoint.com/saas/help/common/api_keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5a00280a",
+      "title": "Deploying Virtual Appliances",
+      "url": "https://documentation.sailpoint.com/saas/help/va/deploy_va.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8589ad72",
+      "title": "Managing Virtual Appliances",
+      "url": "https://documentation.sailpoint.com/saas/help/va/manage_va.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,387 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "sap",
+      "name": "SAP BTP and S/4HANA Cloud",
+      "scope_notes": "Covers SAP Business Technology Platform (XSUAA, Cloud Management service, btp CLI), SAP Cloud Identity Services, and SAP S/4HANA Cloud Public Edition. Covers BTP Cloud Foundry/multi-environment subaccounts, Identity Authentication tenants, and S/4HANA Cloud Public Edition communication management; BTP docs cited from SAP's official SAP-docs GitHub source of help.sap.com.",
+      "controls": [
+        {
+          "name": "Secret 'Expire in'",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "sap-5"
+          ],
+          "what": "Sets IAS client secret expiry to 1 year, 2 years or Never.",
+          "setting": "Admin console > Applications > Trust > Client Authentication > Secrets > Add; Administrators > System > Secrets",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-07f44074",
+            "fc-2e2e1796"
+          ]
+        },
+        {
+          "name": "Secret scope (Application / Application Users / OpenID)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "sap-5"
+          ],
+          "what": "Limits which APIs an application secret may be used for; all scopes are selected by default.",
+          "setting": "Client Authentication > Secrets > Scope",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-07f44074"
+          ]
+        },
+        {
+          "name": "Administrator roles for systems",
+          "effect": "limit_scope",
+          "applies_to": [
+            "sap-5"
+          ],
+          "what": "Assigns only needed admin roles (e.g. Read Users) to a system administrator credential.",
+          "setting": "Admin console > Administrators > Add > System",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-2e2e1796"
+          ]
+        },
+        {
+          "name": "Client ID Lock",
+          "effect": "other",
+          "applies_to": [
+            "sap-5"
+          ],
+          "what": "Locks a technical user's client ID after 5 failed secret logons.",
+          "setting": "Users & Authorizations > Technical User > Details > Client ID",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-5dbd736a"
+          ]
+        },
+        {
+          "name": "Manage Applications / Manage Tenant Configuration administrator roles",
+          "effect": "disable",
+          "applies_to": [
+            "sap-5"
+          ],
+          "what": "Only administrators with Manage Applications can configure applications (including client secrets), and only Manage Tenant Configuration can add systems as administrators.",
+          "setting": "Administration console > Administrators > authorizations",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-9f555536",
+            "fc-2e2e1796"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP/network allowlist for XSUAA clients, btp API credentials, IAS API secrets or S/4HANA communication users.",
+        "Whether XSUAA password-grant tokens (cis service keys) honor IAS/corporate IdP MFA or conditional access.",
+        "Exact audit message for service key deletion and for API credential create/delete in XSUAA audit log.",
+        "Whether communication user passwords expire.",
+        "Org-wide switch to block creation of service keys or API credentials (none found).",
+        "IAS audit event emitted on client secret creation/deletion (change log covers admin CREATE/UPDATE/DELETE generally)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "sap-5",
+      "provider_id": "sap",
+      "name": "SAP Cloud Identity Services client ID/secret or certificate (applications, systems as administrators, technical users)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "In the Identity Authentication admin console, admins generate client secrets or certificates for an application (Trust > Client Authentication), for a system added as an administrator, or for a technical user. These authenticate to the SCIM/user-management REST APIs and OIDC token endpoint.",
+        "evidence_refs": [
+          "fc-07f44074",
+          "fc-2e2e1796",
+          "fc-5dbd736a"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Client authentication; a system administrator 'can perform the same actions as the human administrator' without an interactive IdP login. Conditional-access behavior not documented.",
+        "evidence_refs": [
+          "fc-2e2e1796"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Risk-based authentication applies to user logons; no IP restriction for API client secrets found.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "1 year, 2 years, or Never",
+        "evidence_refs": [
+          "fc-07f44074",
+          "fc-2e2e1796"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Secret 'Expire in' choice",
+        "summary": "Add a new secret (up to 20 per app, 2 per system), switch clients, delete the old one.",
+        "evidence_refs": [
+          "fc-07f44074",
+          "fc-2e2e1796"
+        ]
+      },
+      "administration": {
+        "summary": "Requires tenant admin roles (Manage Applications / Manage Tenant Configuration). Secret scopes: Application, Application Users, OpenID (all selected by default). System admins get explicit admin roles. Client ID lock after 5 failures is off by default for technical users.",
+        "conditions": "",
+        "evidence_refs": [
+          "fc-07f44074",
+          "fc-2e2e1796",
+          "fc-5dbd736a"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Systems as administrators and application clients are not persons.",
+          "evidence_refs": [
+            "fc-2e2e1796"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Administrators tile lists all administrators including systems; client secrets are shown per application (Trust > Client Authentication), with no tenant-wide secret list.",
+          "evidence_refs": [
+            "fc-732c6b70",
+            "fc-07f44074"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Cloud Identity Services admin console > Audit and Change Logs > Audit Logs > Cloud Foundry (opens BTP Audit Log Viewer); filter on caller. Admin changes: Audit and Change Logs > Export Change Logs > Export (CSV, Administrator's ID)",
+          "api": "GET <url_from_service_key>/auditlog/v2/auditlogrecords (subaccount Audit Log Retrieval API)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-9fe82ba5",
+            "fc-0d8a203a",
+            "fc-d6ade17b",
+            "fc-154997ee"
+          ]
+        },
+        "reads": {
+          "ui": "Audit Log Viewer for the mapped subaccount; filter category audit.authentication and caller = client ID",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-9fe82ba5",
+            "fc-d6ade17b"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Client ID is a UUID"
+        },
+        "log_sources": [
+          {
+            "name": "Identity Authentication audit log (via BTP Audit Log Viewer)",
+            "notes": "90 days"
+          },
+          {
+            "name": "IAS change logs",
+            "notes": "CSV export, admin CREATE/UPDATE/DELETE, 24 months"
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "caller",
+            "log": "IAS audit log",
+            "notes": "Identifier of the subject"
+          },
+          {
+            "field": "Administrator's ID",
+            "log": "Change log",
+            "notes": "User or system that made the change"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "action=issueJwtToken",
+            "stage": "use",
+            "notes": "IAS audit action value"
+          },
+          {
+            "event": "action=search objectType=scimUser(s)",
+            "stage": "use",
+            "notes": "Possible audit values; exact pairing not documented"
+          }
+        ],
+        "correlation_keys": [
+          "client ID",
+          "caller",
+          "objectId"
+        ],
+        "anomaly_cues": [
+          "Secrets set to Never",
+          "System administrators with Manage Tenant Configuration",
+          "Bulk user export/search by a system"
+        ],
+        "containment": {
+          "steps": "Delete the secret/certificate, the system administrator, or the technical user in the admin console.",
+          "kills_existing": "unknown",
+          "notes": "Effect on already-issued tokens not documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact event when a secret is added or deleted"
+        ],
+        "evidence_refs": [
+          "fc-d6ade17b",
+          "fc-0d8a203a",
+          "fc-9fe82ba5",
+          "fc-2e2e1796"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /scim/Users (Identity Authentication SCIM API)",
+            "reveals": "Tenant users",
+            "bulk": true,
+            "scope": "Read Users admin role",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "IAS audit actions include search/read/export but mapping not documented"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /scim/Users (Identity Directory API)",
+            "reveals": "All users in the tenant",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "audit.authentication",
+            "log_notes": "Docs say all authentication and authorization checks are audit logged; they do not say the read itself is recorded as a data-access event."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-2e2e1796",
+          "fc-d6ade17b",
+          "fc-9a4948a8"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-07f44074",
+      "title": "Configure Secrets for API Authentication (SAP Cloud Identity Services)",
+      "url": "https://github.com/SAP-docs/btp-cloud-identity-services/blob/main/docs/Development/configure-secrets-for-api-authentication-9ea13fe.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0d8a203a",
+      "title": "Export Change Logs with a History of Administration Operations",
+      "url": "https://github.com/SAP-docs/btp-cloud-identity-services/blob/main/docs/Monitoring-and-Reporting/export-change-logs-with-a-history-of-administration-operations-9d96aae.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-154997ee",
+      "title": "Audit Log Retrieval API for Global Accounts in the Cloud Foundry Environment",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/audit-log-retrieval-api-for-global-accounts-in-the-cloud-foundry-environment-7db3c9f.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2e2e1796",
+      "title": "Add Administrators (SAP Cloud Identity Services)",
+      "url": "https://github.com/SAP-docs/btp-cloud-identity-services/blob/main/docs/Operation-Guide/add-administrators-bbbdbdd.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5dbd736a",
+      "title": "Manage Technical User Details",
+      "url": "https://github.com/SAP-docs/btp-cloud-identity-services/blob/main/docs/Operation-Guide/manage-technical-user-details-14b36c2.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-732c6b70",
+      "title": "List Administrators",
+      "url": "https://github.com/SAP-docs/btp-cloud-identity-services/blob/main/docs/Operation-Guide/list-administrators-c79a5c6.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9a4948a8",
+      "title": "Identity Directory API",
+      "url": "https://github.com/SAP-docs/btp-cloud-identity-services/blob/main/docs/Development/identity-directory-api-5be5692.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9f555536",
+      "title": "Edit Administrator Authorizations",
+      "url": "https://github.com/SAP-docs/btp-cloud-identity-services/blob/main/docs/Operation-Guide/edit-administrator-authorizations-86ee374.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9fe82ba5",
+      "title": "Access Audit Logs (Audit Log Service in SAP BTP, Cloud Foundry)",
+      "url": "https://github.com/SAP-docs/btp-cloud-identity-services/blob/main/docs/Monitoring-and-Reporting/access-audit-logs-audit-log-service-in-sap-btp-cloud-foundry-a3e793c.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d6ade17b",
+      "title": "Auditing and Logging Information (Identity Authentication)",
+      "url": "https://github.com/SAP-docs/btp-cloud-identity-services/blob/main/docs/Security/auditing-and-logging-information-ac5537b.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

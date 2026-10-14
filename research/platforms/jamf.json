@@ -1,0 +1,1075 @@
+{
+ "id": "jamf",
+ "name": "Jamf",
+ "scope_notes": "Covers Jamf (Jamf Pro, Jamf Platform API Gateway, Jamf Protect, Jamf School). Jamf Pro cloud (11.x) is the main focus; Jamf Log Stream export needs Jamf Cloud Premium; Protect and School covered from public docs only.",
+ "controls": [
+  {
+   "name": "Disable API Client",
+   "effect": "disable",
+   "applies_to": [
+    "jamf-1"
+   ],
+   "what": "Stops the client from issuing new access tokens; existing tokens stay valid until expiry.",
+   "setting": "Settings > System > API roles and clients > client > Disable API Client; or PUT /v1/api-integrations/{id} enabled=false",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-d558f88b",
+    "fc-2ec0e391",
+    "fc-d8425148"
+   ]
+  },
+  {
+   "name": "Remove specified API integration",
+   "effect": "revoke",
+   "applies_to": [
+    "jamf-1"
+   ],
+   "what": "Deletes the API client; already-issued tokens remain valid until expiry.",
+   "setting": "DELETE /v1/api-integrations/{id} or UI delete",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-d8425148",
+    "fc-2ec0e391"
+   ]
+  },
+  {
+   "name": "Rotate Client Secret",
+   "effect": "require_rotation",
+   "applies_to": [
+    "jamf-1"
+   ],
+   "what": "Invalidates the old secret so it can no longer mint tokens.",
+   "setting": "API client > Rotate Client Secret; POST /v1/api-integrations/{id}/client-credentials",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-59acb0a7",
+    "fc-d8425148"
+   ]
+  },
+  {
+   "name": "API Roles",
+   "effect": "limit_scope",
+   "applies_to": [
+    "jamf-1"
+   ],
+   "what": "Client privileges are the union of assigned API roles; editing a role's privileges applies to live tokens immediately.",
+   "setting": "Settings > System > API roles and clients > API Roles; /v1/api-roles",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-68b82b3a",
+    "fc-2ec0e391"
+   ]
+  },
+  {
+   "name": "Access Token Lifetime",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "jamf-1"
+   ],
+   "what": "Sets token lifetime in seconds per client; changes do not affect tokens already issued.",
+   "setting": "API client > Access Token Lifetime (accessTokenLifetimeSeconds)",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-2ec0e391",
+    "fc-a7605a62"
+   ]
+  },
+  {
+   "name": "Token scope parameter",
+   "effect": "limit_scope",
+   "applies_to": [
+    "jamf-1"
+   ],
+   "what": "Caller may request a token limited to a subset of the client's roles.",
+   "setting": "scope parameter on POST /v1/oauth/token",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-a7605a62"
+   ]
+  },
+  {
+   "name": "Invalidate current token",
+   "effect": "revoke",
+   "applies_to": [
+    "jamf-2"
+   ],
+   "what": "Invalidates the bearer token presented in the request (self-revoke by the holder).",
+   "setting": "POST /v1/auth/invalidate-token",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-086f69b6"
+   ]
+  },
+  {
+   "name": "Password Policy",
+   "effect": "other",
+   "applies_to": [
+    "jamf-2"
+   ],
+   "what": "Sets lockout attempts, password length/age/reuse for local Jamf Pro accounts used to mint bearer tokens.",
+   "setting": "Settings > System > User accounts & groups > Password Policy",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-a6bcbc3d"
+   ]
+  },
+  {
+   "name": "Jamf Pro user account privileges",
+   "effect": "limit_scope",
+   "applies_to": [
+    "jamf-2"
+   ],
+   "what": "Bearer token carries the account's privilege set; CRUD privileges map to POST/GET/PUT/DELETE.",
+   "setting": "Settings > System > User accounts & groups",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-7184bbd7"
+   ]
+  },
+  {
+   "name": "Integration scope level and capability permissions",
+   "effect": "limit_scope",
+   "applies_to": [
+    "jamf-3"
+   ],
+   "what": "Each gateway integration is bound to one scope level (org, environment, tenant) and granted capability:action permissions.",
+   "setting": "Jamf Account > Integrations",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-e9978d21"
+   ]
+  },
+  {
+   "name": "Integration validity (six months)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "jamf-3"
+   ],
+   "what": "Gateway integrations expire after six months.",
+   "setting": "Fixed",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-e9978d21"
+   ]
+  },
+  {
+   "name": "Jamf Protect API client role",
+   "effect": "limit_scope",
+   "applies_to": [
+    "jamf-4"
+   ],
+   "what": "Each Protect API client is assigned a role such as Read Only; max five clients.",
+   "setting": "Jamf Protect > Administrative > API Clients",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-0923c517"
+   ]
+  },
+  {
+   "name": "Jamf School API key methods",
+   "effect": "limit_scope",
+   "applies_to": [
+    "jamf-5"
+   ],
+   "what": "Each key is limited to the API methods selected for it.",
+   "setting": "Organization > Settings > API > Add API Key",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-a7484f6c"
+   ]
+  },
+  {
+   "name": "Access Status (Jamf Pro user account)",
+   "effect": "revoke",
+   "applies_to": [
+    "jamf-2"
+   ],
+   "what": "An admin can set a Jamf Pro user account's Access Status to Disabled, blocking that account's username/password sign-in used to get bearer tokens.",
+   "setting": "Settings > System > User accounts & groups > account > Access Status",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-74682d06"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "jamf-1",
+   "what": "Disabling or deleting an API client does not end access for tokens already issued; there is no documented per-client token revocation.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-2ec0e391"
+   ]
+  },
+  {
+   "path_id": "jamf-2",
+   "what": "No SSO/IdP enforcement for API authentication.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-7184bbd7"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "IP allowlisting for Jamf Pro API clients or user API access (none found in public docs).",
+  "Default and maximum Access Token Lifetime for API clients (the doc example shows expires_in 599, but no default is stated).",
+  "Whether Jamf Pro admins can block a user account from using /v1/auth/token while keeping UI access.",
+  "Which identity Change Management logs for actions taken by an API client, and whether /v1/oauth/token requests appear in the Access Log.",
+  "Exact Change Management object/action names for API client create/rotate/disable.",
+  "Jamf Protect API token lifetime and revocation; Jamf School API key expiry, auth header format and revocation behavior.",
+  "Platform API Gateway: revoke/disable controls for an integration and IP restrictions."
+ ],
+ "credentials": [
+  {
+   "id": "jamf-1",
+   "name": "Jamf Pro API client (API Roles and Clients, client credentials)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An admin creates an API client with one or more API roles and generates a client secret. The client ID and secret are exchanged at POST /api/v1/oauth/token (grant_type=client_credentials) for a short-lived bearer token. Works for both the Jamf Pro API and the Classic API.",
+    "evidence_refs": [
+     "fc-68b82b3a",
+     "fc-a7605a62"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static client secret; no workload identity federation documented. Jamf states API authentication does not support SSO.",
+    "evidence_refs": [
+     "fc-7184bbd7"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No IP allowlist for API clients found in public Jamf Pro docs.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Access token lifetime set per client (Access Token Lifetime, seconds); client secret has no documented expiry",
+    "evidence_refs": [
+     "fc-a7605a62",
+     "fc-2ec0e391"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "accessTokenLifetimeSeconds on the client",
+    "summary": "Request a new token with the same client ID and secret; secret is rotated manually.",
+    "evidence_refs": [
+     "fc-a7605a62",
+     "fc-59acb0a7"
+    ]
+   },
+   "administration": {
+    "summary": "Settings > System > API roles and clients. Admins can disable, delete, or rotate the secret of a client and edit its roles. Managed by API at /v1/api-integrations and /v1/api-roles.",
+    "conditions": "Requires Create/Update/Delete API Integrations privileges.",
+    "evidence_refs": [
+     "fc-d8425148",
+     "fc-d558f88b",
+     "fc-59acb0a7",
+     "fc-2ec0e391"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Jamf says API authentication does not support SSO; client credentials are exchanged directly for tokens.",
+     "evidence_refs": [
+      "fc-7184bbd7"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "API clients are standalone service credentials, not tied to a Jamf Pro user account.",
+     "evidence_refs": [
+      "fc-2d9886de"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Settings > API Roles and Clients lists clients; GET /v1/api-integrations returns them via API.",
+     "evidence_refs": [
+      "fc-699e1658",
+      "fc-2d9886de"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Jamf Pro > Settings > System > Change management (Read operations); Jamf Cloud Premium: stream JAMFChangeManagement via Jamf Log Stream",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-31366176",
+      "fc-f2c6ab61",
+      "fc-8a4b539f"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Client ID is a UUID; access token is a JWT (sample token in docs is a three-part eyJ... JWT with scope api-role:N)."
+    },
+    "log_sources": [
+     {
+      "name": "Change Management log",
+      "notes": "Settings > Change Management; Jamf Cloud: view in UI only, not exportable except via Jamf Log Stream (Jamf Cloud Premium). Retention set by log flushing."
+     },
+     {
+      "name": "Access Log",
+      "notes": "Login and token requests with username, IP, entryPoint. Export via Log Stream (Premium). Flushable."
+     },
+     {
+      "name": "RestAPIOperation webhook",
+      "notes": "Fires on authorized Classic API requests; includes authorizedUsername, objectTypeName, restAPIOperationType."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "clientId",
+      "log": "API integrations (GET /v1/api-integrations)",
+      "notes": "Client ID of the API client."
+     },
+     {
+      "field": "authorizedUsername",
+      "log": "RestAPIOperation webhook",
+      "notes": "What value appears for an API client is not documented."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "clientId",
+     "ipAddress (Access Log)",
+     "entryPoint"
+    ],
+    "anomaly_cues": [
+     "New API client or newly rotated secret",
+     "Role with broad privileges added to a client",
+     "Classic API reads from unexpected sources via RestAPIOperation webhook"
+    ],
+    "containment": {
+     "steps": "Disable or delete the client and rotate its secret; to cut live tokens immediately, remove privileges from the client's API roles (role changes apply to live tokens).",
+     "kills_existing": "partial",
+     "notes": "Disable/delete leaves valid tokens working until expiry; role edits apply immediately."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact Change Management event names for API client actions",
+     "Whether client-credential token requests are recorded in the Access Log"
+    ],
+    "evidence_refs": [
+     "fc-2ec0e391",
+     "fc-f816ca4f",
+     "fc-31366176",
+     "fc-6c6f4756",
+     "fc-d8425148",
+     "fc-555c0975",
+     "fc-4604d828"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/v1/jamf-pro-version",
+      "reveals": "Server version",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /api/v1/api-integrations",
+      "reveals": "All API clients, roles, lifetimes",
+      "bulk": true,
+      "scope": "Read API Integrations",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /api/v3/computers-inventory",
+      "reveals": "Paginated computer inventory",
+      "bulk": true,
+      "scope": "Read Computers",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Change Management records READ operations for some objects; not confirmed for API reads."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /api/v3/computers-inventory/filevault",
+      "reveals": "FileVault recovery data for all computers",
+      "bulk": true,
+      "scope": "View Disk Encryption Recovery Key",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v3/computers-inventory",
+      "reveals": "Paginated computer inventory records",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Change Management log records Read operations (shown as [READ] entries with username). In Jamf Cloud it is viewable in the UI only; export via Log Stream needs Jamf Cloud Premium."
+     }
+    ],
+    "unknown": [
+     "GET /v1/auth behavior for client-credential tokens (documented for user tokens)"
+    ],
+    "evidence_refs": [
+     "fc-2fd66136",
+     "fc-d8425148",
+     "fc-27ad6e2b",
+     "fc-31366176",
+     "fc-f816ca4f"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "jamf-2",
+   "name": "Jamf Pro user account bearer token (username/password via /v1/auth/token)",
+   "family": "basic",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A Jamf Pro user account's username and password are sent with basic auth to POST /api/v1/auth/token to get a bearer token used on both APIs. Since 11.17.0 basic auth works only on the token endpoint.",
+    "evidence_refs": [
+     "fc-7184bbd7",
+     "fc-1109c2fb"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Jamf: \"API authentication does not support the use of SSO.\" A local (or LDAP) password is needed, so API access does not go through the IdP. The SSO settings also offer a bypass checkbox for the web UI.",
+    "evidence_refs": [
+     "fc-7184bbd7",
+     "fc-487d7917"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Access log records source IP for token requests; no IP restriction found in public docs.",
+    "evidence_refs": [
+     "fc-31366176"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 1200,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "20-minute token, renewable indefinitely via keep-alive while valid",
+    "evidence_refs": [
+     "fc-7184bbd7"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "20 minutes from issue",
+    "summary": "POST /v1/auth/keep-alive returns a new token and invalidates the old one; or re-authenticate with the password.",
+    "evidence_refs": [
+     "fc-7184bbd7",
+     "fc-9d03138f"
+    ]
+   },
+   "administration": {
+    "summary": "Governed by Jamf Pro user accounts and privileges and the Password Policy (lockout, length, age) for local accounts. Holder can self-revoke with POST /v1/auth/invalidate-token.",
+    "conditions": "Password Policy applies only to local accounts.",
+    "evidence_refs": [
+     "fc-a6bcbc3d",
+     "fc-086f69b6"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Jamf says API authentication does not support SSO; the token is obtained with a Jamf Pro username and password.",
+     "evidence_refs": [
+      "fc-7184bbd7",
+      "fc-1109c2fb"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "POST /v1/auth/token returns \"expires\"; POST /v1/auth/keep-alive issues a new 20-minute token",
+     "cli": null,
+     "evidence_refs": [
+      "fc-7184bbd7"
+     ]
+    },
+    "usage": {
+     "ui": "Jamf Pro > Settings > System > Change management (filter by username); Access log (JSSAccess.log, username/ipAddress/entryPoint) via Jamf Log Stream on Jamf Cloud Premium or on the self-hosted server",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-f2c6ab61",
+      "fc-31366176",
+      "fc-8a4b539f",
+      "fc-77cefb7e"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Bearer token sample begins eyJhbGciOiJIUzUxMiJ9 (JWT)."
+    },
+    "log_sources": [
+     {
+      "name": "Access Log",
+      "notes": "Token requests logged with username, status, ipAddress, entryPoint=Universal API; individual Classic API calls with bearer tokens are not logged there."
+     },
+     {
+      "name": "Change Management log",
+      "notes": "Records username, object, action for changes."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "username",
+      "log": "Access Log",
+      "notes": "Jamf Pro account name."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "Successful Login",
+      "stage": "create",
+      "notes": "Access Log status value; entryPoint Universal API for token requests."
+     },
+     {
+      "event": "Failed Login",
+      "stage": "use",
+      "notes": "Access Log status value."
+     }
+    ],
+    "correlation_keys": [
+     "username",
+     "ipAddress",
+     "entryPoint"
+    ],
+    "anomaly_cues": [
+     "Universal API logins from new IPs",
+     "Bursts of Failed Login",
+     "Logins from accounts that normally use SSO via failover/bypass"
+    ],
+    "containment": {
+     "steps": "Disable/delete the user account or change its password; holder can call POST /v1/auth/invalidate-token.",
+     "kills_existing": "unknown",
+     "notes": "Docs do not say whether disabling an account invalidates outstanding bearer tokens."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Effect of account disable on live tokens"
+    ],
+    "evidence_refs": [
+     "fc-31366176",
+     "fc-086f69b6",
+     "fc-f816ca4f"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/v1/auth",
+      "reveals": "Account, privileges, sites for the current token",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /api/v3/computers-inventory",
+      "reveals": "Paginated computer inventory",
+      "bulk": true,
+      "scope": "Read Computers",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /JSSResource/... (Classic API)",
+      "reveals": "Classic API objects",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "no",
+      "log_event": null,
+      "log_notes": "Not in Access Log for bearer tokens; RestAPIOperation webhook fires if configured."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-bfecde8c",
+     "fc-2fd66136",
+     "fc-31366176",
+     "fc-6c6f4756"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "jamf-3",
+   "name": "Jamf Platform API Gateway integration (Jamf Account client credentials)",
+   "family": "oauth",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An integration created in Jamf Account holds a client_id and client_secret, exchanged at https://{region}.api.jamfcloud.com/auth/token for a 15-minute bearer token. Reaches platform APIs and, at tenant scope, Jamf Pro (incl. Classic), Jamf Protect and Jamf Security Cloud.",
+    "evidence_refs": [
+     "fc-e9978d21"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Only client credentials documented.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 900,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Token 900 s; integration credentials valid six months",
+    "evidence_refs": [
+     "fc-e9978d21"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Token 900 s; integration six months",
+    "summary": "No refresh token; request a new token with the same credentials; regenerate secret / recreate integration every six months.",
+    "evidence_refs": [
+     "fc-e9978d21"
+    ]
+   },
+   "administration": {
+    "summary": "Created in Jamf Account > Integrations with a scope level and capability permissions.",
+    "conditions": "Jamf Account Administrator role or custom role with Integrations privileges.",
+    "evidence_refs": [
+     "fc-e9978d21",
+     "fc-0ef5b39f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The credential belongs to a Jamf Account integration, not to a user.",
+     "evidence_refs": [
+      "fc-e9978d21"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Jamf Account > Integrations (integration valid six months; access tokens 900 s, see expires_in)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-0ef5b39f"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Sample access_token begins eyJhbGciOiJSUzI1NiIs (JWT)."
+    },
+    "log_sources": [
+     {
+      "name": "Platform Audit API (GET /v1/audit)",
+      "notes": "api-gateway source records actor, method, path; needs audit:read."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor",
+      "log": "Platform audit events",
+      "notes": "Filter field."
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "actor",
+     "transaction id"
+    ],
+    "anomaly_cues": [
+     "New integrations with organization-management scope",
+     "Destructive device action capability granted"
+    ],
+    "containment": {
+     "steps": "Delete or regenerate the integration in Jamf Account.",
+     "kills_existing": "unknown",
+     "notes": "Jamf's migration guide lists no invalidate endpoint for gateway tokens; they expire after 900 s."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Event names for integration create/delete"
+    ],
+    "evidence_refs": [
+     "fc-495c3dd9",
+     "fc-ba6132af",
+     "fc-e9978d21",
+     "fc-4a3ba4e3"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "GET /v1/audit/sources",
+      "reveals": "Audit sources and event types",
+      "bulk": false,
+      "scope": "audit:read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "whoami endpoint"
+    ],
+    "evidence_refs": [
+     "fc-495c3dd9"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "jamf-4",
+   "name": "Jamf Protect API client (client ID + API client password)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Created in Jamf Protect > Administrative > API Clients. The client ID and API client password are posted as JSON to the tenant's /token endpoint for an access token used against /graphql. Jamf recommends the Platform API Gateway instead.",
+    "evidence_refs": [
+     "fc-0923c517",
+     "fc-4a3ba4e3"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented publicly.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Not documented publicly",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "unknown",
+    "summary": "New token requested with the same client ID and password.",
+    "evidence_refs": [
+     "fc-4a3ba4e3"
+    ]
+   },
+   "administration": {
+    "summary": "Max five API clients per tenant; each is assigned a role (e.g. Read Only); delete to remove.",
+    "conditions": "",
+    "evidence_refs": [
+     "fc-0923c517"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Protect API clients are created under Administrative > API Clients and are not tied to a user.",
+     "evidence_refs": [
+      "fc-0923c517"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Jamf Protect > Administrative > API Clients shows the tenant's API clients (max five).",
+     "evidence_refs": [
+      "fc-0923c517"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Jamf Protect > Administrative > Audit Logs > select entries > Export Selected (CSV)",
+     "api": "POST https://<tenant>.protect.jamfcloud.com/graphql query listAuditLogsByDate",
+     "cli": null,
+     "evidence_refs": [
+      "fc-c78c2562",
+      "fc-1d9f236d",
+      "fc-3cb7fe95"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Jamf Protect Audit Logs",
+      "notes": "Kept one year, CSV export; records user, operation, arguments, IPs, resource ID."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "User",
+     "IP's"
+    ],
+    "anomaly_cues": [
+     "New API client created (max five)"
+    ],
+    "containment": {
+     "steps": "Delete the API client in Administrative > API Clients.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether API-client activity appears in Protect audit logs"
+    ],
+    "evidence_refs": [
+     "fc-1d9f236d",
+     "fc-0923c517"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "GraphQL queries for bulk read are not documented on public pages fetched"
+    ],
+    "evidence_refs": []
+   },
+   "detections": []
+  },
+  {
+   "id": "jamf-5",
+   "name": "Jamf School API key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A static API key created under Organization > Settings > API authorizes all API calls to https://{yourURL}.jamfcloud.com/api, limited to the methods selected for the key.",
+    "evidence_refs": [
+     "fc-a7484f6c"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key.",
+    "evidence_refs": [
+     "fc-a7484f6c"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented publicly.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "unknown",
+    "summary": "Key is reused on every call.",
+    "evidence_refs": [
+     "fc-a7484f6c"
+    ]
+   },
+   "administration": {
+    "summary": "Organization > Settings > API: add key and choose which methods it can access.",
+    "conditions": "",
+    "evidence_refs": [
+     "fc-a7484f6c"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "API keys are created at the organization level, not tied to a user.",
+     "evidence_refs": [
+      "fc-a7484f6c"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Organization > Settings > API is where API keys are created and edited.",
+     "evidence_refs": [
+      "fc-a7484f6c"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Jamf School Audit Log",
+      "notes": "Retained 15 months; Organization > Audit Log; GET <domain>/audit-logs/v1 (3 months per request)."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "IP Address",
+     "Who"
+    ],
+    "anomaly_cues": [
+     "New API key with broad methods"
+    ],
+    "containment": {
+     "steps": "Remove the key under Organization > Settings > API.",
+     "kills_existing": "unknown",
+     "notes": "Delete is not explicitly documented."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether API key calls are attributed in the audit log"
+    ],
+    "evidence_refs": [
+     "fc-70dd62fa"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET <domain>/audit-logs/v1",
+      "reveals": "Audit log entries (3 months per request)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-70dd62fa"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

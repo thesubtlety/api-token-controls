@@ -1,0 +1,631 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "docusign",
+      "name": "DocuSign eSignature",
+      "scope_notes": "Organization/domain-management entitlements apply. CLM IP restrictions and Monitor alerts do not prove eSignature API enforcement.",
+      "controls": [
+        {
+          "name": "Connected Apps > Authorize Application (admin consent)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "docusign-1",
+            "docusign-2"
+          ],
+          "what": "Org admin grants consent for an org-owned integration key on behalf of all claimed-domain users, limited to the permissions (OAuth scopes) entered, e.g. signature impersonation.",
+          "setting": "Docusign Admin > Organization > Connected Apps > Authorize Application",
+          "plan": "Docusign Admin with Access Management (org + claimed domain)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-c75af423"
+          ],
+          "quote": "These permissions define the OAuth scopes the application can access. An example is \"signature\"."
+        },
+        {
+          "name": "Connected Apps > Edit an Authorized Application",
+          "effect": "limit_scope",
+          "applies_to": [
+            "docusign-1",
+            "docusign-2"
+          ],
+          "what": "Changes the permissions (scopes) granted to an admin-authorized app.",
+          "setting": "Docusign Admin > Organization > Connected Apps > Actions > Edit",
+          "plan": "Docusign Admin with Access Management (org + claimed domain)",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f7242c32"
+          ],
+          "quote": "You can edit the Permissions settings for an authorized application."
+        },
+        {
+          "name": "Connected Apps > Revoke Authorization",
+          "effect": "revoke",
+          "applies_to": [
+            "docusign-1",
+            "docusign-2"
+          ],
+          "what": "Removes an admin-authorized app and revokes its consent for all domain users; refresh tokens die, live access tokens run to expiry.",
+          "setting": "Docusign Admin > Organization > Connected Apps > Actions > Revoke",
+          "plan": "Docusign Admin with Access Management (org + claimed domain)",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-697676a2"
+          ],
+          "quote": "The application is removed from your organization and access is revoked for all domain users."
+        },
+        {
+          "name": "Require all users to log in with SSO only",
+          "effect": "require_sso",
+          "applies_to": [
+            "docusign-1"
+          ],
+          "what": "Forces claimed-domain users to authenticate through the IdP, so authorization-code logins go through SSO.",
+          "setting": "Docusign Admin > Organization > Domains > Actions > Manage Settings > Login Settings > Single Sign-On",
+          "plan": "Access Management with SSO add-on",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-1f273521"
+          ],
+          "quote": "Require all users to log in with SSO only : If enabled, this setting removes the Use Company Login button and automatically redirects your users to your organization’s identity provider."
+        },
+        {
+          "name": "Restrict Domain IPs (Allowed IP Ranges)",
+          "effect": "limit_network",
+          "applies_to": [
+            "docusign-1"
+          ],
+          "what": "Restricts login and authentication traffic for claimed-domain users to up to 30 IPv4 ranges.",
+          "setting": "Docusign Admin > Organization > Domains > Actions > Manage Settings > Access Settings > Add IP Range; toggle Allowed IP Ranges",
+          "plan": "Docusign Admin org with claimed domain (section notes Access Management with SSO add-on)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-40e9a1c5"
+          ],
+          "quote": "Organization administrators can set a domain level policy for claimed domain users and restrict login and authentication traffic by IP addresses. This IP range restriction applies to both password login and SSO login."
+        },
+        {
+          "name": "Permission profile: Allow view and manage envelope rights through API",
+          "effect": "limit_scope",
+          "applies_to": [
+            "docusign-1",
+            "docusign-2"
+          ],
+          "what": "When unchecked, users with the profile cannot view/manage all account envelopes via the API (account-wide API access).",
+          "setting": "eSignature Admin > Permission Profiles > Edit",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-870d7d8a"
+          ],
+          "quote": "Allow view and manage envelope rights through API : When selected, the user can: View, manage, and request the status of all envelopes for the account through the Docusign API."
+        },
+        {
+          "name": "Permission profile setting allowApiAccessToAccount",
+          "effect": "disable",
+          "applies_to": [
+            "docusign-1",
+            "docusign-2"
+          ],
+          "what": "When false, users with the profile cannot access the account through the eSignature API.",
+          "setting": "eSignature REST API: AccountPermissionProfiles settings.allowApiAccessToAccount (UI label not verified)",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-5575ef14"
+          ],
+          "quote": "allowApiAccessToAccount: When true, users can access the account by using the eSignature API."
+        },
+        {
+          "name": "Apps and Keys (integration key secrets, RSA keypairs, redirect URIs)",
+          "effect": "other",
+          "applies_to": [
+            "docusign-1",
+            "docusign-2"
+          ],
+          "what": "Account admins manage the integration keys; removing secrets or RSA keypairs stops new auth-code or JWT token requests for that key.",
+          "setting": "eSignature Admin > Integrations > Apps and Keys",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-3fc54abc"
+          ],
+          "quote": "After a key has been moved to the Production environment, the account it is linked to is used to manage secret keys, RSA keypairs, and redirect URIs."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "docusign-1",
+          "what": "Admin consent via the Connected Apps UI only covers org-owned integration keys; external apps need a special consent flow.",
+          "evidence_refs": [
+            "fc-6277db6b"
+          ],
+          "quote": "Note: For external integrations, consent cannot be granted from the UI.",
+          "kind": "other"
+        }
+      ],
+      "controls_unknown": [
+        "Whether Restrict Domain IPs or SSO-only login apply to JWT grant token requests (no user login occurs) or to API calls with an existing token.",
+        "Whether admins can stop users from granting individual consent to arbitrary integration keys (no allowlist/block setting found).",
+        "No per-integration-key IP allowlist found; a Docusign Community idea requesting one (Dec 2025) is still \"Idea Submitted\".",
+        "UI label and default for allowApiAccessToAccount; admin-set token lifetime controls not found."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "docusign-1",
+      "provider_id": "docusign",
+      "name": "OAuth authorization code",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth authorization code + PKCE or JWT grant. JWT grant impersonates a consenting user with an app private key.",
+        "evidence_refs": [
+          "turn4search25",
+          "turn4search9",
+          "turn4search21"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "SAML login and app-signed JWT impersonation do not establish generic external IdP/workload-token federation.",
+        "evidence_refs": [
+          "turn4search25",
+          "turn4search9",
+          "turn4search21"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "login_only",
+        "boundary": "Claimed-domain IP restrictions are documented for password/SSO authentication. Per-request eSignature bearer-token IP enforcement was not verified.",
+        "evidence_refs": [
+          "turn23search1",
+          "turn12search28"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 28800,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "8 hours; cannot be extended",
+        "evidence_refs": [
+          "turn4search25",
+          "turn4search9",
+          "turn4search21",
+          "fc-dadfc8c6"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "absolute",
+        "summary": "Refresh token (typically about 30 days from first login, not reset on use). With the extended scope, each refresh issues a token with a full new lifetime, so access can continue while the token is used before expiry. Password change or consent revocation can invalidate it.",
+        "evidence_refs": [
+          "turn4search25",
+          "turn4search9",
+          "turn4search21",
+          "fc-5fc8abb1",
+          "fc-dadfc8c6"
+        ]
+      },
+      "administration": {
+        "summary": "OAuth scopes/consent, user permission profiles and application access. Domain/IP settings and session controls are separate.",
+        "conditions": "Organization/domain-management entitlements apply. CLM IP restrictions and Monitor alerts do not prove eSignature API enforcement.",
+        "evidence_refs": [
+          "turn23search1",
+          "turn12search28"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "The user signs in on the Docusign sign-in screen to grant the code, and SSO-only domains redirect that sign-in to the IdP; refresh tokens then renew without a new login for about 30 days.",
+          "evidence_refs": [
+            "fc-5fc8abb1",
+            "fc-1f273521"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Each user sees their own consented apps under Manage Profile > Connected Apps; admin-granted consents are managed in Docusign Admin. No org-wide list of user-granted consents documented.",
+          "evidence_refs": [
+            "fc-5f3b42fc"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Admin > Domains > (domain) ACTIONS > Manage Settings > Settings > Login Settings > SSO Login Requirement: Require all users to log in with SSO only; per-user exceptions under Users > View User > Security",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-e4937905",
+            "fc-e1d2f4c8"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "Fixed; read expires_in in the POST https://account.docusign.com/oauth/token response",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2a6faf9d"
+          ]
+        },
+        "usage": {
+          "ui": "Admin > Organization > Monitor > User Investigations; filter by User and Event (paid Monitor)",
+          "api": "GET https://api.docusign.com/v1/organizations/{organizationId}/stream (JWT, impersonating an org admin)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-338d3abd",
+            "fc-d0fcace7",
+            "fc-5459ed57"
+          ]
+        },
+        "reads": {
+          "ui": "Admin > Organization > Monitor > User Investigations; Event = Document downloaded",
+          "api": "GET https://api.docusign.com/v1/organizations/{organizationId}/stream; filter events named Document downloaded",
+          "cli": null,
+          "evidence_refs": [
+            "fc-338d3abd",
+            "fc-d0fcace7",
+            "fc-3ffcc365"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Opaque bearer access token (8 h default for Authorization Code Grant) plus refresh token. Integration key (client id) is a GUID. Not in GitHub's secret scanning partner list."
+        },
+        "log_sources": [
+          {
+            "name": "Docusign Monitor (Monitor API stream)",
+            "notes": "Org-level security events incl. API-driven actions; carries integratorKey per event. Licensing/edition and retention not established. Caller must use JWT impersonating an org admin."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "integratorKey",
+            "log": "Monitor stream",
+            "notes": "Integration key (OAuth client id) of the app that made the call"
+          },
+          {
+            "field": "userId",
+            "log": "Monitor stream",
+            "notes": "Docusign user the token acts as"
+          },
+          {
+            "field": "accountId",
+            "log": "Monitor stream",
+            "notes": "eSignature account"
+          },
+          {
+            "field": "source",
+            "log": "Monitor stream",
+            "notes": "Event source; value set not established"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "integratorKey",
+          "userId",
+          "accountId",
+          "organizationId",
+          "ipAddress",
+          "ipAddressLocation",
+          "userAgent",
+          "object",
+          "action",
+          "result",
+          "timestamp",
+          "eventId"
+        ],
+        "anomaly_cues": [
+          "First event for an integratorKey not in the approved app inventory",
+          "Known integratorKey used from a new IP/country or new userAgent family",
+          "Same user's token used by an integratorKey they never consented to (check Connected Apps)",
+          "Bulk envelope download/export actions driven by an integration key outside business hours",
+          "API activity continuing after consent revoked (expected only until token expiry, ~8 h)"
+        ],
+        "containment": {
+          "steps": "User: Manage Profile > Connected Apps > Revoke. Org-granted consent: revoke in Docusign Admin. If client secret leaked: revoke secrets on the integration key (Apps and Keys) and, if needed, ask Docusign to disable the key.",
+          "kills_existing": "no",
+          "notes": "Revoking consent invalidates refresh tokens and blocks new tokens, but live access tokens keep working until they expire (8 h default for auth code)."
+        },
+        "sample_query": {
+          "language": "Docusign Monitor API stream request + client-side filter",
+          "query": "GET /v1/organizations/{organizationId}/stream?cursor={endCursor}&limit=1000 (Monitor API, host per environment); keep resultData rows where integratorKey == '<key>' and ipAddress not in known egress ranges",
+          "purpose": "Pull all events for one integration key and spot use from unexpected IPs."
+        },
+        "unknown": [
+          "Monitor event names (object/action values) for login, consent and API key activity",
+          "Monitor plan/add-on requirement and retention",
+          "Whether Monitor logs consent grant/revoke",
+          "Access token format/prefix",
+          "Production Monitor API host (spec gives path /v1/organizations/{organizationId}/stream only)"
+        ],
+        "evidence_refs": [
+          "fc-3b45919b",
+          "fc-f3579c51",
+          "fc-5459ed57",
+          "fc-5f3b42fc",
+          "fc-42c978a3",
+          "fc-b71f7bdc"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /restapi/v2.1/accounts/{accountId}/envelopes/{envelopeId}/documents/{documentId}",
+            "reveals": "Envelope documents (one or all, combined)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "Document downloaded",
+            "log_notes": "Docusign Monitor event; not marked as available in Monitor Free Edition, so it needs paid Monitor (separate product, includes Monitor API). Monitor events include actions by connected APIs."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-966593f9",
+          "fc-e771a035",
+          "fc-0a777f1f",
+          "fc-f3579c51"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0a777f1f",
+      "title": "Monitor API 101",
+      "url": "https://developers.docusign.com/docs/monitor-api/monitor101/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1f273521",
+      "title": "Login Settings",
+      "url": "https://support.docusign.com/s/document-item?language=en_US&bundleId=rrf1583359212854&topicId=fnb1668218030221.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2a6faf9d",
+      "title": "How to get an access token with Confidential Authorization Code Grant",
+      "url": "https://developers.docusign.com/platform/auth/authcode/authcode-get-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-338d3abd",
+      "title": "Tracking data and handling alerts",
+      "url": "https://developers.docusign.com/docs/monitor-api/monitor101/tracking-data-handling-alerts/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3b45919b",
+      "title": "Docusign Monitor API OpenAPI spec (vendor repo)",
+      "url": "https://github.com/docusign/OpenAPI-Specifications/blob/master/monitor.rest.swagger-v2.0.json",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3fc54abc",
+      "title": "Apps and Keys",
+      "url": "https://support.docusign.com/s/document-item?language=en_US&bundleId=pik1583277475390&topicId=pmp1583277397015.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3ffcc365",
+      "title": "Monitor eSignature Events",
+      "url": "https://support.docusign.com/s/document-item?bundleId=gso1581445176035&topicId=crj1659119600990.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-40e9a1c5",
+      "title": "Restrict Domain IPs",
+      "url": "https://support.docusign.com/s/document-item?language=en_US&bundleId=rrf1583359212854&topicId=yor1668214161363.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-42c978a3",
+      "title": "Docusign: Obtain access token",
+      "url": "https://developers.docusign.com/platform/auth/reference/obtain-access-token/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5459ed57",
+      "title": "Monitor API: Get monitoring data",
+      "url": "https://developers.docusign.com/docs/monitor-api/how-to/get-monitoring-data/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5575ef14",
+      "title": "AccountPermissionProfiles: get | eSignature REST API",
+      "url": "https://developers.docusign.com/docs/esign-rest-api/reference/accounts/accountpermissionprofiles/get/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5f3b42fc",
+      "title": "Docusign: Obtaining consent",
+      "url": "https://developers.docusign.com/platform/auth/consent/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5fc8abb1",
+      "title": "How to get an access token with Confidential Authorization Code Grant | Docusign",
+      "url": "https://developers.docusign.com/platform/auth/confidential-authcode-get-token/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6277db6b",
+      "title": "https://developers.docusign.com/platform/auth/jwt/jwt-best-practice/",
+      "url": "https://developers.docusign.com/platform/auth/jwt/jwt-best-practice/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-697676a2",
+      "title": "Revoke Authorization for an Application",
+      "url": "https://support.docusign.com/s/document-item?language=en_US&bundleId=rrf1583359212854&topicId=uwb1583359205857.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-870d7d8a",
+      "title": "Permission Profile Options",
+      "url": "https://support.docusign.com/s/document-item?language=en_US&bundleId=pik1583277475390&topicId=mfo1583277360424.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-966593f9",
+      "title": "EnvelopeDocuments: get",
+      "url": "https://developers.docusign.com/docs/esign-rest-api/reference/envelopes/envelopedocuments/get/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b71f7bdc",
+      "title": "Docusign: Authorization Code Grant",
+      "url": "https://developers.docusign.com/platform/auth/authcode/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c75af423",
+      "title": "Authorize an Application",
+      "url": "https://support.docusign.com/s/document-item?language=en_US&bundleId=rrf1583359212854&topicId=dnl1583359204821.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d0fcace7",
+      "title": "Review User Activity with User Investigations",
+      "url": "https://support.docusign.com/s/document-item?bundleId=gso1581445176035&topicId=tsk08ba1ec0-a078-4667-b59b-fe290f36ac83.html&_LANG=enus",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dadfc8c6",
+      "title": "Authorization Code Grant refresh tokens | Docusign developer blog",
+      "url": "https://www.docusign.com/blog/developers/authorization-code-grant-refresh-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e1d2f4c8",
+      "title": "Change the Login Policy for a User",
+      "url": "https://support.docusign.com/s/document-item?language=en_US&bundleId=rrf1583359212854&topicId=fji1583359148678.html&_LANG=enus",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e4937905",
+      "title": "How do I make SSO login required?",
+      "url": "https://support.docusign.com/s/articles/How-do-I-make-SSO-login-required?language=en_US",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e771a035",
+      "title": "Monitor eSignature Events (Docusign Monitor Guide)",
+      "url": "https://support.docusign.com/s/document-item?language=en_US&bundleId=gso1581445176035&topicId=crj1659119600990.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f3579c51",
+      "title": "Monitor API: Events and alerts",
+      "url": "https://developers.docusign.com/docs/monitor-api/monitor101/events-alerts/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f7242c32",
+      "title": "Edit an Authorized Application",
+      "url": "https://support.docusign.com/s/document-item?language=en_US&bundleId=rrf1583359212854&topicId=fes1583359205566.html",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn12search28",
+      "title": "Restrict Domain IPs - DocuSign Support Center",
+      "url": "https://support.docusign.com/s/document-item?_LANG=enus&bundleId=rrf1583359212854&language=en_US&topicId=yor1668214161363.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn23search1",
+      "title": "Restrict Domain IPs",
+      "url": "https://support.docusign.com/s/document-item?_LANG=enus&bundleId=rrf1583359212854&language=en_US&topicId=yor1668214161363.html",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn4search21",
+      "title": "Access Tokens with JSON Web Token (JWT) Grant | Docusign",
+      "url": "https://developers.docusign.com/platform/auth/jwt-get-token/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn4search25",
+      "title": "REST API Authentication | Docusign",
+      "url": "https://developers.docusign.com/docs/esign-rest-api/esign101/auth/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn4search9",
+      "title": "FAQ: Docusign developer general administration and authentication",
+      "url": "https://support.docusign.com/s/articles/DocuSign-Developer-FAQs-General-Administration-and-Authentication?language=en_US",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

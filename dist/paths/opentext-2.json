@@ -1,0 +1,301 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "opentext",
+      "name": "OpenText Cloud Platform",
+      "scope_notes": "Covers OpenText Cloud Platform (Admin Center / Thrust Services APIs, used by OpenText Core SaaS apps such as Core Content). Covers the OAuth service clients and tokens of OpenText Cloud Platform (formerly OT2 / Developer Cloud), which back Core Content and other Core SaaS APIs at <region>.api.opentext.com; on-prem Content Server/OTDS and Admin Center help (CDAC-H-*) pages are not covered.",
+      "controls": [
+        {
+          "name": "Revoke client",
+          "effect": "revoke",
+          "applies_to": [
+            "opentext-1",
+            "opentext-2",
+            "opentext-3"
+          ],
+          "what": "Revokes access tokens for a confidential service client.",
+          "setting": "Admin Center > Service clients > More options > Revoke client",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8827d31f"
+          ]
+        },
+        {
+          "name": "Regenerate client",
+          "effect": "require_rotation",
+          "applies_to": [
+            "opentext-1",
+            "opentext-2"
+          ],
+          "what": "Issues a new client secret for a confidential client.",
+          "setting": "Admin Center > Service clients > More options > Regenerate client",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8827d31f",
+            "fc-b2ea3927"
+          ]
+        },
+        {
+          "name": "Edit token lifetimes",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "opentext-1",
+            "opentext-2",
+            "opentext-3"
+          ],
+          "what": "Sets access (900-28800 s) and refresh (900 s-1 year) token lifetimes per client.",
+          "setting": "Admin Center > Service clients > More options > Edit token lifetimes; Admin API Client.accessTokenLifetime / refreshTokenLifetime",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8827d31f",
+            "fc-86ecf651",
+            "fc-82f0bb33"
+          ]
+        },
+        {
+          "name": "Deactivate service client (activate=false)",
+          "effect": "disable",
+          "applies_to": [
+            "opentext-1",
+            "opentext-2",
+            "opentext-3"
+          ],
+          "what": "Deactivates an app or organization service client through the Admin API.",
+          "setting": "PATCH /admin/api/v1/organizations/{organizationId}/apps/{appId}/clients/{clientId}?activate=false (or /organizations/{organizationId}/clients/{clientId})",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-82f0bb33"
+          ]
+        },
+        {
+          "name": "allowedScopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "opentext-1",
+            "opentext-2",
+            "opentext-3"
+          ],
+          "what": "Lists the scopes a client may request.",
+          "setting": "Admin API Client.allowedScopes",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-82f0bb33"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Audit log for OpenText Cloud Platform / Admin Center: event names for client create, regenerate, revoke and token issuance; retention; how to export.",
+        "Whether API calls or data reads (e.g. Core Content GET /v3/files) are logged and which field identifies the client.",
+        "Whether client secrets expire or can be given an expiry.",
+        "Any IP/network restriction on service clients or tokens.",
+        "Whether 'Revoke client' invalidates already-issued access tokens immediately, and whether it also invalidates the secret.",
+        "Default token lifetimes when not edited (Core Capture sample shows 900 s).",
+        "Whether the password grant can be disabled per tenant, and whether IdP MFA applies to it.",
+        "Token format/prefix."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "opentext-2",
+      "provider_id": "opentext",
+      "name": "Resource owner password grant (confidential client + user name/password)",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A confidential client sends its secret plus a user's name and password to the tenant token endpoint and receives access and refresh tokens in that user's context. OpenText says this is for testing only.",
+        "evidence_refs": [
+          "fc-b2ea3927"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "The password is sent straight to the OpenText token endpoint; the docs do not say whether federated IdP MFA or policies apply or whether the grant can be turned off.",
+        "evidence_refs": [
+          "fc-b2ea3927"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": 28800,
+        "configurable": "yes",
+        "summary": "Access 900-28800 s; refresh up to 1 year",
+        "evidence_refs": [
+          "fc-82f0bb33"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "Refresh token lifetime (900 s - 31536000 s)",
+        "summary": "Refresh tokens are single-use and replaced on each refresh.",
+        "evidence_refs": [
+          "fc-b2ea3927",
+          "fc-82f0bb33"
+        ]
+      },
+      "administration": {
+        "summary": "No admin setting to disable the password grant was found; OpenText only advises against production use. Organizations also have a service account password managed in Admin Center.",
+        "conditions": "",
+        "evidence_refs": [
+          "fc-b2ea3927",
+          "fc-8827d31f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Opaque bearer token per docs; format not documented."
+        },
+        "log_sources": [],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "client ID",
+          "tenant ID",
+          "organization ID"
+        ],
+        "anomaly_cues": [
+          "Any production use of grant_type=password",
+          "Same client used with many user names"
+        ],
+        "containment": {
+          "steps": "Revoke the confidential client; reset the user's password.",
+          "kills_existing": "unknown",
+          "notes": "Docs say Revoke client revokes an access token but do not state scope or timing."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit event names and log location",
+          "Token format"
+        ],
+        "evidence_refs": [
+          "fc-8827d31f",
+          "fc-82f0bb33",
+          "fc-b2ea3927"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST https://<region>.api.opentext.com/tenants/<tenant_id>/oauth2/token (grant_type=password)",
+            "reveals": "Access and refresh token for the user",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v3/files (Core Content)",
+            "reveals": "Files the user can reach",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-b2ea3927",
+          "fc-d29caf40"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-82f0bb33",
+      "title": "Administration API (OpenAPI spec)",
+      "url": "https://developer.opentext.com/saasapps/products/developer-admin/apis/developer-administration-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-86ecf651",
+      "title": "Integrating Okta with OpenText using SAML (and SCIM)",
+      "url": "https://developer.opentext.com/cloud-platform/products/ocp/tutorials/okta-saml-and-scim-integration-for-opentext-applications",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8827d31f",
+      "title": "Admin Center guide",
+      "url": "https://developer.opentext.com/cloud-platform/products/ocp/documentation/application-administration",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b2ea3927",
+      "title": "API Authentication (OpenText Cloud Platform)",
+      "url": "https://developer.opentext.com/cloud-platform/products/ocp/documentation/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d29caf40",
+      "title": "Managing the extension (SaaS application extension)",
+      "url": "https://developer.opentext.com/cloud-platform/products/ocp/documentation/saas-application-extension-developer-concepts-overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

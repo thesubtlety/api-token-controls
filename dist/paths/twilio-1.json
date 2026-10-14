@@ -1,0 +1,430 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "twilio",
+      "name": "Twilio",
+      "scope_notes": "Twilio cloud APIs; PKCV needs Enterprise or Security Edition, OAuth apps are US1-only, and Monitor Events keeps 30 days (13 months with Administration, Security or Enterprise Edition).",
+      "controls": [
+        {
+          "name": "Auth Token rotation (secondary + promote)",
+          "effect": "revoke",
+          "applies_to": [
+            "twilio-1"
+          ],
+          "what": "Promoting the secondary token deletes the old primary.",
+          "setting": "Console > API keys & tokens > Auth Tokens; POST https://accounts.twilio.com/v1/AuthTokens/Secondary, POST https://accounts.twilio.com/v1/AuthTokens/Promote",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-8ea50af5",
+            "fc-4fc37d61",
+            "fc-b7756822"
+          ]
+        },
+        {
+          "name": "Enforce Public Key Client Validation",
+          "effect": "disable",
+          "applies_to": [
+            "twilio-1"
+          ],
+          "what": "Makes the Auth Token invalid for REST requests; requests must be signed with a registered key.",
+          "setting": "Console > Settings > Enforce Public Key Client Validation",
+          "plan": "Enterprise Edition or Security Edition",
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-05d9e1e1",
+            "fc-103e8def"
+          ]
+        },
+        {
+          "name": "Suspend or close subaccount",
+          "effect": "disable",
+          "applies_to": [
+            "twilio-1",
+            "twilio-2"
+          ],
+          "what": "Stops a subaccount; closed subaccounts are deleted after 30 days by default.",
+          "setting": "POST https://api.twilio.com/2010-04-01/Accounts/{Sid}.json Status=suspended|closed",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-5a243e1d"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for REST API credentials (Auth Token, API keys, OAuth).",
+        "Expiry settings for API keys and Auth Tokens.",
+        "Whether org SSO enforcement or SCIM deactivation affects any API credential.",
+        "Org-wide policy to block Main key or Auth Token use other than PKCV.",
+        "Whether Monitor Events records read (GET) API calls or token issuance.",
+        "Whether actor_sid identifies the API key SID (SK) or only the account."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "twilio-1",
+      "provider_id": "twilio",
+      "name": "Account SID + Auth Token",
+      "family": "basic",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Account SID as username and Auth Token as password (HTTP Basic). One primary token per account gives admin-level API access; parent tokens also reach subaccount v2010 resources.",
+        "evidence_refs": [
+          "fc-be35f117",
+          "fc-b7756822",
+          "fc-cd9725f4"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "SSO enforcement applies to user login; docs do not say it affects Auth Token use.",
+        "evidence_refs": [
+          "fc-bd67f0f2"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No documented IP allowlist for REST API credentials.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented; rotate manually",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Until rotated",
+        "summary": "Create secondary token, update apps, promote it (old primary deleted).",
+        "evidence_refs": [
+          "fc-8ea50af5",
+          "fc-4fc37d61"
+        ]
+      },
+      "administration": {
+        "summary": "Rotation via Console or AuthTokens API; every change emails owners and admins. PKCV enforcement makes the Auth Token invalid for REST.",
+        "conditions": "PKCV: Enterprise/Security Edition.",
+        "evidence_refs": [
+          "fc-8ea50af5",
+          "fc-05d9e1e1"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The Auth Token belongs to the account. Deleting a user does not delete the accounts they own or can access.",
+          "evidence_refs": [
+            "fc-c8301318"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Monitor > Insights > Audit > Audit Events Log; filter EventType recording.accessed",
+          "api": "GET https://monitor.twilio.com/v1/Events?EventType=recording.accessed&StartDate=...&EndDate=...",
+          "cli": null,
+          "evidence_refs": [
+            "fc-9b1d5a4e",
+            "fc-f9986bc7"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Account SID starts with AC; Auth Token has no documented prefix."
+        },
+        "log_sources": [
+          {
+            "name": "Monitor Events (GET https://monitor.twilio.com/v1/Events)",
+            "notes": "30 days free; 13 months with Administration, Security or Enterprise Edition; pull into SIEM via API."
+          },
+          {
+            "name": "Email to owners/admins",
+            "notes": "Sent on each Auth Token change."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor_sid / actor_type",
+            "log": "Monitor Events",
+            "notes": "source=api, actor_type=account, actor_sid=AC... when Account authenticated against the API."
+          },
+          {
+            "field": "source_ip_address",
+            "log": "Monitor Events",
+            "notes": null
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "account-auth-token.secondary-created",
+            "stage": "create",
+            "notes": null
+          },
+          {
+            "event": "account-auth-token.promoted",
+            "stage": "rotate",
+            "notes": null
+          },
+          {
+            "event": "account-auth-token.secondary-deleted",
+            "stage": "revoke",
+            "notes": null
+          },
+          {
+            "event": "account-auth-token.updated",
+            "stage": "modify",
+            "notes": null
+          }
+        ],
+        "correlation_keys": [
+          "account_sid",
+          "actor_sid",
+          "source_ip_address"
+        ],
+        "anomaly_cues": [
+          "Changes with source=api from unfamiliar IPs",
+          "New API keys or subaccounts created by account actor",
+          "Secondary token created unexpectedly"
+        ],
+        "containment": {
+          "steps": "Create secondary token, then promote it to delete the old primary; repeat for affected subaccounts.",
+          "kills_existing": "yes",
+          "notes": "Docs say apps using old token stop immediately; Functions may take ~1 minute to pick up change."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether individual REST reads are logged"
+        ],
+        "evidence_refs": [
+          "fc-8ea50af5",
+          "fc-b7756822",
+          "fc-9b1d5a4e"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET https://api.twilio.com/2010-04-01/Accounts.json",
+            "reveals": "Account and subaccounts",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Monitor Events documents changes, reads not stated"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET https://iam.twilio.com/v1/Keys",
+            "reveals": "API keys",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json",
+            "reveals": "Message history and bodies",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "discovery",
+            "call": "GET https://monitor.twilio.com/v1/Events",
+            "reveals": "Audit log",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Recordings/{Sid}.mp3",
+            "reveals": "Call recording audio",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "recording.accessed",
+            "log_notes": "Monitor Events; 30 days, or 13 months with Administration, Security or Enterprise Edition. actor_sid is the Account SID, not the key."
+          }
+        ],
+        "unknown": [
+          "Whether reads are logged"
+        ],
+        "evidence_refs": [
+          "fc-5a243e1d",
+          "fc-76306c45",
+          "fc-9b1d5a4e",
+          "fc-e7df353d",
+          "fc-a55c5de4",
+          "fc-438426da"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-05d9e1e1",
+      "title": "Get Started with Public Key Client Validation",
+      "url": "https://www.twilio.com/docs/iam/pkcv",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-103e8def",
+      "title": "Public Key Client Validation Quickstart",
+      "url": "https://www.twilio.com/docs/iam/pkcv/quickstart",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-438426da",
+      "title": "New Audit Events for Voice Recordings and Transcriptions to log media access",
+      "url": "https://www.twilio.com/en-us/changelog/new-audit-events-for-voice-recordings-and-transcriptions-to-log-media-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4fc37d61",
+      "title": "REST API: Secondary Auth Token",
+      "url": "https://www.twilio.com/docs/iam/api/secondary_authtoken",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5a243e1d",
+      "title": "REST API: Accounts",
+      "url": "https://www.twilio.com/docs/iam/api/account",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-76306c45",
+      "title": "Message resource",
+      "url": "https://www.twilio.com/docs/messaging/api/message-resource",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8ea50af5",
+      "title": "REST API: Auth Token",
+      "url": "https://www.twilio.com/docs/iam/api/authtoken",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9b1d5a4e",
+      "title": "Monitor Events resource",
+      "url": "https://www.twilio.com/docs/usage/monitor-events",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a55c5de4",
+      "title": "Recording resource",
+      "url": "https://www.twilio.com/docs/voice/api/recording",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b7756822",
+      "title": "Contain: Immediate Countermeasures",
+      "url": "https://www.twilio.com/docs/usage/fraud-response-guide/contain",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bd67f0f2",
+      "title": "Single Sign On",
+      "url": "https://www.twilio.com/docs/iam/single-sign-on",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-be35f117",
+      "title": "Requests to Twilio",
+      "url": "https://www.twilio.com/docs/usage/requests-to-twilio",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c8301318",
+      "title": "Managed users",
+      "url": "https://www.twilio.com/docs/iam/organizations/managed-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cd9725f4",
+      "title": "Subaccounts",
+      "url": "https://www.twilio.com/docs/iam/api/subaccounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e7df353d",
+      "title": "REST API: Key Resource v1",
+      "url": "https://www.twilio.com/docs/iam/api-keys/key-resource-v1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f9986bc7",
+      "title": "Analyze: Investigate",
+      "url": "https://www.twilio.com/docs/usage/fraud-response-guide/analyze",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

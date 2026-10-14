@@ -1,0 +1,612 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "datadog",
+      "name": "Datadog",
+      "scope_notes": "IP documentation differs on entitlement (Pro+ via support vs Enterprise). Confirm contract. AWS WIF requires supported integration/configuration.",
+      "controls": [
+        {
+          "name": "Application key scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Restricts an application key to the listed authorization scopes instead of all of its owner's permissions.",
+          "setting": "Organization Settings > Application Keys (edit key scopes); Key Management API",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn19search19"
+          ],
+          "quote": "Scoped application keys are granted only the scopes specified by the user"
+        },
+        {
+          "name": "API Keys Write permission",
+          "effect": "disable",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Only roles holding api_keys_write can create or rename API keys (Admin role by default).",
+          "setting": "Organization Settings > Roles (custom roles)",
+          "plan": "Custom roles may require an eligible plan (not confirmed)",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-5e887a08"
+          ],
+          "quote": "Create and rename API Keys for your organization."
+        },
+        {
+          "name": "User App Keys / Org App Keys Write permissions",
+          "effect": "disable",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Controls who can create and manage their own application keys (user_app_keys) or anyone's keys (org_app_keys_write).",
+          "setting": "Organization Settings > Roles",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-5e887a08"
+          ],
+          "quote": "View and manage Application Keys owned by the user."
+        },
+        {
+          "name": "Service Account Write permission",
+          "effect": "disable",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Limits who can create, disable and use service accounts that own application keys.",
+          "setting": "Organization Settings > Roles; Organization Settings > Service Accounts",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-5e887a08"
+          ],
+          "quote": "Create, disable, and use Service Accounts in your organization."
+        },
+        {
+          "name": "One-Time Read (OTR) mode",
+          "effect": "other",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Shows application key secrets only once at creation; becomes permanent after 3 months enabled.",
+          "setting": "Organization Settings > Application Keys (requires org_app_keys_write + org_management)",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "turn19search19"
+          ],
+          "quote": "When OTR mode is enabled, application key secrets are only displayed once during creation."
+        },
+        {
+          "name": "Actions API access (per application key)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Application keys cannot call the Actions APIs unless explicitly enabled per key.",
+          "setting": "Organization Settings > Application Keys or API",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn19search19"
+          ],
+          "quote": "By default, application keys cannot be used with these APIs."
+        },
+        {
+          "name": "IP Allowlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "datadog-1",
+            "datadog-2"
+          ],
+          "what": "Blocks UI, public API and OAuth app access from IPs outside the list; Agent intake and some endpoints are exempt.",
+          "setting": "Organization Settings > Security > IP Allowlist; IP Allowlist API; Terraform ip_allowlist (Org Management permission)",
+          "plan": "Pro+ or Enterprise, enabled via support (API reference says Enterprise)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn5search4"
+          ],
+          "quote": "When the IP allowlist is enabled, only IP addresses or CIDR ranges in the allowlist can access the Datadog API and UI."
+        },
+        {
+          "name": "Revoke API key / application key",
+          "effect": "revoke",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Revoked API keys can be restored for 7 days; application key revocation is permanent.",
+          "setting": "Organization Settings > API Keys / Application Keys; Key Management API",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "turn19search19"
+          ],
+          "quote": "Revoking an application key is permanent."
+        },
+        {
+          "name": "Unused Application Keys (Governance Console control)",
+          "effect": "revoke",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Detects application keys unused for a set period (default 30 days) and can automatically revoke them.",
+          "setting": "Governance Console > Controls > Unused Application Keys > Enforce control",
+          "plan": "Enterprise (Governance Console, via support)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6e071546",
+            "fc-a86a9545"
+          ]
+        },
+        {
+          "name": "Unused API Keys (Governance Console control)",
+          "effect": "revoke",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Detects API keys unused for a set period and can automatically revoke them.",
+          "setting": "Governance Console > Controls > Unused API Keys > Enforce control",
+          "plan": "Enterprise (Governance Console, via support)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6e071546",
+            "fc-a86a9545"
+          ]
+        },
+        {
+          "name": "Leaked API Keys (Governance Console control)",
+          "effect": "revoke",
+          "applies_to": [
+            "datadog-1"
+          ],
+          "what": "Detects active API keys found exposed publicly by Datadog token leak detection, with optional enforcement.",
+          "setting": "Governance Console > Controls > Leaked API Keys",
+          "plan": "Enterprise (Governance Console, via support)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6e071546",
+            "fc-a86a9545"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "datadog-1",
+          "what": "No expiration or maximum lifetime for API or application keys.",
+          "evidence_refs": [
+            "fc-f1c37728"
+          ],
+          "quote": "Long-lived. No built-in expiration.",
+          "kind": "expiry"
+        }
+      ],
+      "controls_unknown": [
+        "No org setting found that blocks personal application keys or forces service-account-only keys.",
+        "Whether the IP allowlist applies to API-key and client-token requests outside telemetry intake is not stated; entitlement differs between account docs (Pro+/Enterprise) and API reference (Enterprise).",
+        "Plan requirement for Agent-based WIF: current WIF page lists no tier; earlier material says Enterprise-only and preview.",
+        "How to delete or disable an identity mapping is not documented on the WIF page; intake mappings are deleted via API.",
+        "Whether custom roles (needed to narrow these permissions) require a specific plan was not confirmed."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "datadog-1",
+      "provider_id": "datadog",
+      "name": "API + application keys",
+      "family": "api_key",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Organization API key, often combined with a user/service-account application key; OAuth for supported apps; workload federation for supported scenarios.",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Org IP allowlist applies to UI/API, with documented intake/public-dashboard exceptions. Not a per-key rule.",
+        "evidence_refs": [
+          "turn5search4",
+          "turn5search8",
+          "turn19search19"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "No built-in expiry",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "API/application keys require explicit rotation or revocation.",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23"
+        ]
+      },
+      "administration": {
+        "summary": "Application-key scopes, service accounts, role permissions, OAuth grants, IP allowlist and key revocation.",
+        "conditions": "IP allowlist docs still differ on entitlement (account docs: Pro+ or Enterprise, via support; API reference: enterprise-only). Confirm contract. AWS WIF requires the Datadog-AWS integration.",
+        "evidence_refs": [
+          "turn5search4",
+          "turn5search8",
+          "turn19search19"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Disabling a user revokes the application keys they created, but API keys they created stay valid.",
+          "evidence_refs": [
+            "turn19search19",
+            "fc-f2508496"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Organization Settings > API Keys lists all org API keys (API Keys Read), and Org App Keys Read shows application keys of all users.",
+          "evidence_refs": [
+            "fc-5e887a08"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Audit Trail explorer (Organization Settings > Audit Trail); query @evt.name:\"Log Management\" @asset.type:logs_query, narrow by API Key ID / actor facet",
+          "api": "POST /api/v2/audit/events/search with filter.query \"@evt.name:\\\"Log Management\\\" @asset.type:logs_query\"",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2ab91e19",
+            "fc-29c5614b",
+            "fc-e14d7c2a"
+          ]
+        },
+        "offboard": {
+          "ui": "Organization Settings > Users > Edit > Disable toggle > Save (revokes app keys); then Organization Settings > API Keys > Revoke for API keys the user created",
+          "api": "DELETE /api/v2/users/{user_id}; DELETE /api/v2/api_keys/{api_key_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-f2508496",
+            "fc-61800227",
+            "turn19search19",
+            "fc-e1c4d962"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "ddapp_ (new application keys); API keys: null",
+          "notes": "New app keys use ddapp_ prefix; legacy app keys and API keys have no documented prefix. GitHub detects datadog_api_key and datadog_app_key."
+        },
+        "log_sources": [
+          {
+            "name": "Datadog Audit Trail",
+            "notes": "Request events for API calls plus product events; records @auth_method and key IDs. Default 90-day retention when enabled (3-90 days); 7 days when disabled."
+          },
+          {
+            "name": "Organization Settings key list (Last used)",
+            "notes": "Last used timestamp per key; Audit Trail extends history."
+          },
+          {
+            "name": "Datadog Logs (datadog.api_key_uuid tag)",
+            "notes": "Ingested logs carry UUID of submitting API key."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "@metadata.api_key.id",
+            "log": "Audit Trail",
+            "notes": "API key used to authenticate"
+          },
+          {
+            "field": "@metadata.app_key.id",
+            "log": "Audit Trail",
+            "notes": "Application key when @auth_method is api_app_keys"
+          },
+          {
+            "field": "@metadata.application_key.id",
+            "log": "Audit Trail",
+            "notes": "Application key used for API auth"
+          },
+          {
+            "field": "datadog.api_key_uuid",
+            "log": "Logs",
+            "notes": "API key that submitted the log"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "@evt.name:Authentication @asset.type:api_key",
+            "stage": "create",
+            "notes": "API key accessed, listed, created or deleted in Org Settings"
+          },
+          {
+            "event": "@evt.name:Authentication @asset.type:application_key",
+            "stage": "create",
+            "notes": "App key accessed, listed, created or deleted"
+          },
+          {
+            "event": "@evt.name:\"Access Management\" @asset.type:application_key",
+            "stage": "change",
+            "notes": "Service account app key created/modified/deleted"
+          },
+          {
+            "event": "@auth_method:api_app_keys",
+            "stage": "use",
+            "notes": "API request authenticated with key pair"
+          },
+          {
+            "event": "Dormant application key used",
+            "stage": "use",
+            "notes": "Security Notification, @metadata.dormant_key_age"
+          },
+          {
+            "event": "Token leaked",
+            "stage": "revoke",
+            "notes": "Security Notification, @metadata.key_leak.detected_at; revoke the key"
+          }
+        ],
+        "correlation_keys": [
+          "@usr.email",
+          "@usr.id",
+          "@network.client.ip",
+          "@network.client.geoip.as.number",
+          "@http.useragent",
+          "@http.url_details.path",
+          "@metadata.api_key.id",
+          "@metadata.app_key.id"
+        ],
+        "anomaly_cues": [
+          "App key used after owner deactivated (should be revoked; check API keys created by that user, which stay valid)",
+          "Dormant application key used notification",
+          "Key ID seen from new ASN or country",
+          "Read-heavy calls (logs queries, key listing) from a key normally used for writes",
+          "Token leaked notification for any key"
+        ],
+        "containment": {
+          "steps": "Revoke API key in Organization Settings > API keys (restorable 7 days); revoke app key in Application Keys (permanent). Rotate: create new key, update services, then revoke.",
+          "kills_existing": "yes",
+          "notes": "Revocation may take a few seconds to propagate. Disabling a user revokes their app keys but NOT API keys they created."
+        },
+        "sample_query": {
+          "language": "Datadog Audit Trail search",
+          "query": "@auth_method:api_app_keys @metadata.app_key.id:<KEY_ID> -@network.client.ip:(<KNOWN_IP_1> OR <KNOWN_IP_2>)",
+          "purpose": "Find use of a specific application key from unexpected IPs"
+        },
+        "unknown": [
+          "API key string format/regex",
+          "exact @evt.name value for API request events",
+          "@asset.type for service-account app key list vs org"
+        ],
+        "evidence_refs": [
+          "turn19search19",
+          "fc-2ab91e19",
+          "fc-346bcc6d",
+          "fc-29c5614b",
+          "fc-846e1fd4",
+          "fc-8325e472"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /api/v2/logs/events/search",
+            "reveals": "Log events (needs logs_read_data)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "@evt.name:\"Log Management\" @asset.type:logs_query",
+            "log_notes": "Audit Trail event 'Query (Public Beta)'; Audit Trail must be enabled."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-1bb0d6f3",
+          "fc-29c5614b"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1bb0d6f3",
+      "title": "Logs API: Search logs",
+      "url": "https://docs.datadoghq.com/api/latest/logs/search-logs-post/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-29c5614b",
+      "title": "Audit Trail Events",
+      "url": "https://docs.datadoghq.com/account_management/audit_trail/events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2ab91e19",
+      "title": "Datadog Audit Trail",
+      "url": "https://docs.datadoghq.com/account_management/audit_trail/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-346bcc6d",
+      "title": "dd.audit dataset (DDSQL)",
+      "url": "https://docs.datadoghq.com/ddsql_reference/data_directory/dd/dd.audit.dataset/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5e887a08",
+      "title": "Datadog Role Permissions",
+      "url": "https://docs.datadoghq.com/account_management/rbac/permissions/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-61800227",
+      "title": "Users API reference",
+      "url": "https://docs.datadoghq.com/api/latest/users/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6e071546",
+      "title": "Governance Console Controls",
+      "url": "https://docs.datadoghq.com/account_management/governance_console/controls/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8325e472",
+      "title": "Personal Access Tokens",
+      "url": "https://docs.datadoghq.com/account_management/personal-access-tokens/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a86a9545",
+      "title": "Governance Console",
+      "url": "https://docs.datadoghq.com/account_management/governance_console/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e14d7c2a",
+      "title": "Audit API reference",
+      "url": "https://docs.datadoghq.com/api/latest/audit/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e1c4d962",
+      "title": "Key Management API reference",
+      "url": "https://docs.datadoghq.com/api/latest/key-management/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f1c37728",
+      "title": "Credential Management",
+      "url": "https://docs.datadoghq.com/getting_started/access_for_enterprises/credential_management/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f2508496",
+      "title": "User Management",
+      "url": "https://docs.datadoghq.com/account_management/users/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn19search19",
+      "title": "API and Application Keys",
+      "url": "https://docs.datadoghq.com/account_management/api-app-keys/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn19search23",
+      "title": "OAuth2 in Datadog",
+      "url": "https://docs.datadoghq.com/extend/authorization/oauth2_in_datadog/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn23search0",
+      "title": "Workload Identity Federation",
+      "url": "https://docs.datadoghq.com/account_management/workload_identity_federation/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search0",
+      "title": "API and Application Keys",
+      "url": "https://docs.datadoghq.com/account_management/api-app-keys/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search4",
+      "title": "IP Allowlist - Datadog Infrastructure and Application Monitoring",
+      "url": "https://docs.datadoghq.com/account_management/org_settings/ip_allowlist/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search8",
+      "title": "IP Allowlist - Datadog Infrastructure and Application Monitoring",
+      "url": "https://docs.datadoghq.com/api/latest/ip-allowlist/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

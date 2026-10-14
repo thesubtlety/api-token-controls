@@ -1,0 +1,580 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "github",
+      "name": "GitHub Enterprise Cloud",
+      "scope_notes": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+      "controls": [
+        {
+          "name": "IP allow list",
+          "effect": "limit_network",
+          "applies_to": [
+            "github-1",
+            "github-2",
+            "github-3",
+            "github-4",
+            "github-5",
+            "github-6",
+            "github-7"
+          ],
+          "what": "Blocks PATs, OAuth app tokens, SSH/deploy keys, GitHub App tokens and GITHUB_TOKEN from non-allowed IPs (not user-installed apps' installation tokens).",
+          "setting": "Org settings > Authentication security > IP allow list; Enterprise settings > Authentication security",
+          "plan": "GitHub Enterprise Cloud",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-62eef186"
+          ],
+          "quote": "IP allow lists don't currently restrict access when a GitHub App is installed on a user account and uses server-to-server installation tokens to access an organization or enterprise."
+        },
+        {
+          "name": "Workflow permissions (default GITHUB_TOKEN permissions)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "github-5"
+          ],
+          "what": "Sets the default GITHUB_TOKEN to read-only contents/packages or read/write; workflows can still change it via the permissions key.",
+          "setting": "Org/Enterprise settings > Actions > General > Workflow permissions",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-1949217c"
+          ],
+          "quote": "Under \"Workflow permissions\", choose whether you want the GITHUB_TOKEN to have read and write access for all permissions (the permissive setting), or just read access for the contents and packages permissions (the restricted setting)."
+        },
+        {
+          "name": "Allow GitHub Actions to create and approve pull requests",
+          "effect": "limit_scope",
+          "applies_to": [
+            "github-5"
+          ],
+          "what": "When off, GITHUB_TOKEN cannot create or approve pull requests.",
+          "setting": "Org/Enterprise settings > Actions > General > Workflow permissions",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-1949217c"
+          ],
+          "quote": "By default, when you create a new organization, workflows are not allowed to create or approve pull requests."
+        },
+        {
+          "name": "Send write tokens to workflows from pull requests (fork PRs)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "github-5"
+          ],
+          "what": "Controls whether fork pull-request workflows get a write GITHUB_TOKEN; otherwise it is read-only.",
+          "setting": "Org/Enterprise settings > Actions > General > Fork pull request workflows",
+          "plan": null,
+          "default": "off",
+          "level": "enterprise",
+          "evidence_refs": [
+            "fc-443141b3"
+          ],
+          "quote": "Run workflows from fork pull requests. Users can run workflows from fork pull requests. By default, workflows will use a GITHUB_TOKEN with read-only permission, with no access to secrets."
+        },
+        {
+          "name": "Actions policies (disable GitHub Actions)",
+          "effect": "disable",
+          "applies_to": [
+            "github-5"
+          ],
+          "what": "Disabling Actions for all or selected repositories prevents workflows (and their GITHUB_TOKEN) from running.",
+          "setting": "Org settings > Actions > General > Policies; enterprise policy can override",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-1949217c"
+          ],
+          "quote": "You can choose to disable GitHub Actions for all repositories in your organization, or only allow specific repositories."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "github-5",
+          "what": "Admins cannot stop repo writers from raising GITHUB_TOKEN permissions in the workflow file above the default.",
+          "evidence_refs": [
+            "fc-1949217c"
+          ],
+          "quote": "Anyone with write access to a repository can modify the permissions granted to the GITHUB_TOKEN, adding or removing access as required, by editing the permissions key in the workflow file.",
+          "kind": "other"
+        }
+      ],
+      "controls_unknown": [
+        "Whether admins can set a maximum lifetime for GitHub App user access tokens or OAuth app tokens (only app-developer settings found).",
+        "Whether GITHUB_TOKEN workflow permission defaults can be made non-overridable."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "github-5",
+      "provider_id": "github",
+      "name": "Actions GITHUB_TOKEN",
+      "family": "job_token",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Classic/fine-grained PATs, OAuth app tokens, GitHub App installation/user tokens, and Actions GITHUB_TOKEN.",
+        "evidence_refs": [
+          "turn3search28",
+          "turn19search0"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "turn3search28",
+          "turn19search0"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Allow list explicitly covers the Actions GITHUB_TOKEN. Jobs must run on self-hosted runners or GitHub-hosted larger runners with static IP ranges that are added to the list.",
+        "evidence_refs": [
+          "turn3search8",
+          "turn3search0",
+          "turn3search28",
+          "fc-62eef186"
+        ]
+      },
+      "lifetime": {
+        "basis": "job",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Job duration",
+        "evidence_refs": [
+          "turn3search28",
+          "turn19search0"
+        ]
+      },
+      "renewal": {
+        "mechanism": "job_reissued",
+        "expiry_basis": "job",
+        "summary": "The platform supplies a token for the workflow job.",
+        "evidence_refs": [
+          "turn3search28",
+          "turn19search0"
+        ]
+      },
+      "administration": {
+        "summary": "Repository/permission-scoped apps and PATs; PAT approval/restriction and lifetime policy; SAML authorization; revoke tokens or suspend/uninstall apps.",
+        "conditions": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+        "evidence_refs": [
+          "turn3search8",
+          "turn3search0",
+          "turn3search28"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "GITHUB_TOKEN is repository-scoped and marked as not supporting SSO authorization in the credential types table; SSO bulk actions do not affect it.",
+          "evidence_refs": [
+            "fc-70eb24e3"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The token belongs to a workflow job and expires when the job ends.",
+          "evidence_refs": [
+            "fc-70eb24e3"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Not configurable: token expires when the job finishes (max 24 h refresh)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-205532d4"
+          ]
+        },
+        "reads": {
+          "ui": "Enterprise Settings > Audit log > Export Git Events; filter JSON on action git.clone and repo",
+          "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+          "cli": null,
+          "evidence_refs": [
+            "fc-aa029406",
+            "fc-ce6df4bc",
+            "fc-19c68525",
+            "fc-69839963"
+          ]
+        },
+        "kill": {
+          "ui": "Repo > Actions > workflow > run > Cancel workflow",
+          "api": "POST /repos/{owner}/{repo}/actions/runs/{run_id}/cancel",
+          "cli": "gh run cancel <run-id>",
+          "evidence_refs": [
+            "fc-88261f44",
+            "fc-007e38a0",
+            "fc-26d6a55d"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "ghs_",
+          "notes": "GITHUB_TOKEN is a GitHub App installation token, so ghs_ (incl. new ghs_APPID_JWT). Expires at job end; max 6h hosted, refreshable to 24h self-hosted."
+        },
+        "log_sources": [
+          {
+            "name": "GitHub organization/enterprise audit log",
+            "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+          },
+          {
+            "name": "Audit log streaming (enterprise)",
+            "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+          },
+          {
+            "name": "Workflow run logs",
+            "notes": "Only step stdout; correlate with audit log."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "workflow_run_id",
+            "log": "audit log (workflows.*)",
+            "notes": "Run that received the token"
+          },
+          {
+            "field": "job_workflow_ref",
+            "log": "audit log (workflows.prepared_workflow_job)",
+            "notes": "Workflow file/ref"
+          },
+          {
+            "field": "secrets_passed",
+            "log": "audit log (workflows.prepared_workflow_job)",
+            "notes": "Secrets provided to the job"
+          },
+          {
+            "field": "runner_name",
+            "log": "audit log",
+            "notes": "Runner that held the token"
+          },
+          {
+            "field": "hashed_token",
+            "log": "audit log",
+            "notes": "Common field; GITHUB_TOKEN-specific use not documented"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "workflows.prepared_workflow_job",
+            "stage": "create",
+            "notes": "Job start; token minted; streaming/export/REST only"
+          },
+          {
+            "event": "workflows.completed_workflow_run",
+            "stage": "revoke",
+            "notes": "Run done; token expires at job end"
+          },
+          {
+            "event": "workflows.cancel_workflow_run",
+            "stage": "revoke",
+            "notes": "Cancel run"
+          },
+          {
+            "event": "org.set_default_workflow_permissions",
+            "stage": "change",
+            "notes": "Default token permissions changed (org)"
+          },
+          {
+            "event": "repo.set_default_workflow_permissions",
+            "stage": "change",
+            "notes": "Default token permissions changed (repo)"
+          },
+          {
+            "event": "repo.set_workflow_permission_can_approve_pr",
+            "stage": "change",
+            "notes": "Token may approve PRs"
+          }
+        ],
+        "correlation_keys": [
+          "actor",
+          "workflow_run_id",
+          "job_workflow_ref",
+          "runner_name",
+          "runner_labels",
+          "is_hosted_runner",
+          "repo",
+          "created_at"
+        ],
+        "anomaly_cues": [
+          "workflow runs from unfamiliar actors or new branches",
+          "default_workflow_permissions switched to write before a suspicious run",
+          "job on a newly registered self-hosted runner (org.register_self_hosted_runner)",
+          "workflow file changes in .github/workflows followed by runs passing extra secrets_passed"
+        ],
+        "containment": {
+          "steps": "Cancel in-progress runs; disable Actions for repo/org; remove self-hosted runners; set default workflow permissions to read.",
+          "kills_existing": "partial",
+          "notes": "No manual revocation; token dies at job end. Not affected by enterprise bulk credential actions. Rotate any other secrets exposed to the job."
+        },
+        "sample_query": {
+          "language": "GitHub audit log REST (phrase)",
+          "query": "GET /orgs/octo-org/audit-log?phrase=action:workflows.prepared_workflow_job+repo:octo-org/app+created:>=2026-09-01",
+          "purpose": "List jobs (and secrets passed) in the incident window."
+        },
+        "unknown": [
+          "actor/programmatic_access_type recorded for GITHUB_TOKEN API calls",
+          "whether GITHUB_TOKEN hashed_token appears in audit events",
+          "per-job token id field"
+        ],
+        "evidence_refs": [
+          "fc-86e7cb4e",
+          "turn3search28",
+          "fc-b07fe78b",
+          "fc-58ac0db8",
+          "fc-8a7fd6ce",
+          "fc-ce6df4bc",
+          "fc-99bddc62"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /rate_limit",
+            "reveals": "remaining quota; confirms token is live (installation token tied to the workflow repo)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "1,000/hour per repository",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Reads not in standard audit log"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /repos/{owner}/{repo}/tarball/{ref}",
+            "reveals": "archive of the workflow's own repository (token limited to that repo)",
+            "bulk": true,
+            "scope": "contents: read (workflow permissions)",
+            "rate_limit": "1,000/hour per repository",
+            "logged": "unknown",
+            "log_event": "repo.download_zip (candidate)",
+            "log_notes": "API emission not stated"
+          },
+          {
+            "stage": "collection",
+            "call": "git clone of the workflow repo with GITHUB_TOKEN",
+            "reveals": "full history of the workflow's repository",
+            "bulk": true,
+            "scope": "contents: read",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "git.clone",
+            "log_notes": "Enterprise Cloud only; GITHUB_TOKEN scoped to the one repo"
+          }
+        ],
+        "unknown": [
+          "GITHUB_TOKEN is scoped to the workflow repo, so cross-repo discovery is not possible",
+          "Whether reads appear in api.request streaming events"
+        ],
+        "evidence_refs": [
+          "fc-86e7cb4e",
+          "fc-35204b4b",
+          "fc-19c68525"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "GitHub Workflow Permissions Modified",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_workflow_permission_modified.yml",
+          "detects": "Changes to the organization default GITHUB_TOKEN workflow permissions."
+        },
+        {
+          "source": "Panther",
+          "title": "GitHub Workflow Dispatched by GitHub Actions Bot",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_workflow_dispatch_by_github_bot.yml",
+          "detects": "github-actions[bot] using a server-to-server token (GITHUB_TOKEN) to start a workflow via workflow_dispatch, a sign of a stolen GITHUB_TOKEN being replayed."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-007e38a0",
+      "title": "Cancel a workflow run",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/actions/workflow-runs#cancel-a-workflow-run",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1949217c",
+      "title": "Disabling or limiting GitHub Actions for your organization",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-organization-settings/disabling-or-limiting-github-actions-for-your-organization",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-19c68525",
+      "title": "Audit log events for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/audit-log-events-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-205532d4",
+      "title": "GITHUB_TOKEN",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/actions/concepts/security/github_token",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-26d6a55d",
+      "title": "gh run cancel",
+      "url": "https://cli.github.com/manual/gh_run_cancel",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-35204b4b",
+      "title": "Rate limits for the REST API",
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-443141b3",
+      "title": "Enforcing policies for GitHub Actions in your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/enforcing-policies/enforcing-policies-for-your-enterprise/enforcing-policies-for-github-actions-in-your-enterprise",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-58ac0db8",
+      "title": "Common security incident investigation areas",
+      "url": "https://docs.github.com/en/code-security/reference/security-incident-response/investigation-areas",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62eef186",
+      "title": "Managing allowed IP addresses for your organization - GitHub Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/managing-allowed-ip-addresses-for-your-organization",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69839963",
+      "title": "Identifying audit log events performed by an access token",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/identifying-audit-log-events-performed-by-an-access-token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-70eb24e3",
+      "title": "GitHub credential types reference",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-programmatic-access-to-your-organization/github-credential-types",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-86e7cb4e",
+      "title": "GITHUB_TOKEN",
+      "url": "https://docs.github.com/en/actions/concepts/security/github_token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-88261f44",
+      "title": "Canceling a workflow run",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/canceling-a-workflow",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8a7fd6ce",
+      "title": "Responding to a security incident",
+      "url": "https://docs.github.com/en/code-security/tutorials/secure-your-organization/respond-to-a-security-incident",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-99bddc62",
+      "title": "Audit log for an enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/about-the-audit-log-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aa029406",
+      "title": "Exporting audit log activity for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/exporting-audit-log-activity-for-your-enterprise",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b07fe78b",
+      "title": "Audit log events for your organization",
+      "url": "https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/audit-log-events-for-your-organization",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ce6df4bc",
+      "title": "Using the audit log API for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/using-the-audit-log-api-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn19search0",
+      "title": "Configuring OpenID Connect in cloud providers - GitHub Docs",
+      "url": "https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-cloud-providers",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search0",
+      "title": "Enforcing policies for personal access tokens in your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud%40latest/admin/enforcing-policies/enforcing-policies-for-your-enterprise/enforcing-policies-for-personal-access-tokens-in-your-enterprise",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search28",
+      "title": "GitHub credential types reference",
+      "url": "https://docs.github.com/en/organizations/managing-programmatic-access-to-your-organization/github-credential-types",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search8",
+      "title": "Managing allowed IP addresses for your organization - GitHub Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud%40latest/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/managing-allowed-ip-addresses-for-your-organization",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

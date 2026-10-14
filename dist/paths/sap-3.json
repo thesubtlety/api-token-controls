@@ -1,0 +1,387 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "sap",
+      "name": "SAP BTP and S/4HANA Cloud",
+      "scope_notes": "Covers SAP Business Technology Platform (XSUAA, Cloud Management service, btp CLI), SAP Cloud Identity Services, and SAP S/4HANA Cloud Public Edition. Covers BTP Cloud Foundry/multi-environment subaccounts, Identity Authentication tenants, and S/4HANA Cloud Public Edition communication management; BTP docs cited from SAP's official SAP-docs GitHub source of help.sap.com.",
+      "controls": [
+        {
+          "name": "Delete binding / service key",
+          "effect": "revoke",
+          "applies_to": [
+            "sap-1",
+            "sap-3"
+          ],
+          "what": "Deleting the binding or service key makes XSUAA stop accepting its secret/certificate.",
+          "setting": "cf unbind-service / cf delete-service-key / cockpit",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-c27d4d0f",
+            "fc-1697835f"
+          ]
+        },
+        {
+          "name": "token-validity / refresh-token-validity",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "sap-1",
+            "sap-2",
+            "sap-3"
+          ],
+          "what": "Sets access/refresh token lifetime per XSUAA instance.",
+          "setting": "xs-security.json oauth2-configuration",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-763e16d9"
+          ]
+        },
+        {
+          "name": "Token Validity (subaccount security settings)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "sap-1",
+            "sap-2",
+            "sap-3"
+          ],
+          "what": "Sets default token lifetimes for all instances in a subaccount that don't set their own.",
+          "setting": "BTP cockpit > Subaccount > Security > Settings > Token Validity; Security Settings API",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-37a60c08"
+          ]
+        },
+        {
+          "name": "Token revoke endpoint",
+          "effect": "revoke",
+          "applies_to": [
+            "sap-1",
+            "sap-2",
+            "sap-3"
+          ],
+          "what": "Revokes an issued token, but apps validating offline keep accepting it until expiry.",
+          "setting": "Cloud Foundry UAA revoke endpoint",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-07f59e19"
+          ]
+        },
+        {
+          "name": "Cloud Management service plan selection",
+          "effect": "limit_scope",
+          "applies_to": [
+            "sap-3"
+          ],
+          "what": "The cis plan (central, central-viewer, local, local-viewer) fixes the API scopes in the token.",
+          "setting": "Entitlements + cis instance plan",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-40b6f5f8",
+            "fc-743352ef"
+          ]
+        },
+        {
+          "name": "Entitlements (SAP Cloud Management service plans)",
+          "effect": "disable",
+          "applies_to": [
+            "sap-3"
+          ],
+          "what": "A cis service instance and key can only be created in a subaccount where the global account admin has entitled a Cloud Management service plan.",
+          "setting": "Global account > Entitlements",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-743352ef"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP/network allowlist for XSUAA clients, btp API credentials, IAS API secrets or S/4HANA communication users.",
+        "Whether XSUAA password-grant tokens (cis service keys) honor IAS/corporate IdP MFA or conditional access.",
+        "Exact audit message for service key deletion and for API credential create/delete in XSUAA audit log.",
+        "Whether communication user passwords expire.",
+        "Org-wide switch to block creation of service keys or API credentials (none found).",
+        "IAS audit event emitted on client secret creation/deletion (change log covers admin CREATE/UPDATE/DELETE generally)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "sap-3",
+      "provider_id": "sap",
+      "name": "SAP Cloud Management service (cis) service key",
+      "family": "oauth",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A service key on a `cis` instance gives an OAuth client for the Accounts/Entitlements/Provisioning APIs. Default grant is password (a user's credentials plus client); client credentials is available when requested at instance creation.",
+        "evidence_refs": [
+          "fc-743352ef"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Password grant sends a user's password directly to XSUAA; docs reviewed do not say whether IdP MFA/conditional access applies. Client-credential instances have no user.",
+        "evidence_refs": [
+          "fc-743352ef"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No IP allowlist for OAuth clients/tokens found in the XSUAA docs reviewed.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": 43200,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Key lives until deleted; tokens follow XSUAA validity",
+        "evidence_refs": [
+          "fc-c27d4d0f",
+          "fc-763e16d9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "XSUAA token validity",
+        "summary": "Re-request token with key (and user password for password grant).",
+        "evidence_refs": [
+          "fc-743352ef"
+        ]
+      },
+      "administration": {
+        "summary": "Global account admin must entitle a cis plan to the subaccount; the plan (central, central-viewer, local, local-viewer) sets the scopes. `central` can create/delete subaccounts and set entitlements.",
+        "conditions": "Entitlement required.",
+        "evidence_refs": [
+          "fc-743352ef",
+          "fc-40b6f5f8"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "With the Password grant the user's password plus 2FA passcode is needed; the Client Credentials grant has no user check.",
+          "evidence_refs": [
+            "fc-743352ef"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "BTP cockpit > global account > Security > Trust Configuration > Establish Trust (custom IdP for platform users; enforce MFA there). Client Credentials grant bypasses this.",
+          "api": "POST <uaa_url>/oauth/token grant_type=password, username, password=<password><2FA passcode>",
+          "cli": null,
+          "evidence_refs": [
+            "fc-99050aa5",
+            "fc-743352ef"
+          ]
+        },
+        "usage": {
+          "ui": "Account Explorer header > SAP Audit Log Viewer (global account); filter retrieved records for the service key's client ID",
+          "api": "GET <url_from_service_key>/auditlog/v2/auditlogrecords?time_from=...&time_to=... (Auditlog Management, Central plan); filter on clientId",
+          "cli": null,
+          "evidence_refs": [
+            "fc-60b0f09a",
+            "fc-154997ee"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "XSUAA JWT"
+        },
+        "log_sources": [
+          {
+            "name": "SAP Audit Log service (global account and subaccount)",
+            "notes": "Cloud Management service events via Audit Log Retrieval API for global accounts"
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Client ID",
+            "log": "UAA ClientAuthenticationSuccess",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "\"type\":\"CREATE\" \"entity\":\"Subaccount",
+            "stage": "use",
+            "notes": "Cloud Management service audit message text"
+          }
+        ],
+        "correlation_keys": [
+          "client ID",
+          "global account ID",
+          "subaccount ID"
+        ],
+        "anomaly_cues": [
+          "Subaccount/directory create or delete via API",
+          "Entitlement changes outside change windows"
+        ],
+        "containment": {
+          "steps": "Delete the cis service key (and instance if needed); reset the user's password for password-grant keys.",
+          "kills_existing": "partial",
+          "notes": "Issued tokens live until expiry."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-80959e15",
+          "fc-743352ef",
+          "fc-c27d4d0f"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "btp list accounts/subaccount",
+            "reveals": "Subaccounts in the global account",
+            "bulk": true,
+            "scope": "global-account.subaccount.read",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit page lists create/update/delete only"
+          }
+        ],
+        "unknown": [
+          "Equivalent raw Accounts API path not verified"
+        ],
+        "evidence_refs": [
+          "fc-40b6f5f8",
+          "fc-80959e15",
+          "fc-6bb5ba0d"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-07f59e19",
+      "title": "Validation and Revocation of Access Tokens",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/30-development/validation-and-revocation-of-access-tokens-8eb23a1.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-154997ee",
+      "title": "Audit Log Retrieval API for Global Accounts in the Cloud Foundry Environment",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/audit-log-retrieval-api-for-global-accounts-in-the-cloud-foundry-environment-7db3c9f.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1697835f",
+      "title": "Rotate Binding Secrets",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/rotate-binding-secrets-618441b.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-37a60c08",
+      "title": "Configure Token Policy for SAP Authorization and Trust Management Service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/configure-token-policy-for-sap-authorization-and-trust-management-service-40290a9.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-40b6f5f8",
+      "title": "SAP Cloud Management Service - Service Plans",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/sap-cloud-management-service-service-plans-a508b72.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-60b0f09a",
+      "title": "SAP Audit Log Viewer service for the Cloud Foundry Environment",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/sap-audit-log-viewer-service-for-the-cloud-foundry-environment-e3baa5f.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6bb5ba0d",
+      "title": "Working with Global Accounts, Directories, and Subaccounts Using the btp CLI",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/working-with-global-accounts-directories-and-subaccounts-using-the-btp-cli-85a683e.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-743352ef",
+      "title": "Getting an Access Token for SAP Cloud Management Service APIs",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/getting-an-access-token-for-sap-cloud-management-service-apis-3670474.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-763e16d9",
+      "title": "Security Considerations for the SAP Authorization and Trust Management Service",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/60-security/security-considerations-for-the-sap-authorization-and-trust-management-service-f117cab.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-80959e15",
+      "title": "Auditing and Logging Information (SAP Cloud Management service)",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/auditing-and-logging-information-44b00a8.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-99050aa5",
+      "title": "Establish Trust and Federation of Custom Identity Providers for Platform Users",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/establish-trust-and-federation-of-custom-identity-providers-for-platform-users-c368984.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c27d4d0f",
+      "title": "Service Instance Secrets (SAP Authorization and Trust Management service)",
+      "url": "https://github.com/SAP-docs/btp-cloud-platform/blob/main/docs/50-administration-and-ops/service-instance-secrets-5578ec4.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

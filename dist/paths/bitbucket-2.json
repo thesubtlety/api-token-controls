@@ -1,0 +1,215 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "bitbucket",
+      "name": "Bitbucket Cloud",
+      "scope_notes": "Bitbucket Cloud SaaS; workspace/project access tokens and IP allowlisting need Premium, org-level audit log needs Atlassian Guard; API tokens are Atlassian-account tokens shared with Jira/Confluence.",
+      "controls": [],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether the workspace IP allowlist is enforced on REST API calls (docs only mention viewing content and Git clone/push/pull).",
+        "Whether API tokens or OAuth tokens are checked against IdP SSO or conditional access at use time.",
+        "Whether the workspace audit log records access token creation, rotation or revocation (no such events listed).",
+        "Lifetime of the Pipelines OIDC token.",
+        "OAuth access token lifetime: developer docs say 1 hour, support docs say 2 hours.",
+        "Any admin approval workflow for users authorizing third-party OAuth consumers."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "bitbucket-2",
+      "provider_id": "bitbucket",
+      "name": "App passwords (deprecated)",
+      "family": "basic",
+      "principal": "user",
+      "lifecycle": "legacy",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Per-user password used with the Bitbucket username for REST API and Git over HTTPS. Fully deprecated on 28 July 2026; app-password requests now fail with 401 (API) or 410 (Git).",
+        "evidence_refs": [
+          "fc-5adceb93"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Retired credential type; docs reviewed do not address SSO interaction.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "Same Premium private-content allowlist as other credentials.",
+        "evidence_refs": [
+          "fc-b50f7c86"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Retired platform-wide 2026-07-28",
+        "evidence_refs": [
+          "fc-5adceb93"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "platform retirement",
+        "summary": "Replace with an API token.",
+        "evidence_refs": [
+          "fc-4bf122a1",
+          "fc-5adceb93"
+        ]
+      },
+      "administration": {
+        "summary": "No longer usable. Historic creation/removal is in the workspace audit log as 'App password added'/'App password removed'.",
+        "conditions": "Audit retention 30 days, so historic events are likely aged out.",
+        "evidence_refs": [
+          "fc-5adceb93",
+          "fc-4e80eaad"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "Workspace settings > Access management > Access controls > Restrict access to certain IP addresses > Add or remove IP addresses > Update (Premium)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-bb730ff3"
+          ]
+        },
+        "kill": {
+          "ui": "None needed: app passwords fully deprecated on Jul 28, 2026",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-5adceb93"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Retired credential."
+        },
+        "log_sources": [
+          {
+            "name": "Bitbucket workspace audit log",
+            "notes": "Workspace settings > Security > Audit log; 30 days."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [
+          {
+            "event": "App password added",
+            "stage": "create",
+            "notes": "User category."
+          },
+          {
+            "event": "App password removed",
+            "stage": "revoke",
+            "notes": "User category."
+          }
+        ],
+        "correlation_keys": [
+          "Bitbucket username"
+        ],
+        "anomaly_cues": [
+          "Any 401 on API or 410 on Git from legacy integrations indicates leftover app-password use"
+        ],
+        "containment": {
+          "steps": "None needed; Bitbucket rejects app passwords since 2026-07-28.",
+          "kills_existing": "yes",
+          "notes": "Platform-wide removal."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-5adceb93",
+          "fc-4e80eaad"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Retired; calls fail with 401/410"
+        ],
+        "evidence_refs": [
+          "fc-5adceb93"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-4bf122a1",
+      "title": "API tokens | Bitbucket Cloud",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/api-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4e80eaad",
+      "title": "Bitbucket Cloud audit log events",
+      "url": "https://support.atlassian.com/bitbucket-cloud/kb/bitbucket-cloud-audit-log-events/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5adceb93",
+      "title": "Bitbucket Cloud changelog",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/changelog/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b50f7c86",
+      "title": "Control access to private content in a workspace",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/control-access-to-private-content-in-a-workspace/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bb730ff3",
+      "title": "Control access to your private content",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/control-access-to-your-private-content/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

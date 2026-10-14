@@ -1,0 +1,386 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "scope_notes": "Covers n8n (Cloud and self-hosted). Public API is on Cloud Starter/Pro/Enterprise and all self-hosted editions (not free trial); key scopes, log streaming and token exchange are Enterprise; env-var controls apply only to self-hosted.",
+      "controls": [
+        {
+          "name": "N8N_PUBLIC_API_DISABLED",
+          "effect": "disable",
+          "applies_to": [
+            "n8n-1"
+          ],
+          "what": "Turns off the public REST API for the whole instance.",
+          "setting": "Environment variable N8N_PUBLIC_API_DISABLED=true",
+          "plan": "Self-hosted only",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-3ab7b99e"
+          ]
+        },
+        {
+          "name": "API key scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "n8n-1"
+          ],
+          "what": "Limits a key to chosen resource:action scopes.",
+          "setting": "Settings > n8n API > Create an API key > Scopes",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-5f556b2f"
+          ]
+        },
+        {
+          "name": "API key expiration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "n8n-1"
+          ],
+          "what": "Key creator sets an expiration time.",
+          "setting": "Settings > n8n API > Create an API key > Expiration",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-5f556b2f"
+          ]
+        },
+        {
+          "name": "Delete API key",
+          "effect": "revoke",
+          "applies_to": [
+            "n8n-1"
+          ],
+          "what": "Deletes the key.",
+          "setting": "Settings > n8n API > Delete > Delete Forever",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-5f556b2f"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "n8n-1",
+          "what": "Scopes to limit a key are not available outside Enterprise; those keys have full account access.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-5f556b2f"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether n8n API keys or MCP tokens are rejected when SSO is enforced or when a user is deleted",
+        "Any IP allowlist for API or MCP requests on n8n Cloud",
+        "Whether an admin can list or revoke other users' API keys or MCP API-key tokens",
+        "Whether 'no expiration' is an option for API keys, and default/maximum lifetime",
+        "MCP OAuth access/refresh token lifetimes",
+        "Whether public API read calls (GET /workflows, /executions, /credentials) produce any audit event",
+        "Audit log retention (log streaming forwards events; retention is in the customer destination)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "n8n-1",
+      "provider_id": "n8n",
+      "name": "n8n API key (public REST API)",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Each user creates keys in Settings > n8n API. The key is sent in the X-N8N-API-KEY header to /api/v1 and acts as that user.",
+        "evidence_refs": [
+          "fc-5f556b2f",
+          "fc-c678a036"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static key; no workload federation for API keys documented.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No n8n-side IP allowlist for the API is documented; self-hosted operators can only restrict at their own network edge.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Expiration chosen at creation",
+        "evidence_refs": [
+          "fc-5f556b2f"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "fixed at creation",
+        "summary": "Create a new key and delete the old one.",
+        "evidence_refs": [
+          "fc-5f556b2f"
+        ]
+      },
+      "administration": {
+        "summary": "Self-hosted admins can turn off the whole public API with N8N_PUBLIC_API_DISABLED. Scopes only exist on Enterprise; other editions get full access.",
+        "conditions": "No per-user admin block or approval flow documented for Cloud.",
+        "evidence_refs": [
+          "fc-5f556b2f",
+          "fc-3ab7b99e"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "disable": {
+          "ui": null,
+          "api": null,
+          "cli": "export N8N_PUBLIC_API_DISABLED=true (self-hosted env var)",
+          "evidence_refs": [
+            "fc-3ab7b99e"
+          ]
+        },
+        "usage": {
+          "ui": "Settings > Log Streaming > Add new destination > Events: Audit (n8n.audit), Workflow (n8n.workflow); filter on userId (Enterprise)",
+          "api": null,
+          "cli": "N8N_LOG_STREAMING_MANAGED_BY_ENV=true N8N_LOG_STREAMING_DESTINATIONS='[{\"type\":\"webhook\",\"subscribedEvents\":[\"n8n.audit\",\"n8n.workflow\"],...}]'",
+          "evidence_refs": [
+            "fc-6945b4b5"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Prefix not documented. Sent in X-N8N-API-KEY header."
+        },
+        "log_sources": [
+          {
+            "name": "Log streaming (Audit group)",
+            "notes": "Enterprise. Destinations: syslog, webhook, Sentry. Retention depends on destination."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "userId",
+            "log": "workflow events",
+            "notes": "Identifies the user, not the key. No key ID field documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "User API created",
+            "stage": "create",
+            "notes": "Display name in Settings > Log Streaming > Events."
+          },
+          {
+            "event": "User API deleted",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "userId",
+          "workflowId",
+          "executionId"
+        ],
+        "anomaly_cues": [
+          "User API created for an account that does not normally automate",
+          "Workflow created/updated/activated or Execution data revealed shortly after key creation"
+        ],
+        "containment": {
+          "steps": "Delete the key in Settings > n8n API (as the key owner). On self-hosted, N8N_PUBLIC_API_DISABLED=true stops all key use.",
+          "kills_existing": "unknown",
+          "notes": "Docs do not say whether deletion is immediate."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Per-request API logging",
+          "Key identifier in logs"
+        ],
+        "evidence_refs": [
+          "fc-5f556b2f",
+          "fc-3ab7b99e",
+          "fc-6945b4b5"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/v1/discover",
+            "reveals": "Endpoints and operations the key can use",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/users",
+            "reveals": "All users (owner only)",
+            "bulk": true,
+            "scope": "user:list",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/credentials",
+            "reveals": "Credential metadata, no secrets",
+            "bulk": true,
+            "scope": "credential:list",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/v1/workflows",
+            "reveals": "All workflows",
+            "bulk": true,
+            "scope": "workflow:list",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/v1/executions?includeData=true",
+            "reveals": "Execution history and data",
+            "bulk": true,
+            "scope": "execution:list",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "Rate limits",
+          "Whether reads are logged"
+        ],
+        "evidence_refs": [
+          "fc-2354aca5",
+          "fc-adf59c29",
+          "fc-6e891db0",
+          "fc-61e64f3a",
+          "fc-7536cb26"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-2354aca5",
+      "title": "Credential | n8n API reference",
+      "url": "https://docs.n8n.io/connect/n8n-api/credential",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3ab7b99e",
+      "title": "Disable the public API | n8n Docs",
+      "url": "https://docs.n8n.io/deploy/host-n8n/configure-n8n/security/disable-the-public-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5f556b2f",
+      "title": "Authentication | n8n Docs",
+      "url": "https://docs.n8n.io/connect/n8n-api/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-61e64f3a",
+      "title": "Executions | n8n API reference",
+      "url": "https://docs.n8n.io/connect/n8n-api/executions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6945b4b5",
+      "title": "Stream logs to external systems | n8n Docs",
+      "url": "https://docs.n8n.io/administer/observe-and-log/stream-logs-to-external-systems",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6e891db0",
+      "title": "Discover | n8n API reference",
+      "url": "https://docs.n8n.io/connect/n8n-api/discover",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7536cb26",
+      "title": "Workflow | n8n API reference",
+      "url": "https://docs.n8n.io/connect/n8n-api/workflow",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-adf59c29",
+      "title": "User | n8n API reference",
+      "url": "https://docs.n8n.io/connect/n8n-api/user",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c678a036",
+      "title": "n8n API | n8n Docs",
+      "url": "https://docs.n8n.io/connect/n8n-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

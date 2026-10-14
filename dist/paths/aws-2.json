@@ -1,0 +1,528 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "aws",
+      "name": "AWS",
+      "scope_notes": "Covers Amazon Web Services (IAM, STS, IAM Identity Center, IAM Roles Anywhere, Amazon Bedrock). All features are available in every AWS account; SCPs and centralized root access require AWS Organizations, and Control Tower controls require AWS Control Tower.",
+      "controls": [
+        {
+          "name": "Deactivate / delete access key (UpdateAccessKey, DeleteAccessKey)",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-1",
+            "aws-2"
+          ],
+          "what": "Setting a key Inactive or deleting it stops all further use of that key.",
+          "setting": "IAM console > Users > Security credentials > Actions > Deactivate/Delete; API UpdateAccessKey / DeleteAccessKey",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-128b9c71"
+          ]
+        },
+        {
+          "name": "AWS-GR_RESTRICT_ROOT_USER_ACCESS_KEYS",
+          "effect": "disable",
+          "applies_to": [
+            "aws-2"
+          ],
+          "what": "Control Tower preventive control (SCP) that denies iam:CreateAccessKey for the root principal.",
+          "setting": "AWS Control Tower > Controls",
+          "plan": "AWS Control Tower",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-1d5dee53"
+          ]
+        },
+        {
+          "name": "Root access management (Root credentials management)",
+          "effect": "revoke",
+          "applies_to": [
+            "aws-2"
+          ],
+          "what": "Lets the management account or delegated admin delete member-account root passwords, access keys and certificates; new accounts get no root credentials.",
+          "setting": "IAM console > Root access management > Enable",
+          "plan": "AWS Organizations",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-3684e253"
+          ]
+        },
+        {
+          "name": "aws:SourceIp deny policy",
+          "effect": "limit_network",
+          "applies_to": [
+            "aws-1",
+            "aws-2",
+            "aws-3",
+            "aws-4",
+            "aws-5",
+            "aws-6",
+            "aws-7",
+            "aws-8"
+          ],
+          "what": "Identity policy or SCP that denies any request from outside listed CIDR ranges.",
+          "setting": "IAM policy / SCP with NotIpAddress aws:SourceIp",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-ae269843"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "aws-2",
+          "what": "IAM policies cannot restrict the root user's permissions.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-e737228d"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether long-term Bedrock API keys can be set to never expire, and their maximum lifetime.",
+        "Token format/prefix for Bedrock API keys (not documented on fetched pages).",
+        "Which CloudTrail field identifies the specific Bedrock API key on a request (key value is not logged).",
+        "Default session duration for IAM Roles Anywhere when durationSeconds is omitted.",
+        "Exact CloudTrail eventName strings for CreateAccessKey/UpdateAccessKey/DeleteAccessKey were not shown on fetched pages (they match the IAM API action names, which CloudTrail logs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "aws-2",
+      "provider_id": "aws",
+      "name": "Root user access keys",
+      "family": "hmac",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Access key pair for the AWS account root user; signs API calls with full, unrestrictable account access.",
+        "evidence_refs": [
+          "fc-405c7e5c",
+          "fc-4c37fa68",
+          "fc-e737228d"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Root keys are tied to the account root user, not to any IdP. Docs do not discuss IdP policy for them.",
+        "evidence_refs": [
+          "fc-4c37fa68"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Only via an SCP on member accounts with aws:SourceIp. IAM identity policies cannot be attached to the root user, and SCPs do not affect the management account.",
+        "evidence_refs": [
+          "fc-bf544ac3",
+          "fc-081441e9",
+          "fc-e737228d"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Long-term, no expiry",
+        "evidence_refs": [
+          "fc-405c7e5c",
+          "fc-a9f9573f"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "Reused until deleted; up to two keys.",
+        "evidence_refs": [
+          "fc-405c7e5c"
+        ]
+      },
+      "administration": {
+        "summary": "Only the root user can create its keys. With centralized root access (AWS Organizations), the management account or delegated admin can delete member-account root keys, and new accounts start without root credentials. Control Tower provides an SCP denying root iam:CreateAccessKey.",
+        "conditions": "Requires AWS Organizations; centralized root access must be enabled.",
+        "evidence_refs": [
+          "fc-1d5dee53",
+          "fc-3684e253"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "AWS says root user access keys cannot be used with MFA-protected API access.",
+          "evidence_refs": [
+            "fc-56f0ccfa"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "The IAM credential report includes the root user and access key status for each account.",
+          "evidence_refs": [
+            "fc-23db6390"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "IAM console > Credential report > Download Report",
+          "api": "GenerateCredentialReport, then GetCredentialReport",
+          "cli": "aws iam generate-credential-report; aws iam get-credential-report",
+          "evidence_refs": [
+            "fc-23db6390"
+          ]
+        },
+        "network": {
+          "ui": "AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account (member accounts only)",
+          "api": null,
+          "cli": "aws organizations create-policy --type SERVICE_CONTROL_POLICY; aws organizations attach-policy",
+          "evidence_refs": [
+            "fc-bf544ac3",
+            "fc-72343915",
+            "fc-b9b7e785"
+          ]
+        },
+        "reads": {
+          "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+          "api": null,
+          "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+          "evidence_refs": [
+            "fc-bcd7adf9",
+            "fc-0b07a9e0"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "AKIA",
+          "notes": "Same AKIA format as IAM user keys."
+        },
+        "log_sources": [
+          {
+            "name": "AWS CloudTrail event history",
+            "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+          },
+          {
+            "name": "CloudTrail trail / event data store",
+            "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "userIdentity.accessKeyId",
+            "log": "CloudTrail",
+            "notes": "Key ID used to sign the request; may be empty for security reasons."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "CreateAccessKey",
+            "stage": "create",
+            "notes": "Root-only; console or API."
+          },
+          {
+            "event": "DeleteAccessKey",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "userIdentity.type Root",
+          "userIdentity.accessKeyId",
+          "sourceIPAddress"
+        ],
+        "anomaly_cues": [
+          "Any root key use",
+          "Root key creation in a member account"
+        ],
+        "containment": {
+          "steps": "Delete the key as root, or from the management account via centralized root access management.",
+          "kills_existing": "yes",
+          "notes": "Root permissions cannot be scoped down by IAM policy, so deletion is the only fix."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether temporary credentials created by root via GetSessionToken survive key deletion."
+        ],
+        "evidence_refs": [
+          "fc-a9f9573f",
+          "fc-024655eb",
+          "fc-3684e253",
+          "fc-e737228d"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST sts:GetCallerIdentity",
+            "reveals": "Account, ARN, user/role ID",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetCallerIdentity",
+            "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GetAccountAuthorizationDetails",
+            "reveals": "All IAM users, groups, roles, policies",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "GetAccountAuthorizationDetails",
+            "log_notes": "IAM management event."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET / (s3:ListBuckets)",
+            "reveals": "All buckets owned by the account",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": "ListBuckets",
+            "log_notes": "Management/data classification not verified on fetched pages."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /{Key} (s3:GetObject)",
+            "reveals": "Object contents",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "GetObject",
+            "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-024655eb",
+          "fc-bcd7adf9",
+          "fc-3ae233ca",
+          "fc-e422ae4f",
+          "fc-0ec1c9ec",
+          "fc-a8e9c769"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Root Account Access Key Created",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_root_access_key_created.yml",
+          "detects": "An access key was created for the root user."
+        },
+        {
+          "source": "Panther",
+          "title": "AWS STS GetCallerIdentity via TruffleHog",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_sts_getcalleridentity_trufflehog.yml",
+          "detects": "GetCallerIdentity with a TruffleHog user agent, used to check whether leaked access keys still work."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS STS GetCallerIdentity Enumeration Via TruffleHog",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_sts_getcalleridentity_trufflehog.yml",
+          "detects": "GetCallerIdentity with a TruffleHog user agent."
+        },
+        {
+          "source": "Sigma",
+          "title": "PUA - AWS TruffleHog Execution",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_cloudtrail_pua_trufflehog.yml",
+          "detects": "Any CloudTrail event with the TruffleHog user agent."
+        },
+        {
+          "source": "Panther",
+          "title": "Root Account Activity",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_root_activity.yml",
+          "detects": "Write actions by the root user (console or root access key), excluding service-invoked events."
+        },
+        {
+          "source": "Sigma",
+          "title": "AWS Root Credentials",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_root_account_usage.yml",
+          "detects": "Any root user activity that is not an AWS service event."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-024655eb",
+      "title": "Logging IAM and AWS STS API calls with AWS CloudTrail - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/cloudtrail-integration.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-081441e9",
+      "title": "Service control policies (SCPs) - AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0b07a9e0",
+      "title": "Viewing recent management events with the console",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/view-cloudtrail-events-console.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0ec1c9ec",
+      "title": "GetObject - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-128b9c71",
+      "title": "Update access keys - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys_retrieve.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1d5dee53",
+      "title": "Strongly recommended controls with preventive behavior - AWS Control Tower",
+      "url": "https://docs.aws.amazon.com/controltower/latest/controlreference/strongly-recommended-preventive-controls.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-23db6390",
+      "title": "Generate credential reports for your AWS account - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3684e253",
+      "title": "Centralize root access for member accounts - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3ae233ca",
+      "title": "GetCallerIdentity - AWS Security Token Service",
+      "url": "https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-405c7e5c",
+      "title": "Manage access keys for IAM users - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4c37fa68",
+      "title": "Create access keys for the root user - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user_manage_add-key.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-56f0ccfa",
+      "title": "Secure API access with MFA - IAM",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_configure-api-require.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-72343915",
+      "title": "Creating organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_create.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8e9c769",
+      "title": "GetAccountAuthorizationDetails - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetAccountAuthorizationDetails.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a9f9573f",
+      "title": "Programmatic access with AWS security credentials - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds-programmatic-access.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae269843",
+      "title": "AWS global condition context keys - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9b7e785",
+      "title": "Attaching organization policies with AWS Organizations",
+      "url": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_policies_attach.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bcd7adf9",
+      "title": "Logging data events - AWS CloudTrail",
+      "url": "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf544ac3",
+      "title": "AWS: Denies access to AWS based on the source IP - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_examples_aws_deny-ip.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e422ae4f",
+      "title": "ListBuckets - Amazon S3",
+      "url": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListBuckets.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e737228d",
+      "title": "Disabling permissions for temporary security credentials - AWS Identity and Access Management",
+      "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_control-access_disable-perms.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

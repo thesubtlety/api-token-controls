@@ -1,0 +1,559 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "databricks",
+      "name": "Databricks (AWS baseline)",
+      "scope_notes": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+      "controls": [
+        {
+          "name": "Personal Access Tokens (workspace toggle)",
+          "effect": "disable",
+          "applies_to": [
+            "databricks-3"
+          ],
+          "what": "Turns off PAT authentication for a workspace; existing tokens are not deleted.",
+          "setting": "Workspace Settings > Advanced > Personal Access Tokens",
+          "plan": "Premium or above",
+          "default": "on",
+          "level": "workspace",
+          "evidence_refs": [
+            "turn24search1"
+          ],
+          "quote": "enabled by default for all Databricks workspaces."
+        },
+        {
+          "name": "Personal access token permissions (CAN USE)",
+          "effect": "limit_resources",
+          "applies_to": [
+            "databricks-3"
+          ],
+          "what": "Restricts which users, groups and service principals can create and use PATs.",
+          "setting": "Workspace Settings > Advanced > Personal Access Tokens > Permissions; Permissions API",
+          "plan": "Premium or above",
+          "default": "varies",
+          "level": "workspace",
+          "evidence_refs": [
+            "turn24search7"
+          ],
+          "quote": "User cannot create or use personal access tokens to authenticate to the Databricks workspace."
+        },
+        {
+          "name": "maxTokenLifetimeDays",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "databricks-3"
+          ],
+          "what": "Caps lifetime of new PATs (default 730 days); does not affect existing tokens.",
+          "setting": "Workspace configuration API / CLI (no UI)",
+          "plan": "Premium or above",
+          "default": "on",
+          "level": "workspace",
+          "evidence_refs": [
+            "turn24search1"
+          ],
+          "quote": "730 days (two years)"
+        },
+        {
+          "name": "Automatic revocation of unused PATs",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "databricks-3"
+          ],
+          "what": "PATs not used for 90 days are revoked automatically.",
+          "setting": "Automatic (not configurable per docs)",
+          "plan": null,
+          "default": "on",
+          "level": "workspace",
+          "evidence_refs": [
+            "turn24search1"
+          ],
+          "quote": "Databricks automatically revokes personal access tokens that haven't been used in 90 or more days."
+        },
+        {
+          "name": "Token report and revoke (account console)",
+          "effect": "revoke",
+          "applies_to": [
+            "databricks-3"
+          ],
+          "what": "Account admins list PATs across workspaces and revoke them.",
+          "setting": "Account console > Security > Token report; databricks token-management delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "turn24search1"
+          ],
+          "quote": "select a token and click Revoke."
+        },
+        {
+          "name": "IP access lists",
+          "effect": "limit_network",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2",
+            "databricks-3",
+            "databricks-4"
+          ],
+          "what": "Restrict account console/account APIs and workspace/workspace APIs to approved IPs.",
+          "setting": "Account console IP access lists; workspace IP Access List API",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "workspace",
+          "evidence_refs": [
+            "turn5search18"
+          ],
+          "quote": "The default allows connections from any IP address."
+        },
+        {
+          "name": "Context-based ingress policies",
+          "effect": "limit_network",
+          "applies_to": [
+            "databricks-1",
+            "databricks-2",
+            "databricks-3",
+            "databricks-4"
+          ],
+          "what": "Account-level allow/deny rules combining identity, network source and request scope, e.g. pinning service principals to trusted networks.",
+          "setting": "Account console network policies (account admin)",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-d0d16207"
+          ],
+          "quote": "allow and deny rules that combine who is calling, from where they are calling, and what they can reach"
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No account-wide switch to disable PATs across all workspaces was found; the toggle is per workspace.",
+        "Whether IP access lists explicitly cover PAT/OAuth API calls is implied (workspace-level APIs) but not stated.",
+        "Whether context-based ingress rules can distinguish auth method (PAT vs OAuth) is not stated.",
+        "How to update or delete federation policies, and how to revoke an individual OAuth secret, were not covered on the fetched pages.",
+        "TTL min/max ranges, and whether built-in databricks-cli app follows app-connection TTL defaults, not confirmed.",
+        "Single-use refresh token details page returned 404; defaults per app not confirmed.",
+        "Azure/GCP capabilities and tiers not checked."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "databricks-3",
+      "provider_id": "databricks",
+      "name": "Legacy PAT",
+      "family": "pat",
+      "principal": "user_or_service",
+      "lifecycle": "legacy",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth user-to-machine and machine-to-machine, external token federation, and legacy personal access tokens.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Enterprise tier. Separate account/workspace IP lists protect public UI/API access; PrivateLink traffic is not filtered by them. Context-based ingress (Enterprise) can add rules combining identity (e.g. service principal), network source and access type.",
+        "evidence_refs": [
+          "turn5search18",
+          "turn24search7",
+          "turn24search1",
+          "fc-d0d16207"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 63072000,
+        "configurable": "yes",
+        "summary": "Default maximum 730 days; admins can reduce it (new tokens only). Unused PATs are auto-revoked after 90 days.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1",
+          "fc-8b8d94a9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not_applicable",
+        "summary": "Admins can impose a shorter PAT maximum, control who can create/use PATs and revoke them. Setting custom max to 0 restores 730-day system default.",
+        "evidence_refs": [
+          "turn5search2",
+          "turn5search6",
+          "turn5search26",
+          "turn24search1"
+        ]
+      },
+      "administration": {
+        "summary": "Service principals, entitlements/resource ACLs, federation policies, PAT controls and context-based ingress controls.",
+        "conditions": "AWS IP-access-list docs require Enterprise tier. Azure/GCP capabilities and licensing must be checked separately.",
+        "evidence_refs": [
+          "turn5search18",
+          "turn24search7",
+          "turn24search1"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Tokens of a deactivated user stop working (they remain but cannot authenticate); SCIM removal deactivates the user.",
+          "evidence_refs": [
+            "fc-2c40808e",
+            "fc-b6acac67"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Account console > Security > Token report; workspace Token Management API (databricks token-management list).",
+          "evidence_refs": [
+            "turn24search1"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": null,
+          "api": "SQL: SELECT * FROM system.access.audit WHERE service_name='workspace' AND action_name='workspaceExport' (filter user_identity.email)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ae5ed64d",
+            "fc-1f6728c3"
+          ]
+        },
+        "offboard": {
+          "ui": "Remove the user from the IdP account-level SCIM connector (deactivates the user)",
+          "api": "PATCH /api/2.1/accounts/{account_id}/scim/v2/Users/{id} with active=false",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2c40808e",
+            "fc-b6acac67"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "dapi",
+          "notes": "Prefix from official legacy Tokens CLI example (dapi + 32 chars); regex inferred from example, not documented. GitHub type databricks_access_token, push protection and validity checks."
+        },
+        "log_sources": [
+          {
+            "name": "Databricks audit logs (system.access.audit system table / audit log delivery)",
+            "notes": "Account- and workspace-level events; account-level rows have workspace_id 0. No general retention stated on the table page; events of a deleted workspace older than 14 days are removed."
+          },
+          {
+            "name": "Account console token report / Token Management API",
+            "notes": "Lists token_id, owner_id, created_by_id, creation_time, expiry_time, last_used_day; filter by owner, workspace, last used."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "request_params.tokenId",
+            "log": "system.access.audit (accounts.tokenLogin)",
+            "notes": "Token used to authenticate"
+          },
+          {
+            "field": "request_params.tokenHash",
+            "log": "system.access.audit (generateDbToken/revokeDbToken/changeDbTokenState)",
+            "notes": "Hash of the token in lifecycle events"
+          },
+          {
+            "field": "request_params.userId",
+            "log": "system.access.audit (token management events)",
+            "notes": "Token owner"
+          },
+          {
+            "field": "request_params.tokenCreatedBy",
+            "log": "system.access.audit (generateDbToken)",
+            "notes": "Creator (on-behalf-of tokens for SPs)"
+          },
+          {
+            "field": "token_id",
+            "log": "Token Management API",
+            "notes": "Use to revoke"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "accounts.generateDbToken",
+            "stage": "create",
+            "notes": "Params tokenExpirationTime, tokenCreatedBy, tokenHash, userId"
+          },
+          {
+            "event": "accounts.tokenLogin",
+            "stage": "use",
+            "notes": "Params tokenId, user, authenticationMethod"
+          },
+          {
+            "event": "accounts.updateDbToken",
+            "stage": "change",
+            "notes": "Scopes changed"
+          },
+          {
+            "event": "accounts.updateOnBehalfOfToken",
+            "stage": "change",
+            "notes": "On-behalf-of token changed"
+          },
+          {
+            "event": "accounts.changeDbTokenState",
+            "stage": "revoke",
+            "notes": "Token disabled"
+          },
+          {
+            "event": "accounts.revokeDbToken",
+            "stage": "revoke",
+            "notes": "Token dropped; also on user removal"
+          },
+          {
+            "event": "accounts.garbageCollectDbToken",
+            "stage": "revoke",
+            "notes": "Expired token cleanup; includes tokenFirstAccessed"
+          }
+        ],
+        "correlation_keys": [
+          "user_identity.email",
+          "identity_metadata.run_by",
+          "identity_metadata.run_as",
+          "source_ip_address",
+          "user_agent",
+          "session_id",
+          "workspace_id",
+          "request_params",
+          "request_params.tokenId",
+          "request_params.tokenHash",
+          "request_params.userId"
+        ],
+        "anomaly_cues": [
+          "tokenLogin for a tokenId from a new source_ip_address or user_agent",
+          "tokenLogin for a token owned by a deactivated or IdP-removed user",
+          "generateDbToken with long tokenExpirationTime created right after an interactive login from an unusual IP",
+          "dormant token (old last_used_day) suddenly active",
+          "burst of generateDbToken across workspaces by one user",
+          "GitHub secret scanning alert for databricks_access_token"
+        ],
+        "containment": {
+          "steps": "Revoke: databricks token-management delete TOKEN_ID (DELETE /api/2.0/token-management/tokens/{token_id}) or account console token report > Revoke; owner can run databricks tokens revoke --token-id. Deactivate owner if compromised.",
+          "kills_existing": "yes",
+          "notes": "PAT is the bearer credential itself; docs do not state propagation delay. Tokens of deactivated users are not auto-revoked."
+        },
+        "sample_query": {
+          "language": "Databricks SQL (system.access.audit)",
+          "query": "SELECT request_params['tokenId'] AS token_id, user_identity.email, source_ip_address, user_agent, min(event_time) AS first_seen, count(*) AS uses FROM system.access.audit WHERE service_name = 'accounts' AND action_name = 'tokenLogin' AND event_date >= current_date() - INTERVAL 7 DAYS GROUP BY ALL ORDER BY first_seen DESC",
+          "purpose": "Find PATs used from new IPs or user agents"
+        },
+        "unknown": [
+          "official PAT regex/length",
+          "relationship between tokenLogin tokenId and lifecycle tokenHash",
+          "authenticationMethod values",
+          "revocation propagation delay",
+          "exact audit_level value for workspace events"
+        ],
+        "evidence_refs": [
+          "fc-1f6728c3",
+          "fc-ae5ed64d",
+          "fc-c0b2c80d",
+          "fc-8b8d94a9",
+          "turn24search1",
+          "fc-479062c7",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /api/2.0/workspace/export",
+            "reveals": "Notebook or whole-directory contents (source code, sometimes embedded secrets/results)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "workspace.workspaceExport",
+            "log_notes": "Audit log / system.access.audit; user_identity shows the caller. Docs describe the event as a notebook export."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-0c3101b7",
+          "fc-1f6728c3",
+          "fc-ae5ed64d"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Databricks Long-Lifetime Token Generated",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/databricks_rules/databricks_long_lifetime_token_generated.yml",
+          "detects": "A personal access token was generated with a lifetime over 72 hours."
+        },
+        {
+          "source": "Panther",
+          "title": "Databricks Access Token Revoked",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/databricks_rules/databricks_access_token_revoked.yml",
+          "detects": "A Databricks access token was revoked."
+        },
+        {
+          "source": "Panther",
+          "title": "Databricks TruffleHog Scan Detected",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/databricks_rules/databricks_trufflehog_scan_detected.yml",
+          "detects": "Any Databricks API request with a TruffleHog user agent, which indicates a leaked token being validated."
+        },
+        {
+          "source": "Panther",
+          "title": "Databricks Non-SSO Login Detected",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/databricks_rules/databricks_non_sso_login.yml",
+          "detects": "Successful logins that did not use SAML SSO, including token logins with a PAT."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0c3101b7",
+      "title": "Export a workspace object | Databricks API Reference",
+      "url": "https://docs.databricks.com/api/workspace/workspace/export",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1f6728c3",
+      "title": "Audit log reference (Account-level authentication events)",
+      "url": "https://docs.databricks.com/aws/en/admin/account-settings/audit-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2c40808e",
+      "title": "Manage users | Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/admin/users-groups/users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-479062c7",
+      "title": "Token Management API - Delete a token",
+      "url": "https://docs.databricks.com/api/workspace/tokenmanagement/delete",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8b8d94a9",
+      "title": "Authenticate with Databricks personal access tokens (legacy) - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/pat",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae5ed64d",
+      "title": "Audit log system table reference",
+      "url": "https://docs.databricks.com/aws/en/admin/system-tables/audit-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b6acac67",
+      "title": "Sync users and groups from your identity provider using SCIM | Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/admin/users-groups/scim/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c0b2c80d",
+      "title": "Tokens CLI (legacy)",
+      "url": "https://docs.databricks.com/dev-tools/cli/tokens-cli.html",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d0d16207",
+      "title": "Context-based ingress control - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/network/front-end/context-based-ingress",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn24search1",
+      "title": "Monitor and revoke personal access tokens - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/admin/access-control/tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn24search7",
+      "title": "Manage personal access token permissions - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/auth/api-access-permissions",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search18",
+      "title": "Manage IP access lists - Databricks on AWS",
+      "url": "https://docs.databricks.com/aws/en/security/network/front-end/ip-access-list",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search2",
+      "title": "Authenticate access to Databricks using OAuth token federation ...",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-federation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search26",
+      "title": "Authorize service principal access to Databricks with OAuth ...",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-m2m",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search6",
+      "title": "Authenticate with an identity provider token - Databricks",
+      "url": "https://docs.databricks.com/aws/en/dev-tools/auth/oauth-federation-exchange",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

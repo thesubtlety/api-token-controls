@@ -1,0 +1,333 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "glean",
+      "name": "Glean",
+      "scope_notes": "Glean-hosted enterprise SaaS (single tenant, <instance>-be.glean.com); plan tiers are not documented for these controls, and log delivery to customer storage needs Glean account team setup.",
+      "controls": [
+        {
+          "name": "Revoke API token",
+          "effect": "revoke",
+          "applies_to": [
+            "glean-1",
+            "glean-2",
+            "glean-3"
+          ],
+          "what": "Revokes a Glean-issued token.",
+          "setting": "Admin console > Platform > API tokens",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d67398fb"
+          ]
+        },
+        {
+          "name": "Token creation roles",
+          "effect": "require_approval",
+          "applies_to": [
+            "glean-1",
+            "glean-2",
+            "glean-3"
+          ],
+          "what": "Only admin roles or API Token Creator can create tokens; global scope needs Super Admin.",
+          "setting": "Admin console > User roles",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-cd8ae899",
+            "fc-d7429b32",
+            "fc-765e2605"
+          ]
+        },
+        {
+          "name": "Greenlisted IPs",
+          "effect": "limit_network",
+          "applies_to": [
+            "glean-3"
+          ],
+          "what": "Per-token CIDR allowlist enforced on Indexing API requests.",
+          "setting": "Indexing token creation > Greenlisted IPs",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d7429b32"
+          ]
+        },
+        {
+          "name": "Expires On (required)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "glean-3"
+          ],
+          "what": "Indexing tokens must have an expiry date.",
+          "setting": "Indexing token creation",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d7429b32"
+          ]
+        },
+        {
+          "name": "Rotation Period",
+          "effect": "require_rotation",
+          "applies_to": [
+            "glean-3"
+          ],
+          "what": "Token must be rotated via /rotatetoken within the set period (min 24h).",
+          "setting": "Indexing token creation > Rotation Settings",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d7429b32",
+            "fc-93fd96da"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "glean-3",
+          "what": "OAuth/federated auth is not available for the Indexing API; only static Glean-issued tokens.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-d7429b32"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether revoking a Glean-issued API token takes effect immediately",
+        "Whether user deprovisioning revokes that user's Glean-issued API tokens",
+        "Whether admin audit logs record API token create/revoke (coverage list does not mention tokens)",
+        "Per-token IP allowlist for Client API tokens",
+        "Default OAuth server state (admin docs: off; developer docs: on)",
+        "Where the tenant-wide IP greenlist is configured and whether customers manage it",
+        "EMA token lifetime"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "glean-3",
+      "provider_id": "glean",
+      "name": "Indexing API token",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Glean-issued bearer token for /api/index/v1 (push documents, permissions, datasources). Global or limited to selected datasources. OAuth is not accepted.",
+        "evidence_refs": [
+          "fc-d7429b32"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Glean-issued only.",
+        "evidence_refs": [
+          "fc-d7429b32"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Optional per-token Greenlisted IPs (CIDR); requests from other IPs get 403.",
+        "evidence_refs": [
+          "fc-d7429b32"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Expiry date required at creation",
+        "evidence_refs": [
+          "fc-d7429b32"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "fixed date; rotation does not extend it",
+        "summary": "Optional rotation via /rotatetoken (min period 24h); old secret works 10 more minutes.",
+        "evidence_refs": [
+          "fc-ed7d1e9e",
+          "fc-d7429b32",
+          "fc-93fd96da"
+        ]
+      },
+      "administration": {
+        "summary": "Setup Admins, Admins and Super Admins create tokens; only Super Admins grant global scope.",
+        "conditions": "Revoke from the API tokens page.",
+        "evidence_refs": [
+          "fc-d7429b32",
+          "fc-d67398fb"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Indexing tokens give service-level access, not user access.",
+          "evidence_refs": [
+            "fc-d7429b32"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admin console > Platform > API tokens (Indexing Tokens tab).",
+          "evidence_refs": [
+            "fc-d67398fb"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Admin console → Users & permissions → Audit logs; filter, Export to CSV (config changes only)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-2ca66beb"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "glean_",
+          "notes": "Example only."
+        },
+        "log_sources": [
+          {
+            "name": "Admin audit logs",
+            "notes": "Config changes; 30 days default."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "datasource name"
+        ],
+        "anomaly_cues": [
+          "403 IP not allowed errors",
+          "Unexpected permission or document updates in a datasource"
+        ],
+        "containment": {
+          "steps": "Revoke the token in API tokens (Indexing tab).",
+          "kills_existing": "unknown",
+          "notes": "After a rotation the old secret works for 10 more minutes."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Logging of indexing API calls"
+        ],
+        "evidence_refs": [
+          "fc-d67398fb",
+          "fc-d7429b32",
+          "fc-ed7d1e9e",
+          "fc-2ca66beb"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST /api/index/v1/getdatasourceconfig",
+            "reveals": "Datasource config",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-df39305e",
+          "fc-93fd96da"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-2ca66beb",
+      "title": "Audit Logs | Glean Docs",
+      "url": "https://docs.glean.com/administration/management/audit-logs/admin-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-765e2605",
+      "title": "Administrator Roles",
+      "url": "https://docs.glean.com/administration/identity/roles/admin-roles",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-93fd96da",
+      "title": "Rotate token",
+      "url": "https://developers.glean.com/api/indexing-api/rotate-token",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cd8ae899",
+      "title": "Glean-Issued Tokens for Client API",
+      "url": "https://developers.glean.com/api-info/client/authentication/glean-issued",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d67398fb",
+      "title": "API Tokens | Glean Docs",
+      "url": "https://docs.glean.com/administration/developer/api-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7429b32",
+      "title": "Indexing API Authentication",
+      "url": "https://developers.glean.com/api-info/indexing/authentication/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-df39305e",
+      "title": "Get datasource config",
+      "url": "https://developers.glean.com/api/indexing-api/get-datasource-config",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed7d1e9e",
+      "title": "Token Rotation",
+      "url": "https://developers.glean.com/api-info/indexing/authentication/token-rotation",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

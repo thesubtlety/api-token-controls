@@ -1,0 +1,447 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "devin",
+      "name": "Devin",
+      "scope_notes": "Covers Devin (Cognition). Cognition-hosted SaaS on Teams and Enterprise plans; PAT policy, IP access lists, enterprise service users, audit log API and SCIM are Enterprise features.",
+      "controls": [
+        {
+          "name": "PAT policy",
+          "effect": "disable",
+          "applies_to": [
+            "devin-2"
+          ],
+          "what": "Disabled, Approval required, or Self serve for all orgs in the enterprise.",
+          "setting": "Enterprise settings > Devin API > PAT policies",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-afe65dae",
+            "fc-113ec1ab"
+          ]
+        },
+        {
+          "name": "PAT approval workflow",
+          "effect": "require_approval",
+          "applies_to": [
+            "devin-2"
+          ],
+          "what": "Admins approve or deny each PAT request; requests lapse after 7 days.",
+          "setting": "PAT policies > Approval queue",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        },
+        {
+          "name": "PAT expiration policy",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "devin-2"
+          ],
+          "what": "Requires expiry, capped at 365 days by default or shorter.",
+          "setting": "PAT policies",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        },
+        {
+          "name": "PAT inventory revoke",
+          "effect": "revoke",
+          "applies_to": [
+            "devin-2"
+          ],
+          "what": "Admin revokes any user's PAT, one at a time; policy changes can bulk-revoke noncompliant tokens.",
+          "setting": "PAT policies > PAT inventory",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-113ec1ab",
+            "fc-3e18b5ad"
+          ]
+        },
+        {
+          "name": "Automatic PAT revocation on deprovision",
+          "effect": "revoke",
+          "applies_to": [
+            "devin-2"
+          ],
+          "what": "PATs revoked when a user leaves the account, incl. SCIM.",
+          "setting": "Automatic",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        },
+        {
+          "name": "Rotate / Revoke PAT",
+          "effect": "revoke",
+          "applies_to": [
+            "devin-2"
+          ],
+          "what": "Owner rotates (old secret stops immediately) or revokes.",
+          "setting": "Settings > Devin API > PATs",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        },
+        {
+          "name": "IP Access Lists",
+          "effect": "limit_network",
+          "applies_to": [
+            "devin-1",
+            "devin-2",
+            "devin-3"
+          ],
+          "what": "Only allowed CIDRs can reach Devin APIs and webapp.",
+          "setting": "/v3/enterprise/ip-access-list (ManageIPWhitelist)",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-224e4437"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "devin-2",
+          "what": "Teams (non-enterprise) accounts have no PAT policy and may create non-expiring PATs.",
+          "kind": "expiry",
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        },
+        {
+          "path_id": "devin-2",
+          "what": "PATs cannot be scoped below the user's full permissions.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether API tokens are blocked when SSO is enforced or bypass IdP conditional access (not stated)",
+        "Inbound workload federation for the Devin API (audit actions exist, no guide found)",
+        "Where the static service user key policy is set in the UI",
+        "Audit log retention period",
+        "Whether read calls (list sessions, list knowledge) are audited",
+        "Legacy key expiry and whether a v3 setting disables them",
+        "Whether revoking a service user key ends access immediately"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "devin-2",
+      "provider_id": "devin",
+      "name": "Personal Access Token (PAT)",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "cog_ bearer token that acts as the human user with all of that user's permissions in every org they belong to. Used by the Devin CLI, desktop apps, MCP and API.",
+        "evidence_refs": [
+          "fc-afe65dae",
+          "fc-113ec1ab"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static token.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Enterprise IP access list applies to API requests.",
+        "evidence_refs": [
+          "fc-224e4437"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": 31536000,
+        "configurable": "yes",
+        "summary": "Enterprise: expiry required, max 365 days by default (shorter configurable); Teams: may never expire",
+        "evidence_refs": [
+          "fc-113ec1ab"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "fixed date",
+        "summary": "Rotate generates a new secret; old secret stops immediately.",
+        "evidence_refs": [
+          "fc-113ec1ab"
+        ]
+      },
+      "administration": {
+        "summary": "Enterprise PAT policy: Disabled (default), Approval required, or Self serve. Admins see a PAT inventory and can revoke tokens. PATs are revoked when the user loses membership, including SCIM deprovisioning.",
+        "conditions": "No policy controls on Teams plans.",
+        "evidence_refs": [
+          "fc-afe65dae",
+          "fc-113ec1ab"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "PATs are revoked automatically when the user loses account membership, including through SCIM deprovisioning or IdP group changes.",
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "The PAT inventory view on the enterprise PAT policies tab lists PATs across the enterprise (Enterprise; needs Manage account API keys).",
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Enterprise settings > Devin API > PAT policies > PAT inventory",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        },
+        "expiry": {
+          "ui": "Enterprise settings > Devin API > PAT policies (maximum lifetime); PAT inventory shows each token's expiration date",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        },
+        "usage": {
+          "ui": null,
+          "api": "GET /v3/enterprise/audit-logs; filter results on user_id / user_email",
+          "cli": null,
+          "evidence_refs": [
+            "fc-3e18b5ad"
+          ]
+        },
+        "kill": {
+          "ui": "Enterprise settings > Devin API > PAT policies > PAT inventory > Revoke (row); or set policy to Disabled to revoke all",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-113ec1ab"
+          ]
+        },
+        "offboard": {
+          "ui": "Settings > Membership > remove member; or deactivate the user in the IdP (SCIM)",
+          "api": "DELETE /v3/enterprise/members/users/{user_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-113ec1ab",
+            "fc-eaa03bdb",
+            "fc-31dc69bc",
+            "fc-049c9e41"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "cog_",
+          "notes": "Shown once."
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs API",
+            "notes": "Enterprise. Email notifications for PAT lifecycle."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "user_id / user_email",
+            "log": "audit log",
+            "notes": "PAT actions attributed to the user."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "create_pat",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "rotate_pat",
+            "stage": "rotate",
+            "notes": ""
+          },
+          {
+            "event": "revoke_pat",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "policy_revoke_pat",
+            "stage": "revoke",
+            "notes": "Revoked by policy change"
+          },
+          {
+            "event": "approve_pat_request",
+            "stage": "other",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "user_id",
+          "org_id"
+        ],
+        "anomaly_cues": [
+          "create_pat right after approve_pat_request for a departing user",
+          "search_query or create_session volume spike"
+        ],
+        "containment": {
+          "steps": "Admin revokes from PAT inventory, or switch PAT policy to Disabled, or remove the user (auto-revokes).",
+          "kills_existing": "yes",
+          "notes": "Rotation stops the old secret immediately; revoke is documented as invalidating the token."
+        },
+        "sample_query": "GET /v3/enterprise/audit-logs?action=create_pat",
+        "unknown": [],
+        "evidence_refs": [
+          "fc-113ec1ab",
+          "fc-3e18b5ad"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v3/self",
+            "reveals": "pat_user identity",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v3/organizations/{org_id}/sessions",
+            "reveals": "Sessions the user can view",
+            "bulk": true,
+            "scope": "ViewOrgSessions",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-c274a10d",
+          "fc-d82dd168"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-049c9e41",
+      "title": "SCIM Setup",
+      "url": "https://docs.devin.ai/enterprise/security-access/scim",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-113ec1ab",
+      "title": "Personal Access Tokens | Devin Docs",
+      "url": "https://docs.devin.ai/api-reference/personal-access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-224e4437",
+      "title": "IP Access Lists | Devin Docs",
+      "url": "https://docs.devin.ai/enterprise/security-access/ip-access-lists",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-31dc69bc",
+      "title": "Invite your Team",
+      "url": "https://docs.devin.ai/product-guides/invite-team",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3e18b5ad",
+      "title": "List Audit Logs | Devin API",
+      "url": "https://docs.devin.ai/api-reference/v3/audit-logs/enterprise-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-afe65dae",
+      "title": "Authentication | Devin Docs",
+      "url": "https://docs.devin.ai/api-reference/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c274a10d",
+      "title": "Get Self | Devin API",
+      "url": "https://docs.devin.ai/api-reference/v3/self/self",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d82dd168",
+      "title": "List Sessions | Devin API",
+      "url": "https://docs.devin.ai/api-reference/v3/sessions/organizations-sessions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-eaa03bdb",
+      "title": "Delete User (Devin API v3)",
+      "url": "https://docs.devin.ai/api-reference/v3/users/delete-members-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

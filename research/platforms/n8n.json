@@ -1,0 +1,1210 @@
+{
+ "id": "n8n",
+ "name": "n8n",
+ "scope_notes": "Covers n8n (Cloud and self-hosted). Public API is on Cloud Starter/Pro/Enterprise and all self-hosted editions (not free trial); key scopes, log streaming and token exchange are Enterprise; env-var controls apply only to self-hosted.",
+ "controls": [
+  {
+   "name": "N8N_PUBLIC_API_DISABLED",
+   "effect": "disable",
+   "applies_to": [
+    "n8n-1"
+   ],
+   "what": "Turns off the public REST API for the whole instance.",
+   "setting": "Environment variable N8N_PUBLIC_API_DISABLED=true",
+   "plan": "Self-hosted only",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-3ab7b99e"
+   ]
+  },
+  {
+   "name": "API key scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "n8n-1"
+   ],
+   "what": "Limits a key to chosen resource:action scopes.",
+   "setting": "Settings > n8n API > Create an API key > Scopes",
+   "plan": "Enterprise",
+   "default": "varies",
+   "level": "user",
+   "evidence_refs": [
+    "fc-5f556b2f"
+   ]
+  },
+  {
+   "name": "API key expiration",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "n8n-1"
+   ],
+   "what": "Key creator sets an expiration time.",
+   "setting": "Settings > n8n API > Create an API key > Expiration",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-5f556b2f"
+   ]
+  },
+  {
+   "name": "Delete API key",
+   "effect": "revoke",
+   "applies_to": [
+    "n8n-1"
+   ],
+   "what": "Deletes the key.",
+   "setting": "Settings > n8n API > Delete > Delete Forever",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-5f556b2f"
+   ]
+  },
+  {
+   "name": "Enable/Disable MCP access",
+   "effect": "disable",
+   "applies_to": [
+    "n8n-2",
+    "n8n-3"
+   ],
+   "what": "Turns the instance MCP server on or off; disabling disconnects every client.",
+   "setting": "Settings > Instance-level MCP > Connection details",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-14e7d164"
+   ]
+  },
+  {
+   "name": "N8N_DISABLED_MODULES=mcp",
+   "effect": "disable",
+   "applies_to": [
+    "n8n-2",
+    "n8n-3"
+   ],
+   "what": "Removes MCP endpoints entirely.",
+   "setting": "Environment variable",
+   "plan": "Self-hosted only",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-14e7d164"
+   ]
+  },
+  {
+   "name": "Per-workflow MCP access",
+   "effect": "limit_resources",
+   "applies_to": [
+    "n8n-2",
+    "n8n-3"
+   ],
+   "what": "Only workflows marked Available in MCP can be read in full, run or edited.",
+   "setting": "Workflow settings > Available in MCP; Settings > Instance-level MCP > Workflows enabled",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-14e7d164"
+   ]
+  },
+  {
+   "name": "Rotate MCP access token",
+   "effect": "revoke",
+   "applies_to": [
+    "n8n-2"
+   ],
+   "what": "Generating a new token revokes the old one.",
+   "setting": "Settings > Instance-level MCP > Connect > API key tab",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-14e7d164"
+   ]
+  },
+  {
+   "name": "Revoke access (connected clients)",
+   "effect": "revoke",
+   "applies_to": [
+    "n8n-3"
+   ],
+   "what": "Disconnects an OAuth MCP client immediately.",
+   "setting": "Settings > Instance-level MCP > Connected clients > Revoke access",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-14e7d164"
+   ]
+  },
+  {
+   "name": "Allowed callback URLs",
+   "effect": "limit_network",
+   "applies_to": [
+    "n8n-3"
+   ],
+   "what": "Restricts which redirect URLs can finish an MCP OAuth sign-in.",
+   "setting": "Settings > Instance-level MCP > Access > Allowed callback URLs",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-14e7d164"
+   ]
+  },
+  {
+   "name": "allowedRoles (trusted key source)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "n8n-4"
+   ],
+   "what": "Restricts which roles token exchange may assign.",
+   "setting": "N8N_TOKEN_EXCHANGE_TRUSTED_KEYS entry",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ae6fefe7"
+   ]
+  },
+  {
+   "name": "N8N_TOKEN_EXCHANGE_MAX_TOKEN_TTL",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "n8n-4"
+   ],
+   "what": "Caps issued token lifetime.",
+   "setting": "Environment variable",
+   "plan": "Enterprise",
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ae6fefe7"
+   ]
+  },
+  {
+   "name": "Credential type policy",
+   "effect": "limit_resources",
+   "applies_to": [
+    "n8n-5"
+   ],
+   "what": "Instance or project rules for which credential types are allowed.",
+   "setting": "PUT /credential-type-policies/instance",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ad70504a"
+   ]
+  },
+  {
+   "name": "Allowed HTTP Request Domains",
+   "effect": "limit_network",
+   "applies_to": [
+    "n8n-5"
+   ],
+   "what": "Limits which domains a credential can be sent to from the HTTP Request node.",
+   "setting": "Credential modal > Allowed HTTP Request Domains",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-657765be"
+   ]
+  },
+  {
+   "name": "N8N_TOKEN_EXCHANGE_ENABLED",
+   "effect": "disable",
+   "applies_to": [
+    "n8n-4"
+   ],
+   "what": "Token exchange is off unless this environment variable is true; the endpoint then returns 501. The preview flag N8N_ENV_FEAT_TOKEN_EXCHANGE must also be set to turn it on.",
+   "setting": "Environment variable N8N_TOKEN_EXCHANGE_ENABLED: leave unset or false to keep it off (Cloud: ask n8n support)",
+   "plan": "Enterprise",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-ae6fefe7"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "n8n-1",
+   "what": "Scopes to limit a key are not available outside Enterprise; those keys have full account access.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-5f556b2f"
+   ]
+  },
+  {
+   "path_id": "n8n-3",
+   "what": "No admin approval step for MCP OAuth clients; any signed-in user can approve one while MCP is on.",
+   "kind": "disable",
+   "evidence_refs": [
+    "fc-14e7d164"
+   ]
+  },
+  {
+   "path_id": "n8n-4",
+   "what": "Removing a compromised signing key does not end already-issued tokens or sessions.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-ae6fefe7"
+   ]
+  },
+  {
+   "path_id": "n8n-4",
+   "what": "OAuth scope and resource in the exchange request are not enforced.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-ae6fefe7"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether n8n API keys or MCP tokens are rejected when SSO is enforced or when a user is deleted",
+  "Any IP allowlist for API or MCP requests on n8n Cloud",
+  "Whether an admin can list or revoke other users' API keys or MCP API-key tokens",
+  "Whether 'no expiration' is an option for API keys, and default/maximum lifetime",
+  "MCP OAuth access/refresh token lifetimes",
+  "Whether public API read calls (GET /workflows, /executions, /credentials) produce any audit event",
+  "Audit log retention (log streaming forwards events; retention is in the customer destination)"
+ ],
+ "credentials": [
+  {
+   "id": "n8n-1",
+   "name": "n8n API key (public REST API)",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Each user creates keys in Settings > n8n API. The key is sent in the X-N8N-API-KEY header to /api/v1 and acts as that user.",
+    "evidence_refs": [
+     "fc-5f556b2f",
+     "fc-c678a036"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key; no workload federation for API keys documented.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No n8n-side IP allowlist for the API is documented; self-hosted operators can only restrict at their own network edge.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Expiration chosen at creation",
+    "evidence_refs": [
+     "fc-5f556b2f"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "fixed at creation",
+    "summary": "Create a new key and delete the old one.",
+    "evidence_refs": [
+     "fc-5f556b2f"
+    ]
+   },
+   "administration": {
+    "summary": "Self-hosted admins can turn off the whole public API with N8N_PUBLIC_API_DISABLED. Scopes only exist on Enterprise; other editions get full access.",
+    "conditions": "No per-user admin block or approval flow documented for Cloud.",
+    "evidence_refs": [
+     "fc-5f556b2f",
+     "fc-3ab7b99e"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "disable": {
+     "ui": null,
+     "api": null,
+     "cli": "export N8N_PUBLIC_API_DISABLED=true (self-hosted env var)",
+     "evidence_refs": [
+      "fc-3ab7b99e"
+     ]
+    },
+    "usage": {
+     "ui": "Settings > Log Streaming > Add new destination > Events: Audit (n8n.audit), Workflow (n8n.workflow); filter on userId (Enterprise)",
+     "api": null,
+     "cli": "N8N_LOG_STREAMING_MANAGED_BY_ENV=true N8N_LOG_STREAMING_DESTINATIONS='[{\"type\":\"webhook\",\"subscribedEvents\":[\"n8n.audit\",\"n8n.workflow\"],...}]'",
+     "evidence_refs": [
+      "fc-6945b4b5"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Prefix not documented. Sent in X-N8N-API-KEY header."
+    },
+    "log_sources": [
+     {
+      "name": "Log streaming (Audit group)",
+      "notes": "Enterprise. Destinations: syslog, webhook, Sentry. Retention depends on destination."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userId",
+      "log": "workflow events",
+      "notes": "Identifies the user, not the key. No key ID field documented."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "User API created",
+      "stage": "create",
+      "notes": "Display name in Settings > Log Streaming > Events."
+     },
+     {
+      "event": "User API deleted",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "userId",
+     "workflowId",
+     "executionId"
+    ],
+    "anomaly_cues": [
+     "User API created for an account that does not normally automate",
+     "Workflow created/updated/activated or Execution data revealed shortly after key creation"
+    ],
+    "containment": {
+     "steps": "Delete the key in Settings > n8n API (as the key owner). On self-hosted, N8N_PUBLIC_API_DISABLED=true stops all key use.",
+     "kills_existing": "unknown",
+     "notes": "Docs do not say whether deletion is immediate."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Per-request API logging",
+     "Key identifier in logs"
+    ],
+    "evidence_refs": [
+     "fc-5f556b2f",
+     "fc-3ab7b99e",
+     "fc-6945b4b5"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/v1/discover",
+      "reveals": "Endpoints and operations the key can use",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /api/v1/users",
+      "reveals": "All users (owner only)",
+      "bulk": true,
+      "scope": "user:list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /api/v1/credentials",
+      "reveals": "Credential metadata, no secrets",
+      "bulk": true,
+      "scope": "credential:list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /api/v1/workflows",
+      "reveals": "All workflows",
+      "bulk": true,
+      "scope": "workflow:list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /api/v1/executions?includeData=true",
+      "reveals": "Execution history and data",
+      "bulk": true,
+      "scope": "execution:list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "Rate limits",
+     "Whether reads are logged"
+    ],
+    "evidence_refs": [
+     "fc-2354aca5",
+     "fc-adf59c29",
+     "fc-6e891db0",
+     "fc-61e64f3a",
+     "fc-7536cb26"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "n8n-2",
+   "name": "MCP access token (instance-level MCP, API key tab)",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "n8n generates a personal access token per user for the instance MCP server, sent as Authorization: Bearer to the /mcp-server/http endpoint.",
+    "evidence_refs": [
+     "fc-14e7d164"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static bearer token.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented; rotate manually",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "manual rotation",
+    "summary": "Generating a new token revokes the previous one.",
+    "evidence_refs": [
+     "fc-14e7d164"
+    ]
+   },
+   "administration": {
+    "summary": "MCP is off until an owner/admin enables it; disabling it disconnects all clients. Self-hosted can remove the module or pin settings by env var. Only workflows explicitly enabled for MCP can be read in full or run.",
+    "conditions": "API-key clients do not appear in the Connected clients list, so admins cannot revoke them there.",
+    "evidence_refs": [
+     "fc-14e7d164",
+     "fc-e6e71189"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "API-key MCP clients do not appear in the Connected clients list; their tool calls show only in the n8n.audit.mcp.tool.called log with authType api_key (Enterprise log streaming).",
+     "evidence_refs": [
+      "fc-14e7d164",
+      "fc-6945b4b5"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "No list. Settings > Log Streaming: subscribe to n8n.audit.mcp; filter n8n.audit.mcp.tool.called on authType=api_key, group by userId (Settings > Instance-level MCP > Connected clients > View all lists only OAuth clients)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-6945b4b5",
+      "fc-14e7d164"
+     ]
+    },
+    "usage": {
+     "ui": "Settings > Log Streaming > Add new destination > Events: n8n.audit.mcp; filter authType=api_key and userId",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-6945b4b5"
+     ]
+    },
+    "reads": {
+     "ui": "Settings > Log Streaming > Events: n8n.audit.mcp; filter event n8n.audit.mcp.tool.called with authType=api_key; see toolName, workflowId",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-6945b4b5"
+     ]
+    },
+    "kill": {
+     "ui": "Token owner: Settings > Instance-level MCP > Connect > API key tab > generate new token (revokes old). Admin: Connection details > MCP status > Disable (revokes all clients)",
+     "api": null,
+     "cli": "N8N_DISABLED_MODULES=mcp (self-hosted, removes MCP endpoints)",
+     "evidence_refs": [
+      "fc-14e7d164"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Bearer token; prefix not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Log streaming: n8n.audit.mcp.*",
+      "notes": "Enterprise; from n8n 2.34.0."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "authType",
+      "log": "n8n.audit.mcp.tool.called",
+      "notes": "api_key for any non-OAuth bearer token."
+     },
+     {
+      "field": "userId",
+      "log": "n8n.audit.mcp.tool.called",
+      "notes": "Token owner."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "n8n.audit.mcp.tool.called",
+      "stage": "use",
+      "notes": "Includes toolName, workflowId, status."
+     },
+     {
+      "event": "n8n.audit.mcp.access.updated",
+      "stage": "other",
+      "notes": "Instance MCP turned on/off."
+     }
+    ],
+    "correlation_keys": [
+     "userId",
+     "toolName",
+     "workflowId"
+    ],
+    "anomaly_cues": [
+     "authType=api_key tool calls from a user who normally uses OAuth",
+     "execute_workflow or search_workflows bursts"
+    ],
+    "containment": {
+     "steps": "Owner rotates the token (revokes old). Admin can disable instance MCP, which revokes all clients.",
+     "kills_existing": "yes",
+     "notes": "Rotation revokes the previous token; no token creation event documented."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Token creation/rotation event"
+    ],
+    "evidence_refs": [
+     "fc-6945b4b5",
+     "fc-14e7d164"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "MCP tool search_workflows",
+      "reveals": "Previews of all workflows the user can view",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "n8n.audit.mcp.tool.called",
+      "log_notes": "Enterprise log streaming"
+     },
+     {
+      "stage": "collection",
+      "call": "MCP tool execute_workflow",
+      "reveals": "Runs MCP-enabled workflows",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "n8n.audit.mcp.tool.called",
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-6945b4b5",
+     "fc-14e7d164"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "n8n-3",
+   "name": "MCP OAuth client connection",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An MCP client (Claude, ChatGPT, Cursor, etc.) runs an OAuth flow; the user approves it in n8n and the client gets the permissions granted at consent.",
+    "evidence_refs": [
+     "fc-14e7d164"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "User OAuth consent, not workload federation.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Not documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Not documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "not documented",
+    "summary": "Log docs mention the client's token refreshes; lifetimes are not documented.",
+    "evidence_refs": []
+   },
+   "administration": {
+    "summary": "Any signed-in user can approve a client while MCP is on. Owners/admins can restrict OAuth callback URLs (default allows any) and revoke clients for all users.",
+    "conditions": "No per-client admin approval.",
+    "evidence_refs": [
+     "fc-14e7d164"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Settings > Instance-level MCP > Connected clients > View all, all-users view lists every connected OAuth client.",
+     "evidence_refs": [
+      "fc-14e7d164"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Settings > Log Streaming > Add new destination > Events: n8n.audit.mcp; filter authType=oauth, group by clientId",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-6945b4b5"
+     ]
+    },
+    "reads": {
+     "ui": "Settings > Log Streaming > Events: n8n.audit.mcp; filter event n8n.audit.mcp.tool.called with authType=oauth and clientId",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-6945b4b5"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "OAuth access token."
+    },
+    "log_sources": [
+     {
+      "name": "Log streaming: n8n.audit.mcp.*",
+      "notes": "Enterprise; from n8n 2.34.0."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "clientId",
+      "log": "n8n.audit.mcp.oauth.completed, n8n.audit.mcp.tool.called",
+      "notes": "Stable per client registration."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "n8n.audit.mcp.oauth.completed",
+      "stage": "create",
+      "notes": "userId, clientId, clientName."
+     },
+     {
+      "event": "n8n.audit.mcp.tool.called",
+      "stage": "use",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "clientId",
+     "userId"
+    ],
+    "anomaly_cues": [
+     "New clientName not in approved list",
+     "Callback URL mode left at All callback URLs"
+    ],
+    "containment": {
+     "steps": "Settings > Instance-level MCP > Connected clients > Revoke access (all-users view for others).",
+     "kills_existing": "yes",
+     "notes": "Client is disconnected at once."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Revocation event name"
+    ],
+    "evidence_refs": [
+     "fc-6945b4b5",
+     "fc-14e7d164"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "MCP tool search_workflows",
+      "reveals": "Workflow previews",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "n8n.audit.mcp.tool.called",
+      "log_notes": "clientId present"
+     },
+     {
+      "stage": "collection",
+      "call": "MCP tool search_workflows",
+      "reveals": "Previews of every workflow the user can view",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "n8n.audit.mcp.tool.called",
+      "log_notes": "Log streaming is Enterprise only; MCP audit events from n8n 2.34.0."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-6945b4b5",
+     "fc-14e7d164"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "n8n-4",
+   "name": "Token exchange access token (OEM embedding, preview)",
+   "family": "federation",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A partner backend signs a short-lived JWT; n8n verifies it against trusted keys and returns a bearer access token (or a session cookie for iframe SSO).",
+    "evidence_refs": [
+     "fc-ae6fefe7"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "RFC 8693 exchange using static public keys or a JWKS URL in N8N_TOKEN_EXCHANGE_TRUSTED_KEYS. Requested scope is recorded but not enforced.",
+    "evidence_refs": [
+     "fc-ae6fefe7"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Only per-IP rate limits on the exchange endpoint are documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 900,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Min of subject/actor JWT lifetime and N8N_TOKEN_EXCHANGE_MAX_TOKEN_TTL (default 15 min)",
+    "evidence_refs": [
+     "fc-ae6fefe7"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "short TTL",
+    "summary": "Mint a new external JWT (jti is single-use) and exchange again.",
+    "evidence_refs": [
+     "fc-ae6fefe7"
+    ]
+   },
+   "administration": {
+    "summary": "Off unless N8N_ENV_FEAT_TOKEN_EXCHANGE and the per-flow toggles are set. allowedRoles limits which roles the JWT can assign.",
+    "conditions": "Enterprise; Cloud requires n8n support to enable.",
+    "evidence_refs": [
+     "fc-ae6fefe7"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Issuance requires a JWT signed by the partner's trusted IdP/backend; n8n's own SSO settings are not described as applying.",
+     "evidence_refs": [
+      "fc-ae6fefe7"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "No token list; issued tokens are visible only through n8n.audit.token-exchange.* audit events.",
+     "evidence_refs": [
+      "fc-ae6fefe7"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "No list. Settings > Log Streaming > Events: Audit > Token exchange succeeded (n8n.audit.token-exchange.succeeded)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-6945b4b5",
+      "fc-ae6fefe7"
+     ]
+    },
+    "disable": {
+     "ui": null,
+     "api": null,
+     "cli": "Leave N8N_TOKEN_EXCHANGE_ENABLED unset or not true (endpoint returns 501); Cloud: ask n8n support",
+     "evidence_refs": [
+      "fc-ae6fefe7"
+     ]
+    },
+    "sso": {
+     "ui": null,
+     "api": null,
+     "cli": "Set N8N_TOKEN_EXCHANGE_TRUSTED_KEYS to your IdP/backend key sources with issuer, expectedAudience and allowedRoles",
+     "evidence_refs": [
+      "fc-ae6fefe7"
+     ]
+    },
+    "expiry": {
+     "ui": null,
+     "api": "POST /rest/auth/oauth/token response field expires_in",
+     "cli": "N8N_TOKEN_EXCHANGE_MAX_TOKEN_TTL=<seconds> (default 900)",
+     "evidence_refs": [
+      "fc-ae6fefe7"
+     ]
+    },
+    "usage": {
+     "ui": "Settings > Log Streaming > Add new destination > Events: n8n.audit.token-exchange.* (Enterprise)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-6945b4b5",
+      "fc-ae6fefe7"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "n8n-issued JWT access token."
+    },
+    "log_sources": [
+     {
+      "name": "Log streaming: n8n.audit.token-exchange.*",
+      "notes": "Enterprise."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "not documented",
+      "log": "token exchange events",
+      "notes": "Scope and resource are recorded in audit events per the page."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "n8n.audit.token-exchange.succeeded",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "n8n.audit.token-exchange.failed",
+      "stage": "create",
+      "notes": "With failure reason."
+     },
+     {
+      "event": "n8n.audit.token-exchange.user-provisioned",
+      "stage": "other",
+      "notes": "JIT user created."
+     }
+    ],
+    "correlation_keys": [
+     "userId"
+    ],
+    "anomaly_cues": [
+     "Exchanges assigning global:admin",
+     "User provisioned for unexpected email"
+    ],
+    "containment": {
+     "steps": "Remove the trusted key entry; set N8N_TOKEN_EXCHANGE_ENABLED=false.",
+     "kills_existing": "no",
+     "notes": "Issued tokens stay valid until expiry (default max 15 min)."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-ae6fefe7"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /api/v1/workflows (Authorization: Bearer)",
+      "reveals": "Workflows visible to the acting user",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-7536cb26"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "n8n-5",
+   "name": "Stored credentials (third-party secrets held by n8n)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Secrets for external services saved in n8n and used by workflow nodes. A compromised n8n account or API key can use them through workflows; the API does not return secret values.",
+    "evidence_refs": [
+     "fc-657765be",
+     "fc-2354aca5"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Depends on the external service.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Allowed HTTP Request Domains limits where a credential can be sent from the HTTP Request node only; not a source-IP control.",
+    "evidence_refs": [
+     "fc-657765be"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Set by the external service",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "external",
+    "summary": "Rotate at the external service and update the credential.",
+    "evidence_refs": []
+   },
+   "administration": {
+    "summary": "Admins can set an instance or project credential type policy via the API.",
+    "conditions": "Plan for credential type policy not stated.",
+    "evidence_refs": [
+     "fc-ad70504a"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "On user deletion the admin chooses to transfer the user's credentials to another user or delete them; the secret stays valid at the external service either way.",
+     "evidence_refs": [
+      "fc-84ad41aa"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /api/v1/credentials lists all credentials on the instance for owner/admin.",
+     "evidence_refs": [
+      "fc-2354aca5"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Settings > Log Streaming > Events: Audit (User credentials created/shared/updated/deleted) and Workflow (n8n.workflow.*, by workflowId)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-6945b4b5"
+     ]
+    },
+    "offboard": {
+     "ui": "Settings > Users > three-dot menu > Delete user > transfer or delete their credentials; then rotate the secret at the external service",
+     "api": "DELETE /api/v1/users/{userId}?transferId={projectId} (omit transferId to delete credentials)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-84ad41aa",
+      "fc-7d67617c",
+      "fc-d6223128"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "External service formats."
+    },
+    "log_sources": [
+     {
+      "name": "Log streaming (Audit group)",
+      "notes": "Enterprise."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "not documented",
+      "log": "User credentials * events",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "User credentials created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "User credentials shared",
+      "stage": "other",
+      "notes": ""
+     },
+     {
+      "event": "User credentials deleted",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "userId",
+     "workflowId"
+    ],
+    "anomaly_cues": [
+     "Credential shared or transferred to a new project",
+     "New workflow using HTTP Request node with a credential set to All domains"
+    ],
+    "containment": {
+     "steps": "Rotate the secret at the external service, then update or delete the n8n credential.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether credential use by workflows is logged per credential"
+    ],
+    "evidence_refs": [
+     "fc-6945b4b5"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "enumeration",
+      "call": "GET /api/v1/credentials",
+      "reveals": "Credential names and types, not secrets",
+      "bulk": true,
+      "scope": "credential:list",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-2354aca5"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

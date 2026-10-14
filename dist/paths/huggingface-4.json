@@ -1,0 +1,245 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "scope_notes": "Covers Hugging Face Hub (Team / Enterprise / Enterprise Plus). Hosted Hub; token management needs Team or Enterprise, org revoke and service accounts need Enterprise, IP ranges need Enterprise Plus. Inference Endpoints use the same user access tokens.",
+      "controls": [
+        {
+          "name": "hf_oauth_expiration_minutes",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "huggingface-4"
+          ],
+          "what": "Sets OAuth token lifetime for a Space's Sign in with HF (default 480 min, max 43200 min).",
+          "setting": "Space README.md metadata",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-393b24b6"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Admin-enforced expiry for user access tokens or service account tokens (no setting found; PATs are valid until revoked).",
+        "Whether access tokens require or bypass an SSO session under Basic or Managed SSO.",
+        "Org-level allowlist or block for third-party OAuth apps.",
+        "Org-level control over who can configure Trusted Publishers on org repos.",
+        "Exact audit event name for OAuth Token Exchange issuance (docs say exchanges are logged).",
+        "Whether IP ranges apply to OAuth, Token Exchange and Trusted Publisher tokens."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "huggingface-4",
+      "provider_id": "huggingface",
+      "name": "OAuth app access token (Sign in with HF)",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "User authorizes an OAuth/OIDC app (with or without client secret, incl. device code) for scopes such as read-repos, write-repos, inference-api.",
+        "evidence_refs": [
+          "fc-6bd457a1"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Basic SSO prompts members when accessing org resources; docs do not say whether access tokens require an SSO session.",
+        "evidence_refs": [
+          "fc-497f8174"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Network Security text names access tokens generally; OAuth tokens not addressed.",
+        "evidence_refs": [
+          "fc-772a90c6"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 28800,
+        "maximum_seconds": 2592000,
+        "configurable": "conditional",
+        "summary": "Spaces OAuth: default 8 h, max 30 days via hf_oauth_expiration_minutes; non-Spaces apps not stated",
+        "evidence_refs": [
+          "fc-393b24b6"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "unknown",
+        "summary": "Not documented for interactive flows.",
+        "evidence_refs": []
+      },
+      "administration": {
+        "summary": "User chooses which orgs to grant at consent. No org-admin app allowlist documented.",
+        "conditions": "",
+        "evidence_refs": [
+          "fc-6bd457a1"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Space README.md YAML metadata: hf_oauth_expiration_minutes (default 480, max 43200)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-393b24b6"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "hf_oauth_",
+          "notes": "Prefix shown for token-exchange and user-resource tokens"
+        },
+        "log_sources": [
+          {
+            "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+            "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "token id (24-char, org token settings)",
+          "username",
+          "anonymized IP/location"
+        ],
+        "anomaly_cues": [
+          "Token never rotated or unused for long periods in org token listing",
+          "Unexpected org.token_approval.authorization_request"
+        ],
+        "containment": {
+          "steps": "User revokes the app in their settings (path not documented).",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "Admin revocation of user-granted OAuth apps"
+        ],
+        "evidence_refs": [
+          "fc-6bd457a1",
+          "fc-e1e6add6"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/whoami-v2",
+            "reveals": "User, orgs and auth method of the token",
+            "bulk": false,
+            "scope": "openid profile",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Not among the documented audit event types"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+            "reveals": "File contents (models, datasets)",
+            "bulk": true,
+            "scope": "read-repos",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Org audit log has no download events"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-e1e6add6",
+          "fc-6bd457a1",
+          "fc-5fdecf58"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-393b24b6",
+      "title": "Adding a Sign-In with HF button to your Space",
+      "url": "https://huggingface.co/docs/hub/spaces-oauth",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-497f8174",
+      "title": "Single Sign-On (SSO)",
+      "url": "https://huggingface.co/docs/hub/enterprise-sso",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5fdecf58",
+      "title": "Hub OpenAPI",
+      "url": "https://huggingface.co/.well-known/openapi.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6bd457a1",
+      "title": "Sign in with Hugging Face",
+      "url": "https://huggingface.co/docs/hub/oauth",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-772a90c6",
+      "title": "Network Security",
+      "url": "https://huggingface.co/docs/hub/enterprise-network-security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e1e6add6",
+      "title": "Audit Logs",
+      "url": "https://huggingface.co/docs/hub/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

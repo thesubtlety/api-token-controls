@@ -1,0 +1,516 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "github",
+      "name": "GitHub Enterprise Cloud",
+      "scope_notes": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+      "controls": [
+        {
+          "name": "IP allow list",
+          "effect": "limit_network",
+          "applies_to": [
+            "github-1",
+            "github-2",
+            "github-3",
+            "github-4",
+            "github-5",
+            "github-6",
+            "github-7"
+          ],
+          "what": "Blocks PATs, OAuth app tokens, SSH/deploy keys, GitHub App tokens and GITHUB_TOKEN from non-allowed IPs (not user-installed apps' installation tokens).",
+          "setting": "Org settings > Authentication security > IP allow list; Enterprise settings > Authentication security",
+          "plan": "GitHub Enterprise Cloud",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-62eef186"
+          ],
+          "quote": "IP allow lists don't currently restrict access when a GitHub App is installed on a user account and uses server-to-server installation tokens to access an organization or enterprise."
+        },
+        {
+          "name": "Deploy keys (allow/disallow creation)",
+          "effect": "disable",
+          "applies_to": [
+            "github-7"
+          ],
+          "what": "Disallowing deploy keys blocks creation and disables existing deploy keys in all org repos.",
+          "setting": "Org settings > Repository > Deploy keys; Enterprise settings > Policies > Repository > Deploy keys",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-15a30966"
+          ],
+          "quote": "By default, new organizations are configured to disallow the creation of deploy keys in repositories."
+        },
+        {
+          "name": "Enforcing a policy for deploy keys (enterprise)",
+          "effect": "disable",
+          "applies_to": [
+            "github-7"
+          ],
+          "what": "Enterprise owners allow, restrict, or delegate deploy key creation for all orgs; disabling disables existing keys.",
+          "setting": "Enterprise settings > Policies > Repository > Deploy keys",
+          "plan": "GitHub Enterprise Cloud",
+          "default": "varies",
+          "level": "enterprise",
+          "evidence_refs": [
+            "fc-8e3337ea"
+          ],
+          "quote": "Changing this setting to disabled will result in existing deploy keys being disabled in all repositories in the enterprise."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether admins can set a maximum lifetime for GitHub App user access tokens or OAuth app tokens (only app-developer settings found).",
+        "Whether GITHUB_TOKEN workflow permission defaults can be made non-overridable."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "github-7",
+      "provider_id": "github",
+      "name": "Deploy key",
+      "family": "ssh_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An SSH key pair whose public key is attached to a single repository; the private key stays on the server and authenticates Git operations over SSH. Keys are read-only by default, and write access can be granted when the key is added.",
+        "evidence_refs": [
+          "fc-b704f822"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static SSH key registered on the repository; no external identity exchange is involved.",
+        "evidence_refs": [
+          "fc-b704f822"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "An organization or enterprise IP allow list (GitHub Enterprise Cloud only) covers SSH keys, including deploy keys, for organization-owned repositories. IdP conditional access policy (CAP) IP conditions, used with OIDC for Enterprise Managed Users, do not apply to deploy keys because they do not act on behalf of a user.",
+        "evidence_refs": [
+          "fc-62eef186",
+          "fc-893dd68a"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "No expiry; valid until deleted or disabled",
+        "evidence_refs": [
+          "fc-b704f822"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "The same key is reused until a repository admin deletes it or deploy keys are disabled by policy; removing the user who added it does not deactivate it.",
+        "evidence_refs": [
+          "fc-b704f822"
+        ]
+      },
+      "administration": {
+        "summary": "Added in repository settings by someone with access to them, or through the REST API (fine-grained tokens need repository Administration write). Organization owners can disable deploy key creation, and enterprise owners can set the policy for all organizations; disabling the setting also disables existing deploy keys. Additions and removals are logged as public_key.create and public_key.delete audit events.",
+        "conditions": "One key per repository; a key can't be reused across repositories. New organizations disallow deploy key creation by default. A write-enabled key can do what an organization member with admin access can do on that repository. A key created through the API with a personal access token or OAuth app token is deleted when that token is deleted or revoked; keys created with GitHub App tokens are not. Keys are not tied to organization membership.",
+        "evidence_refs": [
+          "fc-15a30966",
+          "fc-8e3337ea",
+          "fc-86c9980e",
+          "fc-b704f822",
+          "fc-02b10eb4",
+          "fc-c4dd261f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Deploy keys are repository-scoped, are not SSO-authorized, and IdP CAP IP conditions do not apply to them.",
+          "evidence_refs": [
+            "fc-893dd68a"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Deploy keys are tied to the repository; they stay active when the creating user is removed.",
+          "evidence_refs": [
+            "fc-69a967b6"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Only per repository via GET /repos/{owner}/{repo}/keys or repo settings; deploy keys are not in the enterprise credential inventory types.",
+          "evidence_refs": [
+            "fc-a5f7d52c",
+            "fc-71c3f719"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Enterprise Settings > Audit log > Export Git Events; filter JSON on action git.clone and hashed_token (deploy-key token data is public preview)",
+          "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+          "cli": null,
+          "evidence_refs": [
+            "fc-aa029406",
+            "fc-ce6df4bc",
+            "fc-19c68525",
+            "fc-69839963"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "SSH key pair, no prefix. Private key matched by secret type github_ssh_private_key. Identify by fingerprint."
+        },
+        "log_sources": [
+          {
+            "name": "GitHub organization/enterprise audit log",
+            "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+          },
+          {
+            "name": "Audit log streaming (enterprise)",
+            "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+          },
+          {
+            "name": "Enterprise credential inventory export",
+            "notes": "CSV with hashed_token, credential_id and SSH key fingerprint to match against audit events."
+          },
+          {
+            "name": "Deploy keys REST",
+            "notes": "GET /repos/{owner}/{repo}/keys: id, title, read_only, added_by, last_used, enabled."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "fingerprint",
+            "log": "audit log (public_key.*)",
+            "notes": "Key fingerprint"
+          },
+          {
+            "field": "deploy_key_fingerprint",
+            "log": "audit log (e.g. protected_branch events)",
+            "notes": "Deploy key that acted"
+          },
+          {
+            "field": "read_only",
+            "log": "audit log / REST",
+            "notes": "Write-capable if false"
+          },
+          {
+            "field": "hashed_token",
+            "log": "audit log",
+            "notes": "Token data for deploy keys is public preview"
+          },
+          {
+            "field": "last_used",
+            "log": "Deploy keys REST",
+            "notes": "Last use time"
+          },
+          {
+            "field": "added_by",
+            "log": "Deploy keys REST",
+            "notes": "Who added it"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "public_key.create",
+            "stage": "create",
+            "notes": "Deploy key or SSH key added"
+          },
+          {
+            "event": "public_key.update",
+            "stage": "change",
+            "notes": "Key updated"
+          },
+          {
+            "event": "public_key.delete",
+            "stage": "revoke",
+            "notes": "Key removed"
+          },
+          {
+            "event": "git.clone",
+            "stage": "use",
+            "notes": "7-day retention unless streamed"
+          },
+          {
+            "event": "git.push",
+            "stage": "use",
+            "notes": "Write keys only"
+          }
+        ],
+        "correlation_keys": [
+          "actor",
+          "fingerprint",
+          "deploy_key_fingerprint",
+          "repo",
+          "transport_protocol_name",
+          "actor_ip",
+          "created_at"
+        ],
+        "anomaly_cues": [
+          "public_key.create with read_only false on a repo that only needs reads",
+          "git.push via a deploy key outside deploy windows",
+          "clone by a deploy key from an IP that is not the deploy server",
+          "deploy key added by a user who is not a repo admin normally"
+        ],
+        "containment": {
+          "steps": "Repo admin deletes the key (UI or DELETE /repos/{owner}/{repo}/keys/{key_id}); org owner disables deploy keys org-wide; enterprise policy can disable them.",
+          "kills_existing": "yes",
+          "notes": "Org-wide disable disables existing keys immediately. Not covered by enterprise bulk credential actions or SSO revoke."
+        },
+        "sample_query": {
+          "language": "GitHub audit log search",
+          "query": "action:public_key.create repo:octo-org/app created:>=2026-09-01",
+          "purpose": "Find deploy keys added to a repo; check read_only and title."
+        },
+        "unknown": [
+          "fingerprint hash format in audit events",
+          "whether git.* events include deploy key fingerprint",
+          "failed SSH auth event"
+        ],
+        "evidence_refs": [
+          "turn3search28",
+          "fc-b07fe78b",
+          "fc-69839963",
+          "fc-1acc9cca",
+          "fc-86c9980e",
+          "fc-875fb1bf",
+          "fc-58ac0db8",
+          "fc-99bddc62",
+          "fc-846e1fd4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "ssh -T git@github.com",
+            "reveals": "greeting confirms the key authenticates; a deploy key authenticates to its single repository",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No documented audit event for an SSH auth test"
+          },
+          {
+            "stage": "collection",
+            "call": "git clone git@github.com:{owner}/{repo}.git",
+            "reveals": "full history of the one repository the key is attached to",
+            "bulk": true,
+            "scope": "deploy key (read-only by default)",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "git.clone",
+            "log_notes": "Git events Enterprise Cloud only; deploy-key token attribution is in public preview"
+          }
+        ],
+        "unknown": [
+          "Exact ssh -T greeting wording for a deploy key (docs show the user form only)",
+          "Whether deploy keys can call the REST API (not addressed in fetched docs)"
+        ],
+        "evidence_refs": [
+          "fc-6defd200",
+          "fc-b704f822",
+          "fc-19c68525",
+          "fc-69839963"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "GitHub User Access Key Created",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_user_access_key_created.yml",
+          "detects": "A new SSH public key was added (user SSH key or deploy key)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-02b10eb4",
+      "title": "Permissions required for fine-grained personal access tokens - GitHub Docs",
+      "url": "https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-15a30966",
+      "title": "Restricting deploy keys in your organization - GitHub Enterprise Cloud Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-organization-settings/restricting-deploy-keys-in-your-organization",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-19c68525",
+      "title": "Audit log events for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/audit-log-events-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1acc9cca",
+      "title": "REST API endpoints for organizations (Get the audit log for an organization)",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/orgs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-58ac0db8",
+      "title": "Common security incident investigation areas",
+      "url": "https://docs.github.com/en/code-security/reference/security-incident-response/investigation-areas",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-62eef186",
+      "title": "Managing allowed IP addresses for your organization - GitHub Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/managing-allowed-ip-addresses-for-your-organization",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69839963",
+      "title": "Identifying audit log events performed by an access token",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/identifying-audit-log-events-performed-by-an-access-token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69a967b6",
+      "title": "Managing deploy keys",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/authentication/connecting-to-github-with-ssh/managing-deploy-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6defd200",
+      "title": "Testing your SSH connection",
+      "url": "https://docs.github.com/en/authentication/connecting-to-github-with-ssh/testing-your-ssh-connection",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-71c3f719",
+      "title": "Reviewing credentials in your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/respond-to-incidents/reviewing-credentials-in-your-enterprise",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-846e1fd4",
+      "title": "Supported secret scanning patterns",
+      "url": "https://docs.github.com/en/code-security/secret-scanning/introduction/supported-secret-scanning-patterns",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-86c9980e",
+      "title": "REST API endpoints for deploy keys - GitHub Docs",
+      "url": "https://docs.github.com/en/rest/deploy-keys/deploy-keys",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-875fb1bf",
+      "title": "Restricting deploy keys in your organization",
+      "url": "https://docs.github.com/en/organizations/managing-organization-settings/restricting-deploy-keys-in-your-organization",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-893dd68a",
+      "title": "About support for your IdP's Conditional Access Policy - GitHub Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/configuring-authentication-for-enterprise-managed-users/about-support-for-your-idps-conditional-access-policy",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8e3337ea",
+      "title": "Enforcing repository management policies in your enterprise - GitHub Enterprise Cloud Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/enforcing-policies/enforcing-policies-for-your-enterprise/enforcing-repository-management-policies-in-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-99bddc62",
+      "title": "Audit log for an enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/about-the-audit-log-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a5f7d52c",
+      "title": "REST API endpoints for deploy keys",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/rest/deploy-keys/deploy-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aa029406",
+      "title": "Exporting audit log activity for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/exporting-audit-log-activity-for-your-enterprise",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b07fe78b",
+      "title": "Audit log events for your organization",
+      "url": "https://docs.github.com/en/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/audit-log-events-for-your-organization",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b704f822",
+      "title": "Managing deploy keys - GitHub Docs",
+      "url": "https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c4dd261f",
+      "title": "Audit log events for your organization - GitHub Enterprise Cloud Docs",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/organizations/keeping-your-organization-secure/managing-security-settings-for-your-organization/audit-log-events-for-your-organization",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ce6df4bc",
+      "title": "Using the audit log API for your enterprise",
+      "url": "https://docs.github.com/en/enterprise-cloud@latest/admin/monitoring-activity-in-your-enterprise/reviewing-audit-logs-for-your-enterprise/using-the-audit-log-api-for-your-enterprise",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn3search28",
+      "title": "GitHub credential types reference",
+      "url": "https://docs.github.com/en/organizations/managing-programmatic-access-to-your-organization/github-credential-types",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

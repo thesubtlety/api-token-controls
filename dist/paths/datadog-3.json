@@ -1,0 +1,357 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "datadog",
+      "name": "Datadog",
+      "scope_notes": "IP documentation differs on entitlement (Pro+ via support vs Enterprise). Confirm contract. AWS WIF requires supported integration/configuration.",
+      "controls": [
+        {
+          "name": "Workload Identity Federation identity and intake mappings",
+          "effect": "limit_resources",
+          "applies_to": [
+            "datadog-3"
+          ],
+          "what": "Only AWS role ARNs matched by a mapping can authenticate, and each identity mapping grants exactly one Datadog user or service account's permissions.",
+          "setting": "Organization Settings > Workload Identity Federation > Identity Mappings / Intake Mappings; cloud_auth API",
+          "plan": "Not stated on page; requires Datadog-AWS integration",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn23search0"
+          ],
+          "quote": "Each mapping grants a cloud role the permissions of a specific Datadog user or service account."
+        },
+        {
+          "name": "Workload Identity Federation Write permission",
+          "effect": "disable",
+          "applies_to": [
+            "datadog-3"
+          ],
+          "what": "Only roles with this permission can add, change or remove federation mappings (Admin role by default).",
+          "setting": "Organization Settings > Roles",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-5e887a08"
+          ],
+          "quote": "Add, update, and remove workload identity federation configurations"
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "No org setting found that blocks personal application keys or forces service-account-only keys.",
+        "Whether the IP allowlist applies to API-key and client-token requests outside telemetry intake is not stated; entitlement differs between account docs (Pro+/Enterprise) and API reference (Enterprise).",
+        "Plan requirement for Agent-based WIF: current WIF page lists no tier; earlier material says Enterprise-only and preview.",
+        "How to delete or disable an identity mapping is not documented on the WIF page; intake mappings are deleted via API.",
+        "Whether custom roles (needed to narrow these permissions) require a specific plan was not confirmed."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "datadog-3",
+      "provider_id": "datadog",
+      "name": "AWS workload federation",
+      "family": "federation",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Organization API key, often combined with a user/service-account application key; OAuth for supported apps; workload federation for supported scenarios.",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "AWS identity (assumed-role ARN) maps to a Datadog user/service account for a temporary JWT (Terraform) or to an intake mapping for a managed API key (Agent). AWS is the only supported cloud; Agent flow not on US1-FED/US2-FED sites.",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "mixed",
+        "boundary": "Org IP allowlist applies to UI/API, with documented intake/public-dashboard exceptions. Not a per-key rule.",
+        "evidence_refs": [
+          "turn5search4",
+          "turn5search8",
+          "turn19search19"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Short-lived JWT; Datadog returns an expiry with the token; official Go client assumes 15 minutes if none is returned",
+        "evidence_refs": [
+          "fc-14a9c5e1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "policy",
+        "summary": "Terraform provider re-signs an AWS STS request to get a new temporary JWT. Agent receives a Datadog-managed API key that Datadog rotates; on failure the Agent falls back to the API key in datadog.yaml.",
+        "evidence_refs": [
+          "turn5search0",
+          "turn23search0",
+          "turn19search23"
+        ]
+      },
+      "administration": {
+        "summary": "Application-key scopes, service accounts, role permissions, OAuth grants, IP allowlist and key revocation.",
+        "conditions": "IP documentation differs on entitlement (Pro+ via support vs Enterprise). Confirm contract. AWS WIF requires supported integration/configuration.",
+        "evidence_refs": [
+          "turn5search4",
+          "turn5search8",
+          "turn19search19"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Identity mappings can be listed (Organization Settings > Workload Identity Federation, or GET /api/v2/cloud_auth/aws/persona_mapping); issued JWTs are not listed.",
+          "evidence_refs": [
+            "turn23search0"
+          ]
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "Organization Settings > Security > IP Allowlist (org-wide)",
+          "api": "PATCH /api/v2/ip_allowlist",
+          "cli": null,
+          "evidence_refs": [
+            "turn5search4",
+            "turn5search8"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "Read the expires attribute in the POST /api/v2/delegated-token response; not configurable (Go client assumes 15 min if absent)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-14a9c5e1"
+          ]
+        },
+        "reads": {
+          "ui": "Audit Trail explorer; query @evt.name:\"Log Management\" @asset.type:logs_query",
+          "api": "POST /api/v2/audit/events/search with that query",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2ab91e19",
+            "fc-29c5614b",
+            "fc-e14d7c2a"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Terraform flow gets a temporary JWT; Agent flow gets a Datadog-managed API key. No documented format."
+        },
+        "log_sources": [
+          {
+            "name": "Datadog Audit Trail",
+            "notes": "Request events for API calls plus product events; records @auth_method and key IDs. Default 90-day retention when enabled (3-90 days); 7 days when disabled."
+          },
+          {
+            "name": "AWS CloudTrail (customer side)",
+            "notes": "Role sessions whose credentials sign the STS GetCallerIdentity request."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "arn_pattern",
+            "log": "cloud_auth persona_mapping / intake_mapping config",
+            "notes": "Assumed-role ARN pattern mapped to Datadog identity"
+          },
+          {
+            "field": "account_identifier",
+            "log": "cloud_auth persona_mapping config",
+            "notes": "Datadog user email or service account mapped to"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "@usr.email",
+          "@usr.id",
+          "@network.client.ip",
+          "@http.useragent"
+        ],
+        "anomaly_cues": [
+          "New or broadened arn_pattern (wildcard) in a persona or intake mapping",
+          "Mapping to a human user instead of a service account",
+          "Federated identity calling from IPs outside the AWS workload's range",
+          "Agent falling back to static API key in datadog.yaml"
+        ],
+        "containment": {
+          "steps": "Delete intake mapping (DELETE /api/v2/cloud_auth/aws/intake_mapping/<MAPPING_UUID>); remove persona mapping; disable mapped service account; revoke the AWS role session on the AWS side.",
+          "kills_existing": "unknown",
+          "notes": "JWT lifetime not documented; Agent may fall back to configured static API key."
+        },
+        "sample_query": {
+          "language": "Datadog Audit Trail search",
+          "query": "@http.url_details.path:/api/v2/cloud_auth/aws/*",
+          "purpose": "Changes to AWS federation mappings"
+        },
+        "unknown": [
+          "@auth_method value for federated JWT",
+          "JWT lifetime",
+          "audit event names for mapping changes",
+          "credential id field for federated sessions"
+        ],
+        "evidence_refs": [
+          "turn23search0",
+          "fc-2ab91e19",
+          "fc-346bcc6d"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /api/v2/logs/events/search",
+            "reveals": "Log events, as the mapped user or service account",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "@evt.name:\"Log Management\" @asset.type:logs_query",
+            "log_notes": "WIF JWT is used for later API calls as the mapped identity; logs query appears as Audit Trail 'Query (Public Beta)' event."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-1bb0d6f3",
+          "fc-29c5614b"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-14a9c5e1",
+      "title": "datadog-api-client-go: delegated_auth.go",
+      "url": "https://github.com/DataDog/datadog-api-client-go/blob/master/api/datadog/delegated_auth.go",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1bb0d6f3",
+      "title": "Logs API: Search logs",
+      "url": "https://docs.datadoghq.com/api/latest/logs/search-logs-post/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-29c5614b",
+      "title": "Audit Trail Events",
+      "url": "https://docs.datadoghq.com/account_management/audit_trail/events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2ab91e19",
+      "title": "Datadog Audit Trail",
+      "url": "https://docs.datadoghq.com/account_management/audit_trail/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-346bcc6d",
+      "title": "dd.audit dataset (DDSQL)",
+      "url": "https://docs.datadoghq.com/ddsql_reference/data_directory/dd/dd.audit.dataset/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5e887a08",
+      "title": "Datadog Role Permissions",
+      "url": "https://docs.datadoghq.com/account_management/rbac/permissions/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e14d7c2a",
+      "title": "Audit API reference",
+      "url": "https://docs.datadoghq.com/api/latest/audit/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn19search19",
+      "title": "API and Application Keys",
+      "url": "https://docs.datadoghq.com/account_management/api-app-keys/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn19search23",
+      "title": "OAuth2 in Datadog",
+      "url": "https://docs.datadoghq.com/extend/authorization/oauth2_in_datadog/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn23search0",
+      "title": "Workload Identity Federation",
+      "url": "https://docs.datadoghq.com/account_management/workload_identity_federation/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search0",
+      "title": "API and Application Keys",
+      "url": "https://docs.datadoghq.com/account_management/api-app-keys/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search4",
+      "title": "IP Allowlist - Datadog Infrastructure and Application Monitoring",
+      "url": "https://docs.datadoghq.com/account_management/org_settings/ip_allowlist/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search8",
+      "title": "IP Allowlist - Datadog Infrastructure and Application Monitoring",
+      "url": "https://docs.datadoghq.com/api/latest/ip-allowlist/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,314 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "scope_notes": "Covers n8n (Cloud and self-hosted). Public API is on Cloud Starter/Pro/Enterprise and all self-hosted editions (not free trial); key scopes, log streaming and token exchange are Enterprise; env-var controls apply only to self-hosted.",
+      "controls": [
+        {
+          "name": "allowedRoles (trusted key source)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "n8n-4"
+          ],
+          "what": "Restricts which roles token exchange may assign.",
+          "setting": "N8N_TOKEN_EXCHANGE_TRUSTED_KEYS entry",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        },
+        {
+          "name": "N8N_TOKEN_EXCHANGE_MAX_TOKEN_TTL",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "n8n-4"
+          ],
+          "what": "Caps issued token lifetime.",
+          "setting": "Environment variable",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        },
+        {
+          "name": "N8N_TOKEN_EXCHANGE_ENABLED",
+          "effect": "disable",
+          "applies_to": [
+            "n8n-4"
+          ],
+          "what": "Token exchange is off unless this environment variable is true; the endpoint then returns 501. The preview flag N8N_ENV_FEAT_TOKEN_EXCHANGE must also be set to turn it on.",
+          "setting": "Environment variable N8N_TOKEN_EXCHANGE_ENABLED: leave unset or false to keep it off (Cloud: ask n8n support)",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "n8n-4",
+          "what": "Removing a compromised signing key does not end already-issued tokens or sessions.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        },
+        {
+          "path_id": "n8n-4",
+          "what": "OAuth scope and resource in the exchange request are not enforced.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether n8n API keys or MCP tokens are rejected when SSO is enforced or when a user is deleted",
+        "Any IP allowlist for API or MCP requests on n8n Cloud",
+        "Whether an admin can list or revoke other users' API keys or MCP API-key tokens",
+        "Whether 'no expiration' is an option for API keys, and default/maximum lifetime",
+        "MCP OAuth access/refresh token lifetimes",
+        "Whether public API read calls (GET /workflows, /executions, /credentials) produce any audit event",
+        "Audit log retention (log streaming forwards events; retention is in the customer destination)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "n8n-4",
+      "provider_id": "n8n",
+      "name": "Token exchange access token (OEM embedding, preview)",
+      "family": "federation",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A partner backend signs a short-lived JWT; n8n verifies it against trusted keys and returns a bearer access token (or a session cookie for iframe SSO).",
+        "evidence_refs": [
+          "fc-ae6fefe7"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "RFC 8693 exchange using static public keys or a JWKS URL in N8N_TOKEN_EXCHANGE_TRUSTED_KEYS. Requested scope is recorded but not enforced.",
+        "evidence_refs": [
+          "fc-ae6fefe7"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Only per-IP rate limits on the exchange endpoint are documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 900,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Min of subject/actor JWT lifetime and N8N_TOKEN_EXCHANGE_MAX_TOKEN_TTL (default 15 min)",
+        "evidence_refs": [
+          "fc-ae6fefe7"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "short TTL",
+        "summary": "Mint a new external JWT (jti is single-use) and exchange again.",
+        "evidence_refs": [
+          "fc-ae6fefe7"
+        ]
+      },
+      "administration": {
+        "summary": "Off unless N8N_ENV_FEAT_TOKEN_EXCHANGE and the per-flow toggles are set. allowedRoles limits which roles the JWT can assign.",
+        "conditions": "Enterprise; Cloud requires n8n support to enable.",
+        "evidence_refs": [
+          "fc-ae6fefe7"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "Issuance requires a JWT signed by the partner's trusted IdP/backend; n8n's own SSO settings are not described as applying.",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "No token list; issued tokens are visible only through n8n.audit.token-exchange.* audit events.",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "No list. Settings > Log Streaming > Events: Audit > Token exchange succeeded (n8n.audit.token-exchange.succeeded)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-6945b4b5",
+            "fc-ae6fefe7"
+          ]
+        },
+        "disable": {
+          "ui": null,
+          "api": null,
+          "cli": "Leave N8N_TOKEN_EXCHANGE_ENABLED unset or not true (endpoint returns 501); Cloud: ask n8n support",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        },
+        "sso": {
+          "ui": null,
+          "api": null,
+          "cli": "Set N8N_TOKEN_EXCHANGE_TRUSTED_KEYS to your IdP/backend key sources with issuer, expectedAudience and allowedRoles",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "POST /rest/auth/oauth/token response field expires_in",
+          "cli": "N8N_TOKEN_EXCHANGE_MAX_TOKEN_TTL=<seconds> (default 900)",
+          "evidence_refs": [
+            "fc-ae6fefe7"
+          ]
+        },
+        "usage": {
+          "ui": "Settings > Log Streaming > Add new destination > Events: n8n.audit.token-exchange.* (Enterprise)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-6945b4b5",
+            "fc-ae6fefe7"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "n8n-issued JWT access token."
+        },
+        "log_sources": [
+          {
+            "name": "Log streaming: n8n.audit.token-exchange.*",
+            "notes": "Enterprise."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "not documented",
+            "log": "token exchange events",
+            "notes": "Scope and resource are recorded in audit events per the page."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "n8n.audit.token-exchange.succeeded",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "n8n.audit.token-exchange.failed",
+            "stage": "create",
+            "notes": "With failure reason."
+          },
+          {
+            "event": "n8n.audit.token-exchange.user-provisioned",
+            "stage": "other",
+            "notes": "JIT user created."
+          }
+        ],
+        "correlation_keys": [
+          "userId"
+        ],
+        "anomaly_cues": [
+          "Exchanges assigning global:admin",
+          "User provisioned for unexpected email"
+        ],
+        "containment": {
+          "steps": "Remove the trusted key entry; set N8N_TOKEN_EXCHANGE_ENABLED=false.",
+          "kills_existing": "no",
+          "notes": "Issued tokens stay valid until expiry (default max 15 min)."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-ae6fefe7"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /api/v1/workflows (Authorization: Bearer)",
+            "reveals": "Workflows visible to the acting user",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-7536cb26"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-6945b4b5",
+      "title": "Stream logs to external systems | n8n Docs",
+      "url": "https://docs.n8n.io/administer/observe-and-log/stream-logs-to-external-systems",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7536cb26",
+      "title": "Workflow | n8n API reference",
+      "url": "https://docs.n8n.io/connect/n8n-api/workflow",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae6fefe7",
+      "title": "Set up token exchange | n8n Docs",
+      "url": "https://docs.n8n.io/deploy/host-n8n/deploy-as-an-oem-integration/set-up-token-exchange",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

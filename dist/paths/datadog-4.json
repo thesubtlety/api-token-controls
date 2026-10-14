@@ -1,0 +1,239 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "datadog",
+      "name": "Datadog",
+      "scope_notes": "IP documentation differs on entitlement (Pro+ via support vs Enterprise). Confirm contract. AWS WIF requires supported integration/configuration.",
+      "controls": [
+        {
+          "name": "Client Tokens Write permission",
+          "effect": "disable",
+          "applies_to": [
+            "datadog-4"
+          ],
+          "what": "Only roles with client_tokens_write can create or edit client tokens (Standard role by default).",
+          "setting": "Organization Settings > Roles; Organization Settings > Client Tokens",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-5e887a08"
+          ],
+          "quote": "Create and edit Client Tokens."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "datadog-4",
+          "what": "No expiration for RUM client tokens, and they survive deactivation of the creating user.",
+          "evidence_refs": [
+            "turn19search19"
+          ],
+          "quote": "When a user who created a client token is deactivated, the client token remains active.",
+          "kind": "expiry"
+        }
+      ],
+      "controls_unknown": [
+        "No org setting found that blocks personal application keys or forces service-account-only keys.",
+        "Whether the IP allowlist applies to API-key and client-token requests outside telemetry intake is not stated; entitlement differs between account docs (Pro+/Enterprise) and API reference (Enterprise).",
+        "Plan requirement for Agent-based WIF: current WIF page lists no tier; earlier material says Enterprise-only and preview.",
+        "How to delete or disable an identity mapping is not documented on the WIF page; intake mappings are deleted via API.",
+        "Whether custom roles (needed to narrow these permissions) require a specific plan was not confirmed."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "datadog-4",
+      "provider_id": "datadog",
+      "name": "Client token",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Org-level token set as clientToken in browser and mobile SDKs to submit RUM events and logs. It is meant to be visible client-side, unlike API keys.",
+        "evidence_refs": [
+          "turn19search19",
+          "fc-f117cc05",
+          "fc-5e887a08"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static public token embedded in client code; no external identity exchange applies.",
+        "evidence_refs": [
+          "turn19search19"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "The org IP allowlist (Pro+ or Enterprise, via support) covers the UI and API but excludes data ingest endpoints. Client-token intake is not named either way; since end-user browsers send this traffic, source-IP limits would not normally fit.",
+        "evidence_refs": [
+          "turn5search4"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "No built-in expiry",
+        "evidence_refs": [
+          "fc-f1c37728"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "The token is reused until deleted; rotate by creating a new token and updating the client.",
+        "evidence_refs": [
+          "fc-f1c37728",
+          "turn19search19"
+        ]
+      },
+      "administration": {
+        "summary": "Client Tokens Write (default Standard role) creates and edits tokens; Read Only role can view them. RUM applications get a client token automatically. Deleted tokens cannot be restored.",
+        "conditions": "Tokens stay active after the creating user is deactivated, so review them separately from user offboarding. An authenticated proxy can hide the token from end users.",
+        "evidence_refs": [
+          "fc-5e887a08",
+          "turn19search19"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "no",
+          "details": "Client tokens stay active when the user who created them is deactivated.",
+          "evidence_refs": [
+            "turn19search19"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Organization Settings > Client Tokens tab lists the org's client tokens.",
+          "evidence_refs": [
+            "turn19search19"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not covered by GitHub secret scanning patterns; format not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Organization Settings > Client Tokens",
+            "notes": "Lists tokens; no documented usage logging"
+          },
+          {
+            "name": "Datadog Audit Trail",
+            "notes": "May record @asset.type:public_api_key events; not confirmed to be client tokens."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [],
+        "anomaly_cues": [
+          "Spike in RUM sessions or browser logs from unexpected application names or origins",
+          "Logs/RUM ingestion volume or cost spike tied to one token",
+          "Client token reused in an app it was not issued for"
+        ],
+        "containment": {
+          "steps": "Delete the token in Organization Settings > Client Tokens and ship a new token in the SDK config.",
+          "kills_existing": "yes",
+          "notes": "Deletion is permanent; deactivating the creator does not disable it. Token is public by design, so treat as abuse/injection risk, not secret leak."
+        },
+        "sample_query": {
+          "language": "Datadog Audit Trail search",
+          "query": "@evt.name:Authentication @asset.type:public_api_key",
+          "purpose": "Org Settings access/creation/deletion of public API keys (may cover client tokens; unconfirmed)"
+        },
+        "unknown": [
+          "token format",
+          "audit event name for client token create/delete",
+          "usage field identifying client token",
+          "whether public_api_key equals client token"
+        ],
+        "evidence_refs": [
+          "turn19search19",
+          "fc-29c5614b"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Not researched"
+        ],
+        "evidence_refs": []
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-29c5614b",
+      "title": "Audit Trail Events",
+      "url": "https://docs.datadoghq.com/account_management/audit_trail/events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5e887a08",
+      "title": "Datadog Role Permissions",
+      "url": "https://docs.datadoghq.com/account_management/rbac/permissions/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f117cc05",
+      "title": "Browser Log Collection",
+      "url": "https://docs.datadoghq.com/logs/log_collection/javascript/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f1c37728",
+      "title": "Credential Management",
+      "url": "https://docs.datadoghq.com/getting_started/access_for_enterprises/credential_management/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn19search19",
+      "title": "API and Application Keys",
+      "url": "https://docs.datadoghq.com/account_management/api-app-keys/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn5search4",
+      "title": "IP Allowlist - Datadog Infrastructure and Application Monitoring",
+      "url": "https://docs.datadoghq.com/account_management/org_settings/ip_allowlist/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

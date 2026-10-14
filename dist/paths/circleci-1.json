@@ -1,0 +1,371 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "circleci",
+      "name": "CircleCI",
+      "scope_notes": "Covers CircleCI Cloud. CircleCI cloud (Free, Performance, Scale); SAML SSO and audit log streaming need Scale, context security-group restrictions only on github-type orgs; CircleCI Server is out of scope.",
+      "controls": [
+        {
+          "name": "Personal API token expiry",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "circleci-1"
+          ],
+          "what": "Every web-created token has an expiry of at most one year; DCR tokens last 90 days.",
+          "setting": "User Settings > Personal API Tokens",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-93bfbd2b",
+            "fc-af866ed9"
+          ]
+        },
+        {
+          "name": "SSO authentication for personal API tokens",
+          "effect": "require_sso",
+          "applies_to": [
+            "circleci-1"
+          ],
+          "what": "Tokens must be SSO-authorized per org to reach SSO-protected org resources.",
+          "setting": "User Settings > Personal API Tokens > SSO column",
+          "plan": "Scale",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7608ec48"
+          ]
+        },
+        {
+          "name": "Delete personal API token",
+          "effect": "revoke",
+          "applies_to": [
+            "circleci-1"
+          ],
+          "what": "User deletes a token from the Remove column.",
+          "setting": "User Settings > Personal API Tokens",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-93bfbd2b",
+            "fc-af866ed9"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any org-admin setting to block, list or revoke members' personal API tokens.",
+        "Any org setting to disable OAuth Dynamic Client Registration tokens.",
+        "Any inbound IP allowlist for the CircleCI API or web app.",
+        "Whether personal API token create/delete or API reads appear in audit logs (not in the published event list).",
+        "Whether an SSO-authorized token stops working when the IdP session ends or the user is removed from the IdP.",
+        "Project API token expiry."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "circleci-1",
+      "provider_id": "circleci",
+      "name": "Personal API tokens (incl. tokens from OAuth 2.0 Dynamic Client Registration)",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "User-created token sent in the Circle-Token header or as Bearer to API v1/v2/v3. Web-created tokens have the user's full read/write access; tokens issued through the OAuth DCR flow are scoped Read/Write/Admin.",
+        "evidence_refs": [
+          "fc-93bfbd2b",
+          "fc-af866ed9",
+          "fc-b27cdb24"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "In SSO-enabled orgs (Scale) a token must be SSO-authorized per org, and that option needs an active SSO session. Docs do not say whether the token stops when the SSO session ends.",
+        "evidence_refs": [
+          "fc-7608ec48"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Docs describe only outbound job IP ranges; no inbound API allowlist documented.",
+        "evidence_refs": [
+          "fc-d7fcdb72"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 31536000,
+        "configurable": "yes",
+        "summary": "User-set expiry up to 1 year; DCR tokens 90 days",
+        "evidence_refs": [
+          "fc-93bfbd2b",
+          "fc-af866ed9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "fixed expiry date",
+        "summary": "Delete and create a new token; email reminders before expiry.",
+        "evidence_refs": [
+          "fc-93bfbd2b"
+        ]
+      },
+      "administration": {
+        "summary": "Users create and delete their own tokens. Any tool can register an OAuth client without authentication and obtain a token once the user approves.",
+        "conditions": "No documented admin view, revoke or block for members' personal tokens.",
+        "evidence_refs": [
+          "fc-93bfbd2b",
+          "fc-af866ed9"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "yes",
+          "details": "In an SSO-enabled org, a personal API token must be SSO-authenticated before it can reach the org's resources; SSO needs the Scale plan.",
+          "evidence_refs": [
+            "fc-7608ec48"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Each user sees and revokes only their own tokens on User Settings > Personal API Tokens; no admin-wide listing is documented.",
+          "evidence_refs": [
+            "fc-af866ed9"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Org > Single sign-on (SSO) > Enforce SSO for all users; each user: User Settings > Personal API Tokens > pick the org in the SSO column",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-e46c56da",
+            "fc-7608ec48"
+          ]
+        },
+        "usage": {
+          "ui": "Org > Security > Audit Logs > Request audit logs > Download logs (CSV); filter on actor. Scale: Stream audit logs to S3",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-00a430b7"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "No documented prefix."
+        },
+        "log_sources": [
+          {
+            "name": "CircleCI audit logs",
+            "notes": "Org admin requests CSV for any 30-day window in last 12 months (Free 1/day, paid 3/day); Scale can stream to S3."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor",
+            "log": "audit log",
+            "notes": "User id/type/name; no token ID documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "build.create",
+            "stage": "use",
+            "notes": "Pipeline/job creation by the actor."
+          },
+          {
+            "event": "context.secrets.accessed",
+            "stage": "use",
+            "notes": "A job used context secrets."
+          }
+        ],
+        "correlation_keys": [
+          "actor.id",
+          "target.id",
+          "occurred_at"
+        ],
+        "anomaly_cues": [
+          "Pipelines triggered via API by a user outside normal hours",
+          "context.secrets.accessed from unexpected projects or branches",
+          "New env vars or project.settings.update by a token owner"
+        ],
+        "containment": {
+          "steps": "User deletes and recreates the token; remove the user from the org/IdP; block new work and rotate secrets the user could reach.",
+          "kills_existing": "unknown",
+          "notes": "No admin-side revoke documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Token creation/deletion event names",
+          "API read logging"
+        ],
+        "evidence_refs": [
+          "fc-00a430b7",
+          "fc-05bf1236",
+          "fc-c98db406"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/v2/me",
+            "reveals": "token owner",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit logs are control-plane only."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/v2/me/collaborations",
+            "reveals": "orgs the user belongs to",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v2/context?owner-id={org-id}",
+            "reveals": "context names",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v2/project/{project-slug}/envvar",
+            "reveals": "masked env vars (last 4 chars)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/v2/project/{project-slug}/pipeline",
+            "reveals": "pipeline history",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "Whether any API read is logged"
+        ],
+        "evidence_refs": [
+          "fc-b27cdb24",
+          "fc-05bf1236"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-00a430b7",
+      "title": "Audit logs",
+      "url": "https://circleci.com/docs/guides/security/audit-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-05bf1236",
+      "title": "Analyze pipelines during an incident",
+      "url": "https://circleci.com/docs/guides/orchestrate/analyze-pipelines-during-an-incident/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7608ec48",
+      "title": "Single sign-on (SSO) overview",
+      "url": "https://circleci.com/docs/guides/permissions-authentication/sso-overview/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-93bfbd2b",
+      "title": "Managing API tokens",
+      "url": "https://circleci.com/docs/guides/toolkit/managing-api-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-af866ed9",
+      "title": "OAuth 2.0 API access with Dynamic Client Registration",
+      "url": "https://circleci.com/docs/guides/toolkit/oauth-dynamic-client-registration/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b27cdb24",
+      "title": "CircleCI API v2 OpenAPI",
+      "url": "https://circleci.com/api/v2/openapi.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c98db406",
+      "title": "Pause or stop pipelines during an incident",
+      "url": "https://circleci.com/docs/guides/orchestrate/pause-pipelines-during-an-incident/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7fcdb72",
+      "title": "Restrict your pipeline traffic to specific IP ranges",
+      "url": "https://circleci.com/docs/guides/security/ip-ranges/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e46c56da",
+      "title": "SSO setup",
+      "url": "https://circleci.com/docs/guides/permissions-authentication/set-up-sso/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,471 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "zoom",
+      "name": "Zoom",
+      "scope_notes": "Distinguish marketplace build-flow settings from account-admin controls for Server-to-Server apps.",
+      "controls": [
+        {
+          "name": "App pre-approval (Marketplace admin)",
+          "effect": "require_approval",
+          "applies_to": [
+            "zoom-1"
+          ],
+          "what": "Requires a Marketplace admin to pre-approve an app before users can authorize it; users can request approval.",
+          "setting": "Zoom App Marketplace > Manage > Permissions (admin dashboard)",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-b10d848c"
+          ],
+          "quote": "A Zoom account may require an app be pre-approved by a Marketplace admin before the end user may authorize it."
+        },
+        {
+          "name": "Role permissions for admin-level scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "zoom-1"
+          ],
+          "what": "Apps requesting admin scopes can only be authorized by users whose role holds the matching account-level permissions.",
+          "setting": "Web portal > User Management > Roles",
+          "plan": null,
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-b10d848c"
+          ],
+          "quote": "Account-level apps (apps with admin) scopes must be authorized by a user with the corresponding account-level permissions."
+        },
+        {
+          "name": "IP allowlist for Marketplace apps",
+          "effect": "limit_network",
+          "applies_to": [
+            "zoom-1",
+            "zoom-2"
+          ],
+          "what": "Admins approve or reject the IPs an app declares and can enforce the allowlist, blocking token exchange, revocation and API calls from other IPs; S2S app IPs are declared by the admin.",
+          "setting": "Zoom admin portal: App IP allowlist configuration",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "turn2search26"
+          ],
+          "quote": "account administrators who install your app can: Review the IP addresses your app uses. Approve or reject specific IP addresses. Enable IP allowlist enforcement to restrict API access to approved addresses only."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Official Zoom support articles for pre-approval (KB0062300) and admin IP allowlist (KB0088682) render only via JavaScript and could not be read; UI paths and defaults are taken from developer docs.",
+        "Plan requirements for the Marketplace app IP allowlist.",
+        "Whether admins can revoke individual users' OAuth grants for a Marketplace app without removing the app."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "zoom-1",
+      "provider_id": "zoom",
+      "name": "Delegated OAuth",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Delegated OAuth bearer; Server-to-Server OAuth using account ID, client ID and client secret.",
+        "evidence_refs": [
+          "turn2search2"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Server-to-Server OAuth supports unattended account-level access but uses an app secret; no general external identity exchange established.",
+        "evidence_refs": [
+          "turn2search2"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "mixed",
+        "boundary": "Account-admin IP enforcement covers API calls and OAuth endpoints. Server-to-Server restrictions are administered centrally.",
+        "evidence_refs": [
+          "turn2search26",
+          "turn2search2"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "1 hour; refresh with refresh token",
+        "evidence_refs": [
+          "turn2search2",
+          "fc-e2b9842f"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "absolute",
+        "summary": "Exchange the refresh token for a new access token and keep the newest refresh token returned. Refresh tokens expire after 90 days; the docs do not say whether refreshing resets that window. After expiry the user must re-authorize.",
+        "evidence_refs": [
+          "turn2search2",
+          "fc-e2b9842f"
+        ]
+      },
+      "administration": {
+        "summary": "Granular app scopes, role-controlled app management, activation/deactivation and IP allowlisting.",
+        "conditions": "Distinguish marketplace build-flow settings from account-admin controls for Server-to-Server apps.",
+        "evidence_refs": [
+          "turn2search26",
+          "turn2search2"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Refreshing fails with error 4735 once the token's user has been removed from the account; docs don't cover deactivation or the up-to-1-hour access token.",
+          "evidence_refs": [
+            "fc-613431ac"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Marketplace Manage > Apps on Account dashboard lists all apps on the account (Added apps tab).",
+          "evidence_refs": [
+            "fc-9030c6af"
+          ]
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "Zoom Marketplace > Marketplace admin > Marketplace Management > Permissions > Security permissions > IP allow list for apps (Apps tab > Has IPs > app > Add)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-f3fe014e",
+            "turn2search26"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "POST https://zoom.us/oauth/token response expires_in (3600); refresh token lasts 90 days. Fixed, not configurable",
+          "cli": null,
+          "evidence_refs": [
+            "fc-e2b9842f"
+          ]
+        },
+        "offboard": {
+          "ui": "Zoom web portal > User Management > Users > ... > Deactivate or Delete",
+          "api": "PUT /v2/users/{userId}/status (action deactivate); DELETE /v2/users/{userId} (action delete or disassociate); app can also POST https://zoom.us/oauth/revoke",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ee5e30e0",
+            "fc-2491eba2",
+            "fc-613431ac",
+            "fc-e2b9842f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Docs show access/refresh tokens only as \"<JWT_TOKEN>\" placeholders, token_type bearer; no documented prefix. Not in GitHub secret-scanning supported patterns list (checked 2026-10-12)."
+        },
+        "log_sources": [
+          {
+            "name": "Marketplace API call logs (GET /marketplace/apps/{appId}/api_call_logs)",
+            "notes": "Per-app log of API calls: url_pattern, method, http_status, time, trace_id. duration 7/14/30 days max. No caller IP or user field documented. Admin dashboard (Manage > Apps on Account) shows the same per-app call usage and CSV export."
+          },
+          {
+            "name": "Operation Logs report (GET /report/operationlogs)",
+            "notes": "Admin/user activity (add user, settings change, delete recording). Fields: action, category_type, operation_detail, operator, time. No app/client id or IP documented. Pro+; one month per request."
+          },
+          {
+            "name": "app_deauthorized webhook event",
+            "notes": "Sent to the app's endpoint when a user deauthorizes/removes the app; carries account_id, user_id, client_id, deauthorization_time. Only visible to the app owner's webhook receiver."
+          },
+          {
+            "name": "Sign in / sign out activity report (GET /report/activities)",
+            "notes": "User interactive sign-ins with ip_address, client_type, version; useful to compare the authorizing user's normal IPs. Range within last six months; Pro+."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "client_id",
+            "log": "app_deauthorized webhook payload",
+            "notes": "OAuth app whose grant was removed"
+          },
+          {
+            "field": "user_id",
+            "log": "app_deauthorized webhook payload",
+            "notes": "User who deauthorized"
+          },
+          {
+            "field": "appId",
+            "log": "Marketplace API call logs (path parameter)",
+            "notes": "Scopes call log to one app; individual tokens are not identified"
+          },
+          {
+            "field": "trace_id",
+            "log": "Marketplace API call logs",
+            "notes": "Unique id per request"
+          },
+          {
+            "field": "operator",
+            "log": "Operation Logs report",
+            "notes": "User who performed the change (email); the app/token is not identified"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "app_deauthorized",
+            "stage": "revoke",
+            "notes": "Webhook when a user deauthorizes or removes a production app"
+          }
+        ],
+        "correlation_keys": [
+          "client_id",
+          "user_id",
+          "account_id",
+          "trace_id",
+          "url_pattern",
+          "operator",
+          "ip_address",
+          "time"
+        ],
+        "anomaly_cues": [
+          "Spike in calls or new url_pattern values (e.g. /users, /recordings, report endpoints) in the app's api_call_logs",
+          "Bursts of 401/403 http_status for the app after a refresh token was rotated or revoked (stale stolen token)",
+          "Operation Logs entries (recording deletes, user/settings changes) by the authorizing user at times they were not signed in per /report/activities",
+          "API calls continuing for an app after the user who authorized it was deactivated",
+          "app_deauthorized followed by renewed calls for the same appId"
+        ],
+        "containment": {
+          "steps": "POST https://zoom.us/oauth/revoke with token=<access_token>; admin Manage > Apps on Account > Added Apps > Disable App or Remove (account-wide) or Disable per user; rotate client secret via POST /marketplace/apps/{appId}/rotate_client_secret with revoke_old_secret_time=now.",
+          "kills_existing": "unknown",
+          "notes": "Docs do not say whether revoking an access token also kills the refresh token, or whether admin Disable/Remove revokes issued tokens. Access tokens expire after one hour; refresh tokens after 90 days."
+        },
+        "sample_query": {
+          "language": "Zoom REST API query parameters",
+          "query": "GET https://api.zoom.us/v2/marketplace/apps/{appId}/api_call_logs?duration=30&status_code=401&page_size=100",
+          "purpose": "List failed auth calls for the app over 30 days to spot stolen or revoked tokens being replayed"
+        },
+        "unknown": [
+          "token prefix/regex",
+          "caller IP or user agent per API call",
+          "which user's token made a given call in api_call_logs",
+          "authorization-granted (app added) event name",
+          "whether revoke/admin disable invalidates refresh tokens or issued access tokens",
+          "api_call_logs retention beyond 30 days"
+        ],
+        "evidence_refs": [
+          "fc-e2b9842f",
+          "fc-386a2849",
+          "fc-b02a3b43",
+          "fc-9dbd23c2"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v2/users/me",
+            "reveals": "Account and user details of the token principal",
+            "bulk": false,
+            "scope": "user:read:user (granular) / user:read",
+            "rate_limit": "LIGHT",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Operation Logs record admin write-actions; API reads not documented as logged."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v2/users",
+            "reveals": "All users in the account",
+            "bulk": true,
+            "scope": "user:read:list_users:admin / user:read:admin",
+            "rate_limit": "MEDIUM",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No documented log for API reads."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /v2/users/{userId}/meetings",
+            "reveals": "A host's scheduled meetings",
+            "bulk": true,
+            "scope": "meeting:read:list_meetings(:admin) / meeting:read(:admin)",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Rate-limit label not confirmed."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v2/users/{userId}/recordings",
+            "reveals": "Cloud recordings with download URLs",
+            "bulk": true,
+            "scope": "cloud_recording:read:list_user_recordings(:admin) / recording:read(:admin)",
+            "rate_limit": "MEDIUM",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Operation Logs cover deleting recordings; recording downloads/views via API not documented."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v2/meetings/{meetingId}/recordings",
+            "reveals": "Recording files with a download_url per file",
+            "bulk": true,
+            "scope": "cloud_recording:read:list_recording_files(:admin) / recording:read",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not documented as logged."
+          }
+        ],
+        "unknown": [
+          "Whether any Zoom log records REST API reads or recording downloads/views",
+          "Operation Logs retention period",
+          "Rate-limit label for List meetings"
+        ],
+        "evidence_refs": [
+          "fc-2491eba2",
+          "fc-17fc3726",
+          "fc-1e63cf2e",
+          "fc-50c4a973",
+          "turn2search2"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-17fc3726",
+      "title": "Zoom Meetings/Reports API",
+      "url": "https://developers.zoom.us/api-hub/meetings/methods/endpoints.json",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1e63cf2e",
+      "title": "Zoom API rate limits",
+      "url": "https://developers.zoom.us/docs/api/rate-limits/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2491eba2",
+      "title": "Zoom Users API",
+      "url": "https://developers.zoom.us/api-hub/users/methods/endpoints.json",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-386a2849",
+      "title": "Marketplace APIs - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/api/marketplace/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-50c4a973",
+      "title": "Operation Logs",
+      "url": "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0067251",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-613431ac",
+      "title": "OAuth error messages",
+      "url": "https://developers.zoom.us/docs/integrations/oauth-error-messages/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9030c6af",
+      "title": "Using the Marketplace App Dashboard",
+      "url": "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0080840",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9dbd23c2",
+      "title": "Admin management of the Zoom App Marketplace",
+      "url": "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0060122",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b02a3b43",
+      "title": "Meetings APIs (Reports) - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/api/meetings/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b10d848c",
+      "title": "End user authorization - Integrations - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/integrations/end-user-auth/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e2b9842f",
+      "title": "OAuth 2.0 - Integrations - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/integrations/oauth/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ee5e30e0",
+      "title": "Deactivating, unlinking, or deleting users from your account",
+      "url": "https://support.zoom.us/hc/en-us/articles/115005269946-Remove-User-from-your-Account",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f3fe014e",
+      "title": "Managing permissions for the Zoom Marketplace",
+      "url": "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0089123",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search2",
+      "title": "Server-to-Server OAuth - Internal Apps - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/internal-apps/s2s-oauth/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search26",
+      "title": "IP Addresses - Build Flow - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/build-flow/basic-info/ip-address/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,195 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "jamf",
+      "name": "Jamf",
+      "scope_notes": "Covers Jamf (Jamf Pro, Jamf Platform API Gateway, Jamf Protect, Jamf School). Jamf Pro cloud (11.x) is the main focus; Jamf Log Stream export needs Jamf Cloud Premium; Protect and School covered from public docs only.",
+      "controls": [
+        {
+          "name": "Jamf School API key methods",
+          "effect": "limit_scope",
+          "applies_to": [
+            "jamf-5"
+          ],
+          "what": "Each key is limited to the API methods selected for it.",
+          "setting": "Organization > Settings > API > Add API Key",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-a7484f6c"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for Jamf Pro API clients or user API access (none found in public docs).",
+        "Default and maximum Access Token Lifetime for API clients (the doc example shows expires_in 599, but no default is stated).",
+        "Whether Jamf Pro admins can block a user account from using /v1/auth/token while keeping UI access.",
+        "Which identity Change Management logs for actions taken by an API client, and whether /v1/oauth/token requests appear in the Access Log.",
+        "Exact Change Management object/action names for API client create/rotate/disable.",
+        "Jamf Protect API token lifetime and revocation; Jamf School API key expiry, auth header format and revocation behavior.",
+        "Platform API Gateway: revoke/disable controls for an integration and IP restrictions."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "jamf-5",
+      "provider_id": "jamf",
+      "name": "Jamf School API key",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A static API key created under Organization > Settings > API authorizes all API calls to https://{yourURL}.jamfcloud.com/api, limited to the methods selected for the key.",
+        "evidence_refs": [
+          "fc-a7484f6c"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static key.",
+        "evidence_refs": [
+          "fc-a7484f6c"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented publicly.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "unknown",
+        "summary": "Key is reused on every call.",
+        "evidence_refs": [
+          "fc-a7484f6c"
+        ]
+      },
+      "administration": {
+        "summary": "Organization > Settings > API: add key and choose which methods it can access.",
+        "conditions": "",
+        "evidence_refs": [
+          "fc-a7484f6c"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "API keys are created at the organization level, not tied to a user.",
+          "evidence_refs": [
+            "fc-a7484f6c"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Organization > Settings > API is where API keys are created and edited.",
+          "evidence_refs": [
+            "fc-a7484f6c"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Jamf School Audit Log",
+            "notes": "Retained 15 months; Organization > Audit Log; GET <domain>/audit-logs/v1 (3 months per request)."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "IP Address",
+          "Who"
+        ],
+        "anomaly_cues": [
+          "New API key with broad methods"
+        ],
+        "containment": {
+          "steps": "Remove the key under Organization > Settings > API.",
+          "kills_existing": "unknown",
+          "notes": "Delete is not explicitly documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether API key calls are attributed in the audit log"
+        ],
+        "evidence_refs": [
+          "fc-70dd62fa"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET <domain>/audit-logs/v1",
+            "reveals": "Audit log entries (3 months per request)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-70dd62fa"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-70dd62fa",
+      "title": "Audit Log (Jamf School)",
+      "url": "https://learn.jamf.com/r/en-US/jamf-school-documentation/Jamf_School_Audit_Log",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a7484f6c",
+      "title": "Jamf School API",
+      "url": "https://learn.jamf.com/r/en-US/jamf-school-documentation/Jamf_School_API",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

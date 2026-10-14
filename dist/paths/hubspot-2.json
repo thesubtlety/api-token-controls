@@ -1,0 +1,505 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "hubspot",
+      "name": "HubSpot",
+      "scope_notes": "Private-app and newer developer-platform static authentication coexist. SSO requires eligible Professional/Enterprise subscriptions.",
+      "controls": [
+        {
+          "name": "App governance: Approve apps",
+          "effect": "require_approval",
+          "applies_to": [
+            "hubspot-2"
+          ],
+          "what": "Marketplace apps must be approved by a Super Admin before non-admin users can install them; users submit requests.",
+          "setting": "Settings > Integrations > Connected Apps > select app > Approve",
+          "plan": "All products and plans",
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-4ea0e458"
+          ],
+          "quote": "Non-admin users must request access to apps that haven’t been approved yet."
+        },
+        {
+          "name": "App governance: Limit installation (Install Permissions)",
+          "effect": "other",
+          "applies_to": [
+            "hubspot-2"
+          ],
+          "what": "Restricts which users/teams may install an approved app (Admins, specific users/teams, or everyone).",
+          "setting": "Settings > Integrations > Connected Apps > Manage access > Install Permissions",
+          "plan": "All products and plans",
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-4ea0e458"
+          ],
+          "quote": "Limit installation : control which users and teams can install each app."
+        },
+        {
+          "name": "App governance: Customize optional data permissions",
+          "effect": "limit_scope",
+          "applies_to": [
+            "hubspot-2"
+          ],
+          "what": "Turns optional scopes on or off for an approved app for all users; required scopes cannot be removed.",
+          "setting": "Settings > Integrations > Connected Apps > Approve / Manage access > data permissions",
+          "plan": "All products and plans",
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-4ea0e458"
+          ],
+          "quote": "Customize optional data permissions : allow or restrict optional permissions for each approved app."
+        },
+        {
+          "name": "App governance: Revoke approval",
+          "effect": "revoke",
+          "applies_to": [
+            "hubspot-2"
+          ],
+          "what": "Removes the app from approved apps and uninstalls it for every user.",
+          "setting": "Settings > Integrations > Connected Apps > Manage access > Revoke Approval",
+          "plan": "All products and plans",
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-4ea0e458"
+          ],
+          "quote": "Revoking approval for an app will uninstall it for all users who have previously installed it."
+        },
+        {
+          "name": "Uninstall an app for a specific user",
+          "effect": "revoke",
+          "applies_to": [
+            "hubspot-2"
+          ],
+          "what": "Uninstalls an approved app from one user's install; the user can reinstall unless approval is revoked.",
+          "setting": "Settings > Integrations > Connected Apps > Manage access > Installed by > Uninstall",
+          "plan": "All products and plans",
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-4ea0e458"
+          ],
+          "quote": "The user can re-install the app in the future. If you want to restrict them from installing, you can revoke approval instead."
+        },
+        {
+          "name": "User permission: App Marketplace access",
+          "effect": "other",
+          "applies_to": [
+            "hubspot-2",
+            "hubspot-3"
+          ],
+          "what": "Only Super Admins and users with this permission (plus matching scope permissions) can install apps.",
+          "setting": "Settings > Users & Teams > user > permissions (Settings access)",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-5a7188c1"
+          ],
+          "quote": "Users with the *HubSpot Marketplace access* [permission]"
+        },
+        {
+          "name": "Deselect optional scopes at install",
+          "effect": "limit_scope",
+          "applies_to": [
+            "hubspot-2",
+            "hubspot-3"
+          ],
+          "what": "The installing user can clear optional scopes before connecting the app.",
+          "setting": "Install consent screen (Connect app)",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-5a7188c1"
+          ],
+          "quote": "You can also clear any of the checkboxes under *Optional scopes* for any permissions that you don't want to grant to the app."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "hubspot-2",
+          "what": "Required data permissions (scopes) of an app cannot be turned off by the admin.",
+          "evidence_refs": [
+            "fc-4ea0e458"
+          ],
+          "quote": "Required data permissions for apps cannot be modified or turned off.",
+          "kind": "other"
+        }
+      ],
+      "controls_unknown": [
+        "No IP allowlist for API calls found; \"Allowed login IPs\" (Settings > Security > Login) is documented only for logins.",
+        "Whether app governance (approval) covers privately distributed OAuth apps and static-auth apps, or only HubSpot Marketplace listings.",
+        "No admin-set token lifetime or mandatory rotation policy found for private app tokens, static tokens, service keys or the developer API key (only manual rotation and reminders).",
+        "No account-wide switch found to block service key creation other than withholding Developer tools access / Super Admin."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "hubspot-2",
+      "provider_id": "hubspot",
+      "name": "OAuth",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth 2.0 authorization-code flow for project-based apps (and existing legacy public apps) installed in multiple accounts. The app exchanges the code for a 30-minute access token, sent as a Bearer token, and a refresh token.",
+        "evidence_refs": [
+          "turn4search6",
+          "turn12search3",
+          "turn4search22",
+          "fc-fe387099"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "General CRM API federation is not established. Client credentials documented for selected developer-platform functions is not a general CRM grant.",
+        "evidence_refs": [
+          "turn4search6",
+          "turn12search3",
+          "turn4search22"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "login_only",
+        "boundary": "Trusted-IP documentation restricts account logins; API-call enforcement for private-app/OAuth tokens was not established.",
+        "evidence_refs": [
+          "turn11search1",
+          "turn12search3"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 1800,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "30 minutes",
+        "evidence_refs": [
+          "turn4search6",
+          "turn12search3",
+          "turn4search22"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "none",
+        "summary": "Use the refresh token to get a new 30-minute access token. HubSpot describes refresh tokens as not expiring for now; they stop working when the app is uninstalled or the token is revoked.",
+        "evidence_refs": [
+          "turn4search6",
+          "turn12search3",
+          "turn4search22",
+          "fc-fe387099",
+          "fc-5c7fb089"
+        ]
+      },
+      "administration": {
+        "summary": "Scopes (required, conditionally required, optional) are declared in app-hsmeta.json; installers must be super admins or have HubSpot Marketplace access plus the matching permissions. The client secret can be rotated from the app's Auth tab. Apps on 2026.09 can opt into user-level access (isUserLevel), which limits API access to the installing user's permissions; by default access is account-wide.",
+        "conditions": "Privately distributed OAuth apps install in up to 10 allowlisted accounts; marketplace apps up to 25 before listing. Creation of legacy public apps ended on 2026-06-23; existing ones keep working. User-level access requires OAuth and a new app (account-level apps cannot be converted).",
+        "evidence_refs": [
+          "turn11search1",
+          "turn12search3",
+          "fc-5a7188c1",
+          "fc-9f7773e3"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Settings > Integrations > Connected Apps lists connected and approved apps, not individual tokens.",
+          "evidence_refs": [
+            "fc-4ea0e458"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "Read expires_in from POST /oauth/v1/token response, or GET /oauth/v1/access-tokens/{token} (returns expires_in)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-21d8be4d",
+            "fc-0dd10aa8"
+          ]
+        },
+        "reads": {
+          "ui": "(App developer account) Development > Legacy apps > {app} > Monitoring > API calls tab; filter method GET and request URL",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-20354a66"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Access token opaque, 30-minute lifetime (expires_in 1800). Refresh token example format 'na1-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee' (region prefix like na1-). Client id/secret are GUID-style."
+        },
+        "log_sources": [
+          {
+            "name": "HubSpot security activity (Account activity API /account-info/v3/activity/security)",
+            "notes": "Records user actions such as PRIVATE_APP_ACCESS_TOKEN_VIEW and INSTALL_INTEGRATION with IP/location. UI shows 30 days; export covers last year. Scope account-info.security.read."
+          },
+          {
+            "name": "HubSpot centralized audit log (/account-info/v3/activity/audit-logs)",
+            "notes": "Enterprise only. User actions incl. CRITICAL_ACTION subcategories. Records HubSpot-user actions, not API calls."
+          },
+          {
+            "name": "OAuth token introspection (POST /oauth/v3/token/introspect)",
+            "notes": "Not a log; maps a found access or refresh token to hub_id, user_id, user, client_id, app_id, scopes."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "objectId",
+            "log": "security activity",
+            "notes": "Object of INSTALL_INTEGRATION (installed app); exact ID type not documented"
+          },
+          {
+            "field": "client_id",
+            "log": "token introspect",
+            "notes": "OAuth app client id"
+          },
+          {
+            "field": "app_id",
+            "log": "token introspect",
+            "notes": "HubSpot app ID"
+          },
+          {
+            "field": "user_id",
+            "log": "token introspect",
+            "notes": "Installing user"
+          },
+          {
+            "field": "hub_id",
+            "log": "token introspect",
+            "notes": "Portal/account"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "INSTALL_INTEGRATION",
+            "stage": "create",
+            "notes": "User installed an integration (OAuth app) in the account"
+          }
+        ],
+        "correlation_keys": [
+          "userId",
+          "actingUser",
+          "objectId",
+          "ipAddress",
+          "countryCode",
+          "createdAt",
+          "client_id",
+          "app_id",
+          "hub_id",
+          "user_id"
+        ],
+        "anomaly_cues": [
+          "INSTALL_INTEGRATION by a non-admin or from a new IP/country",
+          "Install of an unverified app (no verified domain) shortly before data exports",
+          "Refresh token use continuing after the installing user was deactivated",
+          "Several accounts/users installing the same unfamiliar app in a short window",
+          "invalid_grant / BAD_REFRESH_TOKEN bursts in the app backend (stolen or replayed refresh tokens)"
+        ],
+        "containment": {
+          "steps": "Uninstall the app from Settings > Integrations > Connected apps; app owner deletes refresh token (DELETE /oauth/v1/refresh-tokens/{token}); rotate client secret if it leaked.",
+          "kills_existing": "partial",
+          "notes": "Deleting a refresh token does not delete access tokens already issued; those last up to 30 minutes. Effect of uninstall on live access tokens not documented."
+        },
+        "sample_query": {
+          "language": "HubSpot Account activity API (query parameters)",
+          "query": "GET /account-info/v3/activity/security?fromTimestamp=2026-09-01T00:00:00Z&toTimestamp=2026-10-12T00:00:00Z  -- filter type == 'INSTALL_INTEGRATION'; join objectId to installed apps list",
+          "purpose": "Find recent OAuth app installs and who approved them."
+        },
+        "unknown": [
+          "Event names for app uninstall or token revocation",
+          "Whether API calls by OAuth apps are logged for the customer",
+          "Access token format/prefix",
+          "Whether uninstall revokes live access tokens"
+        ],
+        "evidence_refs": [
+          "fc-217cb85b",
+          "fc-2a578af9",
+          "fc-37586802",
+          "fc-ae49709c",
+          "turn4search22"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /crm/objects/2026-03/contacts",
+            "reveals": "CRM contact records",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Request logs are under Development > Monitoring > Logs for the app; this view is in the app developer's account, not an installing-account audit log."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "turn4search22",
+          "fc-ac3691ef"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0dd10aa8",
+      "title": "OAuth v1 API guide",
+      "url": "https://developers.hubspot.com/docs/api-reference/auth-oauth-v1/guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-20354a66",
+      "title": "Legacy public apps",
+      "url": "https://developers.hubspot.com/docs/apps/legacy-apps/public-apps/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-217cb85b",
+      "title": "HubSpot Account activity API",
+      "url": "https://developers.hubspot.com/docs/api-reference/account-audit-logs-v3/guide",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-21d8be4d",
+      "title": "OAuth quickstart guide",
+      "url": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/authentication/oauth/oauth-quickstart-guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2a578af9",
+      "title": "HubSpot KB: View and export account activity history",
+      "url": "https://knowledge.hubspot.com/account-management/view-and-export-account-activity-history",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-37586802",
+      "title": "HubSpot: Manage OAuth tokens (v3)",
+      "url": "https://developers.hubspot.com/docs/api-reference/legacy/authentication/manage-oauth-tokens",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4ea0e458",
+      "title": "Manage access to apps",
+      "url": "https://knowledge.hubspot.com/integrations/manage-access-to-apps",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5a7188c1",
+      "title": "Manage apps in HubSpot - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/manage-apps-in-hubspot",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5c7fb089",
+      "title": "Production-Ready OAuth Token Management for HubSpot Integrations - HubSpot Developers blog",
+      "url": "https://developers.hubspot.com/blog/oauth-token-management-hubspot-integrations",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9f7773e3",
+      "title": "Legacy apps",
+      "url": "https://developers.hubspot.com/docs/apps/legacy-apps/overview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac3691ef",
+      "title": "API usage guidelines and limits - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/developer-tooling/platform/usage-guidelines",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ae49709c",
+      "title": "HubSpot OAuth v1 tokens",
+      "url": "https://developers.hubspot.com/docs/api-reference/legacy/authentication/oauth-tokens/v1/guide",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fe387099",
+      "title": "Manage OAuth access tokens with the 2026-09 API - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/api-reference/latest/authentication/manage-oauth-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn11search1",
+      "title": "Manage login and account access settings",
+      "url": "https://knowledge.hubspot.com/account-security/limit-logins-to-trusted-ip-addresses",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn12search3",
+      "title": "Legacy private apps - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/apps/legacy-apps/private-apps/overview",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn4search22",
+      "title": "Authentication overview - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/authentication/overview",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn4search6",
+      "title": "Manage OAuth access tokens (latest API) - HubSpot docs",
+      "url": "https://developers.hubspot.com/docs/api-reference/latest/authentication/manage-oauth-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

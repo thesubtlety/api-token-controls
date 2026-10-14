@@ -1,0 +1,350 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "openai",
+      "name": "OpenAI API",
+      "scope_notes": "OpenAI API Platform organizations and projects (platform.openai.com); ChatGPT workspace and Codex credentials out of scope except where shared WIF docs mention them.",
+      "controls": [
+        {
+          "name": "IP allowlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "openai-1",
+            "openai-2",
+            "openai-4"
+          ],
+          "what": "Reject API requests from IPs outside up to 50 addresses/CIDRs; org or project level.",
+          "setting": "Settings > Security > IP allowlist",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4f6c0e89"
+          ]
+        },
+        {
+          "name": "Delete project service account",
+          "effect": "revoke",
+          "applies_to": [
+            "openai-2",
+            "openai-4"
+          ],
+          "what": "Removes the service account identity.",
+          "setting": "DELETE /v1/organization/projects/{project_id}/service_accounts/{service_account_id}",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-8c63700e"
+          ]
+        },
+        {
+          "name": "Workload Identity Provider and service account mappings",
+          "effect": "limit_scope",
+          "applies_to": [
+            "openai-4"
+          ],
+          "what": "Only tokens matching exactly one enabled mapping are exchanged; mapping permissions narrow access.",
+          "setting": "Organization Settings > Security > Workload Identity Provider",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-118be2d3"
+          ]
+        },
+        {
+          "name": "Disable a workload identity service account mapping",
+          "effect": "disable",
+          "applies_to": [
+            "openai-4"
+          ],
+          "what": "A disabled mapping makes token exchange fail for that service account, which stops new access tokens from being issued.",
+          "setting": "Workload Identity Provider > service account mapping (disabled state)",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-6c2bdef9"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether API keys are subject to SSO or IdP conditional access (no statement found).",
+        "Whether the IP allowlist covers Administration API calls made with admin keys.",
+        "Whether audit logging must be activated and its retention period (help center pages blocked to fetch).",
+        "Whether inference/data-read API calls (e.g. GET /v1/files) appear in the audit log; it is described as user actions and configuration changes.",
+        "Whether deleting a service account or WIF mapping invalidates already-issued WIF tokens before expiry.",
+        "Lifetime, listing and admin revocation of legacy user API keys.",
+        "API key secret prefix format (not stated in fetched docs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "openai-4",
+      "provider_id": "openai",
+      "name": "Workload identity federation access token",
+      "family": "federation",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Workload exchanges an OIDC JWT, SPIFFE JWT-SVID or X.509 client cert at the token endpoint for a short-lived token mapped to a project service account.",
+        "evidence_refs": [
+          "fc-118be2d3"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "OIDC providers (AWS, Azure, GCP, Kubernetes, GitHub Actions, OCI, SPIFFE) and X.509 via mTLS; mappings select the service account.",
+        "evidence_refs": [
+          "fc-118be2d3"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Minted tokens are subject to the same IP allowlist checks as normal API requests.",
+        "evidence_refs": [
+          "fc-6c2bdef9",
+          "fc-4f6c0e89"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": 3600,
+        "configurable": "conditional",
+        "summary": "At most 1 hour; never outlives the subject token or certificate",
+        "evidence_refs": [
+          "fc-6c2bdef9"
+        ]
+      },
+      "renewal": {
+        "mechanism": "external_identity",
+        "expiry_basis": "expires_at from exchange",
+        "summary": "No refresh token; repeat the exchange with a fresh external token.",
+        "evidence_refs": [
+          "fc-6c2bdef9"
+        ]
+      },
+      "administration": {
+        "summary": "Admins with permission configure Workload Identity Providers and service account mappings in Organization Settings > Security. Remove unused providers and mappings to cut off exchange.",
+        "conditions": "Cannot call Admin API endpoints.",
+        "evidence_refs": [
+          "fc-118be2d3",
+          "fc-6c2bdef9"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "No endpoint lists issued tokens; issuance appears in the audit log as tenant.workload_identity.access_token.issued.",
+          "evidence_refs": [
+            "fc-924489d8"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": null,
+          "api": "GET /organization/audit_logs?event_types[]=tenant.workload_identity.access_token.issued",
+          "cli": null,
+          "evidence_refs": [
+            "fc-924489d8",
+            "fc-18fbf244"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "POST https://auth.openai.com/oauth/token response fields expires_in, expires_at",
+          "cli": null,
+          "evidence_refs": [
+            "fc-6c2bdef9"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "JWT-style access token; prefix not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs (GET /v1/organization/audit_logs)",
+            "notes": "User actions and configuration changes; actor is session or api_key with key tracking id. Read with an admin key. Activation and retention not verified."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.api_key.service_account.id",
+            "log": "Audit logs",
+            "notes": "Mapped service account (assumed attribution; not verified)"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "workload_identity_provider.created",
+            "stage": "create",
+            "notes": "Also workload_identity_provider_mapping.created/updated/deleted"
+          },
+          {
+            "event": "tenant.workload_identity.access_token.issued",
+            "stage": "use",
+            "notes": "Token issuance"
+          }
+        ],
+        "correlation_keys": [
+          "actor.api_key.id (tracking id)",
+          "actor.api_key.service_account.id",
+          "actor.session.ip_address",
+          "project_id"
+        ],
+        "anomaly_cues": [
+          "Key used from IP that triggers ip_not_authorized",
+          "api_key.created by unexpected user or outside change window",
+          "Usage spike grouped by api_key_id"
+        ],
+        "containment": {
+          "steps": "Disable or delete the service account mapping or provider; delete the service account.",
+          "kills_existing": "unknown",
+          "notes": "Tokens expire within an hour; immediate invalidation of issued tokens not stated."
+        },
+        "sample_query": null,
+        "unknown": [
+          "How WIF-token API calls are attributed in audit logs"
+        ],
+        "evidence_refs": [
+          "fc-fdef42f5",
+          "fc-6c2bdef9",
+          "fc-118be2d3"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/models",
+            "reveals": "Key is valid; models visible to the project",
+            "bulk": false,
+            "scope": "api.model.read",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit log covers config changes; inference/read calls not stated"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+            "reveals": "Uploaded files (fine-tuning, batch, assistants data)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not listed as an audit event"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-126e5cb0",
+          "fc-85c173d1",
+          "fc-6c2bdef9"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-118be2d3",
+      "title": "Workload identity federation",
+      "url": "https://developers.openai.com/api/docs/guides/workload-identity-federation",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-126e5cb0",
+      "title": "Models reference",
+      "url": "https://developers.openai.com/api/reference/resources/models",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-18fbf244",
+      "title": "OpenAI OpenAPI spec (AdminApiKey schema)",
+      "url": "https://github.com/openai/openai-openapi/blob/main/openapi.yaml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4f6c0e89",
+      "title": "IP allowlist",
+      "url": "https://developers.openai.com/api/docs/guides/ip-allowlist",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6c2bdef9",
+      "title": "Workload identity token exchange reference",
+      "url": "https://developers.openai.com/api/reference/workload-identity-federation",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-85c173d1",
+      "title": "Files reference",
+      "url": "https://developers.openai.com/api/reference/resources/files",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8c63700e",
+      "title": "Service Accounts reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/projects/subresources/service_accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-924489d8",
+      "title": "List audit logs",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/audit_logs/methods/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fdef42f5",
+      "title": "Audit Logs reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/audit_logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

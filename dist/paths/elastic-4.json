@@ -1,0 +1,348 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "elastic",
+      "name": "Elastic Cloud",
+      "scope_notes": "Covers Elastic Cloud (Elastic Cloud Hosted / Serverless, Elasticsearch). Covers Elastic Cloud org API keys and Elasticsearch-level credentials on ECH, Serverless and self-managed; Elasticsearch audit logging needs a qualifying subscription, and the org-level Cloud audit trail exists only on FedRAMP Moderate.",
+      "controls": [
+        {
+          "name": "Delete service account tokens",
+          "effect": "revoke",
+          "applies_to": [
+            "elastic-4"
+          ],
+          "what": "Deletes a named service token.",
+          "setting": "DELETE /_security/service/{namespace}/{service}/credential/token/{name}",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-2c4ceef9"
+          ]
+        },
+        {
+          "name": "IP filters (network security policies)",
+          "effect": "limit_network",
+          "applies_to": [
+            "elastic-2",
+            "elastic-3",
+            "elastic-4"
+          ],
+          "what": "Rejects deployment/project traffic from non-allowed IPs with 403.",
+          "setting": "Organization > Network security > IP filter; apply to deployments",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-c2207027"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "elastic-4",
+          "what": "Service tokens cannot be given an expiry.",
+          "kind": "expiry",
+          "evidence_refs": [
+            "fc-80c316d8"
+          ]
+        },
+        {
+          "path_id": "elastic-4",
+          "what": "Built-in service accounts cannot be disabled.",
+          "kind": "disable",
+          "evidence_refs": [
+            "fc-80c316d8"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "IP restriction for the Elastic Cloud API (api.elastic-cloud.com) used with Cloud API keys.",
+        "Whether an org can block creation of Cloud API keys with no expiry (Never).",
+        "Org-level audit log of Cloud API key creation/use outside FedRAMP Moderate.",
+        "Whether ES API keys owned by a SAML user stop working when the user is removed in the IdP.",
+        "Whether xpack.security.authc.api_key.enabled can be set in ECH user settings.",
+        "Whether Cloud API key revocation affects in-flight requests."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "elastic-4",
+      "provider_id": "elastic",
+      "name": "Service account token",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Bearer token for a service account (e.g. elastic/fleet-server, elastic/kibana) with fixed privileges.",
+        "evidence_refs": [
+          "fc-80c316d8"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Service-only credential, not usable by people.",
+        "evidence_refs": [
+          "fc-80c316d8"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Only via deployment IP filters / HTTP filters; not per token.",
+        "evidence_refs": [
+          "fc-c2207027"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Never expires",
+        "evidence_refs": [
+          "fc-80c316d8"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "None",
+        "summary": "Create new token and delete old one.",
+        "evidence_refs": [
+          "fc-80c316d8"
+        ]
+      },
+      "administration": {
+        "summary": "manage_service_account for built-in accounts; manage_security for user-managed accounts. Built-in accounts are always enabled.",
+        "conditions": "User-managed service accounts appear in current API reference with an enabled flag.",
+        "evidence_refs": [
+          "fc-80c316d8",
+          "fc-2c4ceef9"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service accounts are for external services, not individual users.",
+          "evidence_refs": [
+            "fc-80c316d8"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Get service accounts API, then get service account credentials API per account (includes file-backed tokens).",
+          "evidence_refs": [
+            "fc-80c316d8"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Enable audit logging (xpack.security.audit.enabled: true); filter authentication.token.name",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-33c04691",
+            "fc-2f88b4d7",
+            "fc-309fcee8"
+          ]
+        },
+        "reads": {
+          "ui": "Audit log: filter access_granted and authentication.token.name",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-2f88b4d7"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Bearer token; secret part at least 22 chars."
+        },
+        "log_sources": [
+          {
+            "name": "Elasticsearch audit log",
+            "notes": "Same gating."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "authentication.token.name",
+            "log": "Elasticsearch audit log",
+            "notes": null
+          },
+          {
+            "field": "authentication.token.type",
+            "log": "Elasticsearch audit log",
+            "notes": null
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "create_service_token",
+            "stage": "create",
+            "notes": "Needs security_config_change"
+          },
+          {
+            "event": "delete_service_token",
+            "stage": "revoke",
+            "notes": "Needs security_config_change"
+          }
+        ],
+        "correlation_keys": [
+          "user.name (e.g. elastic/fleet-server)",
+          "authentication.token.name",
+          "origin.address"
+        ],
+        "anomaly_cues": [
+          "Service token used from outside Fleet/Kibana hosts",
+          "New token names"
+        ],
+        "containment": {
+          "steps": "Delete the token via API; file-backed tokens need the service_tokens file edited.",
+          "kills_existing": "yes",
+          "notes": "Index-backed token cache clears automatically when the security index changes (for example, a token delete); file-backed cache clears on file change. No derived tokens."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-80c316d8",
+          "fc-2c4ceef9",
+          "fc-2f88b4d7",
+          "fc-b936b3a6"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /_security/_authenticate",
+            "reveals": "Service account and token name",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "authentication_success",
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "GET /<index>/_search",
+            "reveals": "Documents in indices covered by the service account's fixed privileges",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "access_granted",
+            "log_notes": "Elasticsearch audit log (access_granted is in the default include list once auditing is enabled); needs a qualifying subscription. Token identified by authentication.token.name."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-80c316d8",
+          "fc-2f88b4d7",
+          "fc-89efc68a",
+          "fc-985046f7",
+          "fc-c307f244"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-2c4ceef9",
+      "title": "Elasticsearch API (OpenAPI) - Create a cross-cluster API key",
+      "url": "https://www.elastic.co/docs/api/doc/elasticsearch.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2f88b4d7",
+      "title": "Elasticsearch audit events",
+      "url": "https://www.elastic.co/docs/reference/elasticsearch/elasticsearch-audit-events",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-309fcee8",
+      "title": "Stack monitoring on ECH and ECE",
+      "url": "https://www.elastic.co/docs/deploy-manage/monitor/stack-monitoring/ece-ech-stack-monitoring",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-33c04691",
+      "title": "Enable audit logging",
+      "url": "https://www.elastic.co/docs/deploy-manage/security/logging-configuration/enabling-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-80c316d8",
+      "title": "Service accounts",
+      "url": "https://www.elastic.co/docs/deploy-manage/users-roles/cluster-or-deployment-auth/service-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-89efc68a",
+      "title": "Run a search",
+      "url": "https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-search",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-985046f7",
+      "title": "Enable audit logging",
+      "url": "https://www.elastic.co/docs/deploy-manage/monitor/stack-audit-logging/enabling-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b936b3a6",
+      "title": "Clear service account token caches",
+      "url": "https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-security-clear-cached-service-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c2207027",
+      "title": "Manage IP filters in ECH or Serverless",
+      "url": "https://www.elastic.co/docs/deploy-manage/security/ip-filtering-cloud",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c307f244",
+      "title": "Auditing security settings",
+      "url": "https://www.elastic.co/docs/reference/elasticsearch/configuration-reference/auding-settings",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

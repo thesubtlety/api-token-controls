@@ -1,0 +1,211 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "crowdstrike",
+      "name": "CrowdStrike Falcon",
+      "scope_notes": "Public developer docs only; Falcon console documentation (IP allowlisting, audit event names, roles) requires login and is marked unknown. Next-Gen SIEM HEC needs a Next-Gen SIEM subscription; member_cid needs Flight Control.",
+      "controls": [
+        {
+          "name": "Regenerate Ingest token",
+          "effect": "require_rotation",
+          "applies_to": [
+            "crowdstrike-3"
+          ],
+          "what": "Regenerates the data connection ingest token.",
+          "setting": "POST /ngsiem/entities/connections/token/v1",
+          "plan": "Falcon Next-Gen SIEM",
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-bf6410f1",
+            "fc-ad581e2f"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for API clients: whether it exists, whether it applies to /oauth2/token or every API request (Falcon docs require login).",
+        "Whether deleting an API client or resetting its secret invalidates already-issued 30-minute tokens.",
+        "Audit event names for API client create/update/delete/secret reset and token issuance, and which field carries the client ID.",
+        "Whether ordinary API read calls are written to the audit log, and audit log retention.",
+        "Which Falcon roles can create API clients, and whether creation can require approval.",
+        "Whether a parent CID can be prevented from issuing member_cid tokens for specific child CIDs.",
+        "HEC ingest key expiry, IP restriction, and whether regeneration invalidates the old key immediately.",
+        "API rate limits (documented only inside Falcon)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "crowdstrike-3",
+      "provider_id": "crowdstrike",
+      "name": "Next-Gen SIEM HEC data connector API key (ingest token)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Creating an HEC/HTTP Event Data Connector produces an API key and URL used by log shippers to send events into Next-Gen SIEM.",
+        "evidence_refs": [
+          "fc-ad581e2f"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static ingest key.",
+        "evidence_refs": [
+          "fc-ad581e2f"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented publicly.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Token has an expires_at timestamp; default and max not documented",
+        "evidence_refs": [
+          "fc-cad0466e"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "unknown",
+        "summary": "Regenerate via POST /ngsiem/entities/connections/token/v1.",
+        "evidence_refs": [
+          "fc-bf6410f1"
+        ]
+      },
+      "administration": {
+        "summary": "Next-Gen SIEM > Data ingestion > Data connectors.",
+        "conditions": "Falcon Next-Gen SIEM subscription; Administrator or Connector Manager.",
+        "evidence_refs": [
+          "fc-ad581e2f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The key belongs to the data connector, shown on the connector's detail page.",
+          "evidence_refs": [
+            "fc-ad581e2f"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /ngsiem/combined/connections/v1 lists data connections; console page Next-Gen SIEM > Data ingestion > Data connectors.",
+          "evidence_refs": [
+            "fc-79df10b9",
+            "fc-ad581e2f"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Next-Gen SIEM > Data ingestion > Data connectors > <connector> > Show events (or Advanced Event Search filtered on the connector's #connector tag)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-ad581e2f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Next-Gen SIEM events tagged #connector",
+            "notes": "Ingested data can be filtered by the connector tag; key-use audit not documented."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "#connector"
+        ],
+        "anomaly_cues": [
+          "Unexpected events or volume on a connector (log injection)"
+        ],
+        "containment": {
+          "steps": "Regenerate the ingest token or delete the connector.",
+          "kills_existing": "yes",
+          "notes": "Regenerating the ingest token invalidates the previous one; timing not stated."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit events for connector key regeneration"
+        ],
+        "evidence_refs": [
+          "fc-bf6410f1",
+          "fc-cad0466e"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Ingest key is write-only per docs reviewed; read capability not documented"
+        ],
+        "evidence_refs": []
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-79df10b9",
+      "title": "ExternalListDataConnections",
+      "url": "https://developer.crowdstrike.com/api-reference/operations/ExternalListDataConnections/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ad581e2f",
+      "title": "Data Ingestion (HEC)",
+      "url": "https://developer.crowdstrike.com/ngsiem/data-ingestion/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf6410f1",
+      "title": "CrowdStrike Developer Center (full operation index)",
+      "url": "https://developer.crowdstrike.com/llms-full.txt",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cad0466e",
+      "title": "ngsiem_data_connection_token (Terraform provider)",
+      "url": "https://developer.crowdstrike.com/cac/terraform/provider/next-gen-siem/resources/ngsiem-data-connection-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

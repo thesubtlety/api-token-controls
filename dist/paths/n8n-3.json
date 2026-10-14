@@ -1,0 +1,309 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "scope_notes": "Covers n8n (Cloud and self-hosted). Public API is on Cloud Starter/Pro/Enterprise and all self-hosted editions (not free trial); key scopes, log streaming and token exchange are Enterprise; env-var controls apply only to self-hosted.",
+      "controls": [
+        {
+          "name": "Enable/Disable MCP access",
+          "effect": "disable",
+          "applies_to": [
+            "n8n-2",
+            "n8n-3"
+          ],
+          "what": "Turns the instance MCP server on or off; disabling disconnects every client.",
+          "setting": "Settings > Instance-level MCP > Connection details",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-14e7d164"
+          ]
+        },
+        {
+          "name": "N8N_DISABLED_MODULES=mcp",
+          "effect": "disable",
+          "applies_to": [
+            "n8n-2",
+            "n8n-3"
+          ],
+          "what": "Removes MCP endpoints entirely.",
+          "setting": "Environment variable",
+          "plan": "Self-hosted only",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-14e7d164"
+          ]
+        },
+        {
+          "name": "Per-workflow MCP access",
+          "effect": "limit_resources",
+          "applies_to": [
+            "n8n-2",
+            "n8n-3"
+          ],
+          "what": "Only workflows marked Available in MCP can be read in full, run or edited.",
+          "setting": "Workflow settings > Available in MCP; Settings > Instance-level MCP > Workflows enabled",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-14e7d164"
+          ]
+        },
+        {
+          "name": "Revoke access (connected clients)",
+          "effect": "revoke",
+          "applies_to": [
+            "n8n-3"
+          ],
+          "what": "Disconnects an OAuth MCP client immediately.",
+          "setting": "Settings > Instance-level MCP > Connected clients > Revoke access",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-14e7d164"
+          ]
+        },
+        {
+          "name": "Allowed callback URLs",
+          "effect": "limit_network",
+          "applies_to": [
+            "n8n-3"
+          ],
+          "what": "Restricts which redirect URLs can finish an MCP OAuth sign-in.",
+          "setting": "Settings > Instance-level MCP > Access > Allowed callback URLs",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-14e7d164"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "n8n-3",
+          "what": "No admin approval step for MCP OAuth clients; any signed-in user can approve one while MCP is on.",
+          "kind": "disable",
+          "evidence_refs": [
+            "fc-14e7d164"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether n8n API keys or MCP tokens are rejected when SSO is enforced or when a user is deleted",
+        "Any IP allowlist for API or MCP requests on n8n Cloud",
+        "Whether an admin can list or revoke other users' API keys or MCP API-key tokens",
+        "Whether 'no expiration' is an option for API keys, and default/maximum lifetime",
+        "MCP OAuth access/refresh token lifetimes",
+        "Whether public API read calls (GET /workflows, /executions, /credentials) produce any audit event",
+        "Audit log retention (log streaming forwards events; retention is in the customer destination)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "n8n-3",
+      "provider_id": "n8n",
+      "name": "MCP OAuth client connection",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An MCP client (Claude, ChatGPT, Cursor, etc.) runs an OAuth flow; the user approves it in n8n and the client gets the permissions granted at consent.",
+        "evidence_refs": [
+          "fc-14e7d164"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "User OAuth consent, not workload federation.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Not documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "not documented",
+        "summary": "Log docs mention the client's token refreshes; lifetimes are not documented.",
+        "evidence_refs": []
+      },
+      "administration": {
+        "summary": "Any signed-in user can approve a client while MCP is on. Owners/admins can restrict OAuth callback URLs (default allows any) and revoke clients for all users.",
+        "conditions": "No per-client admin approval.",
+        "evidence_refs": [
+          "fc-14e7d164"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Settings > Instance-level MCP > Connected clients > View all, all-users view lists every connected OAuth client.",
+          "evidence_refs": [
+            "fc-14e7d164"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Settings > Log Streaming > Add new destination > Events: n8n.audit.mcp; filter authType=oauth, group by clientId",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-6945b4b5"
+          ]
+        },
+        "reads": {
+          "ui": "Settings > Log Streaming > Events: n8n.audit.mcp; filter event n8n.audit.mcp.tool.called with authType=oauth and clientId",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-6945b4b5"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "OAuth access token."
+        },
+        "log_sources": [
+          {
+            "name": "Log streaming: n8n.audit.mcp.*",
+            "notes": "Enterprise; from n8n 2.34.0."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "clientId",
+            "log": "n8n.audit.mcp.oauth.completed, n8n.audit.mcp.tool.called",
+            "notes": "Stable per client registration."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "n8n.audit.mcp.oauth.completed",
+            "stage": "create",
+            "notes": "userId, clientId, clientName."
+          },
+          {
+            "event": "n8n.audit.mcp.tool.called",
+            "stage": "use",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "clientId",
+          "userId"
+        ],
+        "anomaly_cues": [
+          "New clientName not in approved list",
+          "Callback URL mode left at All callback URLs"
+        ],
+        "containment": {
+          "steps": "Settings > Instance-level MCP > Connected clients > Revoke access (all-users view for others).",
+          "kills_existing": "yes",
+          "notes": "Client is disconnected at once."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Revocation event name"
+        ],
+        "evidence_refs": [
+          "fc-6945b4b5",
+          "fc-14e7d164"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "MCP tool search_workflows",
+            "reveals": "Workflow previews",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "n8n.audit.mcp.tool.called",
+            "log_notes": "clientId present"
+          },
+          {
+            "stage": "collection",
+            "call": "MCP tool search_workflows",
+            "reveals": "Previews of every workflow the user can view",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "n8n.audit.mcp.tool.called",
+            "log_notes": "Log streaming is Enterprise only; MCP audit events from n8n 2.34.0."
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-6945b4b5",
+          "fc-14e7d164"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-14e7d164",
+      "title": "Connect to n8n MCP server | n8n Docs",
+      "url": "https://docs.n8n.io/connect/connect-to-n8n-mcp-server",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6945b4b5",
+      "title": "Stream logs to external systems | n8n Docs",
+      "url": "https://docs.n8n.io/administer/observe-and-log/stream-logs-to-external-systems",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

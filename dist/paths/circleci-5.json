@@ -1,0 +1,301 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "circleci",
+      "name": "CircleCI",
+      "scope_notes": "Covers CircleCI Cloud. CircleCI cloud (Free, Performance, Scale); SAML SSO and audit log streaming need Scale, context security-group restrictions only on github-type orgs; CircleCI Server is out of scope.",
+      "controls": [
+        {
+          "name": "Rotate/delete checkout or SSH key",
+          "effect": "revoke",
+          "applies_to": [
+            "circleci-5"
+          ],
+          "what": "Delete the key in CircleCI and its public key at the VCS.",
+          "setting": "Project Settings > SSH Keys; DELETE /project/{project-slug}/checkout-key/{fingerprint}",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-b27cdb24",
+            "fc-9121aa1f"
+          ]
+        },
+        {
+          "name": "GitHub organization deploy key restriction",
+          "effect": "disable",
+          "applies_to": [
+            "circleci-5"
+          ],
+          "what": "A GitHub org owner can restrict or disable deploy keys across repos, which can disable or remove CircleCI deploy keys. This is a GitHub setting.",
+          "setting": "GitHub organization settings",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-419d322f"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any org-admin setting to block, list or revoke members' personal API tokens.",
+        "Any org setting to disable OAuth Dynamic Client Registration tokens.",
+        "Any inbound IP allowlist for the CircleCI API or web app.",
+        "Whether personal API token create/delete or API reads appear in audit logs (not in the published event list).",
+        "Whether an SSO-authorized token stops working when the IdP session ends or the user is removed from the IdP.",
+        "Project API token expiry."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "circleci-5",
+      "provider_id": "circleci",
+      "name": "Checkout keys (deploy keys and user keys) and additional SSH keys",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "SSH private keys held by CircleCI: deploy/user keys for checking out code from the VCS, and additional keys for deploying to other hosts.",
+        "evidence_refs": [
+          "fc-e2572de6",
+          "fc-05bf1236"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "SSH keys.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "The VCS or target host enforces network rules. With the IP ranges feature (Performance or Scale), job traffic comes from published CircleCI ranges that the target can allowlist.",
+        "evidence_refs": [
+          "fc-d7fcdb72"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "none",
+        "summary": "Rotate by deleting and re-adding the key pair.",
+        "evidence_refs": [
+          "fc-9121aa1f"
+        ]
+      },
+      "administration": {
+        "summary": "Managed in Project Settings > SSH Keys or the checkout-key API. Revocation requires deleting the key in CircleCI and the public key at the VCS.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-b27cdb24",
+          "fc-9121aa1f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Deploy keys are not tied to a user. User keys stay until rotated, unless the user revokes the GitHub OAuth integration that created them, which removes them.",
+          "evidence_refs": [
+            "fc-419d322f"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Per project only: GET /project/{project-slug}/checkout-key lists checkout keys, and Project Settings > SSH Keys shows all keys.",
+          "evidence_refs": [
+            "fc-9121aa1f",
+            "fc-b27cdb24"
+          ]
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "In .circleci/config.yml set circleci_ip_ranges: true on the job; allowlist jobs.knownips.circleci.com ranges at the VCS/target host",
+          "api": null,
+          "cli": "dig all.knownips.circleci.com A +short",
+          "evidence_refs": [
+            "fc-d7fcdb72"
+          ]
+        },
+        "usage": {
+          "ui": "Org > Security > Audit Logs > Request audit logs (CSV); filter actions checkout-key.* and project.ssh_key.* (records key changes)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-00a430b7"
+          ]
+        },
+        "offboard": {
+          "ui": "Project Settings > SSH Keys > user key > X; then delete the CircleCI key in GitHub user settings",
+          "api": "DELETE /api/v2/project/{project-slug}/checkout-key/{fingerprint}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-9121aa1f",
+            "fc-b27cdb24"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "SSH private keys."
+        },
+        "log_sources": [
+          {
+            "name": "CircleCI audit logs",
+            "notes": ""
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "fingerprint",
+            "log": "checkout-key API",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "checkout-key.create",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "checkout-key.delete",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "project.ssh_key.create",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "project.ssh_key.delete",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "fingerprint",
+          "project"
+        ],
+        "anomaly_cues": [
+          "User keys added (act with a user's VCS access)"
+        ],
+        "containment": {
+          "steps": "Delete key in CircleCI and the public key at GitHub/Bitbucket/GitLab.",
+          "kills_existing": "partial",
+          "notes": "Key works at the VCS until its public key is removed there."
+        },
+        "sample_query": null,
+        "unknown": [],
+        "evidence_refs": [
+          "fc-00a430b7",
+          "fc-05bf1236",
+          "fc-9121aa1f"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v2/project/{project-slug}/checkout-key",
+            "reveals": "checkout key fingerprints and public keys",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-b27cdb24"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-00a430b7",
+      "title": "Audit logs",
+      "url": "https://circleci.com/docs/guides/security/audit-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-05bf1236",
+      "title": "Analyze pipelines during an incident",
+      "url": "https://circleci.com/docs/guides/orchestrate/analyze-pipelines-during-an-incident/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-419d322f",
+      "title": "Users, organizations, and integrations guide",
+      "url": "https://circleci.com/docs/guides/permissions-authentication/users-organizations-and-integrations-guide/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9121aa1f",
+      "title": "Rotate project SSH keys",
+      "url": "https://circleci.com/docs/guides/security/rotate-project-ssh-keys/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b27cdb24",
+      "title": "CircleCI API v2 OpenAPI",
+      "url": "https://circleci.com/api/v2/openapi.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7fcdb72",
+      "title": "Restrict your pipeline traffic to specific IP ranges",
+      "url": "https://circleci.com/docs/guides/security/ip-ranges/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e2572de6",
+      "title": "Add additional SSH keys to CircleCI",
+      "url": "https://circleci.com/docs/guides/integration/add-ssh-key/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

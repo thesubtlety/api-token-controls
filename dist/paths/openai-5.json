@@ -1,0 +1,214 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "openai",
+      "name": "OpenAI API",
+      "scope_notes": "OpenAI API Platform organizations and projects (platform.openai.com); ChatGPT workspace and Codex credentials out of scope except where shared WIF docs mention them.",
+      "controls": [],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether API keys are subject to SSO or IdP conditional access (no statement found).",
+        "Whether the IP allowlist covers Administration API calls made with admin keys.",
+        "Whether audit logging must be activated and its retention period (help center pages blocked to fetch).",
+        "Whether inference/data-read API calls (e.g. GET /v1/files) appear in the audit log; it is described as user actions and configuration changes.",
+        "Whether deleting a service account or WIF mapping invalidates already-issued WIF tokens before expiry.",
+        "Lifetime, listing and admin revocation of legacy user API keys.",
+        "API key secret prefix format (not stated in fetched docs)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "openai-5",
+      "provider_id": "openai",
+      "name": "Legacy user API key",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Older user-level key that can reach projects; callers select organization and project with OpenAI-Organization / OpenAI-Project headers.",
+        "evidence_refs": [
+          "fc-a738cffa"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "OpenAI docs fetched do not say whether API keys are subject to SSO or IdP conditional access.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Allowlist applies to API requests for the organization or project associated with the key; legacy keys not addressed specifically.",
+        "evidence_refs": [
+          "fc-4f6c0e89"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Not documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "unknown",
+        "summary": "Replace with a project or service account key.",
+        "evidence_refs": []
+      },
+      "administration": {
+        "summary": "Fetched docs only mention legacy user keys in the authentication header guidance. Keys made before Dec 20, 2023 may lack usage tracking.",
+        "conditions": "Admin listing/revocation path for legacy keys not documented in fetched pages.",
+        "evidence_refs": [
+          "fc-a738cffa",
+          "fc-cda4b87e"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs (GET /v1/organization/audit_logs)",
+            "notes": "User actions and configuration changes; actor is session or api_key with key tracking id. Read with an admin key. Activation and retention not verified."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.api_key.id",
+            "log": "Audit logs",
+            "notes": "type user"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "api_key.deleted",
+            "stage": "revoke",
+            "notes": "Assumed to apply; not verified for legacy keys"
+          }
+        ],
+        "correlation_keys": [
+          "actor.api_key.id (tracking id)",
+          "actor.api_key.service_account.id",
+          "actor.session.ip_address",
+          "project_id"
+        ],
+        "anomaly_cues": [
+          "Key used from IP that triggers ip_not_authorized",
+          "api_key.created by unexpected user or outside change window",
+          "Usage spike grouped by api_key_id"
+        ],
+        "containment": {
+          "steps": "Delete the key from the API keys page.",
+          "kills_existing": "yes",
+          "notes": "General API key statement: revocations take effect within a few seconds; legacy keys not named specifically."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Admin visibility of legacy keys"
+        ],
+        "evidence_refs": [
+          "fc-a738cffa",
+          "fc-cda4b87e",
+          "fc-fdef42f5"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/models",
+            "reveals": "Key is valid; models visible to the project",
+            "bulk": false,
+            "scope": "api.model.read",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit log covers config changes; inference/read calls not stated"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-126e5cb0",
+          "fc-a738cffa"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-126e5cb0",
+      "title": "Models reference",
+      "url": "https://developers.openai.com/api/reference/resources/models",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4f6c0e89",
+      "title": "IP allowlist",
+      "url": "https://developers.openai.com/api/docs/guides/ip-allowlist",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a738cffa",
+      "title": "API Overview - Authentication",
+      "url": "https://developers.openai.com/api/reference/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cda4b87e",
+      "title": "Production best practices - API keys",
+      "url": "https://developers.openai.com/api/docs/guides/production-best-practices",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fdef42f5",
+      "title": "Audit Logs reference",
+      "url": "https://developers.openai.com/api/reference/resources/admin/subresources/organization/subresources/audit_logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,338 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "bitbucket",
+      "name": "Bitbucket Cloud",
+      "scope_notes": "Bitbucket Cloud SaaS; workspace/project access tokens and IP allowlisting need Premium, org-level audit log needs Atlassian Guard; API tokens are Atlassian-account tokens shared with Jira/Confluence.",
+      "controls": [
+        {
+          "name": "Require access token expiry",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "bitbucket-3"
+          ],
+          "what": "Sets the maximum expiry range for all access tokens in the workspace, its projects and repositories.",
+          "setting": "Workspace settings > Security > Access tokens > Access token expiry date range",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-738e409e"
+          ]
+        },
+        {
+          "name": "Revoke access token",
+          "effect": "revoke",
+          "applies_to": [
+            "bitbucket-3"
+          ],
+          "what": "Admin revokes a repository/project/workspace access token; apps using it lose access.",
+          "setting": "Repository/Project/Workspace settings > Access tokens > Revoke",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-9dcaf37e"
+          ]
+        },
+        {
+          "name": "Access token scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "bitbucket-1",
+            "bitbucket-3"
+          ],
+          "what": "Scopes and resource container are fixed at creation.",
+          "setting": "Token creation dialog",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-4bf122a1",
+            "fc-02ac8d2f"
+          ]
+        },
+        {
+          "name": "Restrict access to certain IP addresses",
+          "effect": "limit_network",
+          "applies_to": [
+            "bitbucket-1",
+            "bitbucket-3",
+            "bitbucket-4",
+            "bitbucket-5"
+          ],
+          "what": "Only allowlisted IPs can view private content or clone/push/pull private repos.",
+          "setting": "Workspace settings > Access controls > Restrict access to certain IP addresses",
+          "plan": "Premium",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-b50f7c86"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether the workspace IP allowlist is enforced on REST API calls (docs only mention viewing content and Git clone/push/pull).",
+        "Whether API tokens or OAuth tokens are checked against IdP SSO or conditional access at use time.",
+        "Whether the workspace audit log records access token creation, rotation or revocation (no such events listed).",
+        "Lifetime of the Pipelines OIDC token.",
+        "OAuth access token lifetime: developer docs say 1 hour, support docs say 2 hours.",
+        "Any admin approval workflow for users authorizing third-party OAuth consumers."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "bitbucket-3",
+      "provider_id": "bitbucket",
+      "name": "Access tokens (repository, project, workspace)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Admin-created bearer token tied to one repository, project or workspace rather than a user. Acts as its own 'user' identity named after the token in UI and logs.",
+        "evidence_refs": [
+          "fc-02ac8d2f",
+          "fc-a3d66d5b"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Not tied to a user, so IdP SSO does not apply; docs state they do not require 2SV.",
+        "evidence_refs": [
+          "fc-02ac8d2f"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "Premium workspace IP allowlist covers private content and Git operations; API enforcement for access tokens is not documented.",
+        "evidence_refs": [
+          "fc-b50f7c86"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": 31536000,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Admin-set max (365 days default); 'No expiry' allowed if policy permits",
+        "evidence_refs": [
+          "fc-738e409e",
+          "fc-e281250d"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "expiry date within workspace policy",
+        "summary": "Rotate to refresh secret and expiry without changing scopes.",
+        "evidence_refs": [
+          "fc-daaedd6a"
+        ]
+      },
+      "administration": {
+        "summary": "Created and revoked by repository/project/workspace admins. Workspace admins set maximum expiry. Max 25 per container. Workspace and project tokens need Premium.",
+        "conditions": "Premium for workspace/project tokens.",
+        "evidence_refs": [
+          "fc-02ac8d2f",
+          "fc-738e409e"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Access tokens don't require two-step verification and are not tied to a user.",
+          "evidence_refs": [
+            "fc-02ac8d2f",
+            "fc-a3d66d5b"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Linked to a repository, project or workspace, not a user account.",
+          "evidence_refs": [
+            "fc-a3d66d5b"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Each repository, project or workspace has its own Access tokens settings page; no org-wide list documented.",
+          "evidence_refs": [
+            "fc-a3d66d5b"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "No documented prefix."
+        },
+        "log_sources": [
+          {
+            "name": "Access tokens page",
+            "notes": "Shows name, created date, last accessed date and scopes."
+          },
+          {
+            "name": "Bitbucket UI/logs as token user",
+            "notes": "Actions appear under the token's name as a user."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Access token name (shown as user)",
+            "log": "Bitbucket UI / activity",
+            "notes": "Commits, PR comments and merges attributed to the token."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "access token name",
+          "repository/project/workspace"
+        ],
+        "anomaly_cues": [
+          "Last accessed date recent on a token believed unused",
+          "Tokens with No expiry",
+          "Workspace tokens with admin scopes"
+        ],
+        "containment": {
+          "steps": "Revoke on the container's Access tokens page.",
+          "kills_existing": "yes",
+          "notes": "Content the token created remains."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit events for create/revoke/rotate are not in the published event list"
+        ],
+        "evidence_refs": [
+          "fc-9dcaf37e",
+          "fc-a3d66d5b",
+          "fc-4e80eaad"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "GET /2.0/repositories/{workspace}",
+            "reveals": "repositories the token can see",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Last accessed date updates on the token page."
+          },
+          {
+            "stage": "collection",
+            "call": "git clone https://x-token-auth:{token}@bitbucket.org/{workspace}/{repo}.git",
+            "reveals": "source code",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "Whoami behavior for access tokens"
+        ],
+        "evidence_refs": [
+          "fc-cb0c2b12",
+          "fc-a3d66d5b"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-02ac8d2f",
+      "title": "Access tokens | Bitbucket Cloud",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/access-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4bf122a1",
+      "title": "API tokens | Bitbucket Cloud",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/api-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4e80eaad",
+      "title": "Bitbucket Cloud audit log events",
+      "url": "https://support.atlassian.com/bitbucket-cloud/kb/bitbucket-cloud-audit-log-events/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-738e409e",
+      "title": "Require access token expiry",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/require-access-token-expiry/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9dcaf37e",
+      "title": "Revoke an access token for a repository",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/revoke-a-repository-access-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a3d66d5b",
+      "title": "The Bitbucket Cloud REST API",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/intro/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b50f7c86",
+      "title": "Control access to private content in a workspace",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/control-access-to-private-content-in-a-workspace/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cb0c2b12",
+      "title": "Bitbucket REST API - Repositories",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/api-group-repositories/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-daaedd6a",
+      "title": "Access tokens for a repository",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/repository-access-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e281250d",
+      "title": "Create an access token for a repository",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/create-a-repository-access-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

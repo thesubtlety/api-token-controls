@@ -1,0 +1,517 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "langsmith",
+      "name": "LangSmith",
+      "scope_notes": "Covers LangSmith (LangChain). SaaS (US/EU regions) plus self-hosted and BYOC; audit logs, SCIM and service-key roles are Enterprise, Viewer role needs Plus/Enterprise.",
+      "controls": [
+        {
+          "name": "pat_creation_disabled",
+          "effect": "disable",
+          "applies_to": [
+            "langsmith-1"
+          ],
+          "what": "Stops anyone in the org creating new PATs.",
+          "setting": "PATCH /api/v1/orgs/current/info (API only)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-315666e6"
+          ]
+        },
+        {
+          "name": "Global PAT creation disable (self-hosted)",
+          "effect": "disable",
+          "applies_to": [
+            "langsmith-1"
+          ],
+          "what": "Env var disables PAT creation across all orgs on a self-hosted install.",
+          "setting": "Helm environment variable",
+          "plan": "Self-hosted",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-315666e6"
+          ]
+        },
+        {
+          "name": "Organization Viewer role",
+          "effect": "disable",
+          "applies_to": [
+            "langsmith-1"
+          ],
+          "what": "Users with this role cannot create PATs.",
+          "setting": "Org member role",
+          "plan": "Plus or Enterprise",
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-2ccacbe4"
+          ]
+        },
+        {
+          "name": "Deactivate PAT (revocation)",
+          "effect": "disable",
+          "applies_to": [
+            "langsmith-1"
+          ],
+          "what": "Stops a PAT authenticating; reversible.",
+          "setting": "Settings > API Keys > Personal; POST /api/v1/orgs/current/personal-access-tokens/{pat_id}/revocation",
+          "plan": null,
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-8ad90fe7",
+            "fc-78902130",
+            "fc-6c3e32a9"
+          ]
+        },
+        {
+          "name": "Delete PAT",
+          "effect": "revoke",
+          "applies_to": [
+            "langsmith-1"
+          ],
+          "what": "Permanently removes a PAT.",
+          "setting": "Settings > API Keys; DELETE /api/v1/orgs/current/personal-access-tokens/{pat_id}",
+          "plan": null,
+          "default": "off",
+          "level": "user",
+          "evidence_refs": [
+            "fc-8ad90fe7"
+          ]
+        },
+        {
+          "name": "Key expiration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "langsmith-1",
+            "langsmith-2"
+          ],
+          "what": "Per-key expiry in days; default never.",
+          "setting": "API key create dialog",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8ad90fe7",
+            "fc-2ccacbe4"
+          ]
+        },
+        {
+          "name": "max_pat_expiry_days / max_service_key_expiry_days",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "langsmith-1",
+            "langsmith-2"
+          ],
+          "what": "Org-level maximum expiry fields in the org API schema (behaviour not described in guides).",
+          "setting": "PATCH /api/v1/orgs/current/info",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-9cdc042c"
+          ]
+        },
+        {
+          "name": "Remove user from org / SCIM deprovision",
+          "effect": "revoke",
+          "applies_to": [
+            "langsmith-1"
+          ],
+          "what": "PATs stop working once the user is removed from the organization.",
+          "setting": "Org members or IdP SCIM",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-2ccacbe4",
+            "fc-b3558a37"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "What ip_allowlist covers and whether it applies to API key requests",
+        "Whether SSO-only enforcement blocks PATs",
+        "Whether pat_creation_disabled affects existing PATs",
+        "Exact behaviour of max_pat_expiry_days / max_service_key_expiry_days",
+        "SCIM token expiry",
+        "Whether whoami-style reads (list workspaces, org info) are audited"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "langsmith-1",
+      "provider_id": "langsmith",
+      "name": "Personal Access Tokens (PATs)",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "User-created keys (lsv2_pt_) sent as X-API-Key; they carry the creating user's permissions and default workspace.",
+        "evidence_refs": [
+          "fc-8ad90fe7",
+          "fc-2ccacbe4"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "SSO-only enforcement is documented for logins; docs do not say whether PATs are blocked by it. PATs stop working if the user is removed from the org (e.g. via SCIM).",
+        "evidence_refs": [
+          "fc-b3558a37",
+          "fc-2ccacbe4"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Org API schema has an ip_allowlist field, but no doc describes what it covers.",
+        "evidence_refs": [
+          "fc-9cdc042c"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Never expires by default; optional days; org field max_pat_expiry_days",
+        "evidence_refs": [
+          "fc-8ad90fe7",
+          "fc-2ccacbe4",
+          "fc-9cdc042c"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "expiry date",
+        "summary": "Expired keys cannot be extended; create a new one.",
+        "evidence_refs": [
+          "fc-2ccacbe4"
+        ]
+      },
+      "administration": {
+        "summary": "Org admins can disable PAT creation (pat_creation_disabled), give users the Viewer role (no PATs), and list, deactivate or delete any member's PAT.",
+        "conditions": "Viewer role needs Plus/Enterprise.",
+        "evidence_refs": [
+          "fc-315666e6",
+          "fc-2ccacbe4",
+          "fc-8ad90fe7",
+          "fc-aa5fd976"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "LangSmith says a PAT stops working when its user is removed from the organization.",
+          "evidence_refs": [
+            "fc-2ccacbe4"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Settings > API Keys > Personal > All members, or GET /api/v1/orgs/current/members/personal-access-tokens.",
+          "evidence_refs": [
+            "fc-8ad90fe7",
+            "fc-aa5fd976"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Organization Settings > Audit logs; filter Operation = query_runs / create_bulk_export, Actor = the key",
+          "api": "GET /api/v1/audit-logs?operations=query_runs&operations=create_bulk_export&actor_api_key_ids=<key id> (match actor.user.credential_uid)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2e44f713",
+            "fc-8690e22f"
+          ]
+        },
+        "offboard": {
+          "ui": null,
+          "api": "DELETE /api/v1/orgs/current/members/{identity_id}; or deprovision via SCIM from the IdP",
+          "cli": null,
+          "evidence_refs": [
+            "fc-2c38cd77",
+            "fc-b3558a37"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "lsv2_pt_",
+          "notes": "Legacy ls__ keys stopped working Oct 22 2024"
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs",
+            "notes": "Enterprise; Organization Settings > Audit logs or GET /api/v1/audit-logs (OCSF); 400-day retention; self-hosted needs Helm 0.12.33+ and enablement."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.user.credential_uid",
+            "log": "Audit logs",
+            "notes": "UUID of the PAT/key used; null for UI sessions"
+          },
+          {
+            "field": "unmapped.original_audit_log.enrichments.resource_owner_ls_user_id",
+            "log": "Audit logs",
+            "notes": "Owner of PAT acted on"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "create_personal_access_token",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "revoke_personal_access_token",
+            "stage": "revoke",
+            "notes": "Deactivation"
+          },
+          {
+            "event": "reinstate_personal_access_token",
+            "stage": "modify",
+            "notes": "Reactivation"
+          },
+          {
+            "event": "delete_personal_access_token",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "query_runs",
+            "stage": "use",
+            "notes": "Run reads are audited"
+          }
+        ],
+        "correlation_keys": [
+          "actor.user.uid",
+          "actor.user.credential_uid",
+          "workspace_id"
+        ],
+        "anomaly_cues": [
+          "query_runs / bulk export by a PAT outside normal use",
+          "PATs with no expiry",
+          "Admin acting on another member's PAT"
+        ],
+        "containment": {
+          "steps": "Deactivate or delete in Settings > API Keys (All members) or via revocation API; remove user from org.",
+          "kills_existing": "yes",
+          "notes": "Takes effect within about a minute due to auth cache."
+        },
+        "sample_query": "GET /api/v1/audit-logs?operations=create_personal_access_token&operations=query_runs&start_time=...&end_time=...",
+        "unknown": [],
+        "evidence_refs": [
+          "fc-2ccacbe4",
+          "fc-2e44f713",
+          "fc-8ad90fe7"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/v1/workspaces",
+            "reveals": "Workspaces visible to the key",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "Per-key 1-minute limit",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not in tracked operations list"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/v1/orgs/current/info",
+            "reveals": "Org settings",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /api/v1/runs/query",
+            "reveals": "Traces/runs incl. inputs and outputs",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "Per-key 1-minute limit",
+            "logged": "plan",
+            "log_event": "query_runs",
+            "log_notes": "Enterprise audit logs"
+          },
+          {
+            "stage": "collection",
+            "call": "POST /api/v1/bulk-exports",
+            "reveals": "Bulk export of trace data to a destination",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "create_bulk_export",
+            "log_notes": "Enterprise audit logs"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/orgs/current/members/personal-access-tokens",
+            "reveals": "All members' PATs (admin)",
+            "bulk": true,
+            "scope": "organization:pats:read",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "list_all_org_personal_access_tokens",
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-b704dfb6",
+          "fc-586ecfe9",
+          "fc-424fb709",
+          "fc-1e0d3e9b",
+          "fc-2e44f713",
+          "fc-2ccacbe4",
+          "fc-aa5fd976"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1e0d3e9b",
+      "title": "Create bulk export",
+      "url": "https://docs.langchain.com/langsmith/smith-api/bulk-exports/create-bulk-export",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2c38cd77",
+      "title": "Remove member from current org (API reference)",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/remove-member-from-current-org",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2ccacbe4",
+      "title": "Administration overview",
+      "url": "https://docs.langchain.com/langsmith/administration-overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2e44f713",
+      "title": "Audit logs",
+      "url": "https://docs.langchain.com/langsmith/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-315666e6",
+      "title": "Manage your organization using the API",
+      "url": "https://docs.langchain.com/langsmith/manage-organization-by-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-424fb709",
+      "title": "Query runs",
+      "url": "https://docs.langchain.com/langsmith/smith-api/run/query-runs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-586ecfe9",
+      "title": "Get current organization info",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/get-current-organization-info",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6c3e32a9",
+      "title": "Role-based access control",
+      "url": "https://docs.langchain.com/langsmith/rbac",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-78902130",
+      "title": "Revoke org personal access token",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/revoke-org-personal-access-token",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8690e22f",
+      "title": "Get audit logs (API reference)",
+      "url": "https://docs.langchain.com/langsmith/smith-api/audit-logs/get-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8ad90fe7",
+      "title": "Create an account and API key",
+      "url": "https://docs.langchain.com/langsmith/create-account-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9cdc042c",
+      "title": "Update current organization info (API reference)",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/update-current-organization-info",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-aa5fd976",
+      "title": "List all org personal access tokens",
+      "url": "https://docs.langchain.com/langsmith/smith-api/orgs/list-all-org-personal-access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b3558a37",
+      "title": "User management",
+      "url": "https://docs.langchain.com/langsmith/user-management",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b704dfb6",
+      "title": "List workspaces",
+      "url": "https://docs.langchain.com/langsmith/smith-api/workspaces/list-workspaces",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

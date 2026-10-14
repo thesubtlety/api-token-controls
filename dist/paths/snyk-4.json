@@ -1,0 +1,463 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "snyk",
+      "name": "Snyk",
+      "scope_notes": "Snyk SaaS; API access, service accounts and audit logs require the Enterprise plan, while Free/Team personal tokens work only for CLI/IDE/CI.",
+      "controls": [
+        {
+          "name": "Service account role",
+          "effect": "limit_scope",
+          "applies_to": [
+            "snyk-3",
+            "snyk-4"
+          ],
+          "what": "The assigned Group or Org role (incl. custom roles) sets what the token can do; Group Viewer gives read-only.",
+          "setting": "Group/Org Settings > Service accounts > Role; role_id in POST /service_accounts",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6826b729",
+            "fc-7feb6418"
+          ]
+        },
+        {
+          "name": "Service account creation restricted to admins",
+          "effect": "require_approval",
+          "applies_to": [
+            "snyk-3",
+            "snyk-4"
+          ],
+          "what": "Only Group admins (Group accounts) or Org Admins/Group admins (Org accounts) can create service accounts.",
+          "setting": "Role permissions group.service_account.create / org.service_account.create",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7feb6418"
+          ]
+        },
+        {
+          "name": "Delete service account",
+          "effect": "revoke",
+          "applies_to": [
+            "snyk-3",
+            "snyk-4"
+          ],
+          "what": "Deletes the account and invalidates its token or credentials immediately.",
+          "setting": "Settings > Service accounts > Delete; DELETE /rest/{groups|orgs}/{id}/service_accounts/{serviceaccount_id}",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7feb6418",
+            "fc-43a1979c"
+          ]
+        },
+        {
+          "name": "access_token_ttl_seconds",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "snyk-4"
+          ],
+          "what": "Lifetime of OAuth access tokens issued to the service account (default 1h, 1h-24h).",
+          "setting": "Service account API (not UI)",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-43a1979c",
+            "fc-6e08e2b2",
+            "fc-6100bdf1"
+          ]
+        },
+        {
+          "name": "Manage client secret (create/delete/replace)",
+          "effect": "require_rotation",
+          "applies_to": [
+            "snyk-4"
+          ],
+          "what": "Rotate or delete OAuth service account secrets; replace is the compromise response.",
+          "setting": "POST /rest/{groups|orgs}/{id}/service_accounts/{serviceaccount_id}/secrets",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-43a1979c"
+          ]
+        },
+        {
+          "name": "Audit logs",
+          "effect": "other",
+          "applies_to": [
+            "snyk-1",
+            "snyk-2",
+            "snyk-3",
+            "snyk-4",
+            "snyk-5"
+          ],
+          "what": "Group and Org audit log search (90 days) incl. service account and app lifecycle and api.access events.",
+          "setting": "GET /rest/{groups|orgs}/{id}/audit_logs/search",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d03e3195",
+            "fc-6e08e2b2"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether PATs, legacy API tokens or service account tokens bypass SSO / IdP conditional access (not stated).",
+        "Any admin setting to disable PATs or legacy API tokens, or to revoke another user's personal token (none documented).",
+        "Whether removing a user from a Group/Org or the IdP invalidates their PAT/legacy token (not stated).",
+        "Any customer IP allowlist for API requests (none documented).",
+        "Audit event names for PAT and legacy token create/revoke (not in the documented event lists).",
+        "Contents of api.access events (which fields identify the token or service account).",
+        "Admin approval or allowlist for Snyk App installation.",
+        "Token string prefixes / formats.",
+        "Refresh token lifetime for Snyk Apps."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "snyk-4",
+      "provider_id": "snyk",
+      "name": "Service account using OAuth 2.0 (oauth_client_secret / oauth_private_key_jwt)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "client_credentials grant at POST /oauth2/token with a client secret or a private_key_jwt client assertion; returns a short-lived bearer token used like any Snyk token.",
+        "evidence_refs": [
+          "fc-6100bdf1"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "private_key_jwt: Snyk verifies JWTs signed with customer keys published at a customer-hosted HTTPS JWKS URL. Not cloud workload identity federation.",
+        "evidence_refs": [
+          "fc-6100bdf1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Snyk docs describe no customer-configurable IP allowlist for API callers; IP lists in docs cover Snyk scanners reaching your targets.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 86400,
+        "configurable": "yes",
+        "summary": "Access token 1h default, 1h-24h via API",
+        "evidence_refs": [
+          "fc-43a1979c",
+          "fc-6e08e2b2",
+          "fc-6100bdf1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "access_token_ttl_seconds",
+        "summary": "Client re-requests a token with its secret or a new signed JWT; secrets rotate via /secrets (max two active).",
+        "evidence_refs": [
+          "fc-6100bdf1",
+          "fc-43a1979c"
+        ]
+      },
+      "administration": {
+        "summary": "Same creation rights and roles as other service accounts. Secrets can be created, deleted or replaced; account deletion revokes credentials.",
+        "conditions": "Enterprise plan; created via API or Group UI.",
+        "evidence_refs": [
+          "fc-7feb6418",
+          "fc-43a1979c"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service accounts are system users tied to the Group or Organization, not to a person.",
+          "evidence_refs": [
+            "fc-7feb6418"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Same service account list in Settings > Service accounts and GET /rest/groups/{groupId}/service_accounts (includes auth_type).",
+          "evidence_refs": [
+            "fc-43a1979c",
+            "fc-7feb6418"
+          ]
+        }
+      },
+      "how": {
+        "disable": {
+          "ui": "Group > Settings > Member roles > open role > clear service account create permissions > Update Role Permissions",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-b81b7d9a",
+            "fc-7feb6418"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "GET https://api.snyk.io/rest/groups/{group_id}/audit_logs/search?version={version}&events=api.access&user_id={user_id} (or /rest/orgs/{org_id}/audit_logs/search)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-d03e3195",
+            "fc-44be6988",
+            "fc-3bb65c22",
+            "fc-08d7923f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Snyk audit logs (Group/Org search API)",
+            "notes": "Enterprise; past 90 days; GET /rest/groups/{group_id}/audit_logs/search and /rest/orgs/{org_id}/audit_logs/search; api.access hidden unless requested via events=api.access."
+          },
+          {
+            "name": "Event forwarding (Amazon EventBridge, AWS CloudTrail Lake)",
+            "notes": "Platform audit events, Enterprise; use for retention beyond 90 days."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "client_id / service account id",
+            "log": "service account API",
+            "notes": "Whether audit events carry client_id is not documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "group.service_account.create",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "org.service_account.create",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "group.service_account.delete",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "org.service_account.delete",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "api.access",
+            "stage": "use",
+            "notes": "Exists in Group and Org event lists; excluded by default; described as high-volume low-information."
+          }
+        ],
+        "correlation_keys": [
+          "user_id",
+          "org_id",
+          "group_id",
+          "project_id",
+          "created"
+        ],
+        "anomaly_cues": [
+          "Second client secret added unexpectedly",
+          "JWKS URL pointing to unfamiliar host",
+          "access_token_ttl_seconds raised to 24h"
+        ],
+        "containment": {
+          "steps": "Replace secret (POST .../secrets mode replace) or delete the service account.",
+          "kills_existing": "partial",
+          "notes": "Deleting revokes credentials; whether already-issued access tokens (up to TTL) stop working on secret replace is not stated."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit event for secret rotation",
+          "Whether issued access tokens are revoked on secret replace"
+        ],
+        "evidence_refs": [
+          "fc-43a1979c",
+          "fc-d03e3195",
+          "fc-6e08e2b2"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /rest/self",
+            "reveals": "Identity of the token holder",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Enterprise; api.access hidden by default; per-call detail not documented."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /rest/orgs",
+            "reveals": "Organizations the token can access",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Same as above."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /rest/orgs/{org_id}/projects",
+            "reveals": "Projects / monitored repos and images",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Reads have no explicit action event."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /rest/orgs/{org_id}/issues",
+            "reveals": "All vulnerability findings for the Org",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Reads have no explicit action event."
+          }
+        ],
+        "unknown": [
+          "Exact fields recorded in api.access"
+        ],
+        "evidence_refs": [
+          "fc-6e08e2b2",
+          "fc-d74cf79a",
+          "fc-44be6988"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Snyk Service Account Change",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/snyk_rules/snyk_svcacct_change.yml",
+          "detects": "A Snyk group or org service account was created, deleted, edited, or had its membership changed."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-08d7923f",
+      "title": "Snyk REST API spec (rest-spec.json, linked from docs.snyk.io API reference)",
+      "url": "https://558411700-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FIEEjSXQQu36y0vmFV8zf%2Fuploads%2Fgit-blob-c1151c14af94bd6daf3db0c2cf3424397eb0191a%2Frest-spec.json?alt=media",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3bb65c22",
+      "title": "Audit Logs (API reference)",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/reference/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-43a1979c",
+      "title": "Manage service accounts using the Snyk API",
+      "url": "https://docs.snyk.io/platform-administration/service-accounts/manage-service-accounts-using-the-snyk-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-44be6988",
+      "title": "Search Audit Logs v1 to REST migration guide",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/api-end-of-life-eol-process-and-migration-guides/guides-to-migration/search-audit-logs-group-and-org-v1-api-to-ga-rest-audit-logs-api-migration-guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6100bdf1",
+      "title": "Service accounts using OAuth 2.0",
+      "url": "https://docs.snyk.io/platform-administration/service-accounts/service-accounts-using-oauth-2.0",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6826b729",
+      "title": "Snyk API token permissions users can control",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/authentication-for-api/snyk-api-token-permissions-users-can-control",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6e08e2b2",
+      "title": "Snyk REST API OpenAPI spec 2026-03-25 (AccessTokenTtlSeconds / service account attributes)",
+      "url": "https://api.snyk.io/rest/openapi/2026-03-25",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7feb6418",
+      "title": "Service accounts",
+      "url": "https://docs.snyk.io/platform-administration/service-accounts/service-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b81b7d9a",
+      "title": "User role management",
+      "url": "https://docs.snyk.io/platform-administration/user-management/user-role-management",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d03e3195",
+      "title": "Retrieve audit logs of user-initiated activity by API for an Org or Group",
+      "url": "https://docs.snyk.io/platform-administration/user-management/user-management-with-the-api/retrieve-audit-logs-of-user-initiated-activity-by-api-for-an-org-or-group",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d74cf79a",
+      "title": "About the REST API",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/rest-api/about-the-rest-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

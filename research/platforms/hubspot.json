@@ -1,0 +1,1158 @@
+{
+ "id": "hubspot",
+ "name": "HubSpot",
+ "scope_notes": "Private-app and newer developer-platform static authentication coexist. SSO requires eligible Professional/Enterprise subscriptions.",
+ "controls": [
+  {
+   "name": "App governance: Approve apps",
+   "effect": "require_approval",
+   "applies_to": [
+    "hubspot-2"
+   ],
+   "what": "Marketplace apps must be approved by a Super Admin before non-admin users can install them; users submit requests.",
+   "setting": "Settings > Integrations > Connected Apps > select app > Approve",
+   "plan": "All products and plans",
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-4ea0e458"
+   ],
+   "quote": "Non-admin users must request access to apps that haven’t been approved yet."
+  },
+  {
+   "name": "App governance: Limit installation (Install Permissions)",
+   "effect": "other",
+   "applies_to": [
+    "hubspot-2"
+   ],
+   "what": "Restricts which users/teams may install an approved app (Admins, specific users/teams, or everyone).",
+   "setting": "Settings > Integrations > Connected Apps > Manage access > Install Permissions",
+   "plan": "All products and plans",
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-4ea0e458"
+   ],
+   "quote": "Limit installation : control which users and teams can install each app."
+  },
+  {
+   "name": "App governance: Customize optional data permissions",
+   "effect": "limit_scope",
+   "applies_to": [
+    "hubspot-2"
+   ],
+   "what": "Turns optional scopes on or off for an approved app for all users; required scopes cannot be removed.",
+   "setting": "Settings > Integrations > Connected Apps > Approve / Manage access > data permissions",
+   "plan": "All products and plans",
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-4ea0e458"
+   ],
+   "quote": "Customize optional data permissions : allow or restrict optional permissions for each approved app."
+  },
+  {
+   "name": "App governance: Revoke approval",
+   "effect": "revoke",
+   "applies_to": [
+    "hubspot-2"
+   ],
+   "what": "Removes the app from approved apps and uninstalls it for every user.",
+   "setting": "Settings > Integrations > Connected Apps > Manage access > Revoke Approval",
+   "plan": "All products and plans",
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-4ea0e458"
+   ],
+   "quote": "Revoking approval for an app will uninstall it for all users who have previously installed it."
+  },
+  {
+   "name": "Uninstall an app for a specific user",
+   "effect": "revoke",
+   "applies_to": [
+    "hubspot-2"
+   ],
+   "what": "Uninstalls an approved app from one user's install; the user can reinstall unless approval is revoked.",
+   "setting": "Settings > Integrations > Connected Apps > Manage access > Installed by > Uninstall",
+   "plan": "All products and plans",
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-4ea0e458"
+   ],
+   "quote": "The user can re-install the app in the future. If you want to restrict them from installing, you can revoke approval instead."
+  },
+  {
+   "name": "User permission: App Marketplace access",
+   "effect": "other",
+   "applies_to": [
+    "hubspot-2",
+    "hubspot-3"
+   ],
+   "what": "Only Super Admins and users with this permission (plus matching scope permissions) can install apps.",
+   "setting": "Settings > Users & Teams > user > permissions (Settings access)",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-5a7188c1"
+   ],
+   "quote": "Users with the *HubSpot Marketplace access* [permission]"
+  },
+  {
+   "name": "Deselect optional scopes at install",
+   "effect": "limit_scope",
+   "applies_to": [
+    "hubspot-2",
+    "hubspot-3"
+   ],
+   "what": "The installing user can clear optional scopes before connecting the app.",
+   "setting": "Install consent screen (Connect app)",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-5a7188c1"
+   ],
+   "quote": "You can also clear any of the checkboxes under *Optional scopes* for any permissions that you don't want to grant to the app."
+  },
+  {
+   "name": "User permission: Developer tools access",
+   "effect": "disable",
+   "applies_to": [
+    "hubspot-5",
+    "hubspot-3",
+    "hubspot-4"
+   ],
+   "what": "Controls which non-Super Admin users can access developer features; creating service keys requires it.",
+   "setting": "Settings > Users & Teams > user > permissions (Settings access)",
+   "plan": null,
+   "default": "off",
+   "level": "user",
+   "evidence_refs": [
+    "fc-b4d7cd80"
+   ],
+   "quote": "Developer tools access : toggle the Developer tools access switch on to let the user access and manage developer features"
+  },
+  {
+   "name": "Service key scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "hubspot-5"
+   ],
+   "what": "Each key gets only the scopes selected, and only scopes the creating user already has; editable later.",
+   "setting": "Settings > Integrations > Service Keys (or Development > Keys > Service Keys) > key > Edit",
+   "plan": null,
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-bb6d856f"
+   ],
+   "quote": "A key can only be granted scopes the creating user already has"
+  },
+  {
+   "name": "Service key Rotate / Delete",
+   "effect": "other",
+   "applies_to": [
+    "hubspot-5"
+   ],
+   "what": "Rotate creates a new key and expires the old one now or in 7 days; Delete removes the key.",
+   "setting": "Settings > Integrations > Service Keys > key > Rotate / Delete",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-07562392"
+   ],
+   "quote": "If your key is compromised and you want to immediately revoke access, click **Rotate and expire now**."
+  },
+  {
+   "name": "Legacy private app scopes",
+   "effect": "limit_scope",
+   "applies_to": [
+    "hubspot-1"
+   ],
+   "what": "Super Admin selects which scopes the private app token can use; editable after creation.",
+   "setting": "Development > Legacy apps > app > Scopes / Edit app",
+   "plan": null,
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "turn12search3"
+   ],
+   "quote": "select the **checkbox** for each scope you want your private app to be able to access."
+  },
+  {
+   "name": "Legacy private app token Rotate",
+   "effect": "other",
+   "applies_to": [
+    "hubspot-1"
+   ],
+   "what": "Issues a new token and expires the old one immediately or after 7 days; Super Admins get a reminder after 180 days without rotation.",
+   "setting": "Development > Legacy apps > app > Auth > Rotate",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "turn12search3"
+   ],
+   "quote": "If your token is compromised and you want to immediately revoke access, click **Rotate and expire now**."
+  },
+  {
+   "name": "Delete legacy private app",
+   "effect": "revoke",
+   "applies_to": [
+    "hubspot-1"
+   ],
+   "what": "Deleting the app permanently revokes its access token.",
+   "setting": "Development > Legacy apps > app > Auth > Delete",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "turn12search3"
+   ],
+   "quote": "When you delete one of your private apps, its access token will be permanently revoked and you'll no longer be able to use it to make API calls."
+  },
+  {
+   "name": "Static auth token view/rotate restricted",
+   "effect": "other",
+   "applies_to": [
+    "hubspot-3"
+   ],
+   "what": "Only Super Admins or users with a developer seat on the account can view or rotate the static token.",
+   "setting": "Development > Projects > app > Distribution tab",
+   "plan": null,
+   "default": "on",
+   "level": "account",
+   "evidence_refs": [
+    "fc-5a7188c1"
+   ],
+   "quote": "To view or rotate your access token, you must be a super admin or have a developer seat for the associated account."
+  },
+  {
+   "name": "Developer API key deactivate/regenerate",
+   "effect": "revoke",
+   "applies_to": [
+    "hubspot-4"
+   ],
+   "what": "The single per-account developer API key can be deactivated and replaced at any time.",
+   "setting": "Development > Keys > Developer API key",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-5a7188c1"
+   ],
+   "quote": "You can deactivate your API key and generate a new one at any time."
+  },
+  {
+   "name": "Super Admin required for private apps",
+   "effect": "other",
+   "applies_to": [
+    "hubspot-1"
+   ],
+   "what": "Only Super Admins can access and create private apps, so withholding Super Admin removes the ability; there is no account-wide off switch.",
+   "setting": "User permissions: Super Admin",
+   "plan": null,
+   "default": "on",
+   "level": "user",
+   "evidence_refs": [
+    "turn12search3"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "hubspot-2",
+   "what": "Required data permissions (scopes) of an app cannot be turned off by the admin.",
+   "evidence_refs": [
+    "fc-4ea0e458"
+   ],
+   "quote": "Required data permissions for apps cannot be modified or turned off.",
+   "kind": "other"
+  }
+ ],
+ "controls_unknown": [
+  "No IP allowlist for API calls found; \"Allowed login IPs\" (Settings > Security > Login) is documented only for logins.",
+  "Whether app governance (approval) covers privately distributed OAuth apps and static-auth apps, or only HubSpot Marketplace listings.",
+  "No admin-set token lifetime or mandatory rotation policy found for private app tokens, static tokens, service keys or the developer API key (only manual rotation and reminders).",
+  "No account-wide switch found to block service key creation other than withholding Developer tools access / Super Admin."
+ ],
+ "credentials": [
+  {
+   "id": "hubspot-1",
+   "name": "Private app token",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "legacy",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Static access token for a legacy (non-project) private app, sent as a Bearer token in the Authorization header. HubSpot implements it on top of OAuth, so client libraries accept it as an access token.",
+    "evidence_refs": [
+     "turn4search6",
+     "turn12search3",
+     "turn4search22"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn4search6",
+     "turn12search3",
+     "turn4search22"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "login_only",
+    "boundary": "Trusted-IP documentation restricts account logins; API-call enforcement for private-app/OAuth tokens was not established.",
+    "evidence_refs": [
+     "turn11search1",
+     "turn12search3"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Long-lived; explicit rotation/revocation",
+    "evidence_refs": [
+     "turn4search6",
+     "turn12search3",
+     "turn4search22"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "Rotate the private-app token explicitly, immediately or with a 7-day transition.",
+    "evidence_refs": [
+     "turn4search6",
+     "turn12search3",
+     "turn4search22"
+    ]
+   },
+   "administration": {
+    "summary": "Super admins manage legacy private apps: scope selection, viewing and rotating the token, 30-day API call logs, and deletion (which revokes the token). Super admins get rotation emails and a reminder after 180 days without rotation. Removing the user who created the app can make some calls fail until the token is rotated.",
+    "conditions": "UI creation of new legacy private apps is disabled on 2026-09-28 for accounts created on or after that date and on 2026-10-26 for older accounts; existing legacy private apps keep working. HubSpot points new in-account integrations to service keys (hubspot-5). Migrating a non-project legacy private app to platform 2026.09 is not currently supported. Up to 20 private apps per account.",
+    "evidence_refs": [
+     "turn11search1",
+     "turn12search3",
+     "fc-hs-legacy-pa"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Removing the user who created the private app makes some (not all) API calls with its token fail.",
+     "evidence_refs": [
+      "turn12search3"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Super admins see private apps under Development > Legacy apps; GET /account-info/v3/api-usage/daily/private-apps reports usage for all private apps.",
+     "evidence_refs": [
+      "turn12search3"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Development > Legacy apps > {private app} > Logs tab; Method = GET, search request URL '/crm/v3/objects/contacts'; Export logs (CSV) for 30 days",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "turn12search3"
+     ]
+    },
+    "offboard": {
+     "ui": "Settings > Users & Teams > {user} > Actions > Deactivate user, then Actions > Remove from account",
+     "api": "DELETE /settings/v3/users/{userId}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-2e4b4878",
+      "fc-d8797041"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Static bearer token, does not expire unless rotated. Prefix not shown in fetched private-app docs (service keys use pat-na1-). GitHub secret scanning covers 'Hubspot Private Apps User Token'."
+    },
+    "log_sources": [
+     {
+      "name": "HubSpot security activity (Account activity API /account-info/v3/activity/security)",
+      "notes": "Records user actions such as PRIVATE_APP_ACCESS_TOKEN_VIEW and INSTALL_INTEGRATION with IP/location. UI shows 30 days; export covers last year. Scope account-info.security.read."
+     },
+     {
+      "name": "HubSpot centralized audit log (/account-info/v3/activity/audit-logs)",
+      "notes": "Enterprise only. User actions incl. CRITICAL_ACTION subcategories. Records HubSpot-user actions, not API calls."
+     },
+     {
+      "name": "Private app Logs tab (API call logs)",
+      "notes": "Per-app API calls for 30 days; filter by method/response/URL; CSV export. No request body, URL params or response payload for successful calls."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "objectId",
+      "log": "security activity",
+      "notes": "Private app ID on PRIVATE_APP_ACCESS_TOKEN_VIEW (also in infoUrl /private-apps/{hubId}/{appId}/auth)"
+     },
+     {
+      "field": "targetObjectId",
+      "log": "audit log",
+      "notes": "Private app ID on CRITICAL_ACTION / PRIVATE_APP_ACCESS_TOKEN_VIEW"
+     },
+     {
+      "field": "appId",
+      "log": "POST /oauth/v2/private-apps/get/access-token-info",
+      "notes": "Maps a found token to its private app, plus userId (creator), hubId, scopes"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "PRIVATE_APP_ACCESS_TOKEN_VIEW",
+      "stage": "use",
+      "notes": "A user revealed the token in the UI (security activity type / audit subCategory). Possible exfil point."
+     }
+    ],
+    "correlation_keys": [
+     "userId",
+     "actingUser",
+     "objectId",
+     "targetObjectId",
+     "ipAddress",
+     "countryCode",
+     "regionCode",
+     "createdAt",
+     "occurredAt",
+     "appId",
+     "hubId"
+    ],
+    "anomaly_cues": [
+     "PRIVATE_APP_ACCESS_TOKEN_VIEW by a user who does not own the integration, or from a new country/IP",
+     "Token view followed within hours by API calls in the Logs tab from new patterns (new endpoints, export-heavy reads)",
+     "Private app whose creator was removed (calls failing with USER_DOES_NOT_HAVE_PERMISSIONS) yet still active",
+     "Token not rotated in 180+ days (HubSpot reminder emails)",
+     "Scopes broadened on a private app with no change ticket"
+    ],
+    "containment": {
+     "steps": "Private app > Auth > Rotate > 'Rotate and expire now'; or delete the private app (token permanently revoked). Then update the integration with the new token.",
+     "kills_existing": "yes",
+     "notes": "'Rotate and expire later' leaves the old token valid for 7 days; use expire now for incidents."
+    },
+    "sample_query": {
+     "language": "HubSpot Account activity API (query parameters)",
+     "query": "GET /account-info/v3/activity/security?fromTimestamp=2026-09-01T00:00:00Z&toTimestamp=2026-10-12T00:00:00Z  -- filter results where type == 'PRIVATE_APP_ACCESS_TOKEN_VIEW'",
+     "purpose": "Find who revealed private app tokens, from where, before a suspected leak."
+    },
+    "unknown": [
+     "Token prefix/regex",
+     "Event names for private app create, scope change, rotation and deletion",
+     "Whether private app API calls appear in account audit log",
+     "Client IP of API calls in Logs tab"
+    ],
+    "evidence_refs": [
+     "fc-217cb85b",
+     "fc-2a578af9",
+     "turn12search3",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /crm/v3/objects/contacts",
+      "reveals": "CRM contact records",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Shown in the private app's Logs tab for 30 days; request body, URL parameters and response payload are not stored; rate-limit-exempt calls are not logged."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "turn12search3",
+     "fc-ac3691ef"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "hubspot-2",
+   "name": "OAuth",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth 2.0 authorization-code flow for project-based apps (and existing legacy public apps) installed in multiple accounts. The app exchanges the code for a 30-minute access token, sent as a Bearer token, and a refresh token.",
+    "evidence_refs": [
+     "turn4search6",
+     "turn12search3",
+     "turn4search22",
+     "fc-fe387099"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "General CRM API federation is not established. Client credentials documented for selected developer-platform functions is not a general CRM grant.",
+    "evidence_refs": [
+     "turn4search6",
+     "turn12search3",
+     "turn4search22"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "login_only",
+    "boundary": "Trusted-IP documentation restricts account logins; API-call enforcement for private-app/OAuth tokens was not established.",
+    "evidence_refs": [
+     "turn11search1",
+     "turn12search3"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 1800,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "30 minutes",
+    "evidence_refs": [
+     "turn4search6",
+     "turn12search3",
+     "turn4search22"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "none",
+    "summary": "Use the refresh token to get a new 30-minute access token. HubSpot describes refresh tokens as not expiring for now; they stop working when the app is uninstalled or the token is revoked.",
+    "evidence_refs": [
+     "turn4search6",
+     "turn12search3",
+     "turn4search22",
+     "fc-fe387099",
+     "fc-5c7fb089"
+    ]
+   },
+   "administration": {
+    "summary": "Scopes (required, conditionally required, optional) are declared in app-hsmeta.json; installers must be super admins or have HubSpot Marketplace access plus the matching permissions. The client secret can be rotated from the app's Auth tab. Apps on 2026.09 can opt into user-level access (isUserLevel), which limits API access to the installing user's permissions; by default access is account-wide.",
+    "conditions": "Privately distributed OAuth apps install in up to 10 allowlisted accounts; marketplace apps up to 25 before listing. Creation of legacy public apps ended on 2026-06-23; existing ones keep working. User-level access requires OAuth and a new app (account-level apps cannot be converted).",
+    "evidence_refs": [
+     "turn11search1",
+     "turn12search3",
+     "fc-5a7188c1",
+     "fc-9f7773e3"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Settings > Integrations > Connected Apps lists connected and approved apps, not individual tokens.",
+     "evidence_refs": [
+      "fc-4ea0e458"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "Read expires_in from POST /oauth/v1/token response, or GET /oauth/v1/access-tokens/{token} (returns expires_in)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-21d8be4d",
+      "fc-0dd10aa8"
+     ]
+    },
+    "reads": {
+     "ui": "(App developer account) Development > Legacy apps > {app} > Monitoring > API calls tab; filter method GET and request URL",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-20354a66"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Access token opaque, 30-minute lifetime (expires_in 1800). Refresh token example format 'na1-aaaa-bbbb-cccc-dddd-eeeeeeeeeeee' (region prefix like na1-). Client id/secret are GUID-style."
+    },
+    "log_sources": [
+     {
+      "name": "HubSpot security activity (Account activity API /account-info/v3/activity/security)",
+      "notes": "Records user actions such as PRIVATE_APP_ACCESS_TOKEN_VIEW and INSTALL_INTEGRATION with IP/location. UI shows 30 days; export covers last year. Scope account-info.security.read."
+     },
+     {
+      "name": "HubSpot centralized audit log (/account-info/v3/activity/audit-logs)",
+      "notes": "Enterprise only. User actions incl. CRITICAL_ACTION subcategories. Records HubSpot-user actions, not API calls."
+     },
+     {
+      "name": "OAuth token introspection (POST /oauth/v3/token/introspect)",
+      "notes": "Not a log; maps a found access or refresh token to hub_id, user_id, user, client_id, app_id, scopes."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "objectId",
+      "log": "security activity",
+      "notes": "Object of INSTALL_INTEGRATION (installed app); exact ID type not documented"
+     },
+     {
+      "field": "client_id",
+      "log": "token introspect",
+      "notes": "OAuth app client id"
+     },
+     {
+      "field": "app_id",
+      "log": "token introspect",
+      "notes": "HubSpot app ID"
+     },
+     {
+      "field": "user_id",
+      "log": "token introspect",
+      "notes": "Installing user"
+     },
+     {
+      "field": "hub_id",
+      "log": "token introspect",
+      "notes": "Portal/account"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "INSTALL_INTEGRATION",
+      "stage": "create",
+      "notes": "User installed an integration (OAuth app) in the account"
+     }
+    ],
+    "correlation_keys": [
+     "userId",
+     "actingUser",
+     "objectId",
+     "ipAddress",
+     "countryCode",
+     "createdAt",
+     "client_id",
+     "app_id",
+     "hub_id",
+     "user_id"
+    ],
+    "anomaly_cues": [
+     "INSTALL_INTEGRATION by a non-admin or from a new IP/country",
+     "Install of an unverified app (no verified domain) shortly before data exports",
+     "Refresh token use continuing after the installing user was deactivated",
+     "Several accounts/users installing the same unfamiliar app in a short window",
+     "invalid_grant / BAD_REFRESH_TOKEN bursts in the app backend (stolen or replayed refresh tokens)"
+    ],
+    "containment": {
+     "steps": "Uninstall the app from Settings > Integrations > Connected apps; app owner deletes refresh token (DELETE /oauth/v1/refresh-tokens/{token}); rotate client secret if it leaked.",
+     "kills_existing": "partial",
+     "notes": "Deleting a refresh token does not delete access tokens already issued; those last up to 30 minutes. Effect of uninstall on live access tokens not documented."
+    },
+    "sample_query": {
+     "language": "HubSpot Account activity API (query parameters)",
+     "query": "GET /account-info/v3/activity/security?fromTimestamp=2026-09-01T00:00:00Z&toTimestamp=2026-10-12T00:00:00Z  -- filter type == 'INSTALL_INTEGRATION'; join objectId to installed apps list",
+     "purpose": "Find recent OAuth app installs and who approved them."
+    },
+    "unknown": [
+     "Event names for app uninstall or token revocation",
+     "Whether API calls by OAuth apps are logged for the customer",
+     "Access token format/prefix",
+     "Whether uninstall revokes live access tokens"
+    ],
+    "evidence_refs": [
+     "fc-217cb85b",
+     "fc-2a578af9",
+     "fc-37586802",
+     "fc-ae49709c",
+     "turn4search22"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /crm/objects/2026-03/contacts",
+      "reveals": "CRM contact records",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Request logs are under Development > Monitoring > Logs for the app; this view is in the app developer's account, not an installing-account audit log."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "turn4search22",
+     "fc-ac3691ef"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "hubspot-3",
+   "name": "Static auth token (developer platform)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer access token for a project-based app configured with auth type static and private distribution in app-hsmeta.json. The token appears on the app's Distribution tab after install.",
+    "evidence_refs": [
+     "turn4search22",
+     "fc-5a7188c1"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static token tied to a single installed account; no external identity exchange is documented.",
+    "evidence_refs": [
+     "turn4search22"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "login_only",
+    "boundary": "HubSpot's trusted-IP setting limits account logins (Starter, Professional or Enterprise; Super Admin). Its effect on API calls with static auth tokens is not documented.",
+    "evidence_refs": [
+     "turn11search1"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Static; expiry not documented (rotation every 6 months recommended)",
+    "evidence_refs": [
+     "fc-5a7188c1",
+     "turn4search22"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "unknown",
+    "summary": "The token is reused for API calls and rotated from the Distribution tab; whether the old token is invalidated immediately is not documented.",
+    "evidence_refs": [
+     "fc-5a7188c1"
+    ]
+   },
+   "administration": {
+    "summary": "Scopes are declared in app-hsmeta.json; scope changes require reinstalling. Only super admins or users with a developer seat on the account can view or rotate the token.",
+    "conditions": "Installs in 1 standard account at a time plus up to 10 developer test accounts. Static auth apps cannot use user-level access. Distinct from legacy private app tokens (hubspot-1), whose UI creation HubSpot disables in Sept/Oct 2026, and from account service keys (hubspot-5), which are not tied to an app.",
+    "evidence_refs": [
+     "fc-5a7188c1",
+     "fc-hs-legacy-pa",
+     "fc-766956d4"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Apps are listed on the Development > Projects page; the token is shown per app on its Distribution tab, with no org-wide token list.",
+     "evidence_refs": [
+      "fc-5a7188c1"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Static bearer token for a project app with static auth and private distribution; shown on the app's Distribution tab after install. Format not documented in fetched docs."
+    },
+    "log_sources": [
+     {
+      "name": "HubSpot security activity (Account activity API /account-info/v3/activity/security)",
+      "notes": "Records user actions such as PRIVATE_APP_ACCESS_TOKEN_VIEW and INSTALL_INTEGRATION with IP/location. UI shows 30 days; export covers last year. Scope account-info.security.read."
+     },
+     {
+      "name": "HubSpot centralized audit log (/account-info/v3/activity/audit-logs)",
+      "notes": "Enterprise only. User actions incl. CRITICAL_ACTION subcategories. Records HubSpot-user actions, not API calls."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "objectId",
+      "log": "security activity",
+      "notes": "Object of INSTALL_INTEGRATION; ID type not documented"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "INSTALL_INTEGRATION",
+      "stage": "create",
+      "notes": "Install of the static-token app into the account (assumed to be logged like other integrations; not confirmed for static apps)"
+     }
+    ],
+    "correlation_keys": [
+     "userId",
+     "actingUser",
+     "objectId",
+     "ipAddress",
+     "countryCode",
+     "createdAt"
+    ],
+    "anomaly_cues": [
+     "Static token app installed into a production account by someone without a developer seat",
+     "Reinstall via Reinstall URL that adds scopes without a change ticket",
+     "Token viewed or rotated by an unexpected super admin",
+     "Token older than 6 months (HubSpot recommends 6-month rotation)"
+    ],
+    "containment": {
+     "steps": "Super admin or developer seat: rotate the token on the app's Distribution tab; or uninstall the app from the account.",
+     "kills_existing": "unknown",
+     "notes": "Fetched docs do not describe expire-now vs expire-later semantics for static tokens."
+    },
+    "sample_query": {
+     "language": "HubSpot Account activity API (query parameters)",
+     "query": "GET /account-info/v3/activity/security?fromTimestamp=2026-09-01T00:00:00Z&toTimestamp=2026-10-12T00:00:00Z  -- filter type == 'INSTALL_INTEGRATION'",
+     "purpose": "Find installs of privately distributed apps, including static-token apps."
+    },
+    "unknown": [
+     "Token format/prefix",
+     "Audit/security event name for static token view or rotation",
+     "API call logs for project-based apps",
+     "Rotation grace period semantics"
+    ],
+    "evidence_refs": [
+     "fc-217cb85b",
+     "fc-2a578af9",
+     "fc-5a7188c1"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Not researched"
+    ],
+    "evidence_refs": []
+   },
+   "detections": []
+  },
+  {
+   "id": "hubspot-4",
+   "name": "Developer API key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Account-level key passed as the hapikey query parameter, usually with appId, for app features and settings that require it (for example the custom channels API). It is not a general CRM data credential.",
+    "evidence_refs": [
+     "fc-5a7188c1",
+     "turn4search22"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static account key; no external identity exchange is documented.",
+    "evidence_refs": [
+     "fc-5a7188c1"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "login_only",
+    "boundary": "HubSpot's trusted-IP setting limits account logins. Its effect on calls made with a developer API key is not documented.",
+    "evidence_refs": [
+     "turn11search1"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Static; expiry not documented",
+    "evidence_refs": [
+     "fc-5a7188c1"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "unknown",
+    "summary": "The key is reused until deactivated; deactivate it and generate a new one to rotate.",
+    "evidence_refs": [
+     "fc-5a7188c1"
+    ]
+   },
+   "administration": {
+    "summary": "Managed under Development > Keys > Developer API key. One key per HubSpot account, not per user; it can be deactivated and regenerated at any time.",
+    "conditions": "Still documented in current developer-platform docs; no current deprecation notice found. Separate from the account API keys (hapikey) sunset in 2022.",
+    "evidence_refs": [
+     "fc-5a7188c1",
+     "turn4search22"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The developer API key belongs to the account, not to a user.",
+     "evidence_refs": [
+      "fc-5a7188c1"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Only one key per account; it is shown at Development > Keys > Developer API key.",
+     "evidence_refs": [
+      "fc-5a7188c1"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Account-level developer API key passed as hapikey query parameter (often with appId). One key per account. Format not documented in fetched docs. GitHub scans a 'Hubspot API Key' type; whether it matches developer keys is unconfirmed."
+    },
+    "log_sources": [
+     {
+      "name": "None documented for developer API key use",
+      "notes": "Fetched docs list no call log or audit events for developer API keys."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "appId (request parameter)"
+    ],
+    "anomaly_cues": [
+     "hapikey appearing in proxy/web server logs, referrers or URL-capturing tools (query-string credential)",
+     "Unexpected changes to app features that require the key (e.g., custom channels registrations) for an appId",
+     "Key not rotated after a developer leaves"
+    ],
+    "containment": {
+     "steps": "Development > Keys > Developer API key: deactivate the key and generate a new one.",
+     "kills_existing": "unknown",
+     "notes": "Docs say the key can be deactivated at any time; timing of enforcement not stated."
+    },
+    "sample_query": {
+     "language": "none (no vendor log)",
+     "query": "Search own proxy/web logs for 'hapikey=' in request URLs to api.hubapi.com",
+     "purpose": "Find where the query-string key was used or leaked."
+    },
+    "unknown": [
+     "Any HubSpot log of developer API key use or rotation",
+     "Key format/prefix",
+     "Whether deactivation is immediate"
+    ],
+    "evidence_refs": [
+     "fc-5a7188c1",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Not researched"
+    ],
+    "evidence_refs": []
+   },
+   "detections": []
+  },
+  {
+   "id": "hubspot-5",
+   "name": "Service key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Account-level API key created in Development > Keys > Service keys (also shown under Settings > Integrations > Service Keys), with selected object scopes. It is sent as a Bearer token and only authenticates REST API requests, not webhooks, UI extensions or other app features.",
+    "evidence_refs": [
+     "fc-07562392",
+     "fc-766956d4"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static account key created in the HubSpot UI; no external identity exchange is documented for service keys.",
+    "evidence_refs": [
+     "fc-07562392"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "login_only",
+    "boundary": "HubSpot's trusted-IP and allowed-location settings limit account logins (Starter, Professional or Enterprise; Super Admin). The service key docs and launch posts do not mention any source-IP control for API calls made with a service key.",
+    "evidence_refs": [
+     "turn11search1",
+     "fc-07562392"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "No expiry documented; rotation or deletion ends access",
+    "evidence_refs": [
+     "fc-07562392",
+     "fc-766956d4"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "The key is reused until rotated or deleted; rotation can expire the old key immediately or after a 7-day overlap, which can be ended early or cancelled (cancelling revokes the new key).",
+    "evidence_refs": [
+     "fc-07562392"
+    ]
+   },
+   "administration": {
+    "summary": "Super admins and users with the Developer tools access permission can create, edit (name and scopes), rotate and delete service keys and view their request logs. Keys use the developer-platform scope list, are not tied to an individual user, and key values are visible only to admins by default.",
+    "conditions": "Announced as the replacement for UI-created legacy private apps for in-account integrations; legacy private app creation is disabled on 2026-09-28 (new accounts) and 2026-10-26 (existing accounts). Subject to the same rate limits as privately distributed apps (tiers listed from Free to Enterprise); no separate plan requirement is documented. Separate from project-app static auth tokens (hubspot-3).",
+    "evidence_refs": [
+     "fc-07562392",
+     "fc-hs-legacy-pa",
+     "fc-766956d4"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Service keys are account-level and keep working after the creator leaves.",
+     "evidence_refs": [
+      "fc-bb6d856f"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "All keys are listed at Development > Keys > Service Keys (also Settings > Integrations > Service Keys).",
+     "evidence_refs": [
+      "fc-bb6d856f"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Development > Keys > Service keys > {key} > View logs",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-07562392"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "pat-na1-",
+     "notes": "Doc example: 'Bearer pat-na1-*********-****-****-****-************'. 'na1' is likely a region segment (other regions unconfirmed). Same pat- prefix family as HubSpot personal access keys is not confirmed."
+    },
+    "log_sources": [
+     {
+      "name": "HubSpot security activity (Account activity API /account-info/v3/activity/security)",
+      "notes": "Records user actions such as PRIVATE_APP_ACCESS_TOKEN_VIEW and INSTALL_INTEGRATION with IP/location. UI shows 30 days; export covers last year. Scope account-info.security.read."
+     },
+     {
+      "name": "Service key 'View logs'",
+      "notes": "Recent requests for the key from its details page. Retention and fields not documented."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "userId",
+     "actingUser",
+     "ipAddress",
+     "createdAt"
+    ],
+    "anomaly_cues": [
+     "Service key created by a user with Developer tools access who is not on the integrations team",
+     "Scopes added to an existing key (Edit) without a change ticket",
+     "Key used against object types outside its stated purpose (seen in View logs)",
+     "Key older than 6 months without rotation"
+    ],
+    "containment": {
+     "steps": "Development > Keys > Service keys > key > Rotate > 'Rotate and expire now'; or Delete the key.",
+     "kills_existing": "yes",
+     "notes": "'Rotate and expire later' keeps the old key valid for 7 days."
+    },
+    "sample_query": {
+     "language": "HubSpot UI (service key View logs)",
+     "query": "Development > Keys > Service keys > <key> > View logs; filter by date range",
+     "purpose": "Review recent requests made with a suspected key."
+    },
+    "unknown": [
+     "Audit/security events for service key create, view, scope change, rotate, delete",
+     "View logs fields and retention",
+     "Full token regex"
+    ],
+    "evidence_refs": [
+     "fc-07562392",
+     "fc-217cb85b"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /crm/v3/objects/contacts",
+      "reveals": "CRM contact records",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Per-key request log via View logs on the key's details page; retention not stated."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-07562392"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

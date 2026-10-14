@@ -1,0 +1,636 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "gcp",
+      "name": "Google Cloud",
+      "scope_notes": "Covers Google Cloud (IAM, API Keys, Cloud Storage). Covers Google Cloud project/org credentials; org policy constraints and VPC Service Controls need an organization resource; Workspace user OAuth and domain-wide delegation are in the separate `google` platform.",
+      "controls": [
+        {
+          "name": "iam.managed.disableServiceAccountKeyCreation (legacy iam.disableServiceAccountKeyCreation)",
+          "effect": "disable",
+          "applies_to": [
+            "gcp-1",
+            "gcp-5"
+          ],
+          "what": "Blocks creation of new service account keys and SA HMAC keys.",
+          "setting": "Organization policies > constraint; gcloud resource-manager org-policies enable-enforce",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7af2d5e5"
+          ]
+        },
+        {
+          "name": "iam.managed.disableServiceAccountKeyUpload",
+          "effect": "disable",
+          "applies_to": [
+            "gcp-1"
+          ],
+          "what": "Blocks uploading external public keys to service accounts.",
+          "setting": "Organization policies",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7af2d5e5"
+          ]
+        },
+        {
+          "name": "constraints/iam.serviceAccountKeyExpiryHours",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "gcp-1"
+          ],
+          "what": "Sets an expiry (1h to 2160h) for newly created SA keys.",
+          "setting": "Organization policies",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7af2d5e5",
+            "fc-6fc9753d"
+          ]
+        },
+        {
+          "name": "iam.serviceAccountKeyExposureResponse",
+          "effect": "revoke",
+          "applies_to": [
+            "gcp-1",
+            "gcp-4"
+          ],
+          "what": "Auto-disables SA keys and SA-bound API keys that Google detects as exposed.",
+          "setting": "Organization policies (DISABLE_KEY or WAIT_FOR_ABUSE)",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7af2d5e5"
+          ]
+        },
+        {
+          "name": "Disable service account (serviceAccounts.disable)",
+          "effect": "revoke",
+          "applies_to": [
+            "gcp-1",
+            "gcp-2",
+            "gcp-3",
+            "gcp-4"
+          ],
+          "what": "Immediately disables the SA, which is the documented way to cut off already-issued short-lived tokens.",
+          "setting": "IAM > Service accounts > Disable; POST .../serviceAccounts/SA_ID:disable",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-e9b2abab",
+            "fc-6fc9753d"
+          ]
+        },
+        {
+          "name": "Delete / disable service account key",
+          "effect": "revoke",
+          "applies_to": [
+            "gcp-1"
+          ],
+          "what": "Stops the key from minting new tokens; tokens already minted stay valid until expiry.",
+          "setting": "IAM > Service accounts > Keys; DELETE .../keys/KEY_ID",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-6fc9753d",
+            "fc-65ab24ea"
+          ]
+        },
+        {
+          "name": "VPC Service Controls",
+          "effect": "limit_network",
+          "applies_to": [
+            "gcp-1",
+            "gcp-2",
+            "gcp-3",
+            "gcp-4",
+            "gcp-5"
+          ],
+          "what": "Service perimeters with ingress rules limit API access by network origin and identity, even with stolen credentials.",
+          "setting": "Security > VPC Service Controls",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-c4499f95"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "gcp-1",
+          "what": "Deleting a key does not revoke access tokens already minted from it.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-6fc9753d"
+          ]
+        },
+        {
+          "path_id": "gcp-1",
+          "what": "Keys never expire unless the expiry org policy is set.",
+          "kind": "expiry",
+          "evidence_refs": [
+            "fc-6fc9753d"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether existing keys created before iam.serviceAccountKeyExpiryHours was set get an expiry (docs say 'newly created').",
+        "Federated (STS) access token lifetime.",
+        "Whether API keys support an expiry setting.",
+        "Which audit field identifies the API key or HMAC access ID used on a data-plane request.",
+        "Whether GetKeyString/lookupKey calls are logged for keys.lookupKey.",
+        "Plan/pricing for VPC Service Controls (needs organization)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "gcp-1",
+      "provider_id": "gcp",
+      "name": "Service account keys (user-managed)",
+      "family": "jwt",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "A JSON (or P12) private key for a service account. The holder signs a JWT and exchanges it for an OAuth 2.0 access token, then calls Google APIs as the service account.",
+        "evidence_refs": [
+          "fc-6fc9753d",
+          "fc-9ac8bb6a",
+          "fc-3d9aa972"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Keys authenticate the service account directly. Context-Aware Access policies 'apply only to users', so IdP/CAA conditions on human users do not gate key use. No doc states an SSO check on keys.",
+        "evidence_refs": [
+          "fc-214cc15d",
+          "fc-2e7078e9"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "No IP list on the key itself. VPC Service Controls perimeters with ingress rules (by identity and IP) restrict API requests to protected services; services outside the perimeter are not covered.",
+        "evidence_refs": [
+          "fc-c4499f95",
+          "fc-57894375"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Never expire by default; iam.serviceAccountKeyExpiryHours can set 1h-2160h (90 days) for new keys",
+        "evidence_refs": [
+          "fc-6fc9753d",
+          "fc-7af2d5e5"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Key reused to mint new 1-hour access tokens until the key is deleted, disabled or expires",
+        "summary": "Rotate by creating a new key and deleting the old one (up to 10 keys per SA).",
+        "evidence_refs": [
+          "fc-6fc9753d",
+          "fc-3d9aa972"
+        ]
+      },
+      "administration": {
+        "summary": "Org policy can block key creation and key upload; for orgs created on/after 2024-05-03 creation is blocked by default. Exposed keys are auto-disabled by default.",
+        "conditions": "Org policies need an organization resource.",
+        "evidence_refs": [
+          "fc-7af2d5e5"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Keys belong to a service account; access ends when the service account is disabled or deleted, not when a user leaves.",
+          "evidence_refs": [
+            "fc-c6d6c1f9"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Cloud Asset Inventory supports iam.googleapis.com/ServiceAccountKey in its list/search/export APIs across an organization.",
+          "evidence_refs": [
+            "fc-55f8493d"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "Security > Asset Inventory > Resource search, filter asset type iam.googleapis.com/ServiceAccountKey; per SA: IAM & Admin > Service accounts > (SA) > Keys",
+          "api": "GET https://cloudasset.googleapis.com/v1/{scope}:searchAllResources?assetTypes=iam.googleapis.com/ServiceAccountKey",
+          "cli": "gcloud asset search-all-resources --scope=organizations/ORG_ID --asset-types=iam.googleapis.com/ServiceAccountKey",
+          "evidence_refs": [
+            "fc-2177519d",
+            "fc-55f8493d",
+            "fc-889bbaa1"
+          ]
+        },
+        "expiry": {
+          "ui": "Organization policies > constraints/iam.serviceAccountKeyExpiryHours > Manage policy",
+          "api": null,
+          "cli": "gcloud resource-manager org-policies allow constraints/iam.serviceAccountKeyExpiryHours 2160h --organization=ORG_ID",
+          "evidence_refs": [
+            "fc-7af2d5e5"
+          ]
+        },
+        "usage": {
+          "ui": "Logging > Logs Explorer, filter protoPayload.authenticationInfo.serviceAccountKeyName=\"//iam.googleapis.com/projects/P/serviceAccounts/SA/keys/KEY_ID\"; per-key counts: Metrics Explorer > Service account key authentication events",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-9ac8bb6a",
+            "fc-858b9298",
+            "fc-5c044d8c"
+          ]
+        },
+        "reads": {
+          "ui": "IAM & Admin > Audit Logs > select service > Permission types: Data Read > Save; then Logs Explorer filter serviceAccountKeyName",
+          "api": "Add auditConfigs {logType: DATA_READ} to the project/folder/org IAM policy (setIamPolicy)",
+          "cli": "gcloud projects set-iam-policy PROJECT_ID policy.yaml",
+          "evidence_refs": [
+            "fc-a6bc72ba",
+            "fc-5c044d8c"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "JSON file with \"type\": \"service_account\", private_key_id (key ID) and client_email."
+        },
+        "log_sources": [
+          {
+            "name": "Cloud Audit Logs - Admin Activity",
+            "notes": "Always on; key create/delete/disable. _Required bucket keeps 400 days."
+          },
+          {
+            "name": "Cloud Audit Logs - Data Access",
+            "notes": "Off by default except BigQuery; needed to see reads. _Default bucket 30 days."
+          },
+          {
+            "name": "Cloud Monitoring 'Service account key authentication events'",
+            "notes": "Usage metric per key."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "protoPayload.authenticationInfo.serviceAccountKeyName",
+            "log": "Cloud Audit Logs of called service",
+            "notes": "Full key resource name; missing for App Engine and Compute Engine."
+          },
+          {
+            "field": "protoPayload.authenticationInfo.principalEmail",
+            "log": "Cloud Audit Logs",
+            "notes": "The SA email."
+          },
+          {
+            "field": "RequestMetadata.callerIp",
+            "log": "Cloud Audit Logs",
+            "notes": "Caller IP."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "google.iam.admin.v1.CreateServiceAccountKey",
+            "stage": "create",
+            "notes": "Admin Activity"
+          },
+          {
+            "event": "google.iam.admin.v1.DisableServiceAccountKey",
+            "stage": "revoke",
+            "notes": "Also emitted by gcp-compromised-key-response@system.gserviceaccount.com on auto-disable"
+          },
+          {
+            "event": "google.iam.admin.v1.DeleteServiceAccountKey",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "google.iam.admin.v1.DisableServiceAccount",
+            "stage": "revoke",
+            "notes": "Kills minted tokens too"
+          }
+        ],
+        "correlation_keys": [
+          "serviceAccountKeyName",
+          "principalEmail",
+          "callerIp"
+        ],
+        "anomaly_cues": [
+          "Key used from a new callerIp",
+          "Auto-disable by gcp-compromised-key-response",
+          "Key created then used from outside your network",
+          "Key usage after long inactivity"
+        ],
+        "containment": {
+          "steps": "Disable the SA (cuts all tokens), then delete the key; rotate dependents.",
+          "kills_existing": "partial",
+          "notes": "Key deletion alone leaves minted tokens valid (up to 1h, or 12h if extended)."
+        },
+        "sample_query": "protoPayload.authenticationInfo.serviceAccountKeyName:\"KEY_ID\"",
+        "unknown": [
+          "Retention beyond 400/30 days requires sinks"
+        ],
+        "evidence_refs": [
+          "fc-6fc9753d",
+          "fc-9ac8bb6a",
+          "fc-65ab24ea",
+          "fc-7af2d5e5",
+          "fc-10383540",
+          "fc-4bd38048",
+          "fc-858b9298",
+          "fc-e9b2abab"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET https://oauth2.googleapis.com/tokeninfo?access_token=ACCESS_TOKEN",
+            "reveals": "Token scopes, expiry, client",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Not covered by Cloud Audit Logs docs"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET https://cloudasset.googleapis.com/v1/{scope=*/*}:searchAllResources",
+            "reveals": "All resources visible to the SA",
+            "bulk": true,
+            "scope": "https://www.googleapis.com/auth/cloud-platform",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "google.cloud.asset.v1.AssetService.SearchAllResources",
+            "log_notes": "ADMIN_READ Data Access log; off by default"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET https://storage.googleapis.com/storage/v1/b",
+            "reveals": "Buckets in a project",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Listing buckets is ADMIN_READ Data Access; off by default"
+          },
+          {
+            "stage": "collection",
+            "call": "Cloud Storage object get/list",
+            "reveals": "Object data",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "DATA_READ Data Access; off by default (BigQuery is on by default)"
+          }
+        ],
+        "unknown": [
+          "Rate limits not checked"
+        ],
+        "evidence_refs": [
+          "fc-0c3ff338",
+          "fc-9b8d61c5",
+          "fc-d7ef2703",
+          "fc-4afde58b",
+          "fc-1de9c6e8",
+          "fc-10383540"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "GCP.Iam.ServiceAccountKeys.Create",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_iam_service_account_key_create.yml",
+          "detects": "A granted iam.serviceAccountKeys.create permission check (service account key creation)."
+        },
+        {
+          "source": "Panther",
+          "title": "GCP Service Account or Keys Created",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/gcp_audit_rules/gcp_service_account_or_keys_created.yml",
+          "detects": "A user (not an automated workflow) created a service account or service account key."
+        },
+        {
+          "source": "Sigma",
+          "title": "Google Cloud Service Account Disabled or Deleted",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/gcp/audit/gcp_service_account_disabled_or_deleted.yml",
+          "detects": "A service account was disabled or deleted."
+        },
+        {
+          "source": "Sigma",
+          "title": "Google Cloud Service Account Modified",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/gcp/audit/gcp_service_account_modified.yml",
+          "detects": "A service account was created or patched."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0c3ff338",
+      "title": "Token types",
+      "url": "https://cloud.google.com/docs/authentication/token-types",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-10383540",
+      "title": "Cloud Audit Logs overview",
+      "url": "https://cloud.google.com/logging/docs/audit",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1de9c6e8",
+      "title": "Cloud Storage audit logging",
+      "url": "https://cloud.google.com/storage/docs/audit-logging",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-214cc15d",
+      "title": "Set up Context-Aware Access",
+      "url": "https://cloud.google.com/beyondcorp-enterprise/docs/securing-console-and-apis",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2177519d",
+      "title": "Search resources | Cloud Asset Inventory",
+      "url": "https://cloud.google.com/asset-inventory/docs/search-resources",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2e7078e9",
+      "title": "Set session length for Google Cloud services",
+      "url": "https://support.google.com/a/answer/9368756",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3d9aa972",
+      "title": "Service account credentials",
+      "url": "https://cloud.google.com/iam/docs/service-account-creds",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4afde58b",
+      "title": "Buckets: list",
+      "url": "https://cloud.google.com/storage/docs/json_api/v1/buckets/list",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4bd38048",
+      "title": "Cloud Logging quotas and limits",
+      "url": "https://cloud.google.com/logging/quotas",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-55f8493d",
+      "title": "Asset types - Cloud Asset Inventory",
+      "url": "https://cloud.google.com/asset-inventory/docs/supported-asset-types",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-57894375",
+      "title": "Best practices for managing service account keys",
+      "url": "https://cloud.google.com/iam/docs/best-practices-for-managing-service-account-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5c044d8c",
+      "title": "View logs by using the Logs Explorer",
+      "url": "https://cloud.google.com/logging/docs/view/logs-explorer-interface",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-65ab24ea",
+      "title": "IAM audit logging",
+      "url": "https://cloud.google.com/iam/docs/audit-logging",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6fc9753d",
+      "title": "Create and delete service account keys",
+      "url": "https://cloud.google.com/iam/docs/keys-create-delete",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7af2d5e5",
+      "title": "Restricting service account usage",
+      "url": "https://cloud.google.com/resource-manager/docs/organization-policy/restricting-service-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-858b9298",
+      "title": "Monitor usage patterns for service accounts and keys",
+      "url": "https://cloud.google.com/iam/docs/service-account-monitoring",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-889bbaa1",
+      "title": "List and get service account keys",
+      "url": "https://cloud.google.com/iam/docs/keys-list-get",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9ac8bb6a",
+      "title": "Examples of audit logs for service accounts",
+      "url": "https://cloud.google.com/iam/docs/audit-logging/examples-service-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9b8d61c5",
+      "title": "Method: searchAllResources",
+      "url": "https://cloud.google.com/asset-inventory/docs/reference/rest/v1/TopLevel/searchAllResources",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a6bc72ba",
+      "title": "Enable Data Access audit logs",
+      "url": "https://cloud.google.com/logging/docs/audit/configure-data-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c4499f95",
+      "title": "Overview of VPC Service Controls",
+      "url": "https://cloud.google.com/vpc-service-controls/docs/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c6d6c1f9",
+      "title": "Respond to compromised Google Cloud credentials",
+      "url": "https://docs.cloud.google.com/docs/security/compromised-credentials",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7ef2703",
+      "title": "Cloud Asset Inventory audit logging",
+      "url": "https://cloud.google.com/asset-inventory/docs/audit-logging",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9b2abab",
+      "title": "Disable and enable service accounts",
+      "url": "https://cloud.google.com/iam/docs/service-accounts-disable-enable",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,576 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "okta",
+      "name": "Okta (management API)",
+      "scope_notes": "Org authorization-server rules govern Okta APIs. Custom authorization-server lifetime policies do not govern these tokens.",
+      "controls": [
+        {
+          "name": "Grant Okta API scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "okta-2"
+          ],
+          "what": "A service app only gets Okta API scopes that a super admin has granted on its Okta API Scopes tab.",
+          "setting": "Admin Console > Applications > [service app] > Okta API Scopes > Grant; or /grants API",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "turn2search4"
+          ],
+          "quote": "Only the Super Admin role has the permissions to grant scopes to an app. From the service app page, select the Okta API Scopes tab. Click Grant for each of the scopes that you want to add"
+        },
+        {
+          "name": "Assign admin roles to the service app",
+          "effect": "limit_resources",
+          "applies_to": [
+            "okta-2"
+          ],
+          "what": "Admin roles (and their resource sets) assigned to the service app constrain what its scoped tokens can do.",
+          "setting": "Admin Console > Applications > [service app] > Admin roles",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "turn2search4"
+          ],
+          "quote": "For each service app you create, you need to assign admin roles to constrain the permissions and resources of that app for least privilege access."
+        },
+        {
+          "name": "Public client app admins (org setting)",
+          "effect": "other",
+          "applies_to": [
+            "okta-2"
+          ],
+          "what": "When enabled, service apps automatically get the super admin role after scopes are granted; leaving it off forces explicit least-privilege role assignment.",
+          "setting": "Admin Console > Settings > Account > Public client app admins",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "turn2search4"
+          ],
+          "quote": "If you want to bypass assigning admin roles to service apps, you can enable the Public client app admins org setting. This automatically assigns the super admin role"
+        },
+        {
+          "name": "Require Demonstrating Proof of Possession (DPoP) header in token requests",
+          "effect": "other",
+          "applies_to": [
+            "okta-2"
+          ],
+          "what": "Makes the org authorization server issue DPoP-bound (sender-constrained) access tokens to the app.",
+          "setting": "App > General settings checkbox, or API settings.oauthClient.dpop_bound_access_tokens: true",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-4ed11e0d"
+          ],
+          "quote": "An OAuth 2.0 client app that has the Require Demonstrating Proof of Possession (DPoP) header in token requests checkbox enabled."
+        },
+        {
+          "name": "Super Admin-only grant of Okta API scopes",
+          "effect": "require_approval",
+          "applies_to": [
+            "okta-2"
+          ],
+          "what": "A service app gets no Okta API scopes until a Super Admin grants them on the Okta API Scopes tab.",
+          "setting": "Applications > app > Okta API Scopes",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "turn2search4"
+          ]
+        },
+        {
+          "name": "Network zone restrictions for clients",
+          "effect": "limit_network",
+          "applies_to": [
+            "okta-2"
+          ],
+          "what": "Sets an allowlist or denylist network zone per client, enforced at the OIDC token endpoint.",
+          "setting": "Per-client network zone setting (GA in Production 2025.11.0)",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-4d5c58b7"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "okta-2",
+          "what": "Cannot change the access-token lifetime for Okta-scoped service app tokens.",
+          "evidence_refs": [
+            "turn2search4"
+          ],
+          "quote": "Note: The lifetime for this token is fixed at one hour.",
+          "kind": "expiry"
+        }
+      ],
+      "controls_unknown": [
+        "Whether any org-wide switch exists to disable SSWS token creation entirely (docs only show role-based limits on who can create tokens).",
+        "Whether network zones can restrict where OAuth service apps call Okta APIs from (org authorization server policies were not confirmed).",
+        "Default state of the Public client app admins setting."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "okta-2",
+      "provider_id": "okta",
+      "name": "OAuth service app",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "SSWS API tokens; scoped OAuth bearer. Service apps use client credentials authenticated with private_key_jwt.",
+        "evidence_refs": [
+          "turn2search4",
+          "turn2search16"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Private-key OAuth service apps are documented. Do not infer management-API federation from custom authorization-server token exchange or XAA.",
+        "evidence_refs": [
+          "turn2search4",
+          "turn2search16"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "token_issuance",
+        "boundary": "Per-client allowlist/denylist network zone is checked at the OIDC token endpoint. Docs do not say whether already-issued access tokens are re-checked on API calls.",
+        "evidence_refs": [
+          "fc-4d5c58b7"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Fixed 1 hour",
+        "evidence_refs": [
+          "turn2search4",
+          "turn2search16"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not_applicable",
+        "summary": "Request a new access token using the service app private key. The signing-key lifecycle is separate.",
+        "evidence_refs": [
+          "turn2search4",
+          "turn2search16"
+        ]
+      },
+      "administration": {
+        "summary": "OAuth scopes plus assigned admin roles; SSWS inherits creator privileges. Revoke token or deactivate owner; token rate-limit allocation.",
+        "conditions": "Org authorization-server rules govern Okta APIs. Custom authorization-server lifetime policies do not govern these tokens.",
+        "evidence_refs": [
+          "turn2search16",
+          "turn2search4"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service apps use the Client Credentials flow with no end user, so the credential is not tied to a user account.",
+          "evidence_refs": [
+            "turn2search4"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /api/v1/apps lists all apps in the org, including service apps (filterable); the API does not list issued access tokens.",
+          "evidence_refs": [
+            "fc-4ae74dff"
+          ]
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "Applications > Applications > (service app) > General > Network IP > Edit > In any of the following zones",
+          "api": "PUT /api/v1/apps/{appId} with settings.oauthClient.network {connection: ZONE, include: [zoneIds]}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-23fee578",
+            "fc-4ae74dff"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "POST /oauth2/v1/token response field expires_in (3600; fixed, not configurable)",
+          "cli": null,
+          "evidence_refs": [
+            "turn2search4"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Access token is a JWT (fixed 1-hour lifetime, no refresh token documented). Client authenticates with private_key_jwt assertion (iss=sub=client_id). Not in GitHub secret-scanning list."
+        },
+        "log_sources": [
+          {
+            "name": "Okta System Log (Admin Console / GET /api/v1/logs)",
+            "notes": "Records admin/API actions with token or client context; 90-day retention; export to SIEM or Log Streaming for longer."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "client.id",
+            "log": "Okta System Log",
+            "notes": "For OAuth requests, ID of the OAuth client (service app client_id)."
+          },
+          {
+            "field": "actor.id",
+            "log": "Okta System Log",
+            "notes": "Actor on token grants/admin actions; for service apps typically the client/app (type not confirmed)."
+          },
+          {
+            "field": "authenticationContext.credentialType",
+            "log": "Okta System Log",
+            "notes": "Enum includes JWT and 'OAuth 2.0'."
+          },
+          {
+            "field": "target",
+            "log": "Okta System Log",
+            "notes": "Search by type (e.g. AppInstance) to find affected app in lifecycle events."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "app.oauth2.client.lifecycle.create",
+            "stage": "create",
+            "notes": "Create OAuth client."
+          },
+          {
+            "event": "app.oauth2.credentials.lifecycle.create",
+            "stage": "create",
+            "notes": "Client secret or JWK added/activated."
+          },
+          {
+            "event": "app.oauth2.credentials.lifecycle.activate",
+            "stage": "change",
+            "notes": "Client secret or JWK activated."
+          },
+          {
+            "event": "app.oauth2.client.lifecycle.update",
+            "stage": "change",
+            "notes": "Update OAuth client."
+          },
+          {
+            "event": "app.oauth2.client.read_client_secret",
+            "stage": "change",
+            "notes": "Someone read the client's secret(s)."
+          },
+          {
+            "event": "app.oauth2.as.token.grant",
+            "stage": "use",
+            "notes": "OAuth2 token request; outcome.result FAILURE shows failed assertion."
+          },
+          {
+            "event": "app.oauth2.as.token.grant.access_token",
+            "stage": "use",
+            "notes": "Access token granted; details include client ID, scope, grant type."
+          },
+          {
+            "event": "app.oauth2.token.grant.access_token",
+            "stage": "use",
+            "notes": "OIDC access token granted (org auth server path; which one fires for OAuth-for-Okta not confirmed)."
+          },
+          {
+            "event": "system.oauth2.token.request_outside_allowed_range",
+            "stage": "auth_fail",
+            "notes": "Valid bearer token used from outside allowed network zone."
+          },
+          {
+            "event": "app.oauth2.credentials.lifecycle.deactivate",
+            "stage": "revoke",
+            "notes": "Secret or JWK deactivated."
+          },
+          {
+            "event": "app.oauth2.credentials.lifecycle.delete",
+            "stage": "revoke",
+            "notes": "Secret or JWK deleted."
+          },
+          {
+            "event": "app.oauth2.client.lifecycle.deactivate",
+            "stage": "revoke",
+            "notes": "Deactivate OAuth client."
+          },
+          {
+            "event": "app.oauth2.as.token.revoke",
+            "stage": "revoke",
+            "notes": "OAuth2 token revocation request."
+          },
+          {
+            "event": "app.oauth2.token.revoke.implicit.client",
+            "stage": "revoke",
+            "notes": "Tokens revoked for client."
+          }
+        ],
+        "correlation_keys": [
+          "actor.id",
+          "actor.alternateId",
+          "client.ipAddress",
+          "client.userAgent.rawUserAgent",
+          "client.id",
+          "client.zone",
+          "securityContext.asNumber",
+          "securityContext.asOrg",
+          "request.ipChain",
+          "transaction.id",
+          "uuid",
+          "authenticationContext.credentialType",
+          "debugContext.debugData"
+        ],
+        "anomaly_cues": [
+          "Token grants for the client_id from an IP/ASN outside the workload's hosting range",
+          "New okta.* scopes requested that the integration never used",
+          "app.oauth2.credentials.lifecycle.create (new JWK/secret) not tied to a change ticket",
+          "app.oauth2.client.read_client_secret by an unexpected admin",
+          "Burst of failed app.oauth2.as.token.grant (forged or replayed assertions)",
+          "Admin role assignment changes on the service app followed by high-privilege API calls"
+        ],
+        "containment": {
+          "steps": "Deactivate the attacker's JWK/secret (POST /api/v1/apps/{appId}/credentials/jwks/{keyId}/lifecycle/deactivate or .../secrets/{secretId}/lifecycle/deactivate) or deactivate the app (/api/v1/apps/{appId}/lifecycle/deactivate). Remove granted okta.* scopes and admin roles.",
+          "kills_existing": "partial",
+          "notes": "Revoking keys stops new tokens. 'Revoke all application tokens' only covers refresh-token-derived access tokens; client-credentials access tokens are not affected and live up to 1 hour. Effect of app deactivation on issued tokens not documented."
+        },
+        "sample_query": {
+          "language": "Okta System Log filter (/api/v1/logs filter)",
+          "query": "eventType sw \"app.oauth2\" and client.id eq \"0oa1abcdEXAMPLE0003\" and client.ipAddress ne \"203.0.113.20\"",
+          "purpose": "Token grants and OAuth client changes for one service app from unexpected IPs."
+        },
+        "unknown": [
+          "actor.type value for service-app token grants",
+          "Whether OAuth-for-Okta grants log as app.oauth2.as.* or app.oauth2.token.*",
+          "Exact debugData key for grant type/scopes",
+          "Whether app deactivation invalidates already-issued access tokens",
+          "Access token format/prefix (JWT; no documented prefix)"
+        ],
+        "evidence_refs": [
+          "fc-3a9b3217",
+          "fc-8196268d",
+          "fc-b2f789cd",
+          "fc-6aca2bd9",
+          "turn2search4"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST /oauth2/v1/token (grant_type=client_credentials, private_key_jwt)",
+            "reveals": "Access token; response 'scope' lists granted okta.* scopes",
+            "bulk": false,
+            "scope": "requested okta.* scopes",
+            "rate_limit": "/oauth2/v1/token: 4 req/s per username",
+            "logged": "yes",
+            "log_event": "app.oauth2.token.grant.access_token",
+            "log_notes": "Logged in System Log (org authorization server)."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/users",
+            "reveals": "All users and their profiles (listUsers)",
+            "bulk": true,
+            "scope": "okta.users.read (OAuth); SSWS inherits the owner's admin role",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "GET not in System Log; rate-limit dashboard can show top-consuming tokens."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/v1/apps",
+            "reveals": "All app integrations (listApplications)",
+            "bulk": true,
+            "scope": "okta.apps.read",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "GET not in System Log."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/groups",
+            "reveals": "Groups and memberships (listGroups)",
+            "bulk": true,
+            "scope": "okta.groups.read",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "GET not in System Log."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/v1/logs",
+            "reveals": "System Log events; lets the holder read the same telemetry defenders use (listLogEvents)",
+            "bulk": true,
+            "scope": "okta.logs.read",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "GET not in System Log."
+          }
+        ],
+        "unknown": [
+          "Per-endpoint rate limits for management GETs",
+          "Service apps have no user; token 'scope' field, not /users/me, is the recon signal"
+        ],
+        "evidence_refs": [
+          "turn2search4",
+          "fc-6aca2bd9",
+          "fc-0253b9e2",
+          "fc-d20a0ce3",
+          "fc-4fc2e01e",
+          "fc-7f31f1f9"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Okta Rate Limits",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/okta_rules/okta_rate_limits.yml",
+          "detects": "Okta rate-limit violation events, which API tokens and OAuth clients trigger when they make unusually many requests."
+        },
+        {
+          "source": "Elastic",
+          "title": "Unauthorized Scope for Public App OAuth2 Token Grant with Client Credentials",
+          "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/okta/defense_evasion_first_occurence_public_app_client_credential_token_exchange.toml",
+          "detects": "Failed client-credentials token grants by a public client app that asked for scopes it does not have (outcome reason no_matching_scope)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0253b9e2",
+      "title": "Okta OAuth 2.0 scopes",
+      "url": "https://developer.okta.com/docs/api/oauth2/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-23fee578",
+      "title": "Create OpenID Connect app integrations",
+      "url": "https://help.okta.com/oie/en-us/content/topics/apps/apps_app_integration_wizard_oidc.htm",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3a9b3217",
+      "title": "Okta Management API OpenAPI spec (vendor-owned okta-sdk-java repo)",
+      "url": "https://raw.githubusercontent.com/okta/okta-sdk-java/master/src/swagger/api.yaml",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4ae74dff",
+      "title": "Okta Management API OpenAPI spec (official, GitHub) - List all API token metadata",
+      "url": "https://raw.githubusercontent.com/okta/okta-management-openapi-spec/master/dist/current/management-minimal.yaml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4d5c58b7",
+      "title": "Okta Classic Engine API release notes 2025 (2025.11.0)",
+      "url": "https://developer.okta.com/docs/release-notes/2025/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4ed11e0d",
+      "title": "Configure OAuth 2.0 Demonstrating Proof-of-Possession | Okta Developer",
+      "url": "https://developer.okta.com/docs/guides/dpop/oktaresourceserver/main/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4fc2e01e",
+      "title": "Do API calls generate events in system logs",
+      "url": "https://support.okta.com/help/s/article/Do-API-calls-generate-events-in-system-logs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6aca2bd9",
+      "title": "Okta Event Types",
+      "url": "https://developer.okta.com/docs/reference/api/event-types/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7f31f1f9",
+      "title": "Okta management rate limits",
+      "url": "https://developer.okta.com/docs/reference/rl-global-mgmt/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8196268d",
+      "title": "System Log query",
+      "url": "https://developer.okta.com/docs/reference/system-log-query/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b2f789cd",
+      "title": "Okta Data Retention Policy",
+      "url": "https://support.okta.com/help/s/article/Okta-Data-Retention-Policy",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d20a0ce3",
+      "title": "Okta Management API - Users",
+      "url": "https://developer.okta.com/docs/api/openapi/okta-management/management/tag/User/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search16",
+      "title": "Create an API token - Okta Developer",
+      "url": "https://developer.okta.com/docs/guides/create-an-api-token/main/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search4",
+      "title": "Implement OAuth for Okta with a service app",
+      "url": "https://developer.okta.com/docs/guides/implement-oauth-for-okta-serviceapp/main/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

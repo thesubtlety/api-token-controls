@@ -1,0 +1,544 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "atlassian",
+      "name": "Atlassian Jira / Confluence Cloud",
+      "scope_notes": "Product IP allowlisting requires Premium/Enterprise. SAML SSO typically requires Atlassian Guard Standard or an included entitlement.",
+      "controls": [
+        {
+          "name": "IP allowlists",
+          "effect": "limit_network",
+          "applies_to": [
+            "atlassian-1",
+            "atlassian-2"
+          ],
+          "what": "Users outside allowed IPs/locations cannot reach Jira/Confluence content, including via the APIs.",
+          "setting": "admin.atlassian.com > Security > Device security > IP allowlists",
+          "plan": "Premium (Jira, JSM, Confluence, Compass) or Enterprise (Analytics, Focus)",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-797355fe"
+          ],
+          "quote": "Users also won't be able to access that app programmatically via the APIs."
+        },
+        {
+          "name": "Block user apps (user-installed apps)",
+          "effect": "disable",
+          "applies_to": [
+            "atlassian-2"
+          ],
+          "what": "Restricts app installation to admins so end users cannot grant third-party (3LO) apps access.",
+          "setting": "Atlassian Administration > Apps > [site] > Connected apps > settings > Block user apps",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "turn10search19"
+          ],
+          "quote": "Organization and Site admins can also choose to restrict app installation to admin level by selecting Block user apps in the Connected apps settings."
+        },
+        {
+          "name": "Uninstall connected app",
+          "effect": "revoke",
+          "applies_to": [
+            "atlassian-2"
+          ],
+          "what": "Uninstalling a 3LO app from the site revokes all users' grants.",
+          "setting": "Atlassian Administration > Apps > [site] > Connected apps > Manage authorization > Uninstall",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "turn10search19"
+          ],
+          "quote": "For OAuth 2.0 (3LO) apps such as “Atlassian for VS Code” , the Uninstall button revokes all users."
+        },
+        {
+          "name": "Marketplace and custom app access control (data security policy)",
+          "effect": "limit_resources",
+          "applies_to": [
+            "atlassian-2"
+          ],
+          "what": "Blocks eligible installed apps from user-generated content, org-wide or in selected spaces; finer allow-lists need Guard.",
+          "setting": "Atlassian Administration > Security > Data protection > Data security policy > Marketplace and custom app access",
+          "plan": "Any plan to block all; Atlassian Guard Standard/Premium for selective allow",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-4823d189"
+          ],
+          "quote": "All organization admins are able to use an override to block all eligible Marketplace and custom apps. The override blocks those apps from accessing user-generated content, such as Confluence pages and Jira work item data in their organization."
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether IP allowlists apply to service account credentials calling api.atlassian.com.",
+        "Whether OAuth 2.0 service account client secrets expire or can be given an expiry (no official statement found; access tokens last 60 minutes).",
+        "Whether the authentication-policy API token block also applies to service accounts.",
+        "No per-app allow/block list for 3LO user grants was found in official docs (only the global Block user apps toggle)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "atlassian-2",
+      "provider_id": "atlassian",
+      "name": "OAuth 3LO",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Email + API token via Basic; scoped API tokens; delegated OAuth 2.0 (3LO) bearer tokens. Forge has a separate app model.",
+        "evidence_refs": [
+          "turn2search3",
+          "turn2search19",
+          "turn20search2"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "General inbound external-IdP token exchange is not established for product REST APIs. SAML SSO alone does not replace API credentials.",
+        "evidence_refs": [
+          "turn2search3",
+          "turn2search19",
+          "turn20search2"
+        ]
+      },
+      "ip_restriction": {
+        "status": "excluded",
+        "enforcement_stage": "unknown",
+        "boundary": "Atlassian's app IP allowlist explicitly does not apply to OAuth 2.0 (3LO) apps, Connect apps, or Forge apps. Rovo MCP Server requests are a separate case and must come from allowlisted IPs.",
+        "evidence_refs": [
+          "turn10search15",
+          "turn2search11",
+          "turn10search19",
+          "fc-797355fe"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Short-lived; honor expires_in",
+        "evidence_refs": [
+          "turn2search3",
+          "turn2search19",
+          "turn20search2"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "inactivity",
+        "summary": "Rotating refresh token with 90-day inactivity expiry.",
+        "evidence_refs": [
+          "turn2search3",
+          "turn2search19",
+          "turn20search2"
+        ]
+      },
+      "administration": {
+        "summary": "Token revocation, managed-account API-token controls, scopes, app access policies and app installation controls.",
+        "conditions": "Product IP allowlisting requires Premium/Enterprise. SAML SSO typically requires Atlassian Guard Standard or an included entitlement.",
+        "evidence_refs": [
+          "turn10search15",
+          "turn2search11",
+          "turn10search19"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Connected apps page lists installed apps and can filter by installed by user, but does not list individual user grants or tokens.",
+          "evidence_refs": [
+            "fc-2b4ec135"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Not configurable; read expires_in in the token response. Refresh tokens rotate and have a limited life",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "turn2search19",
+            "fc-81248a82"
+          ]
+        },
+        "reads": {
+          "ui": "Atlassian Administration > Insights > Audit log; filter activity \"Viewed Jira issue\" / \"Viewed Confluence page\" and the user",
+          "api": "GET https://api.atlassian.com/admin/v1/orgs/{orgId}/events?action=<activity>&actor=<accountId>",
+          "cli": null,
+          "evidence_refs": [
+            "fc-f1da018c",
+            "fc-4100e8ce",
+            "fc-84d854df"
+          ]
+        },
+        "kill": {
+          "ui": "Atlassian Administration > Apps > Atlassian apps > (site) > Connected apps > Uninstall (revokes all users; admins cannot revoke one user's grant)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "turn10search19",
+            "turn2search19"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "3LO access/refresh token format not documented; treat as opaque bearer. Refresh tokens rotate."
+        },
+        "log_sources": [
+          {
+            "name": "Atlassian organization audit log (Admin > Insights > Audit log; Organizations REST API /v1/orgs/{orgId}/events and /events-stream)",
+            "notes": "Requires Atlassian Guard Standard/Premium or an Enterprise plan; 180-day retention, default view 7 days. API token activities only for managed (claimed-domain) accounts. Third-party app actions logged as 'Third-party app Jira API request' / 'Third-party app Confluence API request'."
+          },
+          {
+            "name": "Connected apps (user profile) and Admin > Apps (Marketplace and third-party apps)",
+            "notes": "User-level grant list; admin sees installed 3LO apps and can uninstall."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "attributes.actor.auth.authType",
+            "log": "Org audit log events API",
+            "notes": "enum includes api-token, auth-token-for-2LO, auth-token-for-3LO"
+          },
+          {
+            "field": "attributes.actor.app.id",
+            "log": "Org audit log events API",
+            "notes": "app acting"
+          },
+          {
+            "field": "attributes.actor.onBehalfOf.id",
+            "log": "Org audit log events API",
+            "notes": "user the app acts for"
+          },
+          {
+            "field": "attributes.actor.auth.tokenId",
+            "log": "Org audit log events API",
+            "notes": "ID of the authentication token"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Third-party app Jira API request",
+            "stage": "use",
+            "notes": "App actions category"
+          },
+          {
+            "event": "Third-party app Confluence API request",
+            "stage": "use",
+            "notes": "App actions category"
+          },
+          {
+            "event": "Deactivated account",
+            "stage": "revoke",
+            "notes": "consenting user disabled"
+          },
+          {
+            "event": "Logged in to account",
+            "stage": "use",
+            "notes": "interactive login preceding consent"
+          }
+        ],
+        "correlation_keys": [
+          "attributes.actor.app.id",
+          "attributes.actor.onBehalfOf.id",
+          "attributes.actor.auth.authType",
+          "attributes.location.ip",
+          "attributes.container[].id",
+          "ALQL: app, actor, \"auth type\" = oauth, \"ip address\""
+        ],
+        "anomaly_cues": [
+          "new 3LO app making Third-party app Jira/Confluence API requests for a user who never used it",
+          "app acting onBehalfOf a user after the user is deactivated",
+          "burst of read requests across many projects shortly after consent (consent phishing)",
+          "same app/user pair from a new ASN or country",
+          "refresh failures (invalid_grant) at the app after password reset, followed by renewed consent"
+        ],
+        "containment": {
+          "steps": "User revokes the grant on their Connected apps screen; admin uninstalls the 3LO app (revokes all users) and can enable 'Block user apps'; reset password / deactivate the user.",
+          "kills_existing": "yes",
+          "notes": "Docs say access tokens work until expiry or revocation and the app cannot work after the user revokes consent. Only the user can revoke a single grant; admins can only uninstall the app. No timing stated."
+        },
+        "sample_query": {
+          "language": "Atlassian audit log ALQL",
+          "query": "created >= \"2026-09-12\" AND \"auth type\" = oauth AND actor = \"Fran Perez\" ORDER BY created desc",
+          "purpose": "List OAuth-authenticated activity tied to one user to spot unexpected apps or IPs."
+        },
+        "unknown": [
+          "token prefix/format",
+          "access token lifetime (returned per token as expires_in)",
+          "activity key values for third-party app API requests",
+          "consent/grant created or revoked audit events",
+          "whether ALQL auth type 'oauth' covers 3LO only or also 2LO",
+          "user agent field"
+        ],
+        "evidence_refs": [
+          "fc-f1da018c",
+          "fc-4100e8ce",
+          "fc-84d854df",
+          "fc-b26c78de",
+          "fc-bf99abe6",
+          "turn2search19",
+          "turn10search19"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET https://api.atlassian.com/oauth/token/accessible-resources",
+            "reveals": "Sites (cloudid) and the scopes the token holds on each",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Needed to build api.atlassian.com/ex/jira/{cloudId} URLs."
+          },
+          {
+            "stage": "recon",
+            "call": "GET https://api.atlassian.com/me",
+            "reveals": "Public profile of the authorizing user",
+            "bulk": false,
+            "scope": "read:me",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/users/search",
+            "reveals": "All users in the site",
+            "bulk": true,
+            "scope": "read:jira-user",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "discovery",
+            "call": "GET https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/project/search",
+            "reveals": "Projects visible to the principal",
+            "bulk": true,
+            "scope": "read:jira-work",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/search/jql",
+            "reveals": "Issues matching JQL, paged with nextPageToken",
+            "bulk": true,
+            "scope": "read:jira-work",
+            "rate_limit": "API tokens: burst limits (default 100 req/s GET per tenant/endpoint); OAuth apps: points-based hourly budget",
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Org audit log records in-app views (e.g. viewing a Confluence page) only on Guard Premium or Cloud Enterprise; retention 180 days without Guard, 365 days with Guard from 2026-10-01. Docs do not state whether REST API reads produce these entries."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://api.atlassian.com/ex/confluence/{cloudId}/wiki/api/v2/pages",
+            "reveals": "Confluence pages (bodies via body-format)",
+            "bulk": true,
+            "scope": "read:page:confluence",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Org audit log records in-app views (e.g. viewing a Confluence page) only on Guard Premium or Cloud Enterprise; retention 180 days without Guard, 365 days with Guard from 2026-10-01. Docs do not state whether REST API reads produce these entries."
+          }
+        ],
+        "unknown": [
+          "Whether 3LO API reads appear in the org audit log",
+          "Per-endpoint OAuth point costs"
+        ],
+        "evidence_refs": [
+          "turn2search19",
+          "fc-cf1c3895",
+          "fc-f24ba556",
+          "fc-4fdf14ea",
+          "fc-97018e46",
+          "fc-a31e2d9f"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-2b4ec135",
+      "title": "View and filter installed apps",
+      "url": "https://support.atlassian.com/organization-administration/docs/viewing-and-filtering-installed-apps/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4100e8ce",
+      "title": "Audit log activities database",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/audit-log-activities-database/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4823d189",
+      "title": "Block Marketplace and custom app access | Atlassian Support",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/block-app-access/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4fdf14ea",
+      "title": "Jira rate limiting",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/rate-limiting/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-797355fe",
+      "title": "Specify IP addresses for app access - Atlassian Support",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/specify-ip-addresses-for-product-access/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-81248a82",
+      "title": "Implementing the refresh token flow",
+      "url": "https://developer.atlassian.com/cloud/oauth/getting-started/refresh-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-84d854df",
+      "title": "Organizations REST API: Events",
+      "url": "https://developer.atlassian.com/cloud/admin/organization/rest/api-group-events/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-97018e46",
+      "title": "Track organization activities from the audit log",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/track-organization-activities-from-the-audit-log/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a31e2d9f",
+      "title": "What activities does the audit log include?",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/accessing-audit-log-activities/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b26c78de",
+      "title": "ALQL fields",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/alql-fields/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bf99abe6",
+      "title": "What is advanced search in audit log?",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/what-is-advanced-search-in-audit-log/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cf1c3895",
+      "title": "Jira Cloud REST v3 OpenAPI",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/swagger-v3.v3.json",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f1da018c",
+      "title": "View audit log activities",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/view-audit-log-activities/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f24ba556",
+      "title": "Confluence Cloud REST v2 OpenAPI",
+      "url": "https://dac-static.atlassian.com/cloud/confluence/openapi-v2.v3.json",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search15",
+      "title": "Scope of IP allowlists in Atlassian Cloud",
+      "url": "https://support.atlassian.com/atlassian-cloud/kb/what-is-the-scope-of-ip-allowlists-in-atlassian-cloud/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search19",
+      "title": "Manage your organization's Marketplace and third-party apps",
+      "url": "https://support.atlassian.com/security-and-access-policies/docs/manage-your-users-third-party-apps/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn20search2",
+      "title": "Security for other integrations - Atlassian",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/security-for-other-integrations/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search11",
+      "title": "Understand user API tokens - Atlassian Support",
+      "url": "https://support.atlassian.com/organization-administration/docs/understand-user-api-tokens/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search19",
+      "title": "OAuth 2.0 (3LO) apps - Atlassian",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search3",
+      "title": "Manage API tokens for your Atlassian account",
+      "url": "https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

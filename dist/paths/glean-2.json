@@ -1,0 +1,368 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "glean",
+      "name": "Glean",
+      "scope_notes": "Glean-hosted enterprise SaaS (single tenant, <instance>-be.glean.com); plan tiers are not documented for these controls, and log delivery to customer storage needs Glean account team setup.",
+      "controls": [
+        {
+          "name": "Revoke API token",
+          "effect": "revoke",
+          "applies_to": [
+            "glean-1",
+            "glean-2",
+            "glean-3"
+          ],
+          "what": "Revokes a Glean-issued token.",
+          "setting": "Admin console > Platform > API tokens",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d67398fb"
+          ]
+        },
+        {
+          "name": "Token scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "glean-1",
+            "glean-2"
+          ],
+          "what": "Token is limited to chosen Client API scopes, fixed at creation.",
+          "setting": "Add New Token > Scopes",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-cd8ae899"
+          ]
+        },
+        {
+          "name": "Token creation roles",
+          "effect": "require_approval",
+          "applies_to": [
+            "glean-1",
+            "glean-2",
+            "glean-3"
+          ],
+          "what": "Only admin roles or API Token Creator can create tokens; global scope needs Super Admin.",
+          "setting": "Admin console > User roles",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-cd8ae899",
+            "fc-d7429b32",
+            "fc-765e2605"
+          ]
+        },
+        {
+          "name": "Tenant-wide IP greenlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "glean-1",
+            "glean-2",
+            "glean-4",
+            "glean-5",
+            "glean-6"
+          ],
+          "what": "VPC firewall allowlist for the tenant; MCP also checks at app layer.",
+          "setting": "Not documented (Glean-managed)",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ac27dc28"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether revoking a Glean-issued API token takes effect immediately",
+        "Whether user deprovisioning revokes that user's Glean-issued API tokens",
+        "Whether admin audit logs record API token create/revoke (coverage list does not mention tokens)",
+        "Per-token IP allowlist for Client API tokens",
+        "Default OAuth server state (admin docs: off; developer docs: on)",
+        "Where the tenant-wide IP greenlist is configured and whether customers manage it",
+        "EMA token lifetime"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "glean-2",
+      "provider_id": "glean",
+      "name": "Client API token (GLOBAL permission, X-Glean-ActAs)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Glean-issued bearer token that can act as any user by sending X-Glean-ActAs: <email>.",
+        "evidence_refs": [
+          "fc-cd8ae899"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static token; independent of the IdP.",
+        "evidence_refs": [
+          "fc-cd8ae899"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Tenant-wide VPC firewall greenlist only.",
+        "evidence_refs": [
+          "fc-ac27dc28"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Optional expiry date",
+        "evidence_refs": [
+          "fc-cd8ae899"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "fixed date",
+        "summary": "Create a new token.",
+        "evidence_refs": [
+          "fc-cd8ae899"
+        ]
+      },
+      "administration": {
+        "summary": "Only Super Admins can create global tokens.",
+        "conditions": "Highest-impact Glean credential: impersonates any user.",
+        "evidence_refs": [
+          "fc-cd8ae899",
+          "fc-765e2605"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "GLOBAL tokens are not tied to one user; they can act as any user via X-Glean-ActAs.",
+          "evidence_refs": [
+            "fc-cd8ae899"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Admin console > Platform > API tokens.",
+          "evidence_refs": [
+            "fc-d67398fb"
+          ]
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "No self-serve setting; send Glean the allowed CIDRs and Glean enables IP green listing (tenant-wide)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-000bc4ba",
+            "fc-ac27dc28"
+          ]
+        },
+        "expiry": {
+          "ui": "Admin console → Client API Token Settings → Add New Token → Expires (set at creation)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-cd8ae899"
+          ]
+        },
+        "usage": {
+          "ui": "Query the glean-customer-event log (bucket/warehouse; ask account team for location); filter IsRestClientApi = true",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-b9e88402",
+            "fc-4b0dcb82",
+            "fc-94c8cbbf"
+          ]
+        },
+        "reads": {
+          "ui": "In glean-customer-event log, filter jsonPayload.type = SEARCH and IsRestClientApi = true",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-b9e88402",
+            "fc-4b0dcb82"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "glean_",
+          "notes": "Example only."
+        },
+        "log_sources": [
+          {
+            "name": "GCE logs",
+            "notes": "Events are attributed to the impersonated user."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "IsRestClientApi",
+            "log": "GCE SEARCH",
+            "notes": "No token ID documented."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "user identity"
+        ],
+        "anomaly_cues": [
+          "API activity spread across many users at once (ActAs fan-out)"
+        ],
+        "containment": {
+          "steps": "Revoke the global token in the API tokens page.",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether logs record the ActAs caller vs. impersonated user"
+        ],
+        "evidence_refs": [
+          "fc-cd8ae899",
+          "fc-d67398fb",
+          "fc-4b0dcb82"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "POST /rest/api/v1/adminsearch",
+            "reveals": "Search results without permission checks (privileged users)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /rest/api/v1/search with X-Glean-ActAs",
+            "reveals": "Any user's visible documents",
+            "bulk": true,
+            "scope": "SEARCH",
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "SEARCH",
+            "log_notes": "GCE"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-8546e7ff",
+          "fc-4b0dcb82"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-000bc4ba",
+      "title": "Glean web application firewall on AWS",
+      "url": "https://docs.glean.com/security/cloud-prem/aws/aws-waf",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4b0dcb82",
+      "title": "Event schemas | Glean Customer Event logs",
+      "url": "https://docs.glean.com/administration/gce-logs/data-dictionary-detailed",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-765e2605",
+      "title": "Administrator Roles",
+      "url": "https://docs.glean.com/administration/identity/roles/admin-roles",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8546e7ff",
+      "title": "Search the index (admin)",
+      "url": "https://developers.glean.com/api/client-api/search/adminsearch",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-94c8cbbf",
+      "title": "MCP usage tracking and analytics",
+      "url": "https://docs.glean.com/administration/platform/mcp/analytics",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac27dc28",
+      "title": "MCP Security, Data Flow, and Permissions",
+      "url": "https://docs.glean.com/administration/platform/mcp/security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9e88402",
+      "title": "Glean Customer Event logs overview",
+      "url": "https://docs.glean.com/administration/gce-logs/data-dictionary",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cd8ae899",
+      "title": "Glean-Issued Tokens for Client API",
+      "url": "https://developers.glean.com/api-info/client/authentication/glean-issued",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d67398fb",
+      "title": "API Tokens | Glean Docs",
+      "url": "https://docs.glean.com/administration/developer/api-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7429b32",
+      "title": "Indexing API Authentication",
+      "url": "https://developers.glean.com/api-info/indexing/authentication/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

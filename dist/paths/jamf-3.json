@@ -1,0 +1,251 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "jamf",
+      "name": "Jamf",
+      "scope_notes": "Covers Jamf (Jamf Pro, Jamf Platform API Gateway, Jamf Protect, Jamf School). Jamf Pro cloud (11.x) is the main focus; Jamf Log Stream export needs Jamf Cloud Premium; Protect and School covered from public docs only.",
+      "controls": [
+        {
+          "name": "Integration scope level and capability permissions",
+          "effect": "limit_scope",
+          "applies_to": [
+            "jamf-3"
+          ],
+          "what": "Each gateway integration is bound to one scope level (org, environment, tenant) and granted capability:action permissions.",
+          "setting": "Jamf Account > Integrations",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-e9978d21"
+          ]
+        },
+        {
+          "name": "Integration validity (six months)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "jamf-3"
+          ],
+          "what": "Gateway integrations expire after six months.",
+          "setting": "Fixed",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-e9978d21"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for Jamf Pro API clients or user API access (none found in public docs).",
+        "Default and maximum Access Token Lifetime for API clients (the doc example shows expires_in 599, but no default is stated).",
+        "Whether Jamf Pro admins can block a user account from using /v1/auth/token while keeping UI access.",
+        "Which identity Change Management logs for actions taken by an API client, and whether /v1/oauth/token requests appear in the Access Log.",
+        "Exact Change Management object/action names for API client create/rotate/disable.",
+        "Jamf Protect API token lifetime and revocation; Jamf School API key expiry, auth header format and revocation behavior.",
+        "Platform API Gateway: revoke/disable controls for an integration and IP restrictions."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "jamf-3",
+      "provider_id": "jamf",
+      "name": "Jamf Platform API Gateway integration (Jamf Account client credentials)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An integration created in Jamf Account holds a client_id and client_secret, exchanged at https://{region}.api.jamfcloud.com/auth/token for a 15-minute bearer token. Reaches platform APIs and, at tenant scope, Jamf Pro (incl. Classic), Jamf Protect and Jamf Security Cloud.",
+        "evidence_refs": [
+          "fc-e9978d21"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Only client credentials documented.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 900,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Token 900 s; integration credentials valid six months",
+        "evidence_refs": [
+          "fc-e9978d21"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Token 900 s; integration six months",
+        "summary": "No refresh token; request a new token with the same credentials; regenerate secret / recreate integration every six months.",
+        "evidence_refs": [
+          "fc-e9978d21"
+        ]
+      },
+      "administration": {
+        "summary": "Created in Jamf Account > Integrations with a scope level and capability permissions.",
+        "conditions": "Jamf Account Administrator role or custom role with Integrations privileges.",
+        "evidence_refs": [
+          "fc-e9978d21",
+          "fc-0ef5b39f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The credential belongs to a Jamf Account integration, not to a user.",
+          "evidence_refs": [
+            "fc-e9978d21"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "Jamf Account > Integrations (integration valid six months; access tokens 900 s, see expires_in)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-0ef5b39f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Sample access_token begins eyJhbGciOiJSUzI1NiIs (JWT)."
+        },
+        "log_sources": [
+          {
+            "name": "Platform Audit API (GET /v1/audit)",
+            "notes": "api-gateway source records actor, method, path; needs audit:read."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor",
+            "log": "Platform audit events",
+            "notes": "Filter field."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "actor",
+          "transaction id"
+        ],
+        "anomaly_cues": [
+          "New integrations with organization-management scope",
+          "Destructive device action capability granted"
+        ],
+        "containment": {
+          "steps": "Delete or regenerate the integration in Jamf Account.",
+          "kills_existing": "unknown",
+          "notes": "Jamf's migration guide lists no invalidate endpoint for gateway tokens; they expire after 900 s."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Event names for integration create/delete"
+        ],
+        "evidence_refs": [
+          "fc-495c3dd9",
+          "fc-ba6132af",
+          "fc-e9978d21",
+          "fc-4a3ba4e3"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "GET /v1/audit/sources",
+            "reveals": "Audit sources and event types",
+            "bulk": false,
+            "scope": "audit:read",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "whoami endpoint"
+        ],
+        "evidence_refs": [
+          "fc-495c3dd9"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0ef5b39f",
+      "title": "Getting started",
+      "url": "https://developer.jamf.com/platform-api/reference/getting-started-with-platform-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-495c3dd9",
+      "title": "Discover audit sources",
+      "url": "https://developer.jamf.com/platform-api/reference/listauditsources",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4a3ba4e3",
+      "title": "Move an existing integration to the Platform API Gateway",
+      "url": "https://developer.jamf.com/platform-api/reference/move-an-existing-integration-to-the-platform-api-gateway",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ba6132af",
+      "title": "Filter audit events",
+      "url": "https://developer.jamf.com/platform-api/reference/filterauditevents",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9978d21",
+      "title": "Platform API fundamentals",
+      "url": "https://developer.jamf.com/platform-api/reference/platform-api-fundamentals",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

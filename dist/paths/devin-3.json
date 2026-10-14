@@ -1,0 +1,301 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "devin",
+      "name": "Devin",
+      "scope_notes": "Covers Devin (Cognition). Cognition-hosted SaaS on Teams and Enterprise plans; PAT policy, IP access lists, enterprise service users, audit log API and SCIM are Enterprise features.",
+      "controls": [
+        {
+          "name": "IP Access Lists",
+          "effect": "limit_network",
+          "applies_to": [
+            "devin-1",
+            "devin-2",
+            "devin-3"
+          ],
+          "what": "Only allowed CIDRs can reach Devin APIs and webapp.",
+          "setting": "/v3/enterprise/ip-access-list (ManageIPWhitelist)",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-224e4437"
+          ]
+        },
+        {
+          "name": "Revoke API Key (v2)",
+          "effect": "revoke",
+          "applies_to": [
+            "devin-3"
+          ],
+          "what": "Revokes an enterprise legacy key.",
+          "setting": "DELETE /v2/enterprise/api-keys/{api_key_id}",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-c4561cbf",
+            "fc-3e2c6251"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "devin-3",
+          "what": "Legacy keys do not support RBAC.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-afe65dae"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether API tokens are blocked when SSO is enforced or bypass IdP conditional access (not stated)",
+        "Inbound workload federation for the Devin API (audit actions exist, no guide found)",
+        "Where the static service user key policy is set in the UI",
+        "Audit log retention period",
+        "Whether read calls (list sessions, list knowledge) are audited",
+        "Legacy key expiry and whether a v3 setting disables them",
+        "Whether revoking a service user key ends access immediately"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "devin-3",
+      "provider_id": "devin",
+      "name": "Legacy API keys (Personal apk_user_ / Service apk_)",
+      "family": "api_key",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Deprecated keys for the v1 and v2 APIs, still accepted during the deprecation period. Scoped to an (org_id, user_id) pair; no RBAC.",
+        "evidence_refs": [
+          "fc-afe65dae",
+          "fc-3d9238a8"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static key.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Enterprise IP access list covers Devin APIs.",
+        "evidence_refs": [
+          "fc-224e4437"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Not documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not documented",
+        "summary": "Generate a new key in legacy settings; migrate to v3.",
+        "evidence_refs": [
+          "fc-afe65dae"
+        ]
+      },
+      "administration": {
+        "summary": "Enterprise admins can list and revoke enterprise keys via the v2 API. Not accepted by the Devin MCP server.",
+        "conditions": "v2 key endpoints need an enterprise admin personal API key.",
+        "evidence_refs": [
+          "fc-3cdfab2a",
+          "fc-c4561cbf",
+          "fc-3e2c6251"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /v2/enterprise/api-keys lists legacy API keys across all orgs in the enterprise (needs an enterprise admin personal API key).",
+          "evidence_refs": [
+            "fc-3e2c6251"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": null,
+          "api": "GET /v3/enterprise/audit-logs; filter results on user_id / user_email",
+          "cli": null,
+          "evidence_refs": [
+            "fc-3e18b5ad"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "apk_user_ / apk_",
+          "notes": "Personal vs service legacy keys."
+        },
+        "log_sources": [
+          {
+            "name": "Audit logs API",
+            "notes": ""
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "user_id",
+            "log": "audit log",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "create_user_api_key",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "create_org_api_key",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "create_service_api_key",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "revoke_enterprise_api_key",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "revoke_all_enterprise_api_keys",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "user_id",
+          "org_id"
+        ],
+        "anomaly_cues": [
+          "view_user_api_key / view_org_api_key events",
+          "Any legacy key use after v3 migration"
+        ],
+        "containment": {
+          "steps": "DELETE /v2/enterprise/api-keys/{api_key_id} or revoke in Settings > API Keys.",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "Expiry"
+        ],
+        "evidence_refs": [
+          "fc-3e18b5ad",
+          "fc-c4561cbf"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /v1/sessions",
+            "reveals": "Org sessions",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-3d9238a8"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-224e4437",
+      "title": "IP Access Lists | Devin Docs",
+      "url": "https://docs.devin.ai/enterprise/security-access/ip-access-lists",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3cdfab2a",
+      "title": "Devin MCP | Devin Docs",
+      "url": "https://docs.devin.ai/work-with-devin/devin-mcp",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3d9238a8",
+      "title": "v1 API Overview (Legacy)",
+      "url": "https://docs.devin.ai/api-reference/v1/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3e18b5ad",
+      "title": "List Audit Logs | Devin API",
+      "url": "https://docs.devin.ai/api-reference/v3/audit-logs/enterprise-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3e2c6251",
+      "title": "List API Keys (v2)",
+      "url": "https://docs.devin.ai/api-reference/v2/api-keys/list-enterprise-api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-afe65dae",
+      "title": "Authentication | Devin Docs",
+      "url": "https://docs.devin.ai/api-reference/authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c4561cbf",
+      "title": "Revoke API Key (v2)",
+      "url": "https://docs.devin.ai/api-reference/v2/api-keys/revoke-enterprise-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

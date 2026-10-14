@@ -1,0 +1,507 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "azure",
+      "name": "Microsoft Azure",
+      "scope_notes": "Covers Microsoft Azure (Azure Storage, Azure Resource Manager, Microsoft Entra Workload ID, Azure DevOps Services). Azure Storage and ARM controls are per subscription/account; Conditional Access for workload identities needs Workload Identities Premium; Azure DevOps PAT policies need an Entra-backed organization. Entra delegated/app-only OAuth for Graph and managed identities are covered by the separate microsoft platform.",
+      "controls": [
+        {
+          "name": "Allow storage account key access (AllowSharedKeyAccess = false)",
+          "effect": "disable",
+          "applies_to": [
+            "azure-1",
+            "azure-2"
+          ],
+          "what": "Rejects all requests authorized with account keys, including account and service SAS; user delegation SAS still works.",
+          "setting": "Storage account > Configuration > Allow storage account key access; ARM property allowSharedKeyAccess",
+          "plan": null,
+          "default": "on",
+          "level": "account",
+          "evidence_refs": [
+            "fc-722fbc0c"
+          ]
+        },
+        {
+          "name": "Azure Policy: Storage accounts should prevent shared key access",
+          "effect": "disable",
+          "applies_to": [
+            "azure-1",
+            "azure-2"
+          ],
+          "what": "Audits or prevents storage accounts that permit Shared Key authorization.",
+          "setting": "Azure Policy assignment",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-722fbc0c"
+          ]
+        },
+        {
+          "name": "Regenerate key (RegenerateKey)",
+          "effect": "revoke",
+          "applies_to": [
+            "azure-1",
+            "azure-2"
+          ],
+          "what": "Replaces an account key and revokes SAS signed with that key.",
+          "setting": "Storage account > Access keys > Rotate key; POST .../regenerateKey",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-16c4599c",
+            "fc-be5920ad"
+          ]
+        },
+        {
+          "name": "Storage firewall network rules",
+          "effect": "limit_network",
+          "applies_to": [
+            "azure-1",
+            "azure-2"
+          ],
+          "what": "Limits which IPs, VNets and resource instances can reach the account endpoint.",
+          "setting": "Storage account > Networking",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-fe0e4c61"
+          ]
+        },
+        {
+          "name": "SAS expiration policy (Log / Block)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "azure-2"
+          ],
+          "what": "Sets a recommended max SAS interval for service and account SAS; Block denies out-of-policy SAS, default Log allows them.",
+          "setting": "Storage account > Configuration > SAS expiration; -SasExpirationPeriod / -SasExpirationAction",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-6325768d"
+          ]
+        },
+        {
+          "name": "Stored access policy",
+          "effect": "revoke",
+          "applies_to": [
+            "azure-2"
+          ],
+          "what": "Service SAS bound to a stored access policy can be revoked by changing or deleting the policy.",
+          "setting": "Container/share/queue/table ACL operation",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-bd395203",
+            "fc-ed5fcd91"
+          ]
+        },
+        {
+          "name": "Revoke user delegation keys",
+          "effect": "revoke",
+          "applies_to": [
+            "azure-2"
+          ],
+          "what": "Revokes all user delegation keys for the account, invalidating every user delegation SAS.",
+          "setting": "az storage account revoke-delegation-keys",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-93d1e669"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "azure-2",
+          "what": "Azure does not track issued SAS tokens, so there is no inventory or per-token revoke for account SAS.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-bd395203"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether Azure Activity Log records the service principal identity for ARM read calls made with azure-3/azure-4 tokens (Activity log typically skips reads).",
+        "Exact Entra audit activity name for adding/removing a federated identity credential.",
+        "Default of the Azure DevOps \"IP Conditional Access policy validation on non-interactive flows\" policy.",
+        "Maximum Azure DevOps PAT lifetime when no tenant policy is set.",
+        "Token format or prefix for storage keys, SAS, client secrets or Azure DevOps PATs.",
+        "Whether app management policies require a specific license."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "azure-2",
+      "provider_id": "azure",
+      "name": "Shared access signatures (SAS): account SAS, service SAS, user delegation SAS",
+      "family": "hmac",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Signed URL token. Account and service SAS are signed with an account key; user delegation SAS is signed with a user delegation key obtained with Entra credentials (Blob only). Anyone holding the SAS can use it.",
+        "evidence_refs": [
+          "fc-722fbc0c",
+          "fc-bd395203"
+        ]
+      },
+      "federation": {
+        "status": "limited",
+        "details": "Account/service SAS rely on Shared Key and bypass Entra; user delegation SAS is authorized with Entra credentials and still works when Shared Key is disabled.",
+        "evidence_refs": [
+          "fc-722fbc0c"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Optional signed IP (sip) in the SAS plus the storage firewall; the SAS IP cannot grant access beyond firewall rules.",
+        "evidence_refs": [
+          "fc-fe0e4c61"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Expiry set by creator; user delegation key max 7 days; SAS expiration policy can Log or Block over-long SAS",
+        "evidence_refs": [
+          "fc-6325768d",
+          "fc-52950ccf"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "signed expiry (se)",
+        "summary": "Generate a new SAS client-side.",
+        "evidence_refs": [
+          "fc-bd395203"
+        ]
+      },
+      "administration": {
+        "summary": "SAS tokens are not tracked by Azure. Controls: disallow Shared Key (blocks account/service SAS), SAS expiration policy, stored access policies (service SAS only), revoke user delegation keys, regenerate account keys.",
+        "conditions": "Stored access policies not supported for account or user delegation SAS.",
+        "evidence_refs": [
+          "fc-bd395203",
+          "fc-722fbc0c"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "partial",
+          "details": "A user delegation SAS is secured with Entra credentials; account and service SAS are signed with Shared Key, which Conditional Access does not cover unless Shared Key is disallowed.",
+          "evidence_refs": [
+            "fc-bd395203",
+            "fc-722fbc0c"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "no",
+          "details": "SAS tokens are generated client-side and Azure Storage does not track them.",
+          "evidence_refs": [
+            "fc-bd395203"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Storage account > Settings > Configuration > Allow storage account key access = Disabled (leaves only Entra-backed user delegation SAS)",
+          "api": null,
+          "cli": "az storage account update --name <account> --resource-group <rg> --allow-shared-key-access false",
+          "evidence_refs": [
+            "fc-722fbc0c"
+          ]
+        },
+        "usage": {
+          "ui": "Log Analytics (after diagnostic setting): StorageBlobLogs | where AuthenticationType == \"SAS\"; AuthenticationHash identifies the SAS",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-722fbc0c",
+            "fc-e013ea13"
+          ]
+        },
+        "reads": {
+          "ui": "Log Analytics: StorageBlobLogs | where AuthenticationType == \"SAS\" and OperationName == \"GetBlob\"",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-722fbc0c",
+            "fc-7801a81e"
+          ]
+        },
+        "kill": {
+          "ui": "Account/service SAS: Storage account > Security + networking > Access keys > Regenerate the signing key, or change/delete the stored access policy. User delegation SAS: revoke delegation keys",
+          "api": "POST https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/revokeUserDelegationKeys",
+          "cli": "az storage account revoke-delegation-keys --name <account> --resource-group <rg>",
+          "evidence_refs": [
+            "fc-16c4599c",
+            "fc-bd395203",
+            "fc-93d1e669",
+            "fc-e82a1580"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "SAS is a query-string token appended to the resource URL."
+        },
+        "log_sources": [
+          {
+            "name": "Azure Storage resource logs (StorageBlobLogs)",
+            "notes": "Data-plane requests incl. AuthenticationType and AuthenticationHash; not collected until a diagnostic setting routes them."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "AuthenticationHash",
+            "log": "StorageBlobLogs",
+            "notes": "Key used plus SasSignature hash."
+          },
+          {
+            "field": "SasExpiryStatus",
+            "log": "Storage resource logs",
+            "notes": "Flags out-of-policy SAS."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "AuthenticationHash SasSignature",
+          "CallerIpAddress"
+        ],
+        "anomaly_cues": [
+          "AuthenticationType SAS from unknown IP",
+          "SasExpiryStatus entries"
+        ],
+        "containment": {
+          "steps": "Account/service SAS: regenerate signing key or change stored access policy. User delegation SAS: revoke-delegation-keys. Or disallow Shared Key.",
+          "kills_existing": "yes",
+          "notes": "User delegation revocation may be delayed by caching."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Creation of a SAS is client-side and not logged."
+        ],
+        "evidence_refs": [
+          "fc-16c4599c",
+          "fc-722fbc0c",
+          "fc-bd395203",
+          "fc-93d1e669",
+          "fc-11e5a751",
+          "fc-6325768d"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "GET https://{account}.blob.core.windows.net/?comp=list",
+            "reveals": "All containers",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "StorageBlobLogs only if diagnostic setting configured."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET https://{account}.blob.core.windows.net/{container}?restype=container&comp=list",
+            "reveals": "Blob names",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Same."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://{account}.blob.core.windows.net/{container}/{blob}",
+            "reveals": "Blob contents",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Same."
+          }
+        ],
+        "unknown": [
+          "No whoami call for Shared Key or SAS."
+        ],
+        "evidence_refs": [
+          "fc-3255e45c",
+          "fc-9da5e9a2",
+          "fc-8211d8c0",
+          "fc-afe1b0ea"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Panther",
+          "title": "Azure Storage SAS Token Access from External IP",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_storage_sas_external_access.yml",
+          "detects": "Successful storage requests signed with a SAS token (sig= in the URI) from a public IP."
+        },
+        {
+          "source": "Panther",
+          "title": "Azure VM Disk SAS URI Generated",
+          "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/azure_activity_rules/azure_vm_disk_sas_uri_generated.yml",
+          "detects": "A SAS URI was generated for a managed disk (download access to disk contents)."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-11e5a751",
+      "title": "Azure Blob Storage Monitoring Metrics and Logs Reference | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/blobs/monitor-blob-storage-reference",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-16c4599c",
+      "title": "Manage account access keys - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3255e45c",
+      "title": "Monitor Azure Blob Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/blobs/monitor-blob-storage",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-52950ccf",
+      "title": "Create a user delegation SAS - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6325768d",
+      "title": "Configure an expiration policy for shared access signatures (SAS) - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/common/sas-expiration-policy",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-722fbc0c",
+      "title": "Prevent authorization with Shared Key - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/common/shared-key-authorization-prevent",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7801a81e",
+      "title": "Storage Analytics logged operations and status messages",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/storage-analytics-logged-operations-and-status-messages",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8211d8c0",
+      "title": "List Blobs (REST API) - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-93d1e669",
+      "title": "Use Azure CLI to create a user delegation SAS for a container or blob - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9da5e9a2",
+      "title": "List Containers (REST API) - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/list-containers2",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-afe1b0ea",
+      "title": "Get Blob (REST API) - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bd395203",
+      "title": "Grant limited access to data with shared access signatures (SAS) - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-be5920ad",
+      "title": "Storage Accounts - Regenerate Key - REST API (Azure Storage Resource Provider) | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storagerp/storage-accounts/regenerate-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e013ea13",
+      "title": "Azure Monitor Logs reference - StorageBlobLogs - Azure Monitor | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/storagebloblogs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e82a1580",
+      "title": "Storage Accounts - Revoke User Delegation Keys",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storagerp/storage-accounts/revoke-user-delegation-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed5fcd91",
+      "title": "Define a stored access policy - Azure Storage | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/rest/api/storageservices/define-stored-access-policy",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fe0e4c61",
+      "title": "Azure Storage firewall rules and network access | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/azure/storage/common/storage-network-security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

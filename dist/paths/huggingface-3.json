@@ -1,0 +1,325 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "scope_notes": "Covers Hugging Face Hub (Team / Enterprise / Enterprise Plus). Hosted Hub; token management needs Team or Enterprise, org revoke and service accounts need Enterprise, IP ranges need Enterprise Plus. Inference Endpoints use the same user access tokens.",
+      "controls": [
+        {
+          "name": "Revoke leaked token everywhere",
+          "effect": "revoke",
+          "applies_to": [
+            "huggingface-1",
+            "huggingface-2",
+            "huggingface-3"
+          ],
+          "what": "Anyone can submit a raw token value; matching tokens are invalidated everywhere immediately.",
+          "setting": "POST /api/credentials/revoke",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-ad2e83b2"
+          ]
+        },
+        {
+          "name": "Restrict organization access to your IP ranges only",
+          "effect": "limit_network",
+          "applies_to": [
+            "huggingface-1",
+            "huggingface-2",
+            "huggingface-3"
+          ],
+          "what": "Org resources reachable only from listed CIDRs, including via tokens.",
+          "setting": "Organization settings > Network Security (or PATCH /api/organizations/{name}/settings/network-security)",
+          "plan": "Enterprise Plus",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-772a90c6"
+          ]
+        },
+        {
+          "name": "Bypass IP restrictions and the Content Access Policy",
+          "effect": "other",
+          "applies_to": [
+            "huggingface-3"
+          ],
+          "what": "Per-token exemption from IP ranges and content policy; admin-only.",
+          "setting": "Service account token form",
+          "plan": "Enterprise Plus",
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-dfefebc4"
+          ]
+        },
+        {
+          "name": "Service account token rotate / delete",
+          "effect": "revoke",
+          "applies_to": [
+            "huggingface-3"
+          ],
+          "what": "Rotate invalidates the old value immediately; delete revokes permanently.",
+          "setting": "Organization settings > Service Accounts",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-dfefebc4"
+          ]
+        },
+        {
+          "name": "Fine-grained token permissions",
+          "effect": "limit_resources",
+          "applies_to": [
+            "huggingface-1",
+            "huggingface-3"
+          ],
+          "what": "Limit token to specific repos/orgs and actions.",
+          "setting": "Token creation form",
+          "plan": null,
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-ad2e83b2",
+            "fc-dfefebc4"
+          ]
+        },
+        {
+          "name": "Service Accounts (org admin only)",
+          "effect": "other",
+          "applies_to": [
+            "huggingface-3"
+          ],
+          "what": "Only organization administrators can create service accounts and issue their tokens.",
+          "setting": "Organization settings > Service Accounts",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-dfefebc4"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Admin-enforced expiry for user access tokens or service account tokens (no setting found; PATs are valid until revoked).",
+        "Whether access tokens require or bypass an SSO session under Basic or Managed SSO.",
+        "Org-level allowlist or block for third-party OAuth apps.",
+        "Org-level control over who can configure Trusted Publishers on org repos.",
+        "Exact audit event name for OAuth Token Exchange issuance (docs say exchanges are logged).",
+        "Whether IP ranges apply to OAuth, Token Exchange and Trusted Publisher tokens."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "huggingface-3",
+      "provider_id": "huggingface",
+      "name": "Service account access token",
+      "family": "pat",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Fine-grained token issued by admins to an organization-owned service account that cannot sign in interactively.",
+        "evidence_refs": [
+          "fc-dfefebc4"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Non-interactive identity; no SSO login.",
+        "evidence_refs": [
+          "fc-dfefebc4"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Subject to org IP ranges (Enterprise Plus) unless an admin enables 'Bypass IP restrictions and the Content Access Policy' on that token.",
+        "evidence_refs": [
+          "fc-772a90c6",
+          "fc-dfefebc4"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "Manual rotate",
+        "summary": "Rotate replaces the value; old value stops working immediately.",
+        "evidence_refs": [
+          "fc-dfefebc4"
+        ]
+      },
+      "administration": {
+        "summary": "Admins create, update, rotate and delete tokens with org-wide or per-repo permissions.",
+        "conditions": "Enterprise / Enterprise Plus.",
+        "evidence_refs": [
+          "fc-dfefebc4"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service accounts belong to the org, not a person.",
+          "evidence_refs": [
+            "fc-dfefebc4"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Org settings > Service Accounts, where admins see and manage each account's tokens.",
+          "evidence_refs": [
+            "fc-dfefebc4"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": "hf_",
+          "notes": "Assumed same hf_ format; not stated"
+        },
+        "log_sources": [
+          {
+            "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+            "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "token id (24-char, org token settings)",
+          "username",
+          "anonymized IP/location"
+        ],
+        "anomaly_cues": [
+          "Token never rotated or unused for long periods in org token listing",
+          "Unexpected org.token_approval.authorization_request"
+        ],
+        "containment": {
+          "steps": "Rotate or delete the token in Service Accounts settings.",
+          "kills_existing": "yes",
+          "notes": "Old value stops working immediately on rotate."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Service account token lifecycle events are not in the audit log event list"
+        ],
+        "evidence_refs": [
+          "fc-dfefebc4",
+          "fc-e1e6add6"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/whoami-v2",
+            "reveals": "User, orgs and auth method of the token",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Not among the documented audit event types"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/models/{namespace}/{repo}/tree/{rev}/{path}",
+            "reveals": "Files in a repo",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Not among documented audit event types"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+            "reveals": "File contents (models, datasets)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Org audit log has no download events"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-e1e6add6",
+          "fc-5fdecf58"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-5fdecf58",
+      "title": "Hub OpenAPI",
+      "url": "https://huggingface.co/.well-known/openapi.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-772a90c6",
+      "title": "Network Security",
+      "url": "https://huggingface.co/docs/hub/enterprise-network-security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ad2e83b2",
+      "title": "User access tokens",
+      "url": "https://huggingface.co/docs/hub/security-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dfefebc4",
+      "title": "Service Accounts",
+      "url": "https://huggingface.co/docs/hub/enterprise-service-accounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e1e6add6",
+      "title": "Audit Logs",
+      "url": "https://huggingface.co/docs/hub/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,349 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "scope_notes": "Covers Cloudflare (API, Zero Trust Access, R2). All plans have API tokens and 18-month Audit Logs v2; Logpush beyond 18 months is Enterprise; Access service tokens need Cloudflare Zero Trust; R2 credentials need R2.",
+      "controls": [
+        {
+          "name": "Token permissions and resources",
+          "effect": "limit_scope",
+          "applies_to": [
+            "cloudflare-1",
+            "cloudflare-2",
+            "cloudflare-6"
+          ],
+          "what": "Limits a token to chosen permission groups, accounts, zones or R2 buckets.",
+          "setting": "API token > Permissions / Resources",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-f816803c",
+            "fc-8d72ca7d",
+            "fc-54356738"
+          ]
+        },
+        {
+          "name": "Delete / roll API token",
+          "effect": "revoke",
+          "applies_to": [
+            "cloudflare-1",
+            "cloudflare-2",
+            "cloudflare-6"
+          ],
+          "what": "Deleting or rolling invalidates the token secret.",
+          "setting": "DELETE /user/tokens/{token_id}; DELETE /accounts/{account_id}/tokens/{token_id}; PUT /user/tokens/{token_id}/value",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-2543f505",
+            "fc-1cffa3ce",
+            "fc-389be483",
+            "fc-7df6eed0"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any account-level setting to block members from creating user API tokens or using the Global API Key.",
+        "Any account-wide policy forcing token expiry or IP filters.",
+        "Whether Super Administrators can list or revoke other members' user API tokens.",
+        "Whether dashboard SSO or Access policies are checked on API token / Global API Key requests (no explicit statement).",
+        "Exact Audit Logs v2 action names for token create/delete/roll.",
+        "Whether Origin CA keys still authenticate after the 2026-09-30 removal date.",
+        "IP restrictions for Access service tokens and for R2 S3 requests.",
+        "Cloudflare OAuth tokens (actor context 'oauth', e.g. Wrangler) were not researched."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "cloudflare-6",
+      "provider_id": "cloudflare",
+      "name": "R2 S3 API credentials (Access Key ID / Secret Access Key)",
+      "family": "hmac",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "S3 SigV4 credentials derived from a user or account API token: Access Key ID = token id, Secret = SHA-256 of token value. Temporary credentials can be minted from them.",
+        "evidence_refs": [
+          "fc-54356738",
+          "fc-7d028d5f"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Same as the parent API token.",
+        "evidence_refs": [
+          "fc-54356738"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Whether the parent token's IP filter applies to S3 requests is not stated.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Follows the parent token; account tokens valid until revoked or expiry",
+        "evidence_refs": [
+          "fc-54356738"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Parent token lifetime",
+        "summary": "Recreate or roll the parent token.",
+        "evidence_refs": [
+          "fc-54356738"
+        ]
+      },
+      "administration": {
+        "summary": "Permissions can be limited to object read/write on specific buckets. Revoking the parent token kills derived temporary credentials immediately.",
+        "conditions": "Needs R2.",
+        "evidence_refs": [
+          "fc-54356738",
+          "fc-7d028d5f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "R2 user API tokens go inactive when the user is removed from the account; account API tokens are not tied to a user.",
+          "evidence_refs": [
+            "fc-54356738"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "R2 credentials are API tokens: account tokens are listable by Super Administrators (GET /accounts/{account_id}/tokens); user tokens only by their owner.",
+          "evidence_refs": [
+            "fc-8d72ca7d",
+            "fc-3810b4ce",
+            "fc-524509ba"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "R2 > bucket > Settings > Data Access Logs > View logs in Workers Observability; filter action = GetObject and actor.accessKeyId = {key id}",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-773e702f"
+          ]
+        },
+        "offboard": {
+          "ui": "Manage Account > Members > expand member > Revoke (user R2 tokens go inactive; account R2 tokens are unaffected)",
+          "api": "DELETE /accounts/{account_id}/members/{member_id}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-db6610b5",
+            "fc-54356738"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Access Key ID is the parent API token id; secret is SHA-256 of token value."
+        },
+        "log_sources": [
+          {
+            "name": "R2 Data Access Logs",
+            "notes": "Opt-in per bucket; 7-day retention; best effort; excludes status >=400."
+          },
+          {
+            "name": "Audit Logs",
+            "notes": "Bucket config only; no GetObject/PutObject."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actor.accessKeyId",
+            "log": "R2 Data Access Logs",
+            "notes": "Maps to API token id"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "GetObject",
+            "stage": "use",
+            "notes": "Data Access Logs"
+          },
+          {
+            "event": "ListObjectsV2",
+            "stage": "use",
+            "notes": "Data Access Logs"
+          }
+        ],
+        "correlation_keys": [
+          "actor.accessKeyId",
+          "requestMetadata.ip",
+          "actor.token_id (audit logs)"
+        ],
+        "anomaly_cues": [
+          "Bulk ListObjectsV2/GetObject from new IP",
+          "Large response.bytes totals"
+        ],
+        "containment": {
+          "steps": "Delete or roll the parent API token.",
+          "kills_existing": "yes",
+          "notes": "Derived temporary credentials stop immediately."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Jurisdictional buckets lack Data Access Logs"
+        ],
+        "evidence_refs": [
+          "fc-54356738",
+          "fc-fd5ff965",
+          "fc-773e702f",
+          "fc-7d028d5f"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "S3 ListObjectsV2 / GetObject on https://<ACCOUNT_ID>.r2.cloudflarestorage.com",
+            "reveals": "Object listings and data",
+            "bulk": true,
+            "scope": "Object Read",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "GetObject",
+            "log_notes": "Only if Data Access Logs enabled on the bucket; best effort"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-54356738",
+          "fc-fd5ff965",
+          "fc-773e702f"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1cffa3ce",
+      "title": "Delete Token",
+      "url": "https://developers.cloudflare.com/api/resources/user/subresources/tokens/methods/delete/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2543f505",
+      "title": "Roll tokens",
+      "url": "https://developers.cloudflare.com/fundamentals/api/how-to/roll-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3810b4ce",
+      "title": "List Tokens (account)",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/tokens/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-389be483",
+      "title": "Delete Token (account)",
+      "url": "https://developers.cloudflare.com/api/resources/accounts/subresources/tokens/methods/delete/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-524509ba",
+      "title": "List Tokens (user)",
+      "url": "https://developers.cloudflare.com/api/resources/user/subresources/tokens/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-54356738",
+      "title": "R2 Authentication",
+      "url": "https://developers.cloudflare.com/r2/api/tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-773e702f",
+      "title": "R2 Data Access Logs",
+      "url": "https://developers.cloudflare.com/r2/buckets/data-access-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7d028d5f",
+      "title": "R2 Temporary credentials",
+      "url": "https://developers.cloudflare.com/r2/api/s3/temporary-credentials/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7df6eed0",
+      "title": "Roll Token",
+      "url": "https://developers.cloudflare.com/api/resources/user/subresources/tokens/subresources/value/methods/update/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8d72ca7d",
+      "title": "Account API tokens",
+      "url": "https://developers.cloudflare.com/fundamentals/api/get-started/account-owned-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-db6610b5",
+      "title": "Manage (account members)",
+      "url": "https://developers.cloudflare.com/fundamentals/manage-members/manage/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f816803c",
+      "title": "Create API token",
+      "url": "https://developers.cloudflare.com/fundamentals/api/get-started/create-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fd5ff965",
+      "title": "R2 Audit Logs",
+      "url": "https://developers.cloudflare.com/r2/platform/audit-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

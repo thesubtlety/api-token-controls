@@ -1,0 +1,253 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "postman",
+      "name": "Postman",
+      "scope_notes": "Cloud SaaS; admin key management, service accounts, SCIM and audit logs need Enterprise (SSO also on Team with Simple Security add-on).",
+      "controls": [
+        {
+          "name": "Allow creation of Collection Access Keys",
+          "effect": "disable",
+          "applies_to": [
+            "postman-4"
+          ],
+          "what": "Turn off to stop members creating collection access keys.",
+          "setting": "Manage public elements",
+          "plan": "unknown",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f78f9628"
+          ]
+        },
+        {
+          "name": "Revoke All Keys (collection access keys)",
+          "effect": "revoke",
+          "applies_to": [
+            "postman-4"
+          ],
+          "what": "Delete one or all team collection access keys; permanent.",
+          "setting": "Manage public elements > Collection Access Keys; DELETE /collection-access-keys/{keyId}",
+          "plan": "Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f78f9628",
+            "fc-f9541944"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP allowlisting for Postman API keys or the Postman API (none found in docs).",
+        "Whether API keys or service account tokens are blocked by SSO-only enforcement or IdP conditional access; docs do not say.",
+        "Whether revoking a service account API key invalidates already-issued short-lived tokens.",
+        "Whether removing or SCIM-deactivating a user revokes their Postman API keys.",
+        "Default and allowed expiry values for user API keys and SCIM keys.",
+        "Exact audit action codes for service account key events and collection access key create/delete.",
+        "Whether Postman API read calls (GET /collections, /workspaces, etc.) appear in audit logs.",
+        "How OAuth client_credentials clients (installationAuthId) are registered and administered.",
+        "Documented prefix for user Postman API keys (OAuth token example shows PMAK-XXX; not stated for API keys)."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "postman-4",
+      "provider_id": "postman",
+      "name": "Collection access key",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Read-only key for one collection, passed as the access_key query parameter on GET /collections/{id}; no API key needed.",
+        "evidence_refs": [
+          "fc-a8dac838",
+          "fc-e013d117"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static read-only share key.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No Postman doc found describing IP allowlisting for API keys or the Postman API.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "inactivity",
+        "default_seconds": 5184000,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Expires after 60 days unused; each use extends 60 days",
+        "evidence_refs": [
+          "fc-97e69161"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Sliding 60-day window on use",
+        "summary": "Use keeps it alive indefinitely",
+        "evidence_refs": [
+          "fc-97e69161"
+        ]
+      },
+      "administration": {
+        "summary": "Super Admin can turn off creation; Enterprise users with public-element rights can view, delete or revoke all team keys.",
+        "conditions": "Manage public elements dashboard is Enterprise",
+        "evidence_refs": [
+          "fc-f78f9628",
+          "fc-f9541944"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "The Collection access keys section of Account settings > API keys shows keys created by all members of the signed-in team.",
+          "evidence_refs": [
+            "fc-a8dac838"
+          ]
+        }
+      },
+      "how": {
+        "disable": {
+          "ui": "Avatar > Public elements (Manage public elements dashboard) > turn off Allow creation of Collection Access Keys",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-f78f9628"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "PMAT-",
+          "notes": "From API reference example."
+        },
+        "log_sources": [
+          {
+            "name": "Collection access keys list",
+            "notes": "GET /collection-access-keys shows lastUsedAt and expiresAfter; Manage public elements dashboard"
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "id",
+            "log": "GET /collection-access-keys",
+            "notes": "Key ID for DELETE"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "collectionId",
+          "lastUsedAt"
+        ],
+        "anomaly_cues": [
+          "Keys on sensitive collections with recent lastUsedAt"
+        ],
+        "containment": {
+          "steps": "Delete key in API keys page or Manage public elements, or DELETE /collection-access-keys/{keyId}.",
+          "kills_existing": "unknown",
+          "notes": "Revocation is permanent."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit events for create/use/delete"
+        ],
+        "evidence_refs": [
+          "fc-97e69161",
+          "fc-e013d117",
+          "fc-f78f9628",
+          "fc-f9541944"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "GET /collections/{collectionId}?access_key=",
+            "reveals": "Full collection JSON",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "lastUsedAt updated"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-e013d117",
+          "fc-97e69161"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-97e69161",
+      "title": "Get collection access keys",
+      "url": "https://learning.postman.com/api-docs/api-reference/collection-access-keys/get-collection-access-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a8dac838",
+      "title": "Generate and use Postman API keys",
+      "url": "https://learning.postman.com/docs/reference/postman-api/authentication/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e013d117",
+      "title": "Get a collection",
+      "url": "https://learning.postman.com/api-docs/api-reference/collections/get-collection",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f78f9628",
+      "title": "Manage public elements",
+      "url": "https://learning.postman.com/docs/collaborating-in-postman/manage-public-elements/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f9541944",
+      "title": "Delete a collection access key",
+      "url": "https://learning.postman.com/api-docs/api-reference/collection-access-keys/delete-collection-access-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

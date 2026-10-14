@@ -1,0 +1,532 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "mongodb",
+      "name": "MongoDB Atlas",
+      "scope_notes": "Atlas cloud service; Admin API credentials (service accounts, legacy API keys) manage Atlas but cannot read cluster data, while database users read data; database auditing, access history and workload federation need dedicated (M10+) clusters.",
+      "controls": [
+        {
+          "name": "Require IP Access List for the Atlas Administration API",
+          "effect": "limit_network",
+          "applies_to": [
+            "mongodb-1",
+            "mongodb-2"
+          ],
+          "what": "Rejects Admin API requests from service accounts or API keys without a matching access list entry.",
+          "setting": "Organization Settings > Require IP Access List for the Atlas Administration API; API field apiAccessListRequired",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-7552a84c",
+            "fc-d909ecf5"
+          ]
+        },
+        {
+          "name": "API Access List (per service account / API key)",
+          "effect": "limit_network",
+          "applies_to": [
+            "mongodb-1",
+            "mongodb-2"
+          ],
+          "what": "Limits each credential to listed IPs or CIDRs.",
+          "setting": "Applications > Service Accounts/API Keys > Edit > Add Access List Entry; /orgs/{orgId}/serviceAccounts/{clientId}/accessList, /orgs/{orgId}/apiKeys/{apiUserId}/accessList",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-7552a84c"
+          ]
+        },
+        {
+          "name": "maxServiceAccountSecretValidityInHours",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "mongodb-1"
+          ],
+          "what": "Caps how long new service account secrets can be valid (8 to 8760 hours).",
+          "setting": "PATCH /api/atlas/v2/orgs/{orgId}/settings",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d909ecf5",
+            "fc-96310969"
+          ]
+        },
+        {
+          "name": "Client Secret Expiration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "mongodb-1"
+          ],
+          "what": "Each secret expires after a chosen duration of 8 hours to 365 days.",
+          "setting": "Create Service Account > Client Secret Expiration",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-682e6157"
+          ]
+        },
+        {
+          "name": "Atlas roles",
+          "effect": "limit_scope",
+          "applies_to": [
+            "mongodb-1",
+            "mongodb-2"
+          ],
+          "what": "Org and project roles limit which Admin API operations the credential can perform.",
+          "setting": "Applications > Service Accounts/API Keys > roles",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-82575dfe"
+          ]
+        },
+        {
+          "name": "Delete service account / delete secret",
+          "effect": "revoke",
+          "applies_to": [
+            "mongodb-1"
+          ],
+          "what": "Removes the account (from all projects) or one secret.",
+          "setting": "Applications > Service Accounts > Delete; DELETE /orgs/{orgId}/serviceAccounts/{clientId}, DELETE /orgs/{orgId}/serviceAccounts/{clientId}/secrets/{secretId}",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-0766262d"
+          ]
+        },
+        {
+          "name": "Revoke Service Account Token",
+          "effect": "revoke",
+          "applies_to": [
+            "mongodb-1"
+          ],
+          "what": "Revokes a specific access token.",
+          "setting": "POST https://cloud.mongodb.com/api/oauth/revoke",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-bbcd02d1"
+          ]
+        },
+        {
+          "name": "Organization Owner role required to create service accounts and API keys",
+          "effect": "other",
+          "applies_to": [
+            "mongodb-1",
+            "mongodb-2"
+          ],
+          "what": "Only Organization Owners can create org-level service accounts and API keys; project-level ones are created by project roles and are added to the org as Organization Member.",
+          "setting": "Atlas organization/project role assignment",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-7552a84c"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether an org can block creation of legacy API keys entirely.",
+        "Whether API keys have any expiry setting.",
+        "Whether deleting a service account or secret invalidates already-issued 1-hour access tokens.",
+        "Whether deleting a database user terminates open connections.",
+        "Whether Admin API read (GET) calls are recorded anywhere; Activity Feed documents changes, not reads.",
+        "Default secret expiration value for service accounts."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "mongodb-1",
+      "provider_id": "mongodb",
+      "name": "Service account (Atlas Administration API, OAuth 2.0 client credentials)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Client ID and secret (prefix mdb_sa_sk_) are exchanged at POST https://cloud.mongodb.com/api/oauth/token for a 1-hour bearer token. Grants Admin API access only, not UI or cluster data.",
+        "evidence_refs": [
+          "fc-82575dfe",
+          "fc-7552a84c"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Separate credential, not tied to Atlas federated login. Docs say UI session timeout settings do not apply to service accounts; no statement on IdP conditional access.",
+        "evidence_refs": [
+          "fc-82575dfe",
+          "fc-7fb8b355"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Per-service-account API access list; org can require a list for every Admin API request (403 otherwise). Applies to using tokens, not issuing or revoking them; does not cover Atlas CLI or App Connections delegated access.",
+        "evidence_refs": [
+          "fc-7552a84c"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 31536000,
+        "configurable": "yes",
+        "summary": "Token 1 h; secret 8 h to 365 days, org-capped",
+        "evidence_refs": [
+          "fc-82575dfe",
+          "fc-682e6157",
+          "fc-d909ecf5"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "Access token expires after 1 hour and cannot be refreshed; secret expires on its set date.",
+        "summary": "Request a new token with the client secret; rotate by adding a new secret (old one is cut to 7 days).",
+        "evidence_refs": [
+          "fc-7552a84c",
+          "fc-682e6157"
+        ]
+      },
+      "administration": {
+        "summary": "Org Owners create org service accounts; project-level accounts need Project Owner. Roles scope access.",
+        "conditions": "Org Owner needed to manage a project service account that also has org or other-project access.",
+        "evidence_refs": [
+          "fc-7552a84c",
+          "fc-82575dfe"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service accounts are their own principals that belong to an organization, not to a user.",
+          "evidence_refs": [
+            "fc-82575dfe"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Organization Owners can view all service accounts (Identity & Access > Applications) or call GET /api/atlas/v2/orgs/{orgId}/serviceAccounts.",
+          "evidence_refs": [
+            "fc-0766262d",
+            "fc-20518c81"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Project > Security > Activity Feed > Filter > Event = database user added (MONGODB_USER_ADDED); add Initiated By filter for the key/service account",
+          "api": "GET /api/atlas/v2/groups/{groupId}/events?eventType=MONGODB_USER_ADDED",
+          "cli": "atlas events projects list --type MONGODB_USER_ADDED",
+          "evidence_refs": [
+            "fc-fc4b905a",
+            "fc-9803de9f",
+            "fc-416ed3ab"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "mdb_sa_sk_",
+          "notes": "Prefix on the client secret; access tokens are bearer tokens with expires_in 3600."
+        },
+        "log_sources": [
+          {
+            "name": "Organization / Project Activity Feed",
+            "notes": "All tiers; UI, atlas events CLI, GET /api/atlas/v2/orgs/{orgId}/events and /groups/{groupId}/events; org feed kept for life of the org; exportable to SIEM/OTel."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "apiKeyId",
+            "log": "Activity Feed event",
+            "notes": "Identifies the API key that triggered the event; whether service accounts populate it is not documented."
+          },
+          {
+            "field": "remoteAddress",
+            "log": "Activity Feed event",
+            "notes": "Source IP of the action."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "SERVICE_ACCOUNT_CREATED",
+            "stage": "create",
+            "notes": null
+          },
+          {
+            "event": "SERVICE_ACCOUNT_SECRET_ADDED",
+            "stage": "create",
+            "notes": null
+          },
+          {
+            "event": "SERVICE_ACCOUNT_ROLES_CHANGED",
+            "stage": "modify",
+            "notes": null
+          },
+          {
+            "event": "SERVICE_ACCOUNT_ACCESS_LIST_ENTRY_ADDED",
+            "stage": "modify",
+            "notes": null
+          },
+          {
+            "event": "SERVICE_ACCOUNT_ADDED_TO_GROUP",
+            "stage": "modify",
+            "notes": null
+          },
+          {
+            "event": "SERVICE_ACCOUNT_SECRET_DELETED",
+            "stage": "revoke",
+            "notes": null
+          },
+          {
+            "event": "SERVICE_ACCOUNT_DELETED",
+            "stage": "revoke",
+            "notes": null
+          },
+          {
+            "event": "ORG_SERVICE_ACCOUNT_SECRETS_EXPIRING",
+            "stage": "expire",
+            "notes": "Alertable"
+          }
+        ],
+        "correlation_keys": [
+          "clientId",
+          "apiKeyId",
+          "remoteAddress",
+          "orgId",
+          "groupId"
+        ],
+        "anomaly_cues": [
+          "New secret added to an existing service account",
+          "Access list entry added for unfamiliar IP or 0.0.0.0/0",
+          "ORG_PUBLIC_API_ACCESS_LIST_NOT_REQUIRED event",
+          "Service account added to new projects or roles raised",
+          "Database user created by a service account"
+        ],
+        "containment": {
+          "steps": "Revoke tokens via POST /api/oauth/revoke, delete the secret or the service account, remove access list entries.",
+          "kills_existing": "unknown",
+          "notes": "Docs do not say whether deleting the secret invalidates issued tokens; revoke tokens explicitly. Tokens last at most 1 hour."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether token issuance or individual API calls are logged"
+        ],
+        "evidence_refs": [
+          "fc-7552a84c",
+          "fc-0766262d",
+          "fc-bbcd02d1",
+          "fc-96310969",
+          "fc-d909ecf5",
+          "fc-fc4b905a",
+          "fc-0ec068d8"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/atlas/v2",
+            "reveals": "System status and credential metadata",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "Per endpoint set",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No documented read logging"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/atlas/v2/groups",
+            "reveals": "Projects the credential can see",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "Per endpoint set",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/atlas/v2/groups/{groupId}/clusters",
+            "reveals": "Clusters and connection strings",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/atlas/v2/groups/{groupId}/databaseUsers",
+            "reveals": "Database users and roles",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "POST /api/atlas/v2/groups/{groupId}/databaseUsers",
+            "reveals": "Creates a database user to read cluster data (Admin API cannot read data directly)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "MONGODB_USER_ADDED",
+            "log_notes": "Project Activity Feed"
+          }
+        ],
+        "unknown": [
+          "Whether GET calls appear in any log"
+        ],
+        "evidence_refs": [
+          "fc-82575dfe",
+          "fc-d909ecf5",
+          "fc-9bd547dc",
+          "fc-337c59d2"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0766262d",
+      "title": "Manage Programmatic Access to an Organization",
+      "url": "https://www.mongodb.com/docs/atlas/configure-api-access-org/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0ec068d8",
+      "title": "Export Activity Feed Events to External Tools",
+      "url": "https://www.mongodb.com/docs/atlas/export-events/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-20518c81",
+      "title": "Return All Organization Service Accounts",
+      "url": "https://www.mongodb.com/docs/api/doc/atlas-admin-api-v2/operation/operation-listserviceaccounts",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-337c59d2",
+      "title": "Atlas Administration API Rate Limits",
+      "url": "https://www.mongodb.com/docs/atlas/api/api-rate-limit/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-416ed3ab",
+      "title": "atlas events projects list - Atlas CLI",
+      "url": "https://www.mongodb.com/docs/atlas/cli/current/command/atlas-events-projects-list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-682e6157",
+      "title": "Rotate Service Account Secrets",
+      "url": "https://www.mongodb.com/docs/atlas/tutorial/rotate-service-account-secrets/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7552a84c",
+      "title": "Get Started with the Atlas Administration API",
+      "url": "https://www.mongodb.com/docs/atlas/configure-api-access/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7fb8b355",
+      "title": "Manage Organization Settings",
+      "url": "https://www.mongodb.com/docs/atlas/tutorial/manage-organization-settings/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-82575dfe",
+      "title": "Atlas Administration API Authentication Methods",
+      "url": "https://www.mongodb.com/docs/atlas/api/api-authentication/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-96310969",
+      "title": "Atlas Alert Event Types",
+      "url": "https://www.mongodb.com/docs/atlas/reference/atlas-alert-event-types/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9803de9f",
+      "title": "MongoDB Atlas Administration API v2 OpenAPI spec (mongodb/openapi)",
+      "url": "https://raw.githubusercontent.com/mongodb/openapi/main/openapi/v2.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9bd547dc",
+      "title": "Configure Database Users",
+      "url": "https://www.mongodb.com/docs/atlas/security-add-mongodb-users/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bbcd02d1",
+      "title": "Revoke Service Account Token",
+      "url": "https://www.mongodb.com/docs/atlas/api/service-accounts/revoke-oauth2-token/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d909ecf5",
+      "title": "Atlas Administration API v2 OpenAPI spec (OrganizationSettings)",
+      "url": "https://www.mongodb.com/docs/api/doc/atlas-admin-api-v2.yaml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fc4b905a",
+      "title": "View Activity Feed",
+      "url": "https://www.mongodb.com/docs/atlas/tutorial/activity-feed/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

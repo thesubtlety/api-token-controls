@@ -1,0 +1,448 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "zoom",
+      "name": "Zoom",
+      "scope_notes": "Distinguish marketplace build-flow settings from account-admin controls for Server-to-Server apps.",
+      "controls": [
+        {
+          "name": "IP allowlist for Marketplace apps",
+          "effect": "limit_network",
+          "applies_to": [
+            "zoom-1",
+            "zoom-2"
+          ],
+          "what": "Admins approve or reject the IPs an app declares and can enforce the allowlist, blocking token exchange, revocation and API calls from other IPs; S2S app IPs are declared by the admin.",
+          "setting": "Zoom admin portal: App IP allowlist configuration",
+          "plan": null,
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "turn2search26"
+          ],
+          "quote": "account administrators who install your app can: Review the IP addresses your app uses. Approve or reject specific IP addresses. Enable IP allowlist enforcement to restrict API access to approved addresses only."
+        },
+        {
+          "name": "Server-to-Server OAuth app role permission",
+          "effect": "disable",
+          "applies_to": [
+            "zoom-2"
+          ],
+          "what": "Only users whose role has View/Edit for Server-to-Server OAuth app can create or manage S2S apps.",
+          "setting": "Web portal > User Management > Roles > Role Settings > Advanced features > Server-to-Server OAuth app",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-df0deb8c"
+          ],
+          "quote": "the administrator must go to User Management > Roles > Role Settings > Advanced features and select the View and Edit check boxes for Server-to-Server OAuth app ."
+        },
+        {
+          "name": "Scope permissions for S2S developers",
+          "effect": "limit_scope",
+          "applies_to": [
+            "zoom-2"
+          ],
+          "what": "Scopes a developer can add to an S2S app are capped by their role; lowering the owner's role strips admin-level scopes.",
+          "setting": "Web portal > User Management > Roles (developer's role)",
+          "plan": null,
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-57dae6a5"
+          ],
+          "quote": "Changes to an app owner's role permissions also affect the scopes in apps they have already created ."
+        },
+        {
+          "name": "Deactivate or remove S2S app",
+          "effect": "revoke",
+          "applies_to": [
+            "zoom-2"
+          ],
+          "what": "Deactivating the app stops existing tokens; it can also be removed.",
+          "setting": "Zoom App Marketplace > App Management > Created apps > Activation / Remove App",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-57dae6a5"
+          ],
+          "quote": "If your app is deactivated, existing tokens will no longer work. You can also choose to Deactivate your app in this section."
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "zoom-2",
+          "what": "S2S access-token lifetime is fixed at one hour; no refresh token; not configurable.",
+          "evidence_refs": [
+            "turn2search2"
+          ],
+          "quote": "The token's time to live is one hour (3600 seconds). There is no refresh token. You can generate and use multiple access tokens.",
+          "kind": "expiry"
+        }
+      ],
+      "controls_unknown": [
+        "Official Zoom support articles for pre-approval (KB0062300) and admin IP allowlist (KB0088682) render only via JavaScript and could not be read; UI paths and defaults are taken from developer docs.",
+        "Plan requirements for the Marketplace app IP allowlist.",
+        "Whether admins can revoke individual users' OAuth grants for a Marketplace app without removing the app."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "zoom-2",
+      "provider_id": "zoom",
+      "name": "Server-to-Server OAuth",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "Delegated OAuth bearer; Server-to-Server OAuth using account ID, client ID and client secret.",
+        "evidence_refs": [
+          "turn2search2"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Server-to-Server OAuth supports unattended account-level access but uses an app secret; no general external identity exchange established.",
+        "evidence_refs": [
+          "turn2search2"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "mixed",
+        "boundary": "Account-admin IP enforcement covers API calls and OAuth endpoints. Server-to-Server restrictions are administered centrally.",
+        "evidence_refs": [
+          "turn2search26",
+          "turn2search2"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "1 hour; mint a new token",
+        "evidence_refs": [
+          "turn2search2"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "not_applicable",
+        "summary": "No refresh token; request a new token with the app credentials.",
+        "evidence_refs": [
+          "turn2search2"
+        ]
+      },
+      "administration": {
+        "summary": "Granular app scopes, role-controlled app management, activation/deactivation and IP allowlisting.",
+        "conditions": "Distinguish marketplace build-flow settings from account-admin controls for Server-to-Server apps.",
+        "evidence_refs": [
+          "turn2search26",
+          "turn2search2"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Apps on Account dashboard has a Created apps tab, but the page does not mention Server-to-Server apps specifically.",
+          "evidence_refs": [
+            "fc-9030c6af"
+          ]
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "Zoom Marketplace > Marketplace admin > Marketplace Management > Permissions > Security permissions > IP allow list for apps > + Add IP address/CDIR",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-f3fe014e",
+            "turn2search26"
+          ]
+        },
+        "expiry": {
+          "ui": null,
+          "api": "POST https://zoom.us/oauth/token?grant_type=account_credentials response expires_in (3600). Fixed, not configurable",
+          "cli": null,
+          "evidence_refs": [
+            "turn2search2"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Access token shown as \"<JWT_TOKEN>\" placeholder, token_type bearer, issued via grant_type account_credentials with account_id plus Basic client_id:client_secret. Client secret format undocumented. Not in GitHub secret-scanning supported patterns list."
+        },
+        "log_sources": [
+          {
+            "name": "Marketplace API call logs (GET /marketplace/apps/{appId}/api_call_logs)",
+            "notes": "Per-app log: url_pattern, method, http_status, time, trace_id; up to 30 days (duration 7/14/30). No IP, user agent or token id documented. Same data in Manage > Apps on Account dashboard."
+          },
+          {
+            "name": "Operation Logs report (GET /report/operationlogs)",
+            "notes": "Admin changes made via API appear with operator/action/operation_detail/time; app identity and IP not documented. Pro+; one month per request."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "appId",
+            "log": "Marketplace API call logs (path parameter)",
+            "notes": "Identifies the S2S app; individual access tokens are not distinguished"
+          },
+          {
+            "field": "trace_id",
+            "log": "Marketplace API call logs",
+            "notes": "Unique id per request"
+          },
+          {
+            "field": "secret_id",
+            "log": "rotate_client_secret response",
+            "notes": "Id of the new client secret (not a log field)"
+          },
+          {
+            "field": "operator",
+            "log": "Operation Logs report",
+            "notes": "User recorded for the change"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "trace_id",
+          "url_pattern",
+          "method",
+          "http_status",
+          "time",
+          "operator",
+          "category_type"
+        ],
+        "anomaly_cues": [
+          "Call volume from the S2S app outside its scheduled job windows or a new url_pattern family (users, recordings, report, phone)",
+          "Many token requests: multiple valid tokens can coexist, so parallel use from a second environment will not break the legitimate one",
+          "401 bursts after secret rotation or app deactivation (attacker still holding old secret/token)",
+          "Operation Logs changes (user deletes, role changes, settings) not matching any change ticket around the app's call times",
+          "Read-heavy calls to /report/* or recording endpoints from an app normally used for scheduling"
+        ],
+        "containment": {
+          "steps": "Deactivate the app (App Marketplace > app > Activation > Deactivate); rotate the secret via POST /marketplace/apps/{appId}/rotate_client_secret with revoke_old_secret_time=now (dashboard regenerate leaves old secret valid 30 days); delete the app if no longer needed.",
+          "kills_existing": "yes",
+          "notes": "Docs: tokens stop working when the app is deactivated. Rotating the secret alone does not kill issued access tokens (1 hour TTL); new tokens do not invalidate old ones. No refresh token."
+        },
+        "sample_query": {
+          "language": "Zoom REST API query parameters",
+          "query": "GET https://api.zoom.us/v2/marketplace/apps/{appId}/api_call_logs?duration=30&method=DELETE&page_size=100",
+          "purpose": "Find destructive calls made by the S2S app in the last 30 days"
+        },
+        "unknown": [
+          "token prefix/regex and client secret format",
+          "token issuance (account_credentials grant) event or log",
+          "app created/activated/deactivated/secret-rotated audit event names",
+          "caller IP or user agent per API call",
+          "how S2S-app actions are attributed in operator field",
+          "api_call_logs retention beyond 30 days"
+        ],
+        "evidence_refs": [
+          "turn2search2",
+          "fc-57dae6a5",
+          "fc-95db7c8f",
+          "fc-386a2849",
+          "fc-b02a3b43"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST https://zoom.us/oauth/token (grant_type=account_credentials, account_id)",
+            "reveals": "1-hour access token; response 'scope' lists the app's scopes",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No documented log of Server-to-Server token issuance."
+          },
+          {
+            "stage": "recon",
+            "call": "GET /v2/users/me",
+            "reveals": "Account and user details of the token principal",
+            "bulk": false,
+            "scope": "user:read:user (granular) / user:read",
+            "rate_limit": "LIGHT",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Operation Logs record admin write-actions; API reads not documented as logged."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v2/users",
+            "reveals": "All users in the account",
+            "bulk": true,
+            "scope": "user:read:list_users:admin / user:read:admin",
+            "rate_limit": "MEDIUM",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No documented log for API reads."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v2/users/{userId}/recordings",
+            "reveals": "Cloud recordings with download URLs",
+            "bulk": true,
+            "scope": "cloud_recording:read:list_user_recordings(:admin) / recording:read(:admin)",
+            "rate_limit": "MEDIUM",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Operation Logs cover deleting recordings; recording downloads/views via API not documented."
+          },
+          {
+            "stage": "recon",
+            "call": "GET /v2/report/operationlogs",
+            "reveals": "Admin activity report; lets the holder read the same admin audit trail defenders use",
+            "bulk": true,
+            "scope": "report:read:operation_logs:admin / report:read:admin",
+            "rate_limit": "HEAVY",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Report requires Pro or higher plan; records admin actions, not API reads."
+          }
+        ],
+        "unknown": [
+          "Whether S2S token issuance or API reads are recorded in any admin-visible log",
+          "Operation Logs retention period"
+        ],
+        "evidence_refs": [
+          "turn2search2",
+          "fc-2491eba2",
+          "fc-17fc3726",
+          "fc-1e63cf2e",
+          "fc-50c4a973"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-17fc3726",
+      "title": "Zoom Meetings/Reports API",
+      "url": "https://developers.zoom.us/api-hub/meetings/methods/endpoints.json",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1e63cf2e",
+      "title": "Zoom API rate limits",
+      "url": "https://developers.zoom.us/docs/api/rate-limits/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2491eba2",
+      "title": "Zoom Users API",
+      "url": "https://developers.zoom.us/api-hub/users/methods/endpoints.json",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-386a2849",
+      "title": "Marketplace APIs - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/api/marketplace/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-50c4a973",
+      "title": "Operation Logs",
+      "url": "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0067251",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-57dae6a5",
+      "title": "Create a Server-to-Server OAuth app - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/internal-apps/create/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9030c6af",
+      "title": "Using the Marketplace App Dashboard",
+      "url": "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0080840",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-95db7c8f",
+      "title": "App Credentials - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/build-flow/basic-info/app-credentials/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b02a3b43",
+      "title": "Meetings APIs (Reports) - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/api/meetings/",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-df0deb8c",
+      "title": "Internal apps (Server-to-server) - Internal Apps - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/internal-apps/",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f3fe014e",
+      "title": "Managing permissions for the Zoom Marketplace",
+      "url": "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0089123",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search2",
+      "title": "Server-to-Server OAuth - Internal Apps - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/internal-apps/s2s-oauth/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn2search26",
+      "title": "IP Addresses - Build Flow - Zoom Developer Docs",
+      "url": "https://developers.zoom.us/docs/build-flow/basic-info/ip-address/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

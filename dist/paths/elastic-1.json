@@ -1,0 +1,361 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "elastic",
+      "name": "Elastic Cloud",
+      "scope_notes": "Covers Elastic Cloud (Elastic Cloud Hosted / Serverless, Elasticsearch). Covers Elastic Cloud org API keys and Elasticsearch-level credentials on ECH, Serverless and self-managed; Elasticsearch audit logging needs a qualifying subscription, and the org-level Cloud audit trail exists only on FedRAMP Moderate.",
+      "controls": [
+        {
+          "name": "API key expiration (Elastic Cloud)",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "elastic-1"
+          ],
+          "what": "Key expires after a preset or date up to one year, or never.",
+          "setting": "Organization > API keys > Create API key > Expiration",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-292d9e8f"
+          ]
+        },
+        {
+          "name": "Roles on Cloud API keys",
+          "effect": "limit_scope",
+          "applies_to": [
+            "elastic-1"
+          ],
+          "what": "Org-level, cloud resource and connected cluster roles limit what the key can do; Cloud-API-only access is default on Serverless.",
+          "setting": "Create API key > Roles",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-292d9e8f"
+          ]
+        },
+        {
+          "name": "Revoke Cloud API key",
+          "effect": "revoke",
+          "applies_to": [
+            "elastic-1"
+          ],
+          "what": "Deletes the key.",
+          "setting": "Organization > API keys > trash icon; DELETE /api/v1/users/auth/keys/{api_key_id}",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-292d9e8f",
+            "fc-89a2f086"
+          ]
+        },
+        {
+          "name": "Organization owner / manage workload credentials (Cloud role permission)",
+          "effect": "disable",
+          "applies_to": [
+            "elastic-1"
+          ],
+          "what": "Only organization owners and users who can manage workload credentials can create Cloud API keys; withholding these roles blocks creation.",
+          "setting": "Organization > Members > role assignment",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-292d9e8f"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP restriction for the Elastic Cloud API (api.elastic-cloud.com) used with Cloud API keys.",
+        "Whether an org can block creation of Cloud API keys with no expiry (Never).",
+        "Org-level audit log of Cloud API key creation/use outside FedRAMP Moderate.",
+        "Whether ES API keys owned by a SAML user stop working when the user is removed in the IdP.",
+        "Whether xpack.security.authc.api_key.enabled can be set in ECH user settings.",
+        "Whether Cloud API key revocation affects in-flight requests."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "elastic-1",
+      "provider_id": "elastic",
+      "name": "Elastic Cloud API key",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Org-owned key sent as 'Authorization: ApiKey' to api.elastic-cloud.com. Manages org, deployments and projects; on Serverless can optionally reach Elasticsearch/Kibana APIs; on ECH no Elasticsearch/Kibana access.",
+        "evidence_refs": [
+          "fc-292d9e8f"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Docs recommend keeping an org-owner Cloud API key to disable SSO enforcement in an emergency, implying keys work while SSO is enforced. Keys survive the creator leaving.",
+        "evidence_refs": [
+          "fc-e9386df7",
+          "fc-292d9e8f"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "IP filters apply to deployment/project traffic; no documented IP restriction for the Elastic Cloud API itself.",
+        "evidence_refs": [
+          "fc-c2207027"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 7776000,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Default 3 months; up to 1 year or Never",
+        "evidence_refs": [
+          "fc-292d9e8f"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Set expiration date",
+        "summary": "Same key reused until expiry; create a new key to rotate.",
+        "evidence_refs": [
+          "fc-292d9e8f"
+        ]
+      },
+      "administration": {
+        "summary": "Organization owners and users with manage workload credentials create keys; owners see and revoke all. Max 500 active keys per org.",
+        "conditions": "Non-owners can assign only roles they hold.",
+        "evidence_refs": [
+          "fc-292d9e8f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Elastic recommends keeping an org-owner Cloud API key to turn off SSO enforcement if the IdP fails, so keys keep working under enforced SSO.",
+          "evidence_refs": [
+            "fc-e9386df7"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The key belongs to the organization and keeps working after its creator leaves, until it expires or is revoked.",
+          "evidence_refs": [
+            "fc-292d9e8f"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Organization > API keys; organization owners can view and revoke all keys in the organization.",
+          "evidence_refs": [
+            "fc-292d9e8f"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Kibana (destination deployment) > [Elastic GovCloud] Organization Audit Logs dashboard; filter elastic_govcloud.org_audit.api_key.id",
+          "api": "POST /api/v1/organizations/{org_id}/audit_logs {\"deployment_id\": \"...\", \"index\": \"logs-elastic_govcloud.org_audit-default\"} to enable delivery",
+          "cli": null,
+          "evidence_refs": [
+            "fc-f7526f33",
+            "fc-33828005"
+          ]
+        },
+        "reads": {
+          "ui": "Discover on logs-elastic_govcloud.org_audit-*: filter elastic_govcloud.org_audit.api_key.id and http.request.method (every Cloud API call is logged)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-f7526f33",
+            "fc-33828005"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Opaque key; sent as Authorization: ApiKey. Response header X-Elastic-Api-Key-Expiration shows expiry."
+        },
+        "log_sources": [
+          {
+            "name": "Elastic Cloud audit trail",
+            "notes": "FedRAMP Moderate only; Platinum/Enterprise; delivered to logs-elastic_govcloud.org_audit-* in a deployment you own; no backfill."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "elastic_govcloud.org_audit.api_key.*",
+            "log": "Elastic Cloud audit trail",
+            "notes": "API key fields mapped by the integration"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "api_key_id",
+          "organization id",
+          "deployment id"
+        ],
+        "anomaly_cues": [
+          "Keys with expiration Never",
+          "Org-owner keys created by non-admins",
+          "Calls to _reset-password on deployments",
+          "Keys whose creator left the org"
+        ],
+        "containment": {
+          "steps": "Revoke in Organization > API keys or DELETE /api/v1/users/auth/keys/{api_key_id}; bulk via DELETE /api/v1/users/auth/keys.",
+          "kills_existing": "unknown",
+          "notes": "Also rotate any 'elastic' passwords or ES keys the Cloud key could have created."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact event names for key create/delete",
+          "Any audit outside FedRAMP Moderate"
+        ],
+        "evidence_refs": [
+          "fc-292d9e8f",
+          "fc-89a2f086",
+          "fc-8d7c53b5"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/v1/account",
+            "reveals": "Current account",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Only on FedRAMP Moderate audit trail"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/v1/organizations",
+            "reveals": "Organizations",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/deployments",
+            "reveals": "Deployments",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/users/auth/keys",
+            "reveals": "Visible API keys",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "POST /api/v1/deployments/{deployment_id}/elasticsearch/{ref_id}/_reset-password",
+            "reveals": "New 'elastic' superuser password, giving data access",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": null
+          }
+        ],
+        "unknown": [
+          "Rate limits"
+        ],
+        "evidence_refs": [
+          "fc-89a2f086",
+          "fc-8d7c53b5"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-292d9e8f",
+      "title": "Elastic Cloud API keys",
+      "url": "https://www.elastic.co/docs/deploy-manage/api-keys/elastic-cloud-api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-33828005",
+      "title": "Elastic GovCloud Integration",
+      "url": "https://www.elastic.co/docs/reference/integrations/elastic_govcloud",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-89a2f086",
+      "title": "Elastic Cloud API (OpenAPI)",
+      "url": "https://www.elastic.co/docs/api/doc/cloud.json",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8d7c53b5",
+      "title": "Elastic Cloud audit trail",
+      "url": "https://www.elastic.co/docs/deploy-manage/monitor/cloud-audit-trail",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c2207027",
+      "title": "Manage IP filters in ECH or Serverless",
+      "url": "https://www.elastic.co/docs/deploy-manage/security/ip-filtering-cloud",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9386df7",
+      "title": "Configure Elastic Cloud SAML single sign-on",
+      "url": "https://www.elastic.co/docs/deploy-manage/users-roles/cloud-organization/configure-saml-authentication",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f7526f33",
+      "title": "Elastic Cloud audit trail",
+      "url": "https://www.elastic.co/docs/deploy-manage/monitor/log-delivery/cloud-audit-trail",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

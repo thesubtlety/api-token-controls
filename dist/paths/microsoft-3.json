@@ -1,0 +1,572 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "microsoft",
+      "name": "Microsoft 365 / Entra / Graph",
+      "scope_notes": "Workload Conditional Access requires Workload ID Premium. Do not treat a token-issuance IP check as universal per-request Graph enforcement.",
+      "controls": [
+        {
+          "name": "Enabled for users to sign-in?",
+          "effect": "disable",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2",
+            "microsoft-3"
+          ],
+          "what": "Disables the service principal in the tenant so no new tokens are issued for that application.",
+          "setting": "Entra admin center > Enterprise apps > [app] > Properties; Graph servicePrincipal.accountEnabled=false",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-5e8a79c1"
+          ],
+          "quote": "To block user access to an application, you can disable user sign-in for the application, which prevents all tokens from being issued for that application."
+        },
+        {
+          "name": "Revoke permission (admin consent / app role assignments)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2",
+            "microsoft-3"
+          ],
+          "what": "Removes granted delegated permissions (oauth2PermissionGrants) and application permissions (appRoleAssignments) from a service principal.",
+          "setting": "Entra admin center > Enterprise apps > [app] > Permissions > Admin consent > Revoke permission; Graph DELETE oAuth2PermissionGrants/{id} and appRoleAssignedTo/{id}",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-729794da"
+          ],
+          "quote": "You can revoke permissions granted by admins for your entire organization, and you can get contextual PowerShell scripts to perform other actions."
+        },
+        {
+          "name": "RBAC for Applications in Exchange Online",
+          "effect": "limit_resources",
+          "applies_to": [
+            "microsoft-2",
+            "microsoft-3"
+          ],
+          "what": "Grants app-only mail/calendar/contacts permissions scoped to a management scope or admin unit of mailboxes instead of the whole tenant.",
+          "setting": "Exchange Online PowerShell: New-ServicePrincipal, New-ManagementRoleAssignment -CustomResourceScope / -RecipientAdministrativeUnitScope",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-e32c7caf"
+          ],
+          "quote": "This grant can be paired with a scope of access (resource scope) to specify which mailboxes an app can access."
+        },
+        {
+          "name": "Sites.Selected and other *.Selected scopes",
+          "effect": "limit_resources",
+          "applies_to": [
+            "microsoft-1",
+            "microsoft-2",
+            "microsoft-3"
+          ],
+          "what": "An app consented to Selected scopes has no SharePoint/OneDrive access until an admin grants it a role on a specific site, list, item or file.",
+          "setting": "Consent Sites.Selected in Entra, then Graph POST /sites/{siteId}/permissions (and lists/items/files)",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d5d982c9"
+          ],
+          "quote": "Selected scopes require an explicit assignment action; an application consented for Lists.SelectedOperations.Selected would initially have no access."
+        },
+        {
+          "name": "Azure Policy deny on user-assigned managed identities",
+          "effect": "disable",
+          "applies_to": [
+            "microsoft-3"
+          ],
+          "what": "Blocks creation of user-assigned managed identities in the scoped subscription or resource group.",
+          "setting": "Azure portal > Policy > Definitions (deny Microsoft.ManagedIdentity/userAssignedIdentities) > Assign",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-93c35990"
+          ],
+          "quote": "You can keep your users from creating user-assigned managed identities using Azure Policy"
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "microsoft-3",
+          "what": "Conditional Access (including workload identity CA) cannot target managed identities, and does not cover multitenant or Microsoft SaaS apps.",
+          "evidence_refs": [
+            "turn10search0"
+          ],
+          "quote": "Microsoft and third-party SaaS applications, including multitenant apps, are not covered by these policies. Managed identities aren't covered by policy.",
+          "kind": "network"
+        },
+        {
+          "path_id": "microsoft-3",
+          "what": "Cannot force a managed identity token to refresh early; permission changes can take hours because tokens are cached about 24 hours.",
+          "evidence_refs": [
+            "fc-93c35990"
+          ],
+          "quote": "Today, it isn't possible to force a managed identity's token to be refreshed before its expiry.",
+          "kind": "other"
+        }
+      ],
+      "controls_unknown": [
+        "Licensing for app management policies (Application policies): fetched pages list only role prerequisites; Microsoft has previously tied them to Workload ID Premium, not confirmed here.",
+        "Whether 'Assignment required' is enforced for managed identities calling Microsoft Graph (doc covers client apps generally).",
+        "Exchange RBAC for Applications license requirement not stated on the fetched page; it does not constrain unscoped Entra grants, which must be removed."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "microsoft-3",
+      "provider_id": "microsoft",
+      "name": "Managed identity",
+      "family": "federation",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-09",
+      "authentication": {
+        "summary": "OAuth 2.0 delegated and app-only bearer tokens. Apps authenticate with a secret, certificate, managed identity, or federated credential.",
+        "evidence_refs": [
+          "turn26view0",
+          "turn1search0"
+        ]
+      },
+      "federation": {
+        "status": "supported",
+        "details": "Azure-hosted workloads get tokens from the platform without a stored secret. A user-assigned managed identity can also hold federated identity credentials that trust external IdP tokens (issuer/subject/audience must match).",
+        "evidence_refs": [
+          "turn26view0",
+          "turn1search0"
+        ]
+      },
+      "ip_restriction": {
+        "status": "excluded",
+        "enforcement_stage": "token_issuance",
+        "boundary": "Managed identities are excluded from workload Conditional Access. This does not establish absence of every resource-side network control.",
+        "evidence_refs": [
+          "turn10search0",
+          "turn10search4"
+        ]
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Platform-set; tokens cached ~24 h per resource and can't be force-refreshed; CTL not supported",
+        "evidence_refs": [
+          "turn26view0",
+          "turn1search0",
+          "fc-3d76644a",
+          "fc-93c35990"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "none",
+        "summary": "The workload requests new tokens from the platform endpoint; the backing certificate credential is platform-managed and rolled automatically, so there is no customer-held secret to expire.",
+        "evidence_refs": [
+          "turn26view0",
+          "turn1search0",
+          "fc-93c35990"
+        ]
+      },
+      "administration": {
+        "summary": "Delegated scopes vs application permissions, admin consent, app-role grants, app/service-principal disablement and credential revocation.",
+        "conditions": "Workload Conditional Access requires Workload ID Premium. Do not treat a token-issuance IP check as universal per-request Graph enforcement.",
+        "evidence_refs": [
+          "turn10search0",
+          "turn10search4"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Docs say managed identities aren't covered by Conditional Access policy.",
+          "evidence_refs": [
+            "turn10search0"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Managed identities are workload identities, not user accounts.",
+          "evidence_refs": [
+            "turn10search0"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Entra admin center > Enterprise applications with filter Application type == Managed Identities.",
+          "evidence_refs": [
+            "fc-96381067"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "Token response from the managed identity endpoint includes expires_in / expires_on",
+          "cli": null,
+          "evidence_refs": [
+            "fc-1ff4e797"
+          ]
+        },
+        "reads": {
+          "ui": "Azure portal > [resource] > Monitoring > Diagnostic settings > Add diagnostic setting",
+          "api": null,
+          "cli": "az monitor diagnostic-settings create",
+          "evidence_refs": [
+            "fc-64fb7a48"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "No stored secret; tokens fetched from the Azure instance metadata endpoint are JWTs."
+        },
+        "log_sources": [
+          {
+            "name": "AADManagedIdentitySignInLogs",
+            "notes": "Token issuance for managed identities; export via diagnostic settings."
+          },
+          {
+            "name": "MicrosoftGraphActivityLogs",
+            "notes": "Graph calls made with the MI's service principal (P1/P2 + export)."
+          },
+          {
+            "name": "Azure Activity log (resource provider operations)",
+            "notes": "Create/assign/delete user-assigned identities and federated credentials; operation names match Microsoft.ManagedIdentity actions."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "ManagedServiceIdentity",
+            "log": "AADManagedIdentitySignInLogs",
+            "notes": "Details of the MI used"
+          },
+          {
+            "field": "ServicePrincipalId",
+            "log": "AADManagedIdentitySignInLogs",
+            "notes": "MI service principal"
+          },
+          {
+            "field": "FederatedCredentialId",
+            "log": "AADManagedIdentitySignInLogs",
+            "notes": "Set when a federated identity credential was used"
+          },
+          {
+            "field": "UniqueTokenIdentifier",
+            "log": "AADManagedIdentitySignInLogs",
+            "notes": "Joins to Graph SignInActivityId"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Microsoft.ManagedIdentity/userAssignedIdentities/write",
+            "stage": "create",
+            "notes": "Create or update user-assigned identity"
+          },
+          {
+            "event": "Microsoft.ManagedIdentity/userAssignedIdentities/assign/action",
+            "stage": "change",
+            "notes": "Attach identity to a resource; anyone who runs code there can use it"
+          },
+          {
+            "event": "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials/write",
+            "stage": "change",
+            "notes": "Lets an external workload exchange tokens for this MI"
+          },
+          {
+            "event": "Microsoft.ManagedIdentity/userAssignedIdentities/revokeTokens/action",
+            "stage": "revoke",
+            "notes": "Revoke existing tokens on a user-assigned identity"
+          },
+          {
+            "event": "Microsoft.ManagedIdentity/userAssignedIdentities/delete",
+            "stage": "revoke",
+            "notes": "Delete identity"
+          },
+          {
+            "event": "Add app role assignment to service principal",
+            "stage": "change",
+            "notes": "AuditLogs; Graph app roles granted to MI"
+          }
+        ],
+        "correlation_keys": [
+          "ServicePrincipalId",
+          "AppId",
+          "ResourceIdentity",
+          "ResourceDisplayName",
+          "IPAddress",
+          "UniqueTokenIdentifier",
+          "SignInActivityId",
+          "CorrelationId"
+        ],
+        "anomaly_cues": [
+          "MI token requests for a resource (ResourceDisplayName) it never used before",
+          "federatedIdentityCredentials/write on an MI followed by sign-ins with FederatedCredentialId set",
+          "assign/action attaching a privileged MI to a new VM, Function or Logic App",
+          "Graph calls by the MI from an IP outside its host resource's range"
+        ],
+        "containment": {
+          "steps": "Remove role/app-role assignments; delete federated credentials; detach identity from the resource or delete it; for user-assigned MIs use the revokeTokens action; stop or isolate the host resource.",
+          "kills_existing": "partial",
+          "notes": "MI tokens are cached ~24h per resource URI and cannot be force-refreshed, so permission removal can take hours. revokeTokens exists only for user-assigned identities."
+        },
+        "sample_query": {
+          "language": "Entra KQL (Log Analytics)",
+          "query": "AADManagedIdentitySignInLogs | where TimeGenerated > ago(30d) | summarize FirstSeen=min(TimeGenerated) by ServicePrincipalId, ResourceDisplayName | where FirstSeen > ago(2d)",
+          "purpose": "Spot managed identities requesting tokens for a new target resource"
+        },
+        "unknown": [
+          "Exact Azure Activity log schema fields for these operations (not fetched)",
+          "Whether system-assigned identities have any token revocation operation"
+        ],
+        "evidence_refs": [
+          "fc-fbaa7e70",
+          "fc-4b7bb161",
+          "fc-8098cd65",
+          "fc-b9104afe",
+          "fc-e9a0ad21"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://management.azure.com/  (Header Metadata: true)",
+            "reveals": "Issues an app-only access token for the VM's managed identity; access_token, expires_on, resource",
+            "bulk": false,
+            "scope": "resource=https://management.azure.com/ (ARM) or other Entra resource",
+            "rate_limit": "IMDS throttle; returns 429 when exceeded (undocumented numeric limit)",
+            "logged": "plan",
+            "log_event": "AADManagedIdentitySignInLogs",
+            "log_notes": "Token issuance appears in managed identity sign-in logs; sign-ins from same identity/status/resource are aggregated into one row, and IMDS/MI subsystem caches tokens so not every acquisition reaches Entra. Sign-in logs need Entra P1/P2 to export"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET https://management.azure.com/subscriptions?api-version=2022-12-01",
+            "reveals": "All subscriptions the identity can see (subscriptionId, tenantId, state); cloud footprint",
+            "bulk": true,
+            "scope": "Azure RBAC role on subscription(s); token aud management.azure.com",
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": "AzureActivity",
+            "log_notes": "Azure activity log (control plane) does not typically capture read operations: 'The activity log doesn't typically capture read operations.' GET/list of subscriptions is a read."
+          },
+          {
+            "stage": "collection",
+            "call": "GET https://management.azure.com/subscriptions/{id}/resources?api-version=... (ARM resource/data reads)",
+            "reveals": "Resource inventory and, with data-plane reads (e.g. Key Vault GetSecret), secret/data values",
+            "bulk": true,
+            "scope": "Azure RBAC data/management roles on target resources",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "Data Access audit logs / resource logs",
+            "log_notes": "ARM control-plane reads not in activity log; data-plane resource logs capture reads only when a diagnostic setting is configured (off by default for most services)"
+          }
+        ],
+        "unknown": [
+          "Exact IMDS requests-per-second throttle threshold (docs say 429 on throttle but give no number)",
+          "Whether a tenant exports managed-identity sign-in logs (requires Entra P1/P2 + diagnostic setting)"
+        ],
+        "evidence_refs": [
+          "fc-1ff4e797",
+          "fc-7eb54237",
+          "fc-21b77ece",
+          "fc-da199817"
+        ]
+      },
+      "detections": [
+        {
+          "source": "Sigma",
+          "title": "App Granted Microsoft Permissions",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_permissions_msft.yml",
+          "detects": "Delegated permission grants or app role assignments to a service principal."
+        },
+        {
+          "source": "Sigma",
+          "title": "App Granted Privileged Delegated Or App Permissions",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_privileged_permissions.yml",
+          "detects": "App role assignments (application permissions) granted to a service principal."
+        },
+        {
+          "source": "Sigma",
+          "title": "App Assigned To Azure RBAC/Microsoft Entra Role",
+          "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/azure/audit_logs/azure_app_role_added.yml",
+          "detects": "A service principal was added to an Entra or Azure RBAC role."
+        }
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1ff4e797",
+      "title": "Use managed identities on a VM to acquire access token",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-use-vm-token",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-21b77ece",
+      "title": "Subscriptions - List - Azure Resource Management",
+      "url": "https://learn.microsoft.com/en-us/rest/api/resources/subscriptions/list",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3d76644a",
+      "title": "Configurable Token Lifetimes - Microsoft identity platform",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/configurable-token-lifetimes",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4b7bb161",
+      "title": "Access Microsoft Graph activity logs",
+      "url": "https://learn.microsoft.com/en-us/graph/microsoft-graph-activity-logs-overview",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5e8a79c1",
+      "title": "Disable user sign-in for application",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/disable-user-sign-in-portal",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-64fb7a48",
+      "title": "Create diagnostic settings in Azure Monitor",
+      "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/platform/create-diagnostic-settings",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-729794da",
+      "title": "Review permissions granted to enterprise applications",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-application-permissions",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7eb54237",
+      "title": "Managed identity sign-in logs - Microsoft Entra ID",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-managed-identity-sign-ins",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8098cd65",
+      "title": "Azure permissions for Identity",
+      "url": "https://learn.microsoft.com/en-us/azure/role-based-access-control/permissions/identity",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-93c35990",
+      "title": "Managed identities for Azure resources frequently asked questions",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identities-faq",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-96381067",
+      "title": "View the service principal of a managed identity",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-to-view-managed-identity-service-principal-portal",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9104afe",
+      "title": "Managed identity best practice recommendations",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identity-best-practice-recommendations",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d5d982c9",
+      "title": "Overview of Selected Permissions in OneDrive and SharePoint",
+      "url": "https://learn.microsoft.com/en-us/graph/permissions-selected-overview",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-da199817",
+      "title": "Activity Log in Azure Monitor",
+      "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/activity-log",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e32c7caf",
+      "title": "Role Based Access Control for Applications in Exchange Online",
+      "url": "https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac",
+      "retrieved_at": "2026-10-13",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e9a0ad21",
+      "title": "Microsoft Entra audit log activity reference",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/monitoring-health/reference-audit-activities",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fbaa7e70",
+      "title": "AADManagedIdentitySignInLogs table reference",
+      "url": "https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/aadmanagedidentitysigninlogs",
+      "retrieved_at": "2026-10-12",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search0",
+      "title": "Microsoft Entra Conditional Access for workload identities - Microsoft ...",
+      "url": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/workload-identity",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn10search4",
+      "title": "Microsoft Entra Workload ID documentation",
+      "url": "https://learn.microsoft.com/en-us/entra/workload-id/",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn1search0",
+      "title": "Access tokens in the Microsoft identity platform - Microsoft identity platform | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "turn26view0",
+      "title": "Workload Identity Federation - Microsoft Entra Workload ID | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation",
+      "retrieved_at": "2026-10-09",
+      "type": "vendor_documentation"
+    }
+  ]
+}

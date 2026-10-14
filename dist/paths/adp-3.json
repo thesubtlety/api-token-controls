@@ -1,0 +1,355 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "adp",
+      "name": "ADP",
+      "scope_notes": "Covers ADP Workforce Now / ADP API Central / ADP Marketplace APIs. API Central is a paid add-on for client-built integrations; Marketplace data connectors are partner apps; most ADP developer guides are public PDFs, while developers.adp.com is a JS app and admin/audit docs were not publicly readable.",
+      "controls": [
+        {
+          "name": "Mutual TLS certificate",
+          "effect": "other",
+          "applies_to": [
+            "adp-1",
+            "adp-2",
+            "adp-3"
+          ],
+          "what": "Every token and API request must present the registered X.509 certificate, so a leaked secret alone is not enough.",
+          "setting": "API Central / Self Service portal > Certificate",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-42cb32e2",
+            "fc-ed03d59a",
+            "fc-10679140"
+          ]
+        },
+        {
+          "name": "Shorter access token lifetime at registration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "adp-1",
+            "adp-2",
+            "adp-3"
+          ],
+          "what": "A shorter token expiry can be requested during application registration.",
+          "setting": "Request to ADP during registration",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-42cb32e2"
+          ]
+        },
+        {
+          "name": "Client consent before subscriber credentials are released",
+          "effect": "require_approval",
+          "applies_to": [
+            "adp-3"
+          ],
+          "what": "The partner gets a client's Client ID and Secret only after that client consents to the partner solution.",
+          "setting": "Consent Manager (client) / Partner credential workflow",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-24416c25"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether a customer-configurable IP allowlist exists for API Central credentials (docs only say tokens 'may be' tied to an IP).",
+        "Whether credential reset or consent denial revokes already-issued access tokens immediately.",
+        "What audit/log records exist for credential creation, reset, token issuance and API calls, and how clients access them.",
+        "Whether API Central certificates can be revoked by the client before expiry.",
+        "Whether consumer-application-subscription-credentials.read returns the same or new secrets after re-consent."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "adp-3",
+      "provider_id": "adp",
+      "name": "Marketplace Partner API / Data Connector credentials (partner-level)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "The partner's own client ID/secret from the Self Service portal, used with the partner mTLS certificate to get a token that can read client credentials for every consented subscriber.",
+        "evidence_refs": [
+          "fc-a82cb103",
+          "fc-24416c25",
+          "fc-0efcbca8"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Held by the partner, not by the customer tenant.",
+        "evidence_refs": [
+          "fc-a82cb103"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "ADP may tie tokens to the IP used at authorization; no allowlist documented for partner or client.",
+        "evidence_refs": [
+          "fc-9d8b8098"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Access token 60 min; certificate 2 years",
+        "evidence_refs": [
+          "fc-42cb32e2",
+          "fc-0efcbca8"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "access token 60 min",
+        "summary": "Partner re-requests tokens.",
+        "evidence_refs": [
+          "fc-42cb32e2"
+        ]
+      },
+      "administration": {
+        "summary": "Managed by the partner in the ADP Self Service portal; scopes added by ADP ticket. The customer's only lever is consent/subscription.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-ed03d59a",
+          "fc-27e171a0"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Partner-level credentials authenticate an application, with no end-user authentication.",
+          "evidence_refs": [
+            "fc-114e5462"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "ADP issues one set of credentials per application, not per user.",
+          "evidence_refs": [
+            "fc-114e5462"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "The partner sees its projects and credentials in the Partner Self Service Portal; the subscribing client has no view of partner-level credentials.",
+          "evidence_refs": [
+            "fc-083225ee"
+          ]
+        }
+      },
+      "how": {
+        "inventory": {
+          "ui": "(Partner) Self Service Portal > Projects > {project} > Development API Credentials",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-b733a2f6",
+            "fc-10679140"
+          ]
+        },
+        "disable": {
+          "ui": "(Client) adpapps.adp.com/consent-manager > Pending Consents > Manage > Deny",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-d21489cf"
+          ]
+        },
+        "expiry": {
+          "ui": "(Partner) Self Service Portal > Certificate > Request Certificate > Check Status > note Expiration Date; token lifetime per registration (default 60 min)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-10679140",
+            "fc-57f343e3"
+          ]
+        },
+        "kill": {
+          "ui": "(Client) adpapps.adp.com/consent-manager > Allowed Consents > Deny > I'm Sure",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-d21489cf"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Opaque bearer token."
+        },
+        "log_sources": [],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "partner client_id"
+        ],
+        "anomaly_cues": [
+          "Partner credential compromise exposes every consented client; customers cannot see it directly"
+        ],
+        "containment": {
+          "steps": "Customer: deny consent / cancel subscription. Partner: reset credentials in Self Service portal.",
+          "kills_existing": "yes",
+          "notes": "Client side: revoking consent in Consent Manager turns the integration off instantly. Partner credential reset timing not documented."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Partner-side secret reset procedure details"
+        ],
+        "evidence_refs": [
+          "fc-24416c25",
+          "fc-d21489cf",
+          "fc-a82cb103",
+          "fc-6e806344"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "discovery",
+            "call": "POST /events/core/v1/consumer-application-subscription-credentials.read",
+            "reveals": "Client ID and secret for a consented subscriber (by OOID)",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-24416c25"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-083225ee",
+      "title": "Partner Development Learning Guide",
+      "url": "https://developers.adp.com/api/services/elasticsearch/guides/_doc/partner-development-learning-guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-0efcbca8",
+      "title": "Generating a Certificate Signing Request for Partners - Chapter 2",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/protected/Generating_a_Certificate_Signing_Request_for_Partners_chapter_2",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-10679140",
+      "title": "Marketplace Integrations for Benefit Carriers - Chapter 5",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/protected/Marketplace_Integrations_for_Benefit_Carriers_chapter_5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-114e5462",
+      "title": "Application Types (ADP Developer Resources)",
+      "url": "https://developers.adp.com/api/services/elasticsearch/general/_doc/application-types",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-24416c25",
+      "title": "How to retrieve Client Credentials of a Subscriber",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/protected/How_to_retrieve_Client_Credentials_of_a_Subscriber",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-27e171a0",
+      "title": "Handling Consent Guide - Chapter 1",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/protected/Handling_Consent_chapter_1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-42cb32e2",
+      "title": "ADP Marketplace ESI - Getting started (modified Jun 17, 2026)",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/ADP_Marketplace_ESI_-_Getting_started",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-57f343e3",
+      "title": "Access Tokens",
+      "url": "https://developers.adp.com/getting-started/key-concepts/access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6e806344",
+      "title": "Data Connector Application Access Control Guide for ADP Workforce Now",
+      "url": "https://developers.adp.com/api/services/elasticsearch/general/_doc/data-connector-application-access-control-guide-for-adp-workforce-now",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9d8b8098",
+      "title": "Access Tokens (ADP Developer Resources)",
+      "url": "https://developers.adp.com/api/services/elasticsearch/general/_doc/access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a82cb103",
+      "title": "Introduction to Credentials",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/protected/Introduction_to_Credentials",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b733a2f6",
+      "title": "ADP Marketplace Partner Development Learning Guide",
+      "url": "https://developers.adp.com/getting-started/getting-started-as-a-partner/guides/adp-marketplace-integration-guides/partner-development-learning-guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d21489cf",
+      "title": "Using Consent Manager to Control Access to Your Data",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/Using_Consent_Manager_to_Control_Access_to_Your_Data",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed03d59a",
+      "title": "ADP Marketplace Partner Development Learning Guide - Chapter 2",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/ADP_Marketplace_Partner_Development_Learning_Guide_chapter_2",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

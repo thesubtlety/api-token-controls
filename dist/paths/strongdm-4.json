@@ -1,0 +1,251 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "strongdm",
+      "name": "StrongDM",
+      "scope_notes": "SaaS control plane (US/UK/EU); Log Stream and 13-month log viewing require the Enterprise plan, other plans see 30 days in the Admin UI.",
+      "controls": [
+        {
+          "name": "Permission level: Update account settings",
+          "effect": "other",
+          "applies_to": [
+            "strongdm-4"
+          ],
+          "what": "Only Administrators can change org settings, where SCIM is activated and its token generated.",
+          "setting": "Principals > Users > (user) > Settings > Permission Level",
+          "plan": null,
+          "default": "on",
+          "level": "user",
+          "evidence_refs": [
+            "fc-087adfd5"
+          ]
+        },
+        {
+          "name": "SCIM Provider: None - provisioning disabled",
+          "effect": "disable",
+          "applies_to": [
+            "strongdm-4"
+          ],
+          "what": "Turns off SCIM provisioning for the org.",
+          "setting": "Settings > User Management > Provisioning > SCIM Provider",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-6208e27d"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Any IP allowlist for admin tokens, API keys, service accounts, or SCIM tokens (docs silent).",
+        "Any org-wide switch to block creation of admin tokens or API keys, or a maximum expiry policy.",
+        "Whether SSO-required or MFA settings apply to service account token logins.",
+        "SCIM token rotation, revocation, and lifetime.",
+        "Service account token lifetime and rekey procedure.",
+        "Whether read-only SDK/API calls (e.g. listing accounts or resources) are recorded as Activities.",
+        "Whether API key creation logs as 'Admin token created' or a separate event."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "strongdm-4",
+      "provider_id": "strongdm",
+      "name": "SCIM token",
+      "family": "pat",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Bearer token generated when an admin activates SCIM provisioning; the IdP uses it against /provisioning/<provider>/v2 endpoints on app.strongdm.com to manage users and roles.",
+        "evidence_refs": [
+          "fc-130177d8",
+          "fc-49927fe7"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static bearer token.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Not documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "unknown",
+        "summary": "Regeneration/rotation not documented.",
+        "evidence_refs": []
+      },
+      "administration": {
+        "summary": "Created at Settings > User Management > Provisioning by activating SCIM.",
+        "conditions": null,
+        "evidence_refs": [
+          "fc-130177d8",
+          "fc-49927fe7"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "SCIM token belongs to the org provisioning integration, not a user.",
+          "evidence_refs": [
+            "fc-6208e27d"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Logs > Activities (only 'SCIM token created' is listed; no per-call SCIM log)",
+          "api": null,
+          "cli": "sdm audit activities --from <date> --to <date>",
+          "evidence_refs": [
+            "fc-7b10eb9f",
+            "fc-ed22169d"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Activities",
+            "notes": "SCIM token creation logged."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [
+          {
+            "event": "SCIM token created",
+            "stage": "create",
+            "notes": null
+          }
+        ],
+        "correlation_keys": [
+          "ipAddress"
+        ],
+        "anomaly_cues": [
+          "User/role changes via SCIM not matching IdP changes"
+        ],
+        "containment": {
+          "steps": "Not documented; deactivating SCIM provisioning in Settings > User Management > Provisioning is the likely path.",
+          "kills_existing": "unknown",
+          "notes": null
+        },
+        "sample_query": null,
+        "unknown": [
+          "Revocation and rotation steps",
+          "Whether SCIM requests are logged as Activities"
+        ],
+        "evidence_refs": [
+          "fc-7b10eb9f",
+          "fc-130177d8"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "enumeration",
+            "call": "GET /provisioning/generic/v2/Users",
+            "reveals": "Users",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-130177d8"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-087adfd5",
+      "title": "Permission Level",
+      "url": "https://docs.strongdm.com/admin/access/permission-level",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-130177d8",
+      "title": "StrongDM SCIM API Specification",
+      "url": "https://docs.strongdm.com/references/scim",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-49927fe7",
+      "title": "Provisioning With Okta",
+      "url": "https://docs.strongdm.com/admin/principals/provisioning/okta-provisioning",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6208e27d",
+      "title": "Provisioning With OneLogin",
+      "url": "https://docs.strongdm.com/admin/principals/provisioning/onelogin-provisioning",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7b10eb9f",
+      "title": "View Logs from the Admin UI",
+      "url": "https://docs.strongdm.com/admin/audit/logs/view-adminui",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed22169d",
+      "title": "View Logs from the CLI",
+      "url": "https://docs.strongdm.com/admin/audit/logs/view-cli",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

@@ -1,0 +1,431 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "glean",
+      "name": "Glean",
+      "scope_notes": "Glean-hosted enterprise SaaS (single tenant, <instance>-be.glean.com); plan tiers are not documented for these controls, and log delivery to customer storage needs Glean account team setup.",
+      "controls": [
+        {
+          "name": "Tenant-wide IP greenlist",
+          "effect": "limit_network",
+          "applies_to": [
+            "glean-1",
+            "glean-2",
+            "glean-4",
+            "glean-5",
+            "glean-6"
+          ],
+          "what": "VPC firewall allowlist for the tenant; MCP also checks at app layer.",
+          "setting": "Not documented (Glean-managed)",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ac27dc28"
+          ]
+        },
+        {
+          "name": "Enable Glean OAuth Server",
+          "effect": "disable",
+          "applies_to": [
+            "glean-4",
+            "glean-6"
+          ],
+          "what": "Turns Glean-issued OAuth on or off.",
+          "setting": "Admin console > Settings > Third-party access (OAuth)",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-1d735752",
+            "fc-d0c3bb63"
+          ]
+        },
+        {
+          "name": "Dynamic client registration settings",
+          "effect": "require_approval",
+          "applies_to": [
+            "glean-4"
+          ],
+          "what": "Allow any app, only approved apps/redirect URIs, or no DCR.",
+          "setting": "Settings > Third-party access (OAuth) > DCR > Manage settings",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-5087f03b"
+          ]
+        },
+        {
+          "name": "Delete static client / Revoke client",
+          "effect": "revoke",
+          "applies_to": [
+            "glean-4"
+          ],
+          "what": "Ends access for all users of that client after config propagation.",
+          "setting": "Users & permissions > Third-party access (OAuth) > Delete client",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-ac27dc28",
+            "fc-a61fd21d"
+          ]
+        },
+        {
+          "name": "Rotate secret (static client)",
+          "effect": "revoke",
+          "applies_to": [
+            "glean-4"
+          ],
+          "what": "Old client secret stops working immediately.",
+          "setting": "Edit client > Rotate secret",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-a61fd21d"
+          ]
+        },
+        {
+          "name": "OAuth token TTL",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "glean-4"
+          ],
+          "what": "Admins can change access (7d) and refresh (180d) TTLs.",
+          "setting": "Not documented",
+          "plan": null,
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ac27dc28"
+          ]
+        },
+        {
+          "name": "Sign out of all sessions",
+          "effect": "revoke",
+          "applies_to": [
+            "glean-4"
+          ],
+          "what": "Invalidates a user's Glean-issued OAuth tokens (cache refresh ~10 min).",
+          "setting": "Admin console (user)",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-ac27dc28"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether revoking a Glean-issued API token takes effect immediately",
+        "Whether user deprovisioning revokes that user's Glean-issued API tokens",
+        "Whether admin audit logs record API token create/revoke (coverage list does not mention tokens)",
+        "Per-token IP allowlist for Client API tokens",
+        "Default OAuth server state (admin docs: off; developer docs: on)",
+        "Where the tenant-wide IP greenlist is configured and whether customers manage it",
+        "EMA token lifetime"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "glean-4",
+      "provider_id": "glean",
+      "name": "Glean OAuth Authorization Server token (static and DCR clients, MCP)",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "OAuth 2.1 authorization code + PKCE. User signs in through the tenant's SSO IdP; Glean issues a JWT access token with Glean scopes. Used by MCP hosts and Client/Platform API apps.",
+        "evidence_refs": [
+          "fc-1d735752"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "User sign-in goes through the existing SSO IdP; tokens are then Glean-issued.",
+        "evidence_refs": [
+          "fc-1d735752"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Tenant VPC firewall greenlist; MCP endpoints enforce greenlisting at the app layer. OAuth metadata discovery may be exempt.",
+        "evidence_refs": [
+          "fc-ac27dc28"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 604800,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Access 7 days, refresh 180 days by default; admin-configurable",
+        "evidence_refs": [
+          "fc-ac27dc28"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "refresh token TTL",
+        "summary": "Refresh with offline_access.",
+        "evidence_refs": [
+          "fc-fdeada82",
+          "fc-ac27dc28"
+        ]
+      },
+      "administration": {
+        "summary": "Admin toggle under Settings > Third-party access (OAuth). DCR defaults to allowing any application; admins can restrict to approved redirect URIs or block DCR. Static clients have admin-set scopes.",
+        "conditions": "Docs disagree on default: admin docs say off, developer docs say on.",
+        "evidence_refs": [
+          "fc-1d735752",
+          "fc-d0c3bb63",
+          "fc-5087f03b",
+          "fc-fdeada82"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "yes",
+          "details": "Users sign in through the org's existing SSO IdP before Glean issues the OAuth token.",
+          "evidence_refs": [
+            "fc-1d735752"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Users see their own authorized applications. Admins manage clients in the Admin console but have no documented per-token list.",
+          "evidence_refs": [
+            "fc-1d735752"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Admin console → Settings → Third‑party access (OAuth) → Enable Glean OAuth Server; sign-in uses the existing SSO IdP, so set MFA/conditional access in the IdP",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-1d735752",
+            "fc-99af34b9"
+          ]
+        },
+        "network": {
+          "ui": "No self-serve setting; send Glean the allowed CIDRs and Glean enables IP green listing (tenant-wide)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-000bc4ba",
+            "fc-ac27dc28"
+          ]
+        },
+        "usage": {
+          "ui": "MCP activity logs (filter by server, tool, user, date; shows OAuth client name); GCE log: type = MCP_USAGE, McpUsage.Application / AuthMethod",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-94c8cbbf",
+            "fc-b9e88402",
+            "fc-4b0dcb82"
+          ]
+        },
+        "reads": {
+          "ui": "In glean-customer-event log, filter jsonPayload.type = MCP_USAGE (EventType TOOL_CALL, ToolName)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-b9e88402",
+            "fc-4b0dcb82"
+          ]
+        },
+        "kill": {
+          "ui": "Users & permissions → Third‑party access (OAuth) → ⋮ next to client → Delete client; per user: User roles → ⋮ → Sign out of all sessions",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-a61fd21d",
+            "fc-cfa35c05",
+            "fc-ac27dc28"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "RS256 JWT with kid; verifiable via /api/oauth/jwks."
+        },
+        "log_sources": [
+          {
+            "name": "Admin audit logs",
+            "notes": "Client create/revoke and OAuth setting changes."
+          },
+          {
+            "name": "GCE MCP_USAGE",
+            "notes": "Tool, server, client, authentication."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "client",
+            "log": "MCP_USAGE",
+            "notes": "OAuth client metadata."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "client",
+          "user identity"
+        ],
+        "anomaly_cues": [
+          "New DCR client while DCR is set to Allow any application"
+        ],
+        "containment": {
+          "steps": "Delete/revoke the client; sign the user out of all sessions.",
+          "kills_existing": "yes",
+          "notes": "Takes effect after ~5-10 min propagation / 10 min cache. Users can also revoke an app themselves, which deletes its consents and refresh tokens. Admins can list a static client's users via View users."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact audit event names"
+        ],
+        "evidence_refs": [
+          "fc-ac27dc28",
+          "fc-a61fd21d",
+          "fc-b9e88402",
+          "fc-1d735752"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "MCP tool calls on /mcp/<server>",
+            "reveals": "Search, chat, documents per scopes",
+            "bulk": true,
+            "scope": "MCP",
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "MCP_USAGE",
+            "log_notes": "GCE"
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-b9e88402"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-000bc4ba",
+      "title": "Glean web application firewall on AWS",
+      "url": "https://docs.glean.com/security/cloud-prem/aws/aws-waf",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-1d735752",
+      "title": "Glean OAuth Authorization Server",
+      "url": "https://docs.glean.com/administration/oauth/authorization-server",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4b0dcb82",
+      "title": "Event schemas | Glean Customer Event logs",
+      "url": "https://docs.glean.com/administration/gce-logs/data-dictionary-detailed",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5087f03b",
+      "title": "Dynamic Client Registration",
+      "url": "https://docs.glean.com/administration/oauth/dynamic-client-registration",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-94c8cbbf",
+      "title": "MCP usage tracking and analytics",
+      "url": "https://docs.glean.com/administration/platform/mcp/analytics",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-99af34b9",
+      "title": "About Glean SSO",
+      "url": "https://docs.glean.com/administration/identity/sso/about",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a61fd21d",
+      "title": "Static OAuth clients",
+      "url": "https://docs.glean.com/administration/oauth/static-client-registration",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ac27dc28",
+      "title": "MCP Security, Data Flow, and Permissions",
+      "url": "https://docs.glean.com/administration/platform/mcp/security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b9e88402",
+      "title": "Glean Customer Event logs overview",
+      "url": "https://docs.glean.com/administration/gce-logs/data-dictionary",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cfa35c05",
+      "title": "Managing Users",
+      "url": "https://docs.glean.com/administration/identity/roles/manage-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d0c3bb63",
+      "title": "Client API Authentication",
+      "url": "https://developers.glean.com/api-info/client/authentication/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-fdeada82",
+      "title": "OAuth Authentication for Client API",
+      "url": "https://developers.glean.com/api-info/client/authentication/oauth",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

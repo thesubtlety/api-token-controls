@@ -1,0 +1,286 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "scope_notes": "Covers n8n (Cloud and self-hosted). Public API is on Cloud Starter/Pro/Enterprise and all self-hosted editions (not free trial); key scopes, log streaming and token exchange are Enterprise; env-var controls apply only to self-hosted.",
+      "controls": [
+        {
+          "name": "Credential type policy",
+          "effect": "limit_resources",
+          "applies_to": [
+            "n8n-5"
+          ],
+          "what": "Instance or project rules for which credential types are allowed.",
+          "setting": "PUT /credential-type-policies/instance",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ad70504a"
+          ]
+        },
+        {
+          "name": "Allowed HTTP Request Domains",
+          "effect": "limit_network",
+          "applies_to": [
+            "n8n-5"
+          ],
+          "what": "Limits which domains a credential can be sent to from the HTTP Request node.",
+          "setting": "Credential modal > Allowed HTTP Request Domains",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-657765be"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether n8n API keys or MCP tokens are rejected when SSO is enforced or when a user is deleted",
+        "Any IP allowlist for API or MCP requests on n8n Cloud",
+        "Whether an admin can list or revoke other users' API keys or MCP API-key tokens",
+        "Whether 'no expiration' is an option for API keys, and default/maximum lifetime",
+        "MCP OAuth access/refresh token lifetimes",
+        "Whether public API read calls (GET /workflows, /executions, /credentials) produce any audit event",
+        "Audit log retention (log streaming forwards events; retention is in the customer destination)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "n8n-5",
+      "provider_id": "n8n",
+      "name": "Stored credentials (third-party secrets held by n8n)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Secrets for external services saved in n8n and used by workflow nodes. A compromised n8n account or API key can use them through workflows; the API does not return secret values.",
+        "evidence_refs": [
+          "fc-657765be",
+          "fc-2354aca5"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Depends on the external service.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Allowed HTTP Request Domains limits where a credential can be sent from the HTTP Request node only; not a source-IP control.",
+        "evidence_refs": [
+          "fc-657765be"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Set by the external service",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "external",
+        "summary": "Rotate at the external service and update the credential.",
+        "evidence_refs": []
+      },
+      "administration": {
+        "summary": "Admins can set an instance or project credential type policy via the API.",
+        "conditions": "Plan for credential type policy not stated.",
+        "evidence_refs": [
+          "fc-ad70504a"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "On user deletion the admin chooses to transfer the user's credentials to another user or delete them; the secret stays valid at the external service either way.",
+          "evidence_refs": [
+            "fc-84ad41aa"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /api/v1/credentials lists all credentials on the instance for owner/admin.",
+          "evidence_refs": [
+            "fc-2354aca5"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Settings > Log Streaming > Events: Audit (User credentials created/shared/updated/deleted) and Workflow (n8n.workflow.*, by workflowId)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-6945b4b5"
+          ]
+        },
+        "offboard": {
+          "ui": "Settings > Users > three-dot menu > Delete user > transfer or delete their credentials; then rotate the secret at the external service",
+          "api": "DELETE /api/v1/users/{userId}?transferId={projectId} (omit transferId to delete credentials)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-84ad41aa",
+            "fc-7d67617c",
+            "fc-d6223128"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "External service formats."
+        },
+        "log_sources": [
+          {
+            "name": "Log streaming (Audit group)",
+            "notes": "Enterprise."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "not documented",
+            "log": "User credentials * events",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "User credentials created",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "User credentials shared",
+            "stage": "other",
+            "notes": ""
+          },
+          {
+            "event": "User credentials deleted",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "userId",
+          "workflowId"
+        ],
+        "anomaly_cues": [
+          "Credential shared or transferred to a new project",
+          "New workflow using HTTP Request node with a credential set to All domains"
+        ],
+        "containment": {
+          "steps": "Rotate the secret at the external service, then update or delete the n8n credential.",
+          "kills_existing": "unknown",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether credential use by workflows is logged per credential"
+        ],
+        "evidence_refs": [
+          "fc-6945b4b5"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "enumeration",
+            "call": "GET /api/v1/credentials",
+            "reveals": "Credential names and types, not secrets",
+            "bulk": true,
+            "scope": "credential:list",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-2354aca5"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-2354aca5",
+      "title": "Credential | n8n API reference",
+      "url": "https://docs.n8n.io/connect/n8n-api/credential",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-657765be",
+      "title": "Create and edit credentials | n8n Docs",
+      "url": "https://docs.n8n.io/build/understand-workflows/create-and-edit-credentials",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6945b4b5",
+      "title": "Stream logs to external systems | n8n Docs",
+      "url": "https://docs.n8n.io/administer/observe-and-log/stream-logs-to-external-systems",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7d67617c",
+      "title": "n8n public API spec: deleteUser",
+      "url": "https://github.com/n8n-io/n8n/blob/master/packages/cli/src/public-api/v1/handlers/users/spec/paths/deleteUser.generated.yml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-84ad41aa",
+      "title": "Add and remove users | n8n Docs",
+      "url": "https://docs.n8n.io/administer/manage-users-and-access/add-and-remove-users",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ad70504a",
+      "title": "Credential Type Policy | n8n API reference",
+      "url": "https://docs.n8n.io/connect/n8n-api/credential-type-policy",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d6223128",
+      "title": "n8n public API spec: routes",
+      "url": "https://github.com/n8n-io/n8n/blob/master/packages/cli/src/public-api/v1/openapi.decorator-routes.generated.yml",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

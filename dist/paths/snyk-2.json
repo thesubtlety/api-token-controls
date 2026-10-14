@@ -1,0 +1,381 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "snyk",
+      "name": "Snyk",
+      "scope_notes": "Snyk SaaS; API access, service accounts and audit logs require the Enterprise plan, while Free/Team personal tokens work only for CLI/IDE/CI.",
+      "controls": [
+        {
+          "name": "Revoke & Regenerate",
+          "effect": "revoke",
+          "applies_to": [
+            "snyk-2"
+          ],
+          "what": "The owner invalidates the legacy API token and gets a new one; integrations stop immediately.",
+          "setting": "app.snyk.io/account > General > Revoke & Regenerate",
+          "plan": null,
+          "default": "unknown",
+          "level": "user",
+          "evidence_refs": [
+            "fc-5d0d3c6a",
+            "fc-4e12293c"
+          ]
+        },
+        {
+          "name": "Audit logs",
+          "effect": "other",
+          "applies_to": [
+            "snyk-1",
+            "snyk-2",
+            "snyk-3",
+            "snyk-4",
+            "snyk-5"
+          ],
+          "what": "Group and Org audit log search (90 days) incl. service account and app lifecycle and api.access events.",
+          "setting": "GET /rest/{groups|orgs}/{id}/audit_logs/search",
+          "plan": "Enterprise",
+          "default": "on",
+          "level": "org",
+          "evidence_refs": [
+            "fc-d03e3195",
+            "fc-6e08e2b2"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "snyk-2",
+          "what": "Legacy personal API tokens cannot be given an expiry; they never expire.",
+          "kind": "expiry",
+          "evidence_refs": [
+            "fc-5d0d3c6a"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether PATs, legacy API tokens or service account tokens bypass SSO / IdP conditional access (not stated).",
+        "Any admin setting to disable PATs or legacy API tokens, or to revoke another user's personal token (none documented).",
+        "Whether removing a user from a Group/Org or the IdP invalidates their PAT/legacy token (not stated).",
+        "Any customer IP allowlist for API requests (none documented).",
+        "Audit event names for PAT and legacy token create/revoke (not in the documented event lists).",
+        "Contents of api.access events (which fields identify the token or service account).",
+        "Admin approval or allowlist for Snyk App installation.",
+        "Token string prefixes / formats.",
+        "Refresh token lifetime for Snyk Apps."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "snyk-2",
+      "provider_id": "snyk",
+      "name": "Snyk API token (legacy personal API token)",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "One per-user key from General account settings, sent as `Authorization: token`. Snyk calls it legacy and not recommended.",
+        "evidence_refs": [
+          "fc-5d9e987b",
+          "fc-5d0d3c6a"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static key.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Snyk docs describe no customer-configurable IP allowlist for API callers; IP lists in docs cover Snyk scanners reaching your targets.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Never expires",
+        "evidence_refs": [
+          "fc-5d0d3c6a"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "none",
+        "summary": "Revoke & Regenerate replaces the key; old key stops working.",
+        "evidence_refs": [
+          "fc-5d0d3c6a"
+        ]
+      },
+      "administration": {
+        "summary": "Only the user can Revoke & Regenerate. No documented admin control to disable legacy tokens or revoke them for a user. SSO/IdP bypass not documented (not_verified).",
+        "conditions": "API use Enterprise only.",
+        "evidence_refs": [
+          "fc-5d0d3c6a",
+          "fc-4e12293c"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "partial",
+          "details": "Removing a user from a Group removes their access to its Organizations and Projects, but docs do not say the token itself is revoked.",
+          "evidence_refs": [
+            "fc-ed3b9edf"
+          ]
+        },
+        "inventory": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": null,
+          "api": "GET https://api.snyk.io/rest/groups/{group_id}/audit_logs/search?version={version}&events=api.access&user_id={user_id} (or /rest/orgs/{org_id}/audit_logs/search)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-d03e3195",
+            "fc-44be6988",
+            "fc-3bb65c22",
+            "fc-08d7923f"
+          ]
+        },
+        "kill": {
+          "ui": "app.snyk.io/account > General Account Settings > Auth Token > Revoke & Regenerate (token owner only)",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-4e12293c"
+          ]
+        },
+        "offboard": {
+          "ui": "Group > Members > trash icon next to user > Delete member",
+          "api": "DELETE https://api.snyk.io/rest/groups/{group_id}/memberships/{membership_id}?version={version}&cascade=true; per Org: DELETE https://api.snyk.io/v1/org/{orgId}/members/update/{userId}",
+          "cli": null,
+          "evidence_refs": [
+            "fc-ed3b9edf",
+            "fc-08d7923f",
+            "fc-c380ac89"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Snyk audit logs (Group/Org search API)",
+            "notes": "Enterprise; past 90 days; GET /rest/groups/{group_id}/audit_logs/search and /rest/orgs/{org_id}/audit_logs/search; api.access hidden unless requested via events=api.access."
+          },
+          {
+            "name": "Event forwarding (Amazon EventBridge, AWS CloudTrail Lake)",
+            "notes": "Platform audit events, Enterprise; use for retention beyond 90 days."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "userId / user_id",
+            "log": "audit logs",
+            "notes": "Identifies the acting user; whether a service account appears here is not documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "api.access",
+            "stage": "use",
+            "notes": "Exists in Group and Org event lists; excluded by default; described as high-volume low-information."
+          }
+        ],
+        "correlation_keys": [
+          "user_id",
+          "org_id",
+          "group_id",
+          "project_id",
+          "created"
+        ],
+        "anomaly_cues": [
+          "Long-lived key used from new automation",
+          "api.access spikes for one user_id"
+        ],
+        "containment": {
+          "steps": "Owner clicks Revoke & Regenerate at app.snyk.io/account.",
+          "kills_existing": "yes",
+          "notes": "Integrations using the key stop immediately."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Audit event for Revoke & Regenerate",
+          "Admin ability to force revoke"
+        ],
+        "evidence_refs": [
+          "fc-5d0d3c6a",
+          "fc-4e12293c",
+          "fc-d03e3195",
+          "fc-6e08e2b2"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /rest/self",
+            "reveals": "Identity of the token holder",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Enterprise; api.access hidden by default; per-call detail not documented."
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /rest/orgs",
+            "reveals": "Organizations the token can access",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Same as above."
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /rest/orgs/{org_id}/projects",
+            "reveals": "Projects / monitored repos and images",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Reads have no explicit action event."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /rest/orgs/{org_id}/issues",
+            "reveals": "All vulnerability findings for the Org",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "1620 req/min per API key",
+            "logged": "plan",
+            "log_event": "api.access",
+            "log_notes": "Reads have no explicit action event."
+          }
+        ],
+        "unknown": [
+          "Exact fields recorded in api.access"
+        ],
+        "evidence_refs": [
+          "fc-6e08e2b2",
+          "fc-d74cf79a",
+          "fc-44be6988"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-08d7923f",
+      "title": "Snyk REST API spec (rest-spec.json, linked from docs.snyk.io API reference)",
+      "url": "https://558411700-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FIEEjSXQQu36y0vmFV8zf%2Fuploads%2Fgit-blob-c1151c14af94bd6daf3db0c2cf3424397eb0191a%2Frest-spec.json?alt=media",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-3bb65c22",
+      "title": "Audit Logs (API reference)",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/reference/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-44be6988",
+      "title": "Search Audit Logs v1 to REST migration guide",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/api-end-of-life-eol-process-and-migration-guides/guides-to-migration/search-audit-logs-group-and-org-v1-api-to-ga-rest-audit-logs-api-migration-guide",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4e12293c",
+      "title": "Revoke and regenerate a Snyk API token",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/authentication-for-api/revoke-and-regenerate-a-snyk-api-token",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5d0d3c6a",
+      "title": "Getting started",
+      "url": "https://docs.snyk.io/getting-started-guides/getting-started",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5d9e987b",
+      "title": "Authentication for API",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/authentication-for-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6e08e2b2",
+      "title": "Snyk REST API OpenAPI spec 2026-03-25 (AccessTokenTtlSeconds / service account attributes)",
+      "url": "https://api.snyk.io/rest/openapi/2026-03-25",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c380ac89",
+      "title": "Remove members from Groups and Orgs using the API",
+      "url": "https://docs.snyk.io/platform-administration/user-management/user-management-with-the-api/remove-members-from-groups-and-orgs-using-the-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d03e3195",
+      "title": "Retrieve audit logs of user-initiated activity by API for an Org or Group",
+      "url": "https://docs.snyk.io/platform-administration/user-management/user-management-with-the-api/retrieve-audit-logs-of-user-initiated-activity-by-api-for-an-org-or-group",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d74cf79a",
+      "title": "About the REST API",
+      "url": "https://docs.snyk.io/developer-tools/snyk-api/rest-api/about-the-rest-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed3b9edf",
+      "title": "Manage users in a Group",
+      "url": "https://docs.snyk.io/platform-administration/snyk-hierarchy/groups/manage-users-in-a-group",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

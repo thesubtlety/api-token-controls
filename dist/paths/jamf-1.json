@@ -1,0 +1,498 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "jamf",
+      "name": "Jamf",
+      "scope_notes": "Covers Jamf (Jamf Pro, Jamf Platform API Gateway, Jamf Protect, Jamf School). Jamf Pro cloud (11.x) is the main focus; Jamf Log Stream export needs Jamf Cloud Premium; Protect and School covered from public docs only.",
+      "controls": [
+        {
+          "name": "Disable API Client",
+          "effect": "disable",
+          "applies_to": [
+            "jamf-1"
+          ],
+          "what": "Stops the client from issuing new access tokens; existing tokens stay valid until expiry.",
+          "setting": "Settings > System > API roles and clients > client > Disable API Client; or PUT /v1/api-integrations/{id} enabled=false",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d558f88b",
+            "fc-2ec0e391",
+            "fc-d8425148"
+          ]
+        },
+        {
+          "name": "Remove specified API integration",
+          "effect": "revoke",
+          "applies_to": [
+            "jamf-1"
+          ],
+          "what": "Deletes the API client; already-issued tokens remain valid until expiry.",
+          "setting": "DELETE /v1/api-integrations/{id} or UI delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d8425148",
+            "fc-2ec0e391"
+          ]
+        },
+        {
+          "name": "Rotate Client Secret",
+          "effect": "require_rotation",
+          "applies_to": [
+            "jamf-1"
+          ],
+          "what": "Invalidates the old secret so it can no longer mint tokens.",
+          "setting": "API client > Rotate Client Secret; POST /v1/api-integrations/{id}/client-credentials",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-59acb0a7",
+            "fc-d8425148"
+          ]
+        },
+        {
+          "name": "API Roles",
+          "effect": "limit_scope",
+          "applies_to": [
+            "jamf-1"
+          ],
+          "what": "Client privileges are the union of assigned API roles; editing a role's privileges applies to live tokens immediately.",
+          "setting": "Settings > System > API roles and clients > API Roles; /v1/api-roles",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-68b82b3a",
+            "fc-2ec0e391"
+          ]
+        },
+        {
+          "name": "Access Token Lifetime",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "jamf-1"
+          ],
+          "what": "Sets token lifetime in seconds per client; changes do not affect tokens already issued.",
+          "setting": "API client > Access Token Lifetime (accessTokenLifetimeSeconds)",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-2ec0e391",
+            "fc-a7605a62"
+          ]
+        },
+        {
+          "name": "Token scope parameter",
+          "effect": "limit_scope",
+          "applies_to": [
+            "jamf-1"
+          ],
+          "what": "Caller may request a token limited to a subset of the client's roles.",
+          "setting": "scope parameter on POST /v1/oauth/token",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-a7605a62"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "jamf-1",
+          "what": "Disabling or deleting an API client does not end access for tokens already issued; there is no documented per-client token revocation.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-2ec0e391"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "IP allowlisting for Jamf Pro API clients or user API access (none found in public docs).",
+        "Default and maximum Access Token Lifetime for API clients (the doc example shows expires_in 599, but no default is stated).",
+        "Whether Jamf Pro admins can block a user account from using /v1/auth/token while keeping UI access.",
+        "Which identity Change Management logs for actions taken by an API client, and whether /v1/oauth/token requests appear in the Access Log.",
+        "Exact Change Management object/action names for API client create/rotate/disable.",
+        "Jamf Protect API token lifetime and revocation; Jamf School API key expiry, auth header format and revocation behavior.",
+        "Platform API Gateway: revoke/disable controls for an integration and IP restrictions."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "jamf-1",
+      "provider_id": "jamf",
+      "name": "Jamf Pro API client (API Roles and Clients, client credentials)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An admin creates an API client with one or more API roles and generates a client secret. The client ID and secret are exchanged at POST /api/v1/oauth/token (grant_type=client_credentials) for a short-lived bearer token. Works for both the Jamf Pro API and the Classic API.",
+        "evidence_refs": [
+          "fc-68b82b3a",
+          "fc-a7605a62"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static client secret; no workload identity federation documented. Jamf states API authentication does not support SSO.",
+        "evidence_refs": [
+          "fc-7184bbd7"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No IP allowlist for API clients found in public Jamf Pro docs.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Access token lifetime set per client (Access Token Lifetime, seconds); client secret has no documented expiry",
+        "evidence_refs": [
+          "fc-a7605a62",
+          "fc-2ec0e391"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "accessTokenLifetimeSeconds on the client",
+        "summary": "Request a new token with the same client ID and secret; secret is rotated manually.",
+        "evidence_refs": [
+          "fc-a7605a62",
+          "fc-59acb0a7"
+        ]
+      },
+      "administration": {
+        "summary": "Settings > System > API roles and clients. Admins can disable, delete, or rotate the secret of a client and edit its roles. Managed by API at /v1/api-integrations and /v1/api-roles.",
+        "conditions": "Requires Create/Update/Delete API Integrations privileges.",
+        "evidence_refs": [
+          "fc-d8425148",
+          "fc-d558f88b",
+          "fc-59acb0a7",
+          "fc-2ec0e391"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Jamf says API authentication does not support SSO; client credentials are exchanged directly for tokens.",
+          "evidence_refs": [
+            "fc-7184bbd7"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "API clients are standalone service credentials, not tied to a Jamf Pro user account.",
+          "evidence_refs": [
+            "fc-2d9886de"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Settings > API Roles and Clients lists clients; GET /v1/api-integrations returns them via API.",
+          "evidence_refs": [
+            "fc-699e1658",
+            "fc-2d9886de"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Jamf Pro > Settings > System > Change management (Read operations); Jamf Cloud Premium: stream JAMFChangeManagement via Jamf Log Stream",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-31366176",
+            "fc-f2c6ab61",
+            "fc-8a4b539f"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Client ID is a UUID; access token is a JWT (sample token in docs is a three-part eyJ... JWT with scope api-role:N)."
+        },
+        "log_sources": [
+          {
+            "name": "Change Management log",
+            "notes": "Settings > Change Management; Jamf Cloud: view in UI only, not exportable except via Jamf Log Stream (Jamf Cloud Premium). Retention set by log flushing."
+          },
+          {
+            "name": "Access Log",
+            "notes": "Login and token requests with username, IP, entryPoint. Export via Log Stream (Premium). Flushable."
+          },
+          {
+            "name": "RestAPIOperation webhook",
+            "notes": "Fires on authorized Classic API requests; includes authorizedUsername, objectTypeName, restAPIOperationType."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "clientId",
+            "log": "API integrations (GET /v1/api-integrations)",
+            "notes": "Client ID of the API client."
+          },
+          {
+            "field": "authorizedUsername",
+            "log": "RestAPIOperation webhook",
+            "notes": "What value appears for an API client is not documented."
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "clientId",
+          "ipAddress (Access Log)",
+          "entryPoint"
+        ],
+        "anomaly_cues": [
+          "New API client or newly rotated secret",
+          "Role with broad privileges added to a client",
+          "Classic API reads from unexpected sources via RestAPIOperation webhook"
+        ],
+        "containment": {
+          "steps": "Disable or delete the client and rotate its secret; to cut live tokens immediately, remove privileges from the client's API roles (role changes apply to live tokens).",
+          "kills_existing": "partial",
+          "notes": "Disable/delete leaves valid tokens working until expiry; role edits apply immediately."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact Change Management event names for API client actions",
+          "Whether client-credential token requests are recorded in the Access Log"
+        ],
+        "evidence_refs": [
+          "fc-2ec0e391",
+          "fc-f816ca4f",
+          "fc-31366176",
+          "fc-6c6f4756",
+          "fc-d8425148",
+          "fc-555c0975",
+          "fc-4604d828"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/v1/jamf-pro-version",
+            "reveals": "Server version",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/v1/api-integrations",
+            "reveals": "All API clients, roles, lifetimes",
+            "bulk": true,
+            "scope": "Read API Integrations",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/v3/computers-inventory",
+            "reveals": "Paginated computer inventory",
+            "bulk": true,
+            "scope": "Read Computers",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Change Management records READ operations for some objects; not confirmed for API reads."
+          },
+          {
+            "stage": "collection",
+            "call": "GET /api/v3/computers-inventory/filevault",
+            "reveals": "FileVault recovery data for all computers",
+            "bulk": true,
+            "scope": "View Disk Encryption Recovery Key",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v3/computers-inventory",
+            "reveals": "Paginated computer inventory records",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": null,
+            "log_notes": "Change Management log records Read operations (shown as [READ] entries with username). In Jamf Cloud it is viewable in the UI only; export via Log Stream needs Jamf Cloud Premium."
+          }
+        ],
+        "unknown": [
+          "GET /v1/auth behavior for client-credential tokens (documented for user tokens)"
+        ],
+        "evidence_refs": [
+          "fc-2fd66136",
+          "fc-d8425148",
+          "fc-27ad6e2b",
+          "fc-31366176",
+          "fc-f816ca4f"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-27ad6e2b",
+      "title": "Return paginated Computer Inventory records",
+      "url": "https://developer.jamf.com/jamf-pro/reference/get_v3-computers-inventory",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2d9886de",
+      "title": "API Roles and Clients - Jamf Pro Documentation 11.33.0",
+      "url": "https://learn.jamf.com/r/en-US/jamf-pro-documentation-current/API_Roles_and_Clients",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2ec0e391",
+      "title": "Creating an API Client",
+      "url": "https://learn.jamf.com/r/en-US/jamf-pro-documentation-current/Creating_an_API_Client",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-2fd66136",
+      "title": "Jamf Pro API reference index",
+      "url": "https://developer.jamf.com/jamf-pro/reference/llms.txt",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-31366176",
+      "title": "Jamf Log Stream",
+      "url": "https://developer.jamf.com/jamf-pro/docs/jamf-log-stream",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4604d828",
+      "title": "Log Flushing",
+      "url": "https://learn.jamf.com/r/en-US/jamf-pro-documentation-current/Log_Flushing",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-555c0975",
+      "title": "Generating a Client Secret",
+      "url": "https://learn.jamf.com/r/en-US/jamf-pro-documentation-current/Generating_a_Client_Secret",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-59acb0a7",
+      "title": "Rotating a Client Secret",
+      "url": "https://learn.jamf.com/r/en-US/jamf-pro-documentation-current/Rotating_a_Client_Secret",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-68b82b3a",
+      "title": "Client Credentials",
+      "url": "https://developer.jamf.com/jamf-pro/docs/client-credentials",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-699e1658",
+      "title": "Get the current API Integrations",
+      "url": "https://developer.jamf.com/jamf-pro/reference/get_v1-api-integrations",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6c6f4756",
+      "title": "Webhooks",
+      "url": "https://developer.jamf.com/jamf-pro/docs/webhooks-1",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-7184bbd7",
+      "title": "Jamf Pro API Overview",
+      "url": "https://developer.jamf.com/jamf-pro/docs/jamf-pro-api-overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8a4b539f",
+      "title": "Jamf Premium Cloud",
+      "url": "https://learn.jamf.com/r/en-US/technical-articles/Jamf_Premium_Cloud_Prerequisites",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a7605a62",
+      "title": "Obtain an access token using an API Client",
+      "url": "https://developer.jamf.com/jamf-pro/reference/postoauthtoken",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d558f88b",
+      "title": "Disabling an API Client",
+      "url": "https://learn.jamf.com/r/en-US/jamf-pro-documentation-current/Disabling_an_API_Client",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d8425148",
+      "title": "Create API integration object",
+      "url": "https://developer.jamf.com/jamf-pro/reference/postcreateapiintegration",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f2c6ab61",
+      "title": "Viewing Change Management Logs in Jamf Pro",
+      "url": "https://learn.jamf.com/r/en-US/jamf-pro-documentation-current/Viewing_Change_Management_Logs_in_Jamf_Pro",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f816ca4f",
+      "title": "Change Management",
+      "url": "https://learn.jamf.com/r/en-US/jamf-pro-documentation-current/Change_Management",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

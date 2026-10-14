@@ -1,0 +1,2814 @@
+{
+ "id": "github",
+ "name": "GitHub Enterprise Cloud",
+ "scope_notes": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+ "controls": [
+  {
+   "name": "Restrict personal access tokens (classic) from accessing your organizations",
+   "effect": "disable",
+   "applies_to": [
+    "github-1"
+   ],
+   "what": "Blocks classic PATs from org-owned resources; public resources stay reachable.",
+   "setting": "Org settings > Personal access tokens > Settings > Tokens (classic) tab",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-1676c2e2"
+   ],
+   "quote": "Restrict access via personal access tokens: Personal access tokens (classic) or fine-grained personal access tokens cannot access resources owned by the organization. SSH keys created by personal access tokens will continue to work."
+  },
+  {
+   "name": "Fine-grained personal access tokens (restrict access)",
+   "effect": "disable",
+   "applies_to": [
+    "github-2"
+   ],
+   "what": "Blocks fine-grained PATs from org-owned resources.",
+   "setting": "Org settings > Personal access tokens > Settings > Fine-grained tokens tab",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-1676c2e2"
+   ],
+   "quote": "By default, both Personal access tokens (classic) and fine-grained personal access tokens are enabled."
+  },
+  {
+   "name": "Restrict access via personal access tokens (enterprise policy)",
+   "effect": "disable",
+   "applies_to": [
+    "github-1",
+    "github-2"
+   ],
+   "what": "Enterprise owners block classic and/or fine-grained PATs from all enterprise orgs; orgs cannot override.",
+   "setting": "Enterprise settings > Policies > Personal access tokens",
+   "plan": "GitHub Enterprise Cloud",
+   "default": "off",
+   "level": "enterprise",
+   "evidence_refs": [
+    "fc-851d40b6"
+   ],
+   "quote": "Restrict access via personal access tokens: Personal access tokens cannot access organizations owned by the enterprise. SSH keys created by these personal access tokens will continue to work. Organizations cannot override this setting."
+  },
+  {
+   "name": "Require approval of fine-grained personal access tokens",
+   "effect": "require_approval",
+   "applies_to": [
+    "github-2"
+   ],
+   "what": "An org owner must approve each fine-grained PAT before it can access org resources (owner-created tokens exempt).",
+   "setting": "Org settings > Personal access tokens > Settings > Fine-grained tokens; enterprise policy can force on/off",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-1676c2e2"
+   ],
+   "quote": "Require administrator approval: An organization owner must approve each fine-grained personal access token that can access the organization. Fine-grained personal access tokens created by organization owners will not need approval. This is the default value."
+  },
+  {
+   "name": "Set maximum lifetimes for personal access tokens",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "github-1",
+    "github-2"
+   ],
+   "what": "Blocks member PATs whose lifetime exceeds the limit from org resources; tokens are not revoked. Enterprise can set a ceiling.",
+   "setting": "Org settings > Personal access tokens > Settings (per token type); Enterprise settings > Policies > Personal access tokens",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-1676c2e2"
+   ],
+   "quote": "For fine-grained personal access tokens, the default the maximum lifetime policy for organizations is set to expire within 366 days. Personal access tokens (classic) do not have an expiration requirement."
+  },
+  {
+   "name": "Require SAML SSO authentication for all members",
+   "effect": "require_sso",
+   "applies_to": [
+    "github-1",
+    "github-4",
+    "github-6"
+   ],
+   "what": "Members must authenticate via the IdP; classic PATs and SSH keys must be SSO-authorized, and OAuth/GitHub App user authorizations need an active SSO session.",
+   "setting": "Org settings > Authentication security > SAML single sign-on; or enterprise-level SAML",
+   "plan": "GitHub Enterprise Cloud",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-03635d12"
+   ],
+   "quote": "You must authorize your personal access token (classic) after creation before the token can access an organization that uses SAML single sign-on (SSO)."
+  },
+  {
+   "name": "Revoke SSO authorizations / Delete keys and tokens",
+   "effect": "other",
+   "applies_to": [
+    "github-1",
+    "github-2",
+    "github-4",
+    "github-6"
+   ],
+   "what": "Owners revoke SSO authorizations (SAML) or delete credentials (EMU only) per user, per credential type, or in bulk.",
+   "setting": "Org settings > Authentication security; enterprise incident response; REST API",
+   "plan": "GitHub Enterprise Cloud (SAML SSO or EMU)",
+   "default": "unknown",
+   "level": "enterprise",
+   "evidence_refs": [
+    "fc-636a4131"
+   ],
+   "quote": "Revoking authorizations removes SSO authorizations for user tokens and SSH keys, either for a specific user, all users, or a specific credential type, across all organizations in your enterprise."
+  },
+  {
+   "name": "Review and revoke fine-grained personal access tokens",
+   "effect": "other",
+   "applies_to": [
+    "github-2"
+   ],
+   "what": "Org owners view and revoke any fine-grained PAT's access to the org.",
+   "setting": "Org settings > Personal access tokens > Active tokens; REST API (GitHub Apps only)",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-4f578952"
+   ],
+   "quote": "Organization owners can view all fine-grained personal access tokens that can access resources owned by the organization. Organization owners can also revoke access by fine-grained personal access tokens."
+  },
+  {
+   "name": "IP allow list",
+   "effect": "limit_network",
+   "applies_to": [
+    "github-1",
+    "github-2",
+    "github-3",
+    "github-4",
+    "github-5",
+    "github-6",
+    "github-7"
+   ],
+   "what": "Blocks PATs, OAuth app tokens, SSH/deploy keys, GitHub App tokens and GITHUB_TOKEN from non-allowed IPs (not user-installed apps' installation tokens).",
+   "setting": "Org settings > Authentication security > IP allow list; Enterprise settings > Authentication security",
+   "plan": "GitHub Enterprise Cloud",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-62eef186"
+   ],
+   "quote": "IP allow lists don't currently restrict access when a GitHub App is installed on a user account and uses server-to-server installation tokens to access an organization or enterprise."
+  },
+  {
+   "name": "Enable IP allow list configuration for installed GitHub Apps",
+   "effect": "limit_network",
+   "applies_to": [
+    "github-3",
+    "github-4"
+   ],
+   "what": "Adds IPs declared by installed GitHub Apps to the org allow list so app requests from those IPs are permitted.",
+   "setting": "Org settings > Authentication security > IP allow list",
+   "plan": "GitHub Enterprise Cloud",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-62eef186"
+   ],
+   "quote": "If you select Enable IP allow list configuration for installed GitHub Apps in your allow list settings, then IP addresses from installed GitHub Apps are added to your allow list."
+  },
+  {
+   "name": "OAuth app access restrictions",
+   "effect": "require_approval",
+   "applies_to": [
+    "github-6"
+   ],
+   "what": "Unapproved OAuth apps cannot access private org resources; members must request owner approval.",
+   "setting": "Org settings > Third-party Access > OAuth app policy",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-913b4cec"
+   ],
+   "quote": "When OAuth app access restrictions are enabled, organization members and outside collaborators cannot authorize OAuth app access to organization resources. Users can request owner approval for OAuth apps they'd like to use"
+  },
+  {
+   "name": "Deny access to a previously approved OAuth app",
+   "effect": "revoke",
+   "applies_to": [
+    "github-6"
+   ],
+   "what": "Owners remove an approved OAuth app's access to the org.",
+   "setting": "Org settings > Third-party Access > OAuth app policy",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-636a4131"
+   ],
+   "quote": "At the organization level, deny the app access. At the user level, revoke the app authorization and its associated tokens."
+  },
+  {
+   "name": "App access requests",
+   "effect": "require_approval",
+   "applies_to": [
+    "github-3",
+    "github-6"
+   ],
+   "what": "Controls whether members/outside collaborators may request installation or approval of unapproved apps.",
+   "setting": "Org settings > Third-party Access",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-3d73f0ba"
+   ],
+   "quote": "By default, app access requests are enabled. If your organization has a large number of members or outside collaborators, you may want to disable app access requests to reduce the number of requests you have to review."
+  },
+  {
+   "name": "Restrict GitHub App installation to organization owners",
+   "effect": "require_approval",
+   "applies_to": [
+    "github-3",
+    "github-4"
+   ],
+   "what": "Repository admins cannot install GitHub Apps or add repos to existing installations; they must request it.",
+   "setting": "Org settings > Third-party Access",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-3d73f0ba"
+   ],
+   "quote": "As an organization owner, you can restrict GitHub App installations to only organization owners."
+  },
+  {
+   "name": "GitHub App installation repository access",
+   "effect": "limit_resources",
+   "applies_to": [
+    "github-3",
+    "github-4"
+   ],
+   "what": "Owners limit an installed app to all or selected repositories.",
+   "setting": "Org settings > GitHub Apps > Configure > Repository access",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-f7af9022"
+   ],
+   "quote": "Organization owners can change the repository access for an app installed on their organization."
+  },
+  {
+   "name": "Suspend / Uninstall GitHub App",
+   "effect": "revoke",
+   "applies_to": [
+    "github-3",
+    "github-4"
+   ],
+   "what": "Temporarily or permanently blocks an installed app from org resources.",
+   "setting": "Org settings > GitHub Apps > Configure > Suspend or Uninstall; enterprise owners also",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-f7af9022"
+   ],
+   "quote": "You can also temporarily or permanently prevent a GitHub App from accessing resources owned by your account or organization."
+  },
+  {
+   "name": "Workflow permissions (default GITHUB_TOKEN permissions)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "github-5"
+   ],
+   "what": "Sets the default GITHUB_TOKEN to read-only contents/packages or read/write; workflows can still change it via the permissions key.",
+   "setting": "Org/Enterprise settings > Actions > General > Workflow permissions",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-1949217c"
+   ],
+   "quote": "Under \"Workflow permissions\", choose whether you want the GITHUB_TOKEN to have read and write access for all permissions (the permissive setting), or just read access for the contents and packages permissions (the restricted setting)."
+  },
+  {
+   "name": "Allow GitHub Actions to create and approve pull requests",
+   "effect": "limit_scope",
+   "applies_to": [
+    "github-5"
+   ],
+   "what": "When off, GITHUB_TOKEN cannot create or approve pull requests.",
+   "setting": "Org/Enterprise settings > Actions > General > Workflow permissions",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-1949217c"
+   ],
+   "quote": "By default, when you create a new organization, workflows are not allowed to create or approve pull requests."
+  },
+  {
+   "name": "Send write tokens to workflows from pull requests (fork PRs)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "github-5"
+   ],
+   "what": "Controls whether fork pull-request workflows get a write GITHUB_TOKEN; otherwise it is read-only.",
+   "setting": "Org/Enterprise settings > Actions > General > Fork pull request workflows",
+   "plan": null,
+   "default": "off",
+   "level": "enterprise",
+   "evidence_refs": [
+    "fc-443141b3"
+   ],
+   "quote": "Run workflows from fork pull requests. Users can run workflows from fork pull requests. By default, workflows will use a GITHUB_TOKEN with read-only permission, with no access to secrets."
+  },
+  {
+   "name": "Actions policies (disable GitHub Actions)",
+   "effect": "disable",
+   "applies_to": [
+    "github-5"
+   ],
+   "what": "Disabling Actions for all or selected repositories prevents workflows (and their GITHUB_TOKEN) from running.",
+   "setting": "Org settings > Actions > General > Policies; enterprise policy can override",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-1949217c"
+   ],
+   "quote": "You can choose to disable GitHub Actions for all repositories in your organization, or only allow specific repositories."
+  },
+  {
+   "name": "Deploy keys (allow/disallow creation)",
+   "effect": "disable",
+   "applies_to": [
+    "github-7"
+   ],
+   "what": "Disallowing deploy keys blocks creation and disables existing deploy keys in all org repos.",
+   "setting": "Org settings > Repository > Deploy keys; Enterprise settings > Policies > Repository > Deploy keys",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-15a30966"
+   ],
+   "quote": "By default, new organizations are configured to disallow the creation of deploy keys in repositories."
+  },
+  {
+   "name": "Enforcing a policy for deploy keys (enterprise)",
+   "effect": "disable",
+   "applies_to": [
+    "github-7"
+   ],
+   "what": "Enterprise owners allow, restrict, or delegate deploy key creation for all orgs; disabling disables existing keys.",
+   "setting": "Enterprise settings > Policies > Repository > Deploy keys",
+   "plan": "GitHub Enterprise Cloud",
+   "default": "varies",
+   "level": "enterprise",
+   "evidence_refs": [
+    "fc-8e3337ea"
+   ],
+   "quote": "Changing this setting to disabled will result in existing deploy keys being disabled in all repositories in the enterprise."
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "github-1",
+   "what": "Classic PATs cannot be put under an approval workflow; only fine-grained PATs can.",
+   "evidence_refs": [
+    "fc-1676c2e2"
+   ],
+   "quote": "Only fine-grained personal access tokens, not personal access tokens (classic), are subject to approval.",
+   "kind": "other"
+  },
+  {
+   "path_id": "github-3",
+   "what": "Enterprise revoke/delete credential actions do not cover GitHub App installation tokens, deploy keys or GITHUB_TOKEN.",
+   "evidence_refs": [
+    "fc-636a4131"
+   ],
+   "quote": "The following credential types are not affected by either action: GitHub App installation tokens (ghs_) Deploy keys GitHub Actions GITHUB_TOKEN access",
+   "kind": "kill"
+  },
+  {
+   "path_id": "github-5",
+   "what": "Admins cannot stop repo writers from raising GITHUB_TOKEN permissions in the workflow file above the default.",
+   "evidence_refs": [
+    "fc-1949217c"
+   ],
+   "quote": "Anyone with write access to a repository can modify the permissions granted to the GITHUB_TOKEN, adding or removing access as required, by editing the permissions key in the workflow file.",
+   "kind": "other"
+  },
+  {
+   "path_id": "github-3",
+   "what": "GitHub Apps are not subject to the OAuth app access policy.",
+   "evidence_refs": [
+    "fc-1fe99634"
+   ],
+   "quote": "GitHub Apps aren't subject to organization application policies. A GitHub App only has access to the repositories an organization owner has granted.",
+   "kind": "other"
+  }
+ ],
+ "controls_unknown": [
+  "Whether admins can set a maximum lifetime for GitHub App user access tokens or OAuth app tokens (only app-developer settings found).",
+  "Whether GITHUB_TOKEN workflow permission defaults can be made non-overridable."
+ ],
+ "credentials": [
+  {
+   "id": "github-1",
+   "name": "Classic PAT",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Classic/fine-grained PATs, OAuth app tokens, GitHub App installation/user tokens, and Actions GITHUB_TOKEN.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Allowlist covers authenticated web/API/Git. Exceptions exist, including installation tokens for apps installed on a personal user account.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "User-chosen expiry or none; classic PATs have no expiration requirement unless an enterprise/org owner sets a maximum lifetime. Revoked if unused for one year.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0",
+     "fc-851d40b6"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "No refresh token. An expired or revoked PAT cannot be restored; the owner creates a new token. PATs unused for one year are revoked automatically.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0",
+     "fc-932cd3fb"
+    ]
+   },
+   "administration": {
+    "summary": "Repository/permission-scoped apps and PATs; PAT approval/restriction and lifetime policy; SAML authorization; revoke tokens or suspend/uninstall apps.",
+    "conditions": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "With SAML/OIDC SSO, a classic PAT must be SSO-authorized for the org before it can reach org resources; with EMU OIDC, IdP CAP IP conditions are checked on each PAT authentication.",
+     "evidence_refs": [
+      "fc-70eb24e3",
+      "fc-893dd68a"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Offboarded users' PATs can no longer access enterprise/org resources; EMU hard-deprovisioning deletes them.",
+     "evidence_refs": [
+      "fc-9e341652",
+      "fc-b1700c90"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Enterprise Settings > Authentication security > Credentials 'Export CSV' lists classic_pat credentials enterprise-wide (enterprise owners; org owners have no direct visibility).",
+     "evidence_refs": [
+      "fc-71c3f719"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Org Settings > Authentication security > Require SAML SSO authentication (or Enterprise Settings > Authentication security > Require SAML authentication); user authorizes token via Developer settings > Personal access tokens > Configure SSO; admin reviews under People > member > SAML identity linked > Authorized credentials",
+     "api": "GET /orgs/{org}/credential-authorizations",
+     "cli": null,
+     "evidence_refs": [
+      "fc-c5a134ff",
+      "fc-bf83bb86",
+      "fc-03635d12",
+      "fc-d59d1da5",
+      "fc-dc3b71e8"
+     ]
+    },
+    "usage": {
+     "ui": "Enterprise Settings > Audit log; search hashed_token:\"<base64 SHA-256>\" (hash from token or credential inventory CSV)",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=hashed_token:\"<URI-escaped hash>\"",
+     "cli": null,
+     "evidence_refs": [
+      "fc-69839963",
+      "fc-71c3f719"
+     ]
+    },
+    "reads": {
+     "ui": "Enterprise Settings > Audit log > Export Git Events > pick date range > Download Results; filter JSON on action git.clone and hashed_token",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+     "cli": null,
+     "evidence_refs": [
+      "fc-aa029406",
+      "fc-ce6df4bc",
+      "fc-19c68525",
+      "fc-69839963"
+     ]
+    },
+    "offboard": {
+     "ui": "Org > People > select member > Remove from organization; Enterprise > People > ... > Remove from enterprise; EMU: deprovision in IdP (SCIM)",
+     "api": "DELETE /orgs/{org}/members/{username}; EMU: DELETE /scim/v2/enterprises/{enterprise}/Users/{scim_user_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-a2e23dc8",
+      "fc-6c5d47e3",
+      "fc-bcecede9",
+      "fc-b1700c90"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ghp_",
+     "notes": "Prefix documented; GitHub publishes no regex/length. Secret scanning type github_personal_access_token."
+    },
+    "log_sources": [
+     {
+      "name": "GitHub organization/enterprise audit log",
+      "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+     },
+     {
+      "name": "GitHub user security log",
+      "notes": "Token owner's own log: PAT/OAuth create, update, destroy events. Owner-visible only."
+     },
+     {
+      "name": "Audit log streaming (enterprise)",
+      "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+     },
+     {
+      "name": "Enterprise credential inventory export",
+      "notes": "CSV with hashed_token, credential_id and SSH key fingerprint to match against audit events."
+     },
+     {
+      "name": "Secret scanning alerts",
+      "notes": "secret_scanning_alert.* events; GitHub auto-revokes tokens pushed to public repos/gists."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "hashed_token",
+      "log": "audit log",
+      "notes": "Base64 SHA-256 of the token; search with hashed_token:\"...\""
+     },
+     {
+      "field": "programmatic_access_type",
+      "log": "audit log",
+      "notes": "How the actor authenticated"
+     },
+     {
+      "field": "token_id",
+      "log": "audit log",
+      "notes": "Common field; mapping to REST ids not documented"
+     },
+     {
+      "field": "token_scopes",
+      "log": "audit log",
+      "notes": "Scopes of the token, if any"
+     },
+     {
+      "field": "managed_hashed_token",
+      "log": "audit log (org_credential_authorization.*)",
+      "notes": "Hash of the SSO-authorized credential"
+     },
+     {
+      "field": "managed_token_id",
+      "log": "audit log (org_credential_authorization.*)",
+      "notes": "Id of the SSO-authorized credential"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "org_credential_authorization.grant",
+      "stage": "create",
+      "notes": "Member authorized the PAT for SAML/OIDC SSO in the org"
+     },
+     {
+      "event": "oauth_authorization.destroy",
+      "stage": "revoke",
+      "notes": "Docs: may appear when a PAT expires or is revoked (security log)"
+     },
+     {
+      "event": "org_credential_authorization.revoke",
+      "stage": "revoke",
+      "notes": "Owner revoked SSO authorization"
+     },
+     {
+      "event": "org_credential_authorization.deauthorize",
+      "stage": "revoke",
+      "notes": "Member removed SSO authorization"
+     },
+     {
+      "event": "oauth_access.destroy",
+      "stage": "revoke",
+      "notes": "Emitted by enterprise 'delete tokens' action"
+     },
+     {
+      "event": "secret_scanning_alert.create",
+      "stage": "use",
+      "notes": "Leak detected (exposure, not use)"
+     },
+     {
+      "event": "git.clone",
+      "stage": "use",
+      "notes": "Git events carry token data (public preview); REST include=git/export only"
+     }
+    ],
+    "correlation_keys": [
+     "actor",
+     "actor_id",
+     "user_agent",
+     "actor_ip",
+     "actor_location",
+     "hashed_token",
+     "programmatic_access_type",
+     "token_id",
+     "request_id",
+     "org",
+     "repo",
+     "created_at",
+     "transport_protocol_name"
+    ],
+    "anomaly_cues": [
+     "hashed_token seen from new country/ASN or user_agent unlike the owner's tooling",
+     "burst of git.clone across many repos by one hashed_token",
+     "classic PAT use after owner left org or after SSO revoke attempt",
+     "token_scopes include admin:org, delete_repo or workflow on a token used only for read",
+     "use shortly after secret_scanning_alert.create or public_leak"
+    ],
+    "containment": {
+     "steps": "Owner deletes token in settings; anyone with the value can POST it to the credential revocation API; org/enterprise owners revoke its SSO authorization or restrict classic PAT access by policy; EMU owners can delete credentials.",
+     "kills_existing": "yes",
+     "notes": "Deleting/revoking ends the token. SSO revoke only blocks SSO-protected orgs; token still works elsewhere. Org owners cannot list classic PATs."
+    },
+    "sample_query": {
+     "language": "GitHub audit log search",
+     "query": "hashed_token:\"EH4L8o6PfCqipALbL+QT62lyqUtnI7ql0SPbkaQnjv8\" created:>=2026-09-01",
+     "purpose": "All web/API events by one leaked classic PAT (hash with: echo -n TOKEN | openssl dgst -sha256 -binary | base64); add include=git via REST for Git events."
+    },
+    "unknown": [
+     "regex/length for ghp_ tokens",
+     "enumerated values of programmatic_access_type",
+     "event for classic PAT creation in security log",
+     "failed-auth event for invalid/revoked token",
+     "relation between audit token_id and other ids",
+     "actor_ip not listed in current cloud field docs (seen in GHES example)"
+    ],
+    "evidence_refs": [
+     "fc-581baa8e",
+     "turn3search28",
+     "fc-69839963",
+     "fc-b07fe78b",
+     "fc-3d12b26a",
+     "fc-99bddc62",
+     "fc-d92eb504",
+     "fc-b05b2823",
+     "fc-6784f9ba",
+     "fc-932cd3fb",
+     "fc-8a7fd6ce",
+     "fc-636a4131",
+     "fc-846e1fd4",
+     "fc-58ac0db8",
+     "fc-1acc9cca"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /user",
+      "reveals": "login, profile; X-OAuth-Scopes response header lists classic/OAuth token scopes",
+      "bulk": false,
+      "scope": "read:user or user for private fields",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "REST GETs are not in the standard audit log; api.request exists only via Enterprise Cloud streaming with API Request Events enabled, limited to security-relevant endpoints"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /user/repos",
+      "reveals": "repositories the token's user can reach",
+      "bulk": false,
+      "scope": "repo (private repos)",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log; see api.request streaming note"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /repos/{owner}/{repo}/tarball/{ref} (or /zipball/{ref})",
+      "reveals": "redirect URL to a full source archive of the repo",
+      "bulk": true,
+      "scope": "Contents: read (repo)",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": "repo.download_zip (candidate)",
+      "log_notes": "Docs define repo.download_zip for ZIP source-archive downloads but do not state the API zipball/tarball emits it; tarball not addressed"
+     },
+     {
+      "stage": "collection",
+      "call": "git clone https://github.com/{owner}/{repo}.git",
+      "reveals": "full repository history",
+      "bulk": true,
+      "scope": "repo",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "git.clone",
+      "log_notes": "Git events: Enterprise Cloud only, via REST API/streaming/export, 7-day retention via API; actor token visible as hashed_token"
+     }
+    ],
+    "unknown": [
+     "Whether GET /user or repo-listing reads appear in api.request streaming events",
+     "Whether the API tarball/zipball download emits repo.download_zip"
+    ],
+    "evidence_refs": [
+     "fc-84ecf704",
+     "fc-11049102",
+     "fc-35204b4b",
+     "fc-02b10eb4",
+     "fc-53c21801",
+     "fc-19c68525",
+     "fc-f787d164"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "GitHub Secret Scanning Alert Created",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_secret_scanning_alert_created.yml",
+     "detects": "GitHub secret scanning raised an alert for a secret found in a repository, which includes leaked GitHub tokens."
+    },
+    {
+     "source": "Sigma",
+     "title": "Github Push Protection Bypass Detected",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/application/github/audit/github_push_protection_bypass_detected.yml",
+     "detects": "A user bypassed secret scanning push protection and pushed a detected secret."
+    }
+   ]
+  },
+  {
+   "id": "github-2",
+   "name": "Fine-grained PAT",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Classic/fine-grained PATs, OAuth app tokens, GitHub App installation/user tokens, and Actions GITHUB_TOKEN.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Allowlist covers authenticated web/API/Git. Exceptions exist, including installation tokens for apps installed on a personal user account.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "1–366 days or no expiry; the default org/enterprise maximum-lifetime policy is 366 days and can block no-expiry tokens.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0",
+     "fc-851d40b6"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "No refresh token. An expired or revoked PAT cannot be restored; the owner creates a new token. PATs unused for one year are revoked automatically.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0",
+     "fc-932cd3fb"
+    ]
+   },
+   "administration": {
+    "summary": "Repository/permission-scoped apps and PATs; PAT approval/restriction and lifetime policy; SAML authorization; revoke tokens or suspend/uninstall apps.",
+    "conditions": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "Fine-grained PATs support SSO authorization and must be authorized for SSO-enforced orgs; EMU OIDC CAP IP conditions apply to PAT authentication.",
+     "evidence_refs": [
+      "fc-70eb24e3",
+      "fc-893dd68a"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Offboarded users' PATs can no longer access enterprise/org resources; EMU hard-deprovisioning deletes fine-grained PATs.",
+     "evidence_refs": [
+      "fc-9e341652",
+      "fc-b1700c90"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Org owners can view fine-grained PATs in org settings; enterprise credential inventory CSV includes fine_grained_pat.",
+     "evidence_refs": [
+      "fc-70eb24e3",
+      "fc-71c3f719"
+     ]
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Org Settings > Authentication security > Require SAML SSO authentication; fine-grained PATs are authorized at creation; admin lists them under Org Settings > Personal access tokens > Active tokens",
+     "api": "GET /orgs/{org}/credential-authorizations",
+     "cli": null,
+     "evidence_refs": [
+      "fc-c5a134ff",
+      "fc-bf83bb86",
+      "fc-03635d12",
+      "fc-4f578952"
+     ]
+    },
+    "reads": {
+     "ui": "Enterprise Settings > Audit log > Export Git Events > pick date range > Download Results; filter JSON on action git.clone and hashed_token",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+     "cli": null,
+     "evidence_refs": [
+      "fc-aa029406",
+      "fc-ce6df4bc",
+      "fc-19c68525",
+      "fc-69839963"
+     ]
+    },
+    "kill": {
+     "ui": "Org Settings > Personal access tokens > Active tokens > token > Revoke",
+     "api": "POST /orgs/{org}/personal-access-tokens/{pat_id} {\"action\":\"revoke\"} (GitHub App only); full revoke of a leaked value: POST /credentials/revoke",
+     "cli": null,
+     "evidence_refs": [
+      "fc-4f578952",
+      "fc-6824354a",
+      "fc-84944ae3"
+     ]
+    },
+    "offboard": {
+     "ui": "Org > People > select member > Remove from organization; Enterprise > People > ... > Remove from enterprise; EMU: deprovision in IdP (SCIM)",
+     "api": "DELETE /orgs/{org}/members/{username}; EMU: DELETE /scim/v2/enterprises/{enterprise}/Users/{scim_user_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-a2e23dc8",
+      "fc-6c5d47e3",
+      "fc-bcecede9",
+      "fc-b1700c90"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "github_pat_",
+     "notes": "Prefix documented; no official regex. Secret type github_personal_access_token. Lifetime up to 1 year or none."
+    },
+    "log_sources": [
+     {
+      "name": "GitHub organization/enterprise audit log",
+      "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+     },
+     {
+      "name": "GitHub user security log",
+      "notes": "Token owner's own log: PAT/OAuth create, update, destroy events. Owner-visible only."
+     },
+     {
+      "name": "Audit log streaming (enterprise)",
+      "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+     },
+     {
+      "name": "Enterprise credential inventory export",
+      "notes": "CSV with hashed_token, credential_id and SSH key fingerprint to match against audit events."
+     },
+     {
+      "name": "Org fine-grained PAT inventory (REST)",
+      "notes": "GET /orgs/{org}/personal-access-tokens: token_id, token_name, token_expires_at, token_last_used_at. GitHub App auth only."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "hashed_token",
+      "log": "audit log",
+      "notes": "Base64 SHA-256 of the token; search with hashed_token:\"...\""
+     },
+     {
+      "field": "programmatic_access_type",
+      "log": "audit log",
+      "notes": "How the actor authenticated"
+     },
+     {
+      "field": "token_id",
+      "log": "audit log",
+      "notes": "Common field; mapping to REST ids not documented"
+     },
+     {
+      "field": "token_scopes",
+      "log": "audit log",
+      "notes": "Scopes of the token, if any"
+     },
+     {
+      "field": "user_programmatic_access_id",
+      "log": "audit log (personal_access_token.*)",
+      "notes": "Fine-grained PAT id in grant/revoke events"
+     },
+     {
+      "field": "user_programmatic_access_name",
+      "log": "audit/security log",
+      "notes": "Token name"
+     },
+     {
+      "field": "user_programmatic_access_request_id",
+      "log": "audit log",
+      "notes": "Access request id"
+     },
+     {
+      "field": "token_id",
+      "log": "REST /orgs/{org}/personal-access-tokens",
+      "notes": "Token id in org inventory"
+     },
+     {
+      "field": "token_last_used_at",
+      "log": "REST /orgs/{org}/personal-access-tokens",
+      "notes": "Last use time"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "personal_access_token.create",
+      "stage": "create",
+      "notes": "Security log"
+     },
+     {
+      "event": "personal_access_token.request_created",
+      "stage": "create",
+      "notes": "Org approval required"
+     },
+     {
+      "event": "personal_access_token.access_granted",
+      "stage": "change",
+      "notes": "Token granted org access"
+     },
+     {
+      "event": "personal_access_token.update",
+      "stage": "change",
+      "notes": "pat_field_changed"
+     },
+     {
+      "event": "personal_access_token.credential_regenerated",
+      "stage": "change",
+      "notes": "Regenerated"
+     },
+     {
+      "event": "personal_access_token.request_denied",
+      "stage": "revoke",
+      "notes": "Request denied"
+     },
+     {
+      "event": "personal_access_token.access_revoked",
+      "stage": "revoke",
+      "notes": "Org revoked; still reads public org resources"
+     },
+     {
+      "event": "personal_access_token.destroy",
+      "stage": "revoke",
+      "notes": "Owner deleted"
+     },
+     {
+      "event": "personal_access_token.credential_revoked",
+      "stage": "revoke",
+      "notes": "Revoked by GitHub Advanced Security"
+     }
+    ],
+    "correlation_keys": [
+     "actor",
+     "actor_id",
+     "user_agent",
+     "actor_ip",
+     "actor_location",
+     "hashed_token",
+     "programmatic_access_type",
+     "token_id",
+     "request_id",
+     "org",
+     "repo",
+     "created_at",
+     "user_programmatic_access_id",
+     "user_programmatic_access_name",
+     "repository_selection"
+    ],
+    "anomaly_cues": [
+     "access_granted or update widening repository_selection to all right before bulk reads",
+     "token_last_used_at recent on a token whose owner is offboarded",
+     "request_created from a user who never used PATs before",
+     "use of a no-expiration token not touched in months",
+     "SSH keys created by the token still in use after access_revoked"
+    ],
+    "containment": {
+     "steps": "Owner deletes token; anyone posts value to revocation API; org owner revokes it (UI or REST via GitHub App); restrict PAT access by org/enterprise policy.",
+     "kills_existing": "partial",
+     "notes": "Org-owner revoke leaves SSH keys created by the token working and public reads allowed; user can reassign resource owner. Full delete or API revocation kills it."
+    },
+    "sample_query": {
+     "language": "GitHub audit log search",
+     "query": "action:personal_access_token.access_granted created:>=2026-09-01",
+     "purpose": "Find fine-grained PATs newly granted org access, then pivot on user_programmatic_access_id and hashed_token."
+    },
+    "unknown": [
+     "regex/length for github_pat_",
+     "whether audit token_id equals REST token_id/user_programmatic_access_id",
+     "failed-auth event",
+     "programmatic_access_type values"
+    ],
+    "evidence_refs": [
+     "fc-581baa8e",
+     "turn3search28",
+     "fc-69839963",
+     "fc-b07fe78b",
+     "fc-3d12b26a",
+     "fc-99bddc62",
+     "fc-6784f9ba",
+     "fc-932cd3fb",
+     "fc-8a7fd6ce",
+     "fc-636a4131",
+     "fc-846e1fd4",
+     "fc-4df63a1c",
+     "fc-6c80f842"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /user",
+      "reveals": "login, profile (fine-grained token does not return X-OAuth-Scopes header)",
+      "bulk": false,
+      "scope": "none listed for fine-grained tokens",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log; see api.request streaming note"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /user/repos",
+      "reveals": "repositories within the token's selected resources",
+      "bulk": false,
+      "scope": "Metadata: read",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /repos/{owner}/{repo}/tarball/{ref} (or /zipball/{ref})",
+      "reveals": "redirect URL to a full source archive of the repo",
+      "bulk": true,
+      "scope": "Contents: read",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": "repo.download_zip (candidate)",
+      "log_notes": "repo.download_zip documented for ZIP source archives; API emission not stated"
+     },
+     {
+      "stage": "collection",
+      "call": "git clone over HTTPS with token",
+      "reveals": "full repository history",
+      "bulk": true,
+      "scope": "Contents: read",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "git.clone",
+      "log_notes": "Enterprise Cloud only, REST/streaming/export, 7-day retention via API"
+     }
+    ],
+    "unknown": [
+     "Fine-grained tokens do not emit X-OAuth-Scopes per fetched docs; no documented self-introspection of granted permissions found",
+     "Whether reads appear in api.request events"
+    ],
+    "evidence_refs": [
+     "fc-11049102",
+     "fc-02b10eb4",
+     "fc-35204b4b",
+     "fc-19c68525",
+     "fc-f787d164"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "GitHub Secret Scanning Alert Created",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_secret_scanning_alert_created.yml",
+     "detects": "GitHub secret scanning raised an alert for a secret found in a repository, which includes leaked GitHub tokens."
+    },
+    {
+     "source": "Sigma",
+     "title": "Github Push Protection Bypass Detected",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/application/github/audit/github_push_protection_bypass_detected.yml",
+     "detects": "A user bypassed secret scanning push protection and pushed a detected secret."
+    },
+    {
+     "source": "Elastic",
+     "title": "New GitHub Personal Access Token (PAT) Added",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/github/persistence_new_pat_created.toml",
+     "detects": "A fine-grained personal access token was granted access to the organization."
+    },
+    {
+     "source": "Elastic",
+     "title": "High Number of Cloned GitHub Repos From PAT",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/github/execution_github_high_number_of_cloned_repos_from_pat.toml",
+     "detects": "Many private repository clones made with an OAuth access token or fine-grained PAT."
+    }
+   ]
+  },
+  {
+   "id": "github-3",
+   "name": "GitHub App installation",
+   "family": "jwt",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Classic/fine-grained PATs, OAuth app tokens, GitHub App installation/user tokens, and Actions GITHUB_TOKEN.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "GitHub Apps mint installation tokens using a private key. Actions OIDC is outbound federation to other platforms, not inbound GitHub API federation.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "GitHub IP allow list covers installation tokens, except for apps installed on a personal user account. If the enterprise uses the IdP (Entra OIDC CAP) allow list instead, requests made as the app or installation are not validated and are always allowed.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28",
+     "fc-893dd68a"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "1 hour",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "not_applicable",
+    "summary": "Mint another installation token using the GitHub App private key.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "administration": {
+    "summary": "Repository/permission-scoped apps and PATs; PAT approval/restriction and lifetime policy; SAML authorization; revoke tokens or suspend/uninstall apps.",
+    "conditions": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Installation tokens do not need SSO authorization, and app-as-installation requests bypass IdP CAP.",
+     "evidence_refs": [
+      "fc-70eb24e3",
+      "fc-893dd68a"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Installation tokens are tied to the app installation, not a user.",
+     "evidence_refs": [
+      "fc-69a967b6"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Enterprise credential inventory CSV lists github_app_installation rows (the installation, not each 1-hour token).",
+     "evidence_refs": [
+      "fc-71c3f719"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Enterprise Settings > Authentication security > Credentials > Export CSV; filter credential_type",
+     "api": "POST /enterprises/{enterprise}/credentials/exports; per org: GET /orgs/{org}/installations",
+     "cli": null,
+     "evidence_refs": [
+      "fc-71c3f719",
+      "fc-4aef0a67",
+      "fc-b7b52aed"
+     ]
+    },
+    "expiry": {
+     "ui": null,
+     "api": "POST /app/installations/{installation_id}/access_tokens returns expires_at (fixed 1 hour)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-46935230"
+     ]
+    },
+    "reads": {
+     "ui": "Enterprise Settings > Audit log > Export Git Events > pick date range > Download Results; filter JSON on action git.clone and hashed_token",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+     "cli": null,
+     "evidence_refs": [
+      "fc-aa029406",
+      "fc-ce6df4bc",
+      "fc-19c68525",
+      "fc-69839963"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ghs_",
+     "notes": "Installation token ghs_; since 2026-04-27 staged rollout of stateless ghs_APPID_JWT (not 40 chars). Minted with app JWT; expires 1 hour. Secret type github_app_installation_access_token."
+    },
+    "log_sources": [
+     {
+      "name": "GitHub organization/enterprise audit log",
+      "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+     },
+     {
+      "name": "Audit log streaming (enterprise)",
+      "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+     },
+     {
+      "name": "App webhook/installation list (REST)",
+      "notes": "GET /orgs/{org}/installations lists installed apps, app_id, permissions, suspended_at."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "hashed_token",
+      "log": "audit log",
+      "notes": "Base64 SHA-256 of the token; search with hashed_token:\"...\""
+     },
+     {
+      "field": "programmatic_access_type",
+      "log": "audit log",
+      "notes": "How the actor authenticated"
+     },
+     {
+      "field": "token_id",
+      "log": "audit log",
+      "notes": "Common field; mapping to REST ids not documented"
+     },
+     {
+      "field": "token_scopes",
+      "log": "audit log",
+      "notes": "Scopes of the token, if any"
+     },
+     {
+      "field": "integration",
+      "log": "audit log (integration_installation.*)",
+      "notes": "App name"
+     },
+     {
+      "field": "application_client_id",
+      "log": "audit log",
+      "notes": "App client ID"
+     },
+     {
+      "field": "oauth_application_id",
+      "log": "audit log",
+      "notes": "Associated app id"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "integration_installation.create",
+      "stage": "create",
+      "notes": "App installed"
+     },
+     {
+      "event": "integration_installation.repositories_added",
+      "stage": "change",
+      "notes": "Scope widened"
+     },
+     {
+      "event": "integration_installation.version_updated",
+      "stage": "change",
+      "notes": "Permissions updated"
+     },
+     {
+      "event": "integration.update",
+      "stage": "change",
+      "notes": "App registration changed"
+     },
+     {
+      "event": "integration_installation.suspend",
+      "stage": "revoke",
+      "notes": "Stops tokens"
+     },
+     {
+      "event": "integration_installation.destroy",
+      "stage": "revoke",
+      "notes": "Uninstall deactivates tokens"
+     },
+     {
+      "event": "integration.remove_client_secret",
+      "stage": "change",
+      "notes": "Client secret removed"
+     }
+    ],
+    "correlation_keys": [
+     "actor",
+     "hashed_token",
+     "programmatic_access_type",
+     "integration",
+     "application_client_id",
+     "oauth_application_id",
+     "user_agent",
+     "repo",
+     "created_at"
+    ],
+    "anomaly_cues": [
+     "installation token activity on repos outside the app's normal set",
+     "repositories_added or version_updated followed quickly by bulk clone",
+     "new integration_installation.create by a non-admin actor",
+     "app activity from IPs outside the app's IP allow list",
+     "spike in token minting (many distinct hashed_token values per hour)"
+    ],
+    "containment": {
+     "steps": "App owner calls DELETE /installation/token; org owner suspends or uninstalls the app; rotate the app private key so no new tokens can be minted.",
+     "kills_existing": "yes",
+     "notes": "Uninstall deactivates all installation tokens; tokens expire in 1 hour anyway. Not covered by enterprise bulk SSO/credential actions. Private-key rotation event name not established."
+    },
+    "sample_query": {
+     "language": "GitHub audit log search",
+     "query": "action:integration_installation.repositories_added action:integration_installation.version_updated created:>=2026-09-01",
+     "purpose": "Find installations whose scope or permissions grew."
+    },
+    "unknown": [
+     "regex for ghs_APPID_JWT",
+     "audit event for app private key creation/deletion",
+     "whether audit actor for installation token is app bot name",
+     "installation_id field name in audit events"
+    ],
+    "evidence_refs": [
+     "fc-581baa8e",
+     "fc-4869207c",
+     "turn3search28",
+     "fc-69839963",
+     "fc-b07fe78b",
+     "fc-99bddc62",
+     "fc-6784f9ba",
+     "fc-934632aa",
+     "fc-1acc9cca",
+     "fc-58ac0db8",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /app",
+      "reveals": "app identity associated with the credentials (requires app JWT)",
+      "bulk": false,
+      "scope": "app JWT",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /app/installations",
+      "reveals": "every org/account that installed the app",
+      "bulk": false,
+      "scope": "app JWT",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /installation/repositories",
+      "reveals": "repos the installation access token can reach",
+      "bulk": false,
+      "scope": "installation access token",
+      "rate_limit": "5,000/hour minimum per installation",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /repos/{owner}/{repo}/tarball/{ref}",
+      "reveals": "full source archive of an accessible repo",
+      "bulk": true,
+      "scope": "Contents: read",
+      "rate_limit": "5,000/hour minimum per installation",
+      "logged": "unknown",
+      "log_event": "repo.download_zip (candidate)",
+      "log_notes": "API emission of repo.download_zip not stated"
+     },
+     {
+      "stage": "collection",
+      "call": "git clone with installation token",
+      "reveals": "full repository history",
+      "bulk": true,
+      "scope": "Contents: read",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "git.clone",
+      "log_notes": "Enterprise Cloud only; actor appears as hashed_token"
+     }
+    ],
+    "unknown": [
+     "Whether minting POST /app/installations/{id}/access_tokens is audit-logged",
+     "Whether reads appear in api.request streaming events"
+    ],
+    "evidence_refs": [
+     "fc-2704d3be",
+     "fc-934632aa",
+     "fc-35204b4b",
+     "fc-19c68525",
+     "fc-69839963"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Github Organization App Integration Installed",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_organization_app_integration_installed.yml",
+     "detects": "A GitHub App was installed on the organization."
+    }
+   ]
+  },
+  {
+   "id": "github-4",
+   "name": "GitHub App user token",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Classic/fine-grained PATs, OAuth app tokens, GitHub App installation/user tokens, and Actions GITHUB_TOKEN.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "GitHub Apps mint installation tokens using a private key. Actions OIDC is outbound federation to other platforms, not inbound GitHub API federation.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Allowlist covers authenticated web/API/Git. Exceptions exist, including installation tokens for apps installed on a personal user account.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 28800,
+    "maximum_seconds": null,
+    "configurable": "conditional",
+    "summary": "8 hours by default",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "absolute",
+    "summary": "Single-use refresh token, valid 6 months; using it invalidates the old access and refresh tokens. If the app owner opted out of expiring user tokens, tokens do not expire.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0",
+     "fc-5eb30a4a"
+    ]
+   },
+   "administration": {
+    "summary": "Repository/permission-scoped apps and PATs; PAT approval/restriction and lifetime policy; SAML authorization; revoke tokens or suspend/uninstall apps.",
+    "conditions": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "SSO authorization is granted only when the user authorizes during an active SAML/OIDC session; CAP checks the app server IP for requests on a user's behalf.",
+     "evidence_refs": [
+      "fc-70eb24e3",
+      "fc-893dd68a"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Offboarded users' app authorizations can no longer be used against enterprise/org resources.",
+     "evidence_refs": [
+      "fc-9e341652",
+      "fc-b1700c90"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Enterprise credential inventory CSV includes github_app_user_token.",
+     "evidence_refs": [
+      "fc-71c3f719"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Enterprise Settings > Authentication security > Credentials > Export CSV; filter credential_type",
+     "api": "POST /enterprises/{enterprise}/credentials/exports",
+     "cli": null,
+     "evidence_refs": [
+      "fc-71c3f719",
+      "fc-4aef0a67"
+     ]
+    },
+    "sso": {
+     "ui": "Org Settings > Authentication security > Require SAML SSO authentication (or Enterprise Settings > Authentication security > Require SAML authentication); EMU OIDC: Authentication security > IP allow list configuration > Identity Provider (CAP)",
+     "api": "GET /orgs/{org}/credential-authorizations",
+     "cli": null,
+     "evidence_refs": [
+      "fc-c5a134ff",
+      "fc-bf83bb86",
+      "fc-46fea6e3",
+      "fc-bd4f8977",
+      "fc-893dd68a",
+      "fc-dc3b71e8"
+     ]
+    },
+    "expiry": {
+     "ui": "App settings > Edit > Optional Features > User-to-server token expiration > Opt-in (8 h token, 6-month refresh token)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-69e8ea51"
+     ]
+    },
+    "usage": {
+     "ui": "Enterprise Settings > Audit log; search hashed_token:\"<base64 SHA-256>\" (hash from token or credential inventory CSV)",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=hashed_token:\"<URI-escaped hash>\"",
+     "cli": null,
+     "evidence_refs": [
+      "fc-69839963",
+      "fc-71c3f719"
+     ]
+    },
+    "reads": {
+     "ui": "Enterprise Settings > Audit log > Export Git Events > pick date range > Download Results; filter JSON on action git.clone and hashed_token",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+     "cli": null,
+     "evidence_refs": [
+      "fc-aa029406",
+      "fc-ce6df4bc",
+      "fc-19c68525",
+      "fc-69839963"
+     ]
+    },
+    "offboard": {
+     "ui": "Org > People > select member > Remove from organization; Enterprise > People > ... > Remove from enterprise; EMU: deprovision in IdP (SCIM)",
+     "api": "DELETE /orgs/{org}/members/{username}; EMU: DELETE /scim/v2/enterprises/{enterprise}/Users/{scim_user_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-a2e23dc8",
+      "fc-6c5d47e3",
+      "fc-bcecede9",
+      "fc-b1700c90"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ghu_",
+     "notes": "User access token ghu_ (8h default) with refresh token ghr_ (6 months). No ghu_-specific secret-scanning type listed; ghr_ is github_refresh_token."
+    },
+    "log_sources": [
+     {
+      "name": "GitHub organization/enterprise audit log",
+      "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+     },
+     {
+      "name": "GitHub user security log",
+      "notes": "Token owner's own log: PAT/OAuth create, update, destroy events. Owner-visible only."
+     },
+     {
+      "name": "Audit log streaming (enterprise)",
+      "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "hashed_token",
+      "log": "audit log",
+      "notes": "Base64 SHA-256 of the token; search with hashed_token:\"...\""
+     },
+     {
+      "field": "programmatic_access_type",
+      "log": "audit log",
+      "notes": "How the actor authenticated"
+     },
+     {
+      "field": "token_id",
+      "log": "audit log",
+      "notes": "Common field; mapping to REST ids not documented"
+     },
+     {
+      "field": "token_scopes",
+      "log": "audit log",
+      "notes": "Scopes of the token, if any"
+     },
+     {
+      "field": "integration",
+      "log": "audit/security log",
+      "notes": "App name"
+     },
+     {
+      "field": "application_client_id",
+      "log": "audit log (integration.revoke_tokens)",
+      "notes": "App client ID"
+     },
+     {
+      "field": "oauth_application_id",
+      "log": "security log (oauth_authorization.*)",
+      "notes": "App id"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "oauth_authorization.create",
+      "stage": "create",
+      "notes": "User authorized app"
+     },
+     {
+      "event": "oauth_authorization.update",
+      "stage": "change",
+      "notes": "Authorization changed"
+     },
+     {
+      "event": "oauth_authorization.destroy",
+      "stage": "revoke",
+      "notes": "Authorization removed/expired"
+     },
+     {
+      "event": "integration.revoke_tokens",
+      "stage": "revoke",
+      "notes": "Token(s) revoked"
+     },
+     {
+      "event": "integration.revoke_all_tokens",
+      "stage": "revoke",
+      "notes": "All user tokens revoked"
+     },
+     {
+      "event": "org_credential_authorization.grant",
+      "stage": "create",
+      "notes": "SSO auth (auto during SAML/OIDC session)"
+     }
+    ],
+    "correlation_keys": [
+     "actor",
+     "actor_id",
+     "user_agent",
+     "actor_ip",
+     "actor_location",
+     "hashed_token",
+     "programmatic_access_type",
+     "token_id",
+     "request_id",
+     "org",
+     "repo",
+     "created_at",
+     "integration",
+     "application_client_id"
+    ],
+    "anomaly_cues": [
+     "ghr_ refresh from a new IP/user_agent after the user's session ended",
+     "app acting as user on repos user never touches",
+     "user token still active after user offboarding (never-expire setting)",
+     "many oauth_authorization.create for one app in short window (consent phishing)"
+    ],
+    "containment": {
+     "steps": "User revokes app authorization; app owner DELETE /applications/{client_id}/token or /grant; anyone posts ghu_/ghr_ to revocation API; org owner suspends/uninstalls the app; integration.revoke_all_tokens.",
+     "kills_existing": "yes",
+     "notes": "Revoking authorization revokes all its tokens across all orgs. Org owners cannot revoke user authorizations or their SSO authorization directly."
+    },
+    "sample_query": {
+     "language": "GitHub audit log search",
+     "query": "action:integration.revoke_all_tokens created:>=2026-09-01",
+     "purpose": "Track app-wide user-token revocations; for use, search the user token's hashed_token."
+    },
+    "unknown": [
+     "ghu_ regex and dedicated secret-scanning type",
+     "whether revoking ghu_ also revokes its ghr_",
+     "refresh event name",
+     "refresh-token use event"
+    ],
+    "evidence_refs": [
+     "fc-581baa8e",
+     "turn3search28",
+     "fc-69839963",
+     "fc-b07fe78b",
+     "fc-3d12b26a",
+     "fc-932cd3fb",
+     "fc-c730ca19",
+     "fc-636a4131",
+     "fc-846e1fd4",
+     "fc-6784f9ba"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /user",
+      "reveals": "login and profile of the authorizing user",
+      "bulk": false,
+      "scope": "read:user or user for private fields",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /user/installations/{installation_id}/repositories",
+      "reveals": "repos both the user and the app installation can access",
+      "bulk": false,
+      "scope": "user access token",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /repos/{owner}/{repo}/tarball/{ref}",
+      "reveals": "full source archive of an accessible repo",
+      "bulk": true,
+      "scope": "Contents: read",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": "repo.download_zip (candidate)",
+      "log_notes": "API emission not stated"
+     },
+     {
+      "stage": "collection",
+      "call": "git clone with user access token",
+      "reveals": "full repository history",
+      "bulk": true,
+      "scope": "Contents: read",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "git.clone",
+      "log_notes": "Enterprise Cloud only, 7-day retention via API"
+     }
+    ],
+    "unknown": [
+     "Whether reads appear in api.request streaming events"
+    ],
+    "evidence_refs": [
+     "fc-11049102",
+     "fc-934632aa",
+     "fc-35204b4b",
+     "fc-19c68525",
+     "fc-f787d164"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Elastic",
+     "title": "GitHub OAuth Application Authorized",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/github/persistence_github_oauth_application_authorized.toml",
+     "detects": "A user authorized an OAuth application (new OAuth authorization)."
+    }
+   ]
+  },
+  {
+   "id": "github-5",
+   "name": "Actions GITHUB_TOKEN",
+   "family": "job_token",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "Classic/fine-grained PATs, OAuth app tokens, GitHub App installation/user tokens, and Actions GITHUB_TOKEN.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Allow list explicitly covers the Actions GITHUB_TOKEN. Jobs must run on self-hosted runners or GitHub-hosted larger runners with static IP ranges that are added to the list.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28",
+     "fc-62eef186"
+    ]
+   },
+   "lifetime": {
+    "basis": "job",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Job duration",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "renewal": {
+    "mechanism": "job_reissued",
+    "expiry_basis": "job",
+    "summary": "The platform supplies a token for the workflow job.",
+    "evidence_refs": [
+     "turn3search28",
+     "turn19search0"
+    ]
+   },
+   "administration": {
+    "summary": "Repository/permission-scoped apps and PATs; PAT approval/restriction and lifetime policy; SAML authorization; revoke tokens or suspend/uninstall apps.",
+    "conditions": "Enterprise Cloud feature scope. Fine-grained PATs, classic PATs and GitHub Apps have different approval/revocation rules.",
+    "evidence_refs": [
+     "turn3search8",
+     "turn3search0",
+     "turn3search28"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "GITHUB_TOKEN is repository-scoped and marked as not supporting SSO authorization in the credential types table; SSO bulk actions do not affect it.",
+     "evidence_refs": [
+      "fc-70eb24e3"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The token belongs to a workflow job and expires when the job ends.",
+     "evidence_refs": [
+      "fc-70eb24e3"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Not configurable: token expires when the job finishes (max 24 h refresh)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-205532d4"
+     ]
+    },
+    "reads": {
+     "ui": "Enterprise Settings > Audit log > Export Git Events; filter JSON on action git.clone and repo",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+     "cli": null,
+     "evidence_refs": [
+      "fc-aa029406",
+      "fc-ce6df4bc",
+      "fc-19c68525",
+      "fc-69839963"
+     ]
+    },
+    "kill": {
+     "ui": "Repo > Actions > workflow > run > Cancel workflow",
+     "api": "POST /repos/{owner}/{repo}/actions/runs/{run_id}/cancel",
+     "cli": "gh run cancel <run-id>",
+     "evidence_refs": [
+      "fc-88261f44",
+      "fc-007e38a0",
+      "fc-26d6a55d"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ghs_",
+     "notes": "GITHUB_TOKEN is a GitHub App installation token, so ghs_ (incl. new ghs_APPID_JWT). Expires at job end; max 6h hosted, refreshable to 24h self-hosted."
+    },
+    "log_sources": [
+     {
+      "name": "GitHub organization/enterprise audit log",
+      "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+     },
+     {
+      "name": "Audit log streaming (enterprise)",
+      "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+     },
+     {
+      "name": "Workflow run logs",
+      "notes": "Only step stdout; correlate with audit log."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "workflow_run_id",
+      "log": "audit log (workflows.*)",
+      "notes": "Run that received the token"
+     },
+     {
+      "field": "job_workflow_ref",
+      "log": "audit log (workflows.prepared_workflow_job)",
+      "notes": "Workflow file/ref"
+     },
+     {
+      "field": "secrets_passed",
+      "log": "audit log (workflows.prepared_workflow_job)",
+      "notes": "Secrets provided to the job"
+     },
+     {
+      "field": "runner_name",
+      "log": "audit log",
+      "notes": "Runner that held the token"
+     },
+     {
+      "field": "hashed_token",
+      "log": "audit log",
+      "notes": "Common field; GITHUB_TOKEN-specific use not documented"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "workflows.prepared_workflow_job",
+      "stage": "create",
+      "notes": "Job start; token minted; streaming/export/REST only"
+     },
+     {
+      "event": "workflows.completed_workflow_run",
+      "stage": "revoke",
+      "notes": "Run done; token expires at job end"
+     },
+     {
+      "event": "workflows.cancel_workflow_run",
+      "stage": "revoke",
+      "notes": "Cancel run"
+     },
+     {
+      "event": "org.set_default_workflow_permissions",
+      "stage": "change",
+      "notes": "Default token permissions changed (org)"
+     },
+     {
+      "event": "repo.set_default_workflow_permissions",
+      "stage": "change",
+      "notes": "Default token permissions changed (repo)"
+     },
+     {
+      "event": "repo.set_workflow_permission_can_approve_pr",
+      "stage": "change",
+      "notes": "Token may approve PRs"
+     }
+    ],
+    "correlation_keys": [
+     "actor",
+     "workflow_run_id",
+     "job_workflow_ref",
+     "runner_name",
+     "runner_labels",
+     "is_hosted_runner",
+     "repo",
+     "created_at"
+    ],
+    "anomaly_cues": [
+     "workflow runs from unfamiliar actors or new branches",
+     "default_workflow_permissions switched to write before a suspicious run",
+     "job on a newly registered self-hosted runner (org.register_self_hosted_runner)",
+     "workflow file changes in .github/workflows followed by runs passing extra secrets_passed"
+    ],
+    "containment": {
+     "steps": "Cancel in-progress runs; disable Actions for repo/org; remove self-hosted runners; set default workflow permissions to read.",
+     "kills_existing": "partial",
+     "notes": "No manual revocation; token dies at job end. Not affected by enterprise bulk credential actions. Rotate any other secrets exposed to the job."
+    },
+    "sample_query": {
+     "language": "GitHub audit log REST (phrase)",
+     "query": "GET /orgs/octo-org/audit-log?phrase=action:workflows.prepared_workflow_job+repo:octo-org/app+created:>=2026-09-01",
+     "purpose": "List jobs (and secrets passed) in the incident window."
+    },
+    "unknown": [
+     "actor/programmatic_access_type recorded for GITHUB_TOKEN API calls",
+     "whether GITHUB_TOKEN hashed_token appears in audit events",
+     "per-job token id field"
+    ],
+    "evidence_refs": [
+     "fc-86e7cb4e",
+     "turn3search28",
+     "fc-b07fe78b",
+     "fc-58ac0db8",
+     "fc-8a7fd6ce",
+     "fc-ce6df4bc",
+     "fc-99bddc62"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /rate_limit",
+      "reveals": "remaining quota; confirms token is live (installation token tied to the workflow repo)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": "1,000/hour per repository",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /repos/{owner}/{repo}/tarball/{ref}",
+      "reveals": "archive of the workflow's own repository (token limited to that repo)",
+      "bulk": true,
+      "scope": "contents: read (workflow permissions)",
+      "rate_limit": "1,000/hour per repository",
+      "logged": "unknown",
+      "log_event": "repo.download_zip (candidate)",
+      "log_notes": "API emission not stated"
+     },
+     {
+      "stage": "collection",
+      "call": "git clone of the workflow repo with GITHUB_TOKEN",
+      "reveals": "full history of the workflow's repository",
+      "bulk": true,
+      "scope": "contents: read",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "git.clone",
+      "log_notes": "Enterprise Cloud only; GITHUB_TOKEN scoped to the one repo"
+     }
+    ],
+    "unknown": [
+     "GITHUB_TOKEN is scoped to the workflow repo, so cross-repo discovery is not possible",
+     "Whether reads appear in api.request streaming events"
+    ],
+    "evidence_refs": [
+     "fc-86e7cb4e",
+     "fc-35204b4b",
+     "fc-19c68525"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "GitHub Workflow Permissions Modified",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_workflow_permission_modified.yml",
+     "detects": "Changes to the organization default GITHUB_TOKEN workflow permissions."
+    },
+    {
+     "source": "Panther",
+     "title": "GitHub Workflow Dispatched by GitHub Actions Bot",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_workflow_dispatch_by_github_bot.yml",
+     "detects": "github-actions[bot] using a server-to-server token (GITHUB_TOKEN) to start a workflow via workflow_dispatch, a sign of a stolen GITHUB_TOKEN being replayed."
+    }
+   ]
+  },
+  {
+   "id": "github-6",
+   "name": "OAuth app user access token",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "A classic OAuth app gets a gho_ user access token through the web or device flow and sends it as Authorization: Bearer. The token acts as the user, limited by the granted scopes.",
+    "evidence_refs": [
+     "fc-f158a79d"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "The token is obtained by user authorization in the web or device flow. SAML/OIDC SSO authorization is granted automatically during an active SSO session, but no inbound token exchange is documented for this path.",
+    "evidence_refs": [
+     "turn3search28"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "The organization/enterprise IP allow list (Enterprise Cloud only) covers OAuth app tokens. Unlike GitHub Apps, OAuth app IPs cannot be added automatically. With the IdP (Entra OIDC CAP) allow list, GitHub sends the app server's IP for validation, and admins can exempt authorized OAuth apps.",
+    "evidence_refs": [
+     "fc-62eef186",
+     "fc-d5735a5c",
+     "fc-9c7c584e"
+    ]
+   },
+   "lifetime": {
+    "basis": "inactivity",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "conditional",
+    "summary": "Long-lived; revoked after 1 year unused. App can opt in to 8-hour expiring tokens",
+    "evidence_refs": [
+     "turn3search28",
+     "fc-932cd3fb",
+     "fc-f158a79d"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "inactivity",
+    "summary": "By default the same token is reused until revoked or unused for one year. If the app requires expiring tokens or requests offline_access, a refresh token (expires after six months unused) issues a new 8-hour token.",
+    "evidence_refs": [
+     "fc-f158a79d"
+    ]
+   },
+   "administration": {
+    "summary": "Users revoke an app's authorization in their settings. Organization owners control access with OAuth app access restrictions (on by default for new orgs) and can deny a previously approved app. Anyone holding a leaked token value can revoke it through the API. GitHub keeps at most ten tokens per user/app/scope.",
+    "conditions": "IP allow lists and SAML SSO need Enterprise Cloud. Admins cannot revoke SSO authorization for individual OAuth app tokens, and these authorizations are not visible in the UI.",
+    "evidence_refs": [
+     "fc-a275e930",
+     "turn3search28",
+     "fc-f158a79d"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "OAuth app tokens get SSO authorization automatically only during an active SAML/OIDC session; CAP checks the app server IP for user-context requests.",
+     "evidence_refs": [
+      "fc-70eb24e3",
+      "fc-893dd68a"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Offboarded users' app authorizations can no longer be used against enterprise/org resources.",
+     "evidence_refs": [
+      "fc-9e341652",
+      "fc-b1700c90"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Enterprise credential inventory CSV includes oauth_app_user_token.",
+     "evidence_refs": [
+      "fc-71c3f719"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Enterprise Settings > Authentication security > Credentials > Export CSV; filter credential_type",
+     "api": "POST /enterprises/{enterprise}/credentials/exports",
+     "cli": null,
+     "evidence_refs": [
+      "fc-71c3f719",
+      "fc-4aef0a67"
+     ]
+    },
+    "sso": {
+     "ui": "Org Settings > Authentication security > Require SAML SSO authentication (or Enterprise Settings > Authentication security > Require SAML authentication); EMU OIDC: Authentication security > IP allow list configuration > Identity Provider (CAP)",
+     "api": "GET /orgs/{org}/credential-authorizations",
+     "cli": null,
+     "evidence_refs": [
+      "fc-c5a134ff",
+      "fc-bf83bb86",
+      "fc-46fea6e3",
+      "fc-bd4f8977",
+      "fc-893dd68a",
+      "fc-dc3b71e8"
+     ]
+    },
+    "usage": {
+     "ui": "Enterprise Settings > Audit log; search hashed_token:\"<base64 SHA-256>\" (hash from token or credential inventory CSV)",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=hashed_token:\"<URI-escaped hash>\"",
+     "cli": null,
+     "evidence_refs": [
+      "fc-69839963",
+      "fc-71c3f719"
+     ]
+    },
+    "reads": {
+     "ui": "Enterprise Settings > Audit log > Export Git Events > pick date range > Download Results; filter JSON on action git.clone and hashed_token",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+     "cli": null,
+     "evidence_refs": [
+      "fc-aa029406",
+      "fc-ce6df4bc",
+      "fc-19c68525",
+      "fc-69839963"
+     ]
+    },
+    "offboard": {
+     "ui": "Org > People > select member > Remove from organization; Enterprise > People > ... > Remove from enterprise; EMU: deprovision in IdP (SCIM)",
+     "api": "DELETE /orgs/{org}/members/{username}; EMU: DELETE /scim/v2/enterprises/{enterprise}/Users/{scim_user_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-a2e23dc8",
+      "fc-6c5d47e3",
+      "fc-bcecede9",
+      "fc-b1700c90"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "gho_",
+     "notes": "OAuth app access token; long-lived; max 10 per user/app/scope. Secret type github_oauth_access_token."
+    },
+    "log_sources": [
+     {
+      "name": "GitHub organization/enterprise audit log",
+      "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+     },
+     {
+      "name": "GitHub user security log",
+      "notes": "Token owner's own log: PAT/OAuth create, update, destroy events. Owner-visible only."
+     },
+     {
+      "name": "Audit log streaming (enterprise)",
+      "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+     },
+     {
+      "name": "Enterprise credential inventory export",
+      "notes": "CSV with hashed_token, credential_id and SSH key fingerprint to match against audit events."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "hashed_token",
+      "log": "audit log",
+      "notes": "Base64 SHA-256 of the token; search with hashed_token:\"...\""
+     },
+     {
+      "field": "programmatic_access_type",
+      "log": "audit log",
+      "notes": "How the actor authenticated"
+     },
+     {
+      "field": "token_id",
+      "log": "audit log",
+      "notes": "Common field; mapping to REST ids not documented"
+     },
+     {
+      "field": "token_scopes",
+      "log": "audit log",
+      "notes": "Scopes of the token, if any"
+     },
+     {
+      "field": "oauth_application_id",
+      "log": "audit/security log",
+      "notes": "OAuth app id"
+     },
+     {
+      "field": "oauth_application_name",
+      "log": "security log",
+      "notes": "OAuth app name"
+     },
+     {
+      "field": "hashed_token",
+      "log": "REST check-a-token response",
+      "notes": "Token hash returned by POST /applications/{client_id}/token"
+     },
+     {
+      "field": "token_last_eight",
+      "log": "REST check-a-token response",
+      "notes": "Last 8 chars"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "oauth_authorization.create",
+      "stage": "create",
+      "notes": "User authorized app"
+     },
+     {
+      "event": "oauth_access.create",
+      "stage": "create",
+      "notes": "Token generated"
+     },
+     {
+      "event": "oauth_access.regenerate",
+      "stage": "change",
+      "notes": "Token regenerated"
+     },
+     {
+      "event": "oauth_access.revoke",
+      "stage": "revoke",
+      "notes": "Token revoked"
+     },
+     {
+      "event": "oauth_access.destroy",
+      "stage": "revoke",
+      "notes": "Token deleted"
+     },
+     {
+      "event": "oauth_authorization.destroy",
+      "stage": "revoke",
+      "notes": "Authorization deleted/expired"
+     },
+     {
+      "event": "oauth_application.revoke_tokens",
+      "stage": "revoke",
+      "notes": "App owner revoked tokens"
+     },
+     {
+      "event": "oauth_application.revoke_all_tokens",
+      "stage": "revoke",
+      "notes": "All tokens"
+     },
+     {
+      "event": "oauth_application.reset_secret",
+      "stage": "change",
+      "notes": "Client secret reset"
+     }
+    ],
+    "correlation_keys": [
+     "actor",
+     "actor_id",
+     "user_agent",
+     "actor_ip",
+     "actor_location",
+     "hashed_token",
+     "programmatic_access_type",
+     "token_id",
+     "request_id",
+     "org",
+     "repo",
+     "created_at",
+     "oauth_application_id",
+     "oauth_application_name"
+    ],
+    "anomaly_cues": [
+     "new oauth_authorization.create for an unknown app across many users (consent phishing)",
+     "token used from a different ASN than the app's servers",
+     "device-flow authorizations by users who do not use that tool",
+     "use of scopes (repo, admin:org) beyond what the app needs"
+    ],
+    "containment": {
+     "steps": "User revokes authorization; app owner DELETE /applications/{client_id}/token or /grant or revoke all tokens; anyone posts value to revocation API; org owner denies the app's org access; reset client secret.",
+     "kills_existing": "yes",
+     "notes": "Revoking authorization kills all its tokens. Org owners cannot revoke an OAuth token's SSO authorization; denying app access blocks org data."
+    },
+    "sample_query": {
+     "language": "GitHub audit log search",
+     "query": "action:oauth_authorization.create created:>=2026-09-01",
+     "purpose": "Spot new OAuth app grants in the window; pivot on oauth_application_id."
+    },
+    "unknown": [
+     "gho_ regex/length",
+     "whether org audit log shows oauth_access.* (documented in security log)",
+     "failed-auth event"
+    ],
+    "evidence_refs": [
+     "fc-581baa8e",
+     "turn3search28",
+     "fc-69839963",
+     "fc-b07fe78b",
+     "fc-3d12b26a",
+     "fc-932cd3fb",
+     "fc-c730ca19",
+     "fc-636a4131",
+     "fc-846e1fd4",
+     "fc-8a7fd6ce",
+     "fc-6784f9ba"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /user",
+      "reveals": "login, profile; X-OAuth-Scopes response header lists the granted OAuth scopes",
+      "bulk": false,
+      "scope": "read:user or user for private fields",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /user/repos",
+      "reveals": "repositories the OAuth user can reach",
+      "bulk": false,
+      "scope": "repo",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Reads not in standard audit log"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /repos/{owner}/{repo}/tarball/{ref}",
+      "reveals": "full source archive of a repo",
+      "bulk": true,
+      "scope": "repo",
+      "rate_limit": "5,000/hour per user",
+      "logged": "unknown",
+      "log_event": "repo.download_zip (candidate)",
+      "log_notes": "API emission not stated"
+     },
+     {
+      "stage": "collection",
+      "call": "git clone with gho_ token",
+      "reveals": "full repository history",
+      "bulk": true,
+      "scope": "repo",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "git.clone",
+      "log_notes": "Enterprise Cloud only; OAuth app id recorded on some events"
+     }
+    ],
+    "unknown": [
+     "Whether reads appear in api.request streaming events"
+    ],
+    "evidence_refs": [
+     "fc-84ecf704",
+     "fc-11049102",
+     "fc-35204b4b",
+     "fc-19c68525",
+     "fc-f787d164"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "GitHub Org Authentication Method Changed",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_org_auth_modified.yml",
+     "detects": "Org authentication setting changes, including turning OAuth app access restrictions on or off (the rule also covers SAML and 2FA changes)."
+    },
+    {
+     "source": "Elastic",
+     "title": "High Number of Cloned GitHub Repos From PAT",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/github/execution_github_high_number_of_cloned_repos_from_pat.toml",
+     "detects": "Many private repository clones made with an OAuth access token or fine-grained PAT."
+    },
+    {
+     "source": "Elastic",
+     "title": "GitHub OAuth Application Authorized",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/github/persistence_github_oauth_application_authorized.toml",
+     "detects": "A user authorized an OAuth application (new OAuth authorization)."
+    }
+   ]
+  },
+  {
+   "id": "github-7",
+   "name": "Deploy key",
+   "family": "ssh_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An SSH key pair whose public key is attached to a single repository; the private key stays on the server and authenticates Git operations over SSH. Keys are read-only by default, and write access can be granted when the key is added.",
+    "evidence_refs": [
+     "fc-b704f822"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static SSH key registered on the repository; no external identity exchange is involved.",
+    "evidence_refs": [
+     "fc-b704f822"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "An organization or enterprise IP allow list (GitHub Enterprise Cloud only) covers SSH keys, including deploy keys, for organization-owned repositories. IdP conditional access policy (CAP) IP conditions, used with OIDC for Enterprise Managed Users, do not apply to deploy keys because they do not act on behalf of a user.",
+    "evidence_refs": [
+     "fc-62eef186",
+     "fc-893dd68a"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "No expiry; valid until deleted or disabled",
+    "evidence_refs": [
+     "fc-b704f822"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "The same key is reused until a repository admin deletes it or deploy keys are disabled by policy; removing the user who added it does not deactivate it.",
+    "evidence_refs": [
+     "fc-b704f822"
+    ]
+   },
+   "administration": {
+    "summary": "Added in repository settings by someone with access to them, or through the REST API (fine-grained tokens need repository Administration write). Organization owners can disable deploy key creation, and enterprise owners can set the policy for all organizations; disabling the setting also disables existing deploy keys. Additions and removals are logged as public_key.create and public_key.delete audit events.",
+    "conditions": "One key per repository; a key can't be reused across repositories. New organizations disallow deploy key creation by default. A write-enabled key can do what an organization member with admin access can do on that repository. A key created through the API with a personal access token or OAuth app token is deleted when that token is deleted or revoked; keys created with GitHub App tokens are not. Keys are not tied to organization membership.",
+    "evidence_refs": [
+     "fc-15a30966",
+     "fc-8e3337ea",
+     "fc-86c9980e",
+     "fc-b704f822",
+     "fc-02b10eb4",
+     "fc-c4dd261f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Deploy keys are repository-scoped, are not SSO-authorized, and IdP CAP IP conditions do not apply to them.",
+     "evidence_refs": [
+      "fc-893dd68a"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Deploy keys are tied to the repository; they stay active when the creating user is removed.",
+     "evidence_refs": [
+      "fc-69a967b6"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Only per repository via GET /repos/{owner}/{repo}/keys or repo settings; deploy keys are not in the enterprise credential inventory types.",
+     "evidence_refs": [
+      "fc-a5f7d52c",
+      "fc-71c3f719"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Enterprise Settings > Audit log > Export Git Events; filter JSON on action git.clone and hashed_token (deploy-key token data is public preview)",
+     "api": "GET /enterprises/{enterprise}/audit-log?phrase=action:git.clone&include=git",
+     "cli": null,
+     "evidence_refs": [
+      "fc-aa029406",
+      "fc-ce6df4bc",
+      "fc-19c68525",
+      "fc-69839963"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "SSH key pair, no prefix. Private key matched by secret type github_ssh_private_key. Identify by fingerprint."
+    },
+    "log_sources": [
+     {
+      "name": "GitHub organization/enterprise audit log",
+      "notes": "Records token-authenticated actions with hashed_token, programmatic_access_type, token_scopes. 180 days; Git events 7 days and only via REST include=git, streaming or export. IP disclosure is opt-in."
+     },
+     {
+      "name": "Audit log streaming (enterprise)",
+      "notes": "Needed to keep Git events beyond 7 days; api.request events (enterprise setting, streaming only)."
+     },
+     {
+      "name": "Enterprise credential inventory export",
+      "notes": "CSV with hashed_token, credential_id and SSH key fingerprint to match against audit events."
+     },
+     {
+      "name": "Deploy keys REST",
+      "notes": "GET /repos/{owner}/{repo}/keys: id, title, read_only, added_by, last_used, enabled."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "fingerprint",
+      "log": "audit log (public_key.*)",
+      "notes": "Key fingerprint"
+     },
+     {
+      "field": "deploy_key_fingerprint",
+      "log": "audit log (e.g. protected_branch events)",
+      "notes": "Deploy key that acted"
+     },
+     {
+      "field": "read_only",
+      "log": "audit log / REST",
+      "notes": "Write-capable if false"
+     },
+     {
+      "field": "hashed_token",
+      "log": "audit log",
+      "notes": "Token data for deploy keys is public preview"
+     },
+     {
+      "field": "last_used",
+      "log": "Deploy keys REST",
+      "notes": "Last use time"
+     },
+     {
+      "field": "added_by",
+      "log": "Deploy keys REST",
+      "notes": "Who added it"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "public_key.create",
+      "stage": "create",
+      "notes": "Deploy key or SSH key added"
+     },
+     {
+      "event": "public_key.update",
+      "stage": "change",
+      "notes": "Key updated"
+     },
+     {
+      "event": "public_key.delete",
+      "stage": "revoke",
+      "notes": "Key removed"
+     },
+     {
+      "event": "git.clone",
+      "stage": "use",
+      "notes": "7-day retention unless streamed"
+     },
+     {
+      "event": "git.push",
+      "stage": "use",
+      "notes": "Write keys only"
+     }
+    ],
+    "correlation_keys": [
+     "actor",
+     "fingerprint",
+     "deploy_key_fingerprint",
+     "repo",
+     "transport_protocol_name",
+     "actor_ip",
+     "created_at"
+    ],
+    "anomaly_cues": [
+     "public_key.create with read_only false on a repo that only needs reads",
+     "git.push via a deploy key outside deploy windows",
+     "clone by a deploy key from an IP that is not the deploy server",
+     "deploy key added by a user who is not a repo admin normally"
+    ],
+    "containment": {
+     "steps": "Repo admin deletes the key (UI or DELETE /repos/{owner}/{repo}/keys/{key_id}); org owner disables deploy keys org-wide; enterprise policy can disable them.",
+     "kills_existing": "yes",
+     "notes": "Org-wide disable disables existing keys immediately. Not covered by enterprise bulk credential actions or SSO revoke."
+    },
+    "sample_query": {
+     "language": "GitHub audit log search",
+     "query": "action:public_key.create repo:octo-org/app created:>=2026-09-01",
+     "purpose": "Find deploy keys added to a repo; check read_only and title."
+    },
+    "unknown": [
+     "fingerprint hash format in audit events",
+     "whether git.* events include deploy key fingerprint",
+     "failed SSH auth event"
+    ],
+    "evidence_refs": [
+     "turn3search28",
+     "fc-b07fe78b",
+     "fc-69839963",
+     "fc-1acc9cca",
+     "fc-86c9980e",
+     "fc-875fb1bf",
+     "fc-58ac0db8",
+     "fc-99bddc62",
+     "fc-846e1fd4"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "ssh -T git@github.com",
+      "reveals": "greeting confirms the key authenticates; a deploy key authenticates to its single repository",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "No documented audit event for an SSH auth test"
+     },
+     {
+      "stage": "collection",
+      "call": "git clone git@github.com:{owner}/{repo}.git",
+      "reveals": "full history of the one repository the key is attached to",
+      "bulk": true,
+      "scope": "deploy key (read-only by default)",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "git.clone",
+      "log_notes": "Git events Enterprise Cloud only; deploy-key token attribution is in public preview"
+     }
+    ],
+    "unknown": [
+     "Exact ssh -T greeting wording for a deploy key (docs show the user form only)",
+     "Whether deploy keys can call the REST API (not addressed in fetched docs)"
+    ],
+    "evidence_refs": [
+     "fc-6defd200",
+     "fc-b704f822",
+     "fc-19c68525",
+     "fc-69839963"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "GitHub User Access Key Created",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/github_rules/github_user_access_key_created.yml",
+     "detects": "A new SSH public key was added (user SSH key or deploy key)."
+    }
+   ]
+  }
+ ]
+}

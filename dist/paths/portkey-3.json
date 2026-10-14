@@ -1,0 +1,502 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "portkey",
+      "name": "Portkey",
+      "scope_notes": "Covers Portkey (Prisma AIRS AI Gateway). SaaS control plane with hybrid/air-gapped self-hosted options; JWT auth, audit logs and key-permission settings are Enterprise, rotation is on all plans.",
+      "controls": [
+        {
+          "name": "Delete API key",
+          "effect": "revoke",
+          "applies_to": [
+            "portkey-1",
+            "portkey-2",
+            "portkey-3"
+          ],
+          "what": "Removes an API key.",
+          "setting": "DELETE /v1/api-keys/{id} (Admin API)",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-c13c2749"
+          ]
+        },
+        {
+          "name": "API key scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "portkey-1",
+            "portkey-2",
+            "portkey-3"
+          ],
+          "what": "Each key gets a list of permission scopes at create/update.",
+          "setting": "scopes on POST /api-keys/{type}/{sub-type}",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-538a9eb1"
+          ]
+        },
+        {
+          "name": "expires_at / org-workspace maximum TTL",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "portkey-1",
+            "portkey-2",
+            "portkey-3"
+          ],
+          "what": "Key expiry date, which cannot exceed a configured org/workspace maximum TTL.",
+          "setting": "expires_at on create; max TTL setting name not documented",
+          "plan": null,
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-5803e935"
+          ]
+        },
+        {
+          "name": "Rotation policy",
+          "effect": "require_rotation",
+          "applies_to": [
+            "portkey-1",
+            "portkey-2",
+            "portkey-3"
+          ],
+          "what": "Scheduled automatic rotation (weekly, monthly or N days).",
+          "setting": "rotation_policy on create/update; POST /v2/api-keys/{id}/rotate",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-db5e3ba6"
+          ]
+        },
+        {
+          "name": "user_api_key_rotation_period",
+          "effect": "require_rotation",
+          "applies_to": [
+            "portkey-3"
+          ],
+          "what": "Org enforces a rotation cadence (1-365 days) on workspace-user keys.",
+          "setting": "Organisation setting user_api_key_rotation_period",
+          "plan": null,
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-db5e3ba6"
+          ]
+        },
+        {
+          "name": "API Key Management permissions",
+          "effect": "limit_scope",
+          "applies_to": [
+            "portkey-2",
+            "portkey-3"
+          ],
+          "what": "Controls whether workspace managers/members can view or manage keys.",
+          "setting": "Admin Settings > Security > API Key Management",
+          "plan": "Enterprise",
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-61d9e0d0"
+          ]
+        },
+        {
+          "name": "Per-key rate and usage limits",
+          "effect": "limit_resources",
+          "applies_to": [
+            "portkey-1",
+            "portkey-2",
+            "portkey-3"
+          ],
+          "what": "Request/token rate limits and cost/token budgets per key.",
+          "setting": "rate_limits, usage_limits on create/update",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-5803e935"
+          ]
+        },
+        {
+          "name": "Pinned default config",
+          "effect": "limit_scope",
+          "applies_to": [
+            "portkey-1",
+            "portkey-2",
+            "portkey-3"
+          ],
+          "what": "Pins a config to a key; allow_config_override=false stops callers overriding it.",
+          "setting": "defaults.config_id, defaults.allow_config_override",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-5803e935"
+          ]
+        },
+        {
+          "name": "Manage Keys (Workspace Managers)",
+          "effect": "disable",
+          "applies_to": [
+            "portkey-2",
+            "portkey-3"
+          ],
+          "what": "Org admins can turn off workspace managers' ability to create, update and delete workspace service and user API keys.",
+          "setting": "Admin Settings > Security > API Key Management",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-61d9e0d0"
+          ]
+        },
+        {
+          "name": "Manage Keys (Workspace Members)",
+          "effect": "disable",
+          "applies_to": [
+            "portkey-3"
+          ],
+          "what": "Org admins can turn off workspace members' ability to create, update and delete their own user API keys.",
+          "setting": "Admin Settings > Security > API Key Management",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-61d9e0d0"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for API keys or JWTs",
+        "Name of the org/workspace maximum key TTL setting",
+        "Whether user API keys are disabled when the user is removed or deprovisioned via SCIM",
+        "Whether SSO enforcement affects API keys",
+        "Whether GET (read) API calls appear in audit logs (filter lists only POST/PUT/DELETE)",
+        "Auth cache delay after key deletion",
+        "SCIM token expiry and revocation",
+        "API key token prefix"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "portkey-3",
+      "provider_id": "portkey",
+      "name": "Workspace User API Keys",
+      "family": "api_key",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Workspace keys tied to an individual user; same operational scopes as service keys but cannot manage other keys.",
+        "evidence_refs": [
+          "fc-538a9eb1"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Docs do not say whether user keys stop when the user is removed or SSO policy changes.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "policy",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Optional expires_at; org can enforce rotation cadence for user keys",
+        "evidence_refs": [
+          "fc-5803e935",
+          "fc-db5e3ba6"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "user_api_key_rotation_period",
+        "summary": "Rotation; non-admins can rotate only their own keys.",
+        "evidence_refs": [
+          "fc-db5e3ba6"
+        ]
+      },
+      "administration": {
+        "summary": "Org admins choose whether workspace managers/members can view or manage keys.",
+        "conditions": "Enterprise for permission settings.",
+        "evidence_refs": [
+          "fc-61d9e0d0"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "GET /api-keys (List API Key) with workspace_id; scope workspace_user_api_keys.list lists all workspace user keys.",
+          "evidence_refs": [
+            "fc-e877444f",
+            "fc-538a9eb1"
+          ]
+        }
+      },
+      "how": {
+        "reads": {
+          "ui": "Admin Settings > Audit Logs > filter Action = Export",
+          "api": "GET https://api.portkey.ai/v1/audit-logs?action=<export>&user_type=api_key",
+          "cli": null,
+          "evidence_refs": [
+            "fc-02f7691c",
+            "fc-46ab8a49"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented"
+        },
+        "log_sources": [
+          {
+            "name": "Audit Logs",
+            "notes": "Enterprise; Admin Settings > Audit Logs or GET /audit-logs (admin key with audit_logs.list); indefinite retention; filter by user_type=api_key."
+          },
+          {
+            "name": "Request Logs",
+            "notes": "Gateway request logs with full request/response; retention 3 days Developer, 30 days Production, unlimited Enterprise."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "user_type=api_key / user_id",
+            "log": "Audit log",
+            "notes": "Actor can be an API key"
+          },
+          {
+            "field": "api_key_id, old_key_masked",
+            "log": "Audit log (rotation)",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Create (resource type API Keys)",
+            "stage": "create",
+            "notes": "Audit action filter"
+          },
+          {
+            "event": "Rotate",
+            "stage": "rotate",
+            "notes": "rotation_mode manual|auto"
+          },
+          {
+            "event": "Delete",
+            "stage": "revoke",
+            "notes": ""
+          },
+          {
+            "event": "Update",
+            "stage": "modify",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "request_id",
+          "client_ip",
+          "workspace_id",
+          "api key id"
+        ],
+        "anomaly_cues": [
+          "Admin key actions from new Client IP or Country",
+          "Keys created without expires_at",
+          "Workspace service key creating other keys"
+        ],
+        "containment": {
+          "steps": "DELETE the key via Admin API or dashboard; or rotate with minimum 30-minute transition.",
+          "kills_existing": "unknown",
+          "notes": "Rotation leaves old secret valid at least 30 minutes."
+        },
+        "sample_query": "GET /v1/audit-logs?user_type=api_key&resource_type=...&start_time=...&end_time=...",
+        "unknown": [
+          "Whether request logs record which API key was used (field name)"
+        ],
+        "evidence_refs": [
+          "fc-02f7691c",
+          "fc-46ab8a49",
+          "fc-db5e3ba6",
+          "fc-c13c2749",
+          "fc-5308ecb8"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/models",
+            "reveals": "Models available to the key",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v1/api-keys",
+            "reveals": "API keys in scope",
+            "bulk": true,
+            "scope": "*_api_keys.list",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit method filter lists only POST/PUT/DELETE"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /v1/integrations",
+            "reveals": "Stored provider integrations",
+            "bulk": true,
+            "scope": "organisation_integrations.list",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "POST /v1/logs/exports",
+            "reveals": "Bulk export of request logs (full prompts/responses)",
+            "bulk": true,
+            "scope": "logs.export",
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": "Export",
+            "log_notes": "Audit action 'Export' exists (Enterprise)"
+          }
+        ],
+        "unknown": [
+          "Whoami endpoint"
+        ],
+        "evidence_refs": [
+          "fc-a6646e85",
+          "fc-e877444f",
+          "fc-02f7691c",
+          "fc-ec7d1ad0",
+          "fc-5308ecb8",
+          "fc-538a9eb1"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-02f7691c",
+      "title": "Audit Logs",
+      "url": "https://docs.portkey.ai/docs/product/enterprise-offering/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-46ab8a49",
+      "title": "List Audit Logs",
+      "url": "https://docs.portkey.ai/docs/api-reference/admin-api/control-plane/audit-logs/list-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5308ecb8",
+      "title": "Logs",
+      "url": "https://docs.portkey.ai/docs/product/observability/logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-538a9eb1",
+      "title": "API Keys (AuthN and AuthZ)",
+      "url": "https://docs.portkey.ai/docs/product/enterprise-offering/org-management/api-keys-authn-and-authz",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5803e935",
+      "title": "Create API Key",
+      "url": "https://docs.portkey.ai/docs/api-reference/admin-api/control-plane/api-keys/create-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-61d9e0d0",
+      "title": "Configure API Key Access Permissions for Workspaces",
+      "url": "https://docs.portkey.ai/docs/product/administration/configure-api-key-access-permissions",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a6646e85",
+      "title": "List Models",
+      "url": "https://docs.portkey.ai/docs/api-reference/inference-api/models/models",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-c13c2749",
+      "title": "Delete an API Key",
+      "url": "https://docs.portkey.ai/docs/api-reference/admin-api/control-plane/api-keys/delete-an-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-db5e3ba6",
+      "title": "API Key Rotation",
+      "url": "https://docs.portkey.ai/docs/product/enterprise-offering/org-management/api-key-rotation",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e877444f",
+      "title": "List API Keys",
+      "url": "https://docs.portkey.ai/docs/api-reference/admin-api/control-plane/api-keys/list-api-keys",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ec7d1ad0",
+      "title": "Create a Log Export",
+      "url": "https://docs.portkey.ai/docs/api-reference/admin-api/data-plane/logs/log-exports-beta/create-a-log-export",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

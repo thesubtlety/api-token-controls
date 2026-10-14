@@ -1,0 +1,1020 @@
+{
+ "id": "elastic",
+ "name": "Elastic Cloud",
+ "scope_notes": "Covers Elastic Cloud (Elastic Cloud Hosted / Serverless, Elasticsearch). Covers Elastic Cloud org API keys and Elasticsearch-level credentials on ECH, Serverless and self-managed; Elasticsearch audit logging needs a qualifying subscription, and the org-level Cloud audit trail exists only on FedRAMP Moderate.",
+ "controls": [
+  {
+   "name": "API key expiration (Elastic Cloud)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "elastic-1"
+   ],
+   "what": "Key expires after a preset or date up to one year, or never.",
+   "setting": "Organization > API keys > Create API key > Expiration",
+   "plan": null,
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-292d9e8f"
+   ]
+  },
+  {
+   "name": "Roles on Cloud API keys",
+   "effect": "limit_scope",
+   "applies_to": [
+    "elastic-1"
+   ],
+   "what": "Org-level, cloud resource and connected cluster roles limit what the key can do; Cloud-API-only access is default on Serverless.",
+   "setting": "Create API key > Roles",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-292d9e8f"
+   ]
+  },
+  {
+   "name": "Revoke Cloud API key",
+   "effect": "revoke",
+   "applies_to": [
+    "elastic-1"
+   ],
+   "what": "Deletes the key.",
+   "setting": "Organization > API keys > trash icon; DELETE /api/v1/users/auth/keys/{api_key_id}",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-292d9e8f",
+    "fc-89a2f086"
+   ]
+  },
+  {
+   "name": "xpack.security.authc.api_key.enabled",
+   "effect": "disable",
+   "applies_to": [
+    "elastic-2"
+   ],
+   "what": "Turns off the built-in API key service for the cluster.",
+   "setting": "elasticsearch.yml (static)",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-e2859ba7"
+   ]
+  },
+  {
+   "name": "Role descriptors / access on API key",
+   "effect": "limit_scope",
+   "applies_to": [
+    "elastic-2",
+    "elastic-3"
+   ],
+   "what": "Restricts the key to given privileges and indices.",
+   "setting": "POST /_security/api_key role_descriptors; POST /_security/cross_cluster/api_key access",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-b9e9826b",
+    "fc-2c4ceef9"
+   ]
+  },
+  {
+   "name": "API key expiration (Elasticsearch)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "elastic-2",
+    "elastic-3"
+   ],
+   "what": "Optional expiry; none by default.",
+   "setting": "Kibana API keys > Create API key; expiration field",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-e084e481",
+    "fc-2c4ceef9"
+   ]
+  },
+  {
+   "name": "Invalidate API keys",
+   "effect": "revoke",
+   "applies_to": [
+    "elastic-2",
+    "elastic-3"
+   ],
+   "what": "Invalidated keys fail authentication; can target by owner, user or realm.",
+   "setting": "DELETE /_security/api_key; Kibana API keys > Delete",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-68c78025"
+   ]
+  },
+  {
+   "name": "Delete service account tokens",
+   "effect": "revoke",
+   "applies_to": [
+    "elastic-4"
+   ],
+   "what": "Deletes a named service token.",
+   "setting": "DELETE /_security/service/{namespace}/{service}/credential/token/{name}",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-2c4ceef9"
+   ]
+  },
+  {
+   "name": "IP filters (network security policies)",
+   "effect": "limit_network",
+   "applies_to": [
+    "elastic-2",
+    "elastic-3",
+    "elastic-4"
+   ],
+   "what": "Rejects deployment/project traffic from non-allowed IPs with 403.",
+   "setting": "Organization > Network security > IP filter; apply to deployments",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-c2207027"
+   ]
+  },
+  {
+   "name": "Organization owner / manage workload credentials (Cloud role permission)",
+   "effect": "disable",
+   "applies_to": [
+    "elastic-1"
+   ],
+   "what": "Only organization owners and users who can manage workload credentials can create Cloud API keys; withholding these roles blocks creation.",
+   "setting": "Organization > Members > role assignment",
+   "plan": null,
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-292d9e8f"
+   ]
+  },
+  {
+   "name": "manage_security privilege (cross-cluster API key creation)",
+   "effect": "disable",
+   "applies_to": [
+    "elastic-3"
+   ],
+   "what": "Creating or updating a cross-cluster API key needs manage_security and an Enterprise license; users without it cannot create one.",
+   "setting": "Elasticsearch role cluster privileges",
+   "plan": "Enterprise",
+   "default": "varies",
+   "level": "org",
+   "evidence_refs": [
+    "fc-e084e481"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "elastic-4",
+   "what": "Service tokens cannot be given an expiry.",
+   "kind": "expiry",
+   "evidence_refs": [
+    "fc-80c316d8"
+   ]
+  },
+  {
+   "path_id": "elastic-4",
+   "what": "Built-in service accounts cannot be disabled.",
+   "kind": "disable",
+   "evidence_refs": [
+    "fc-80c316d8"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "IP restriction for the Elastic Cloud API (api.elastic-cloud.com) used with Cloud API keys.",
+  "Whether an org can block creation of Cloud API keys with no expiry (Never).",
+  "Org-level audit log of Cloud API key creation/use outside FedRAMP Moderate.",
+  "Whether ES API keys owned by a SAML user stop working when the user is removed in the IdP.",
+  "Whether xpack.security.authc.api_key.enabled can be set in ECH user settings.",
+  "Whether Cloud API key revocation affects in-flight requests."
+ ],
+ "credentials": [
+  {
+   "id": "elastic-1",
+   "name": "Elastic Cloud API key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Org-owned key sent as 'Authorization: ApiKey' to api.elastic-cloud.com. Manages org, deployments and projects; on Serverless can optionally reach Elasticsearch/Kibana APIs; on ECH no Elasticsearch/Kibana access.",
+    "evidence_refs": [
+     "fc-292d9e8f"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Docs recommend keeping an org-owner Cloud API key to disable SSO enforcement in an emergency, implying keys work while SSO is enforced. Keys survive the creator leaving.",
+    "evidence_refs": [
+     "fc-e9386df7",
+     "fc-292d9e8f"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "IP filters apply to deployment/project traffic; no documented IP restriction for the Elastic Cloud API itself.",
+    "evidence_refs": [
+     "fc-c2207027"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 7776000,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Default 3 months; up to 1 year or Never",
+    "evidence_refs": [
+     "fc-292d9e8f"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Set expiration date",
+    "summary": "Same key reused until expiry; create a new key to rotate.",
+    "evidence_refs": [
+     "fc-292d9e8f"
+    ]
+   },
+   "administration": {
+    "summary": "Organization owners and users with manage workload credentials create keys; owners see and revoke all. Max 500 active keys per org.",
+    "conditions": "Non-owners can assign only roles they hold.",
+    "evidence_refs": [
+     "fc-292d9e8f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Elastic recommends keeping an org-owner Cloud API key to turn off SSO enforcement if the IdP fails, so keys keep working under enforced SSO.",
+     "evidence_refs": [
+      "fc-e9386df7"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The key belongs to the organization and keeps working after its creator leaves, until it expires or is revoked.",
+     "evidence_refs": [
+      "fc-292d9e8f"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Organization > API keys; organization owners can view and revoke all keys in the organization.",
+     "evidence_refs": [
+      "fc-292d9e8f"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Kibana (destination deployment) > [Elastic GovCloud] Organization Audit Logs dashboard; filter elastic_govcloud.org_audit.api_key.id",
+     "api": "POST /api/v1/organizations/{org_id}/audit_logs {\"deployment_id\": \"...\", \"index\": \"logs-elastic_govcloud.org_audit-default\"} to enable delivery",
+     "cli": null,
+     "evidence_refs": [
+      "fc-f7526f33",
+      "fc-33828005"
+     ]
+    },
+    "reads": {
+     "ui": "Discover on logs-elastic_govcloud.org_audit-*: filter elastic_govcloud.org_audit.api_key.id and http.request.method (every Cloud API call is logged)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-f7526f33",
+      "fc-33828005"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque key; sent as Authorization: ApiKey. Response header X-Elastic-Api-Key-Expiration shows expiry."
+    },
+    "log_sources": [
+     {
+      "name": "Elastic Cloud audit trail",
+      "notes": "FedRAMP Moderate only; Platinum/Enterprise; delivered to logs-elastic_govcloud.org_audit-* in a deployment you own; no backfill."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "elastic_govcloud.org_audit.api_key.*",
+      "log": "Elastic Cloud audit trail",
+      "notes": "API key fields mapped by the integration"
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "api_key_id",
+     "organization id",
+     "deployment id"
+    ],
+    "anomaly_cues": [
+     "Keys with expiration Never",
+     "Org-owner keys created by non-admins",
+     "Calls to _reset-password on deployments",
+     "Keys whose creator left the org"
+    ],
+    "containment": {
+     "steps": "Revoke in Organization > API keys or DELETE /api/v1/users/auth/keys/{api_key_id}; bulk via DELETE /api/v1/users/auth/keys.",
+     "kills_existing": "unknown",
+     "notes": "Also rotate any 'elastic' passwords or ES keys the Cloud key could have created."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact event names for key create/delete",
+     "Any audit outside FedRAMP Moderate"
+    ],
+    "evidence_refs": [
+     "fc-292d9e8f",
+     "fc-89a2f086",
+     "fc-8d7c53b5"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /api/v1/account",
+      "reveals": "Current account",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "Only on FedRAMP Moderate audit trail"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /api/v1/organizations",
+      "reveals": "Organizations",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": null
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /api/v1/deployments",
+      "reveals": "Deployments",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": null
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /api/v1/users/auth/keys",
+      "reveals": "Visible API keys",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": null
+     },
+     {
+      "stage": "collection",
+      "call": "POST /api/v1/deployments/{deployment_id}/elasticsearch/{ref_id}/_reset-password",
+      "reveals": "New 'elastic' superuser password, giving data access",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": null
+     }
+    ],
+    "unknown": [
+     "Rate limits"
+    ],
+    "evidence_refs": [
+     "fc-89a2f086",
+     "fc-8d7c53b5"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "elastic-2",
+   "name": "Elasticsearch API key (personal/user API key, incl. Serverless project API keys)",
+   "family": "api_key",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Base64 id:api_key sent as 'Authorization: ApiKey' to Elasticsearch/Kibana. Holds a snapshot of the creator's privileges, or the intersection with given role descriptors.",
+    "evidence_refs": [
+     "fc-e084e481",
+     "fc-b9e9826b",
+     "fc-21daec03"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Key is owned by a user in a realm (e.g. SAML) but works independently of IdP sessions; docs do not state behavior when the IdP user is removed.",
+    "evidence_refs": [
+     "fc-e084e481",
+     "fc-b9e9826b"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "ECH/Serverless IP filters gate all deployment traffic (403); self-managed uses xpack.security.http.filter.*. Not per key.",
+    "evidence_refs": [
+     "fc-c2207027"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "No expiry by default (Kibana quick-create: 90 days)",
+    "evidence_refs": [
+     "fc-e084e481"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Optional expiration",
+    "summary": "Reused until expiry or invalidation.",
+    "evidence_refs": [
+     "fc-e084e481"
+    ]
+   },
+   "administration": {
+    "summary": "Needs manage_api_key or manage_own_api_key; admins with manage_api_key see all keys and owners. Service can be turned off cluster-wide with xpack.security.authc.api_key.enabled: false.",
+    "conditions": "Static setting; availability on ECH user settings not verified.",
+    "evidence_refs": [
+     "fc-e084e481",
+     "fc-e2859ba7"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Kibana API Keys management page shows all users' keys to manage_api_key holders; GET /_security/api_key returns all keys.",
+     "evidence_refs": [
+      "fc-e084e481",
+      "fc-38430e33"
+     ]
+    }
+   },
+   "how": {
+    "disable": {
+     "ui": "Self-managed: elasticsearch.yml xpack.security.authc.api_key.enabled: false (static, restart). ECH: Edit > Elasticsearch > Manage user settings and extensions",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-e2859ba7",
+      "fc-33c04691"
+     ]
+    },
+    "usage": {
+     "ui": "ECH: deployment Edit > Elasticsearch > Manage user settings and extensions > add xpack.security.audit.enabled: true; view in monitoring deployment Discover (elastic-cloud-logs-*), filter apikey.id / authentication.type: API_KEY",
+     "api": "PUT _cluster/settings {\"persistent\":{\"xpack.security.audit.enabled\":true}} (9.5+)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-33c04691",
+      "fc-309fcee8",
+      "fc-2f88b4d7"
+     ]
+    },
+    "reads": {
+     "ui": "Same audit log; filter event.action access_granted and apikey.id (access_granted is in the default include list)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-2f88b4d7",
+      "fc-c307f244",
+      "fc-309fcee8"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Encoded value is base64 of id:api_key."
+    },
+    "log_sources": [
+     {
+      "name": "Elasticsearch audit log",
+      "notes": "Disabled by default; subscription-gated; on ECH requires logging and monitoring to a monitoring deployment."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "apikey.id",
+      "log": "Elasticsearch audit log",
+      "notes": "Present for API key authentication"
+     },
+     {
+      "field": "apikey.name",
+      "log": "Elasticsearch audit log",
+      "notes": null
+     },
+     {
+      "field": "authentication.type",
+      "log": "Elasticsearch audit log",
+      "notes": "API_KEY"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "create_apikey",
+      "stage": "create",
+      "notes": "Needs security_config_change event type"
+     },
+     {
+      "event": "change_apikey",
+      "stage": "modify",
+      "notes": "Needs security_config_change"
+     },
+     {
+      "event": "authentication_success",
+      "stage": "use",
+      "notes": null
+     },
+     {
+      "event": "access_granted",
+      "stage": "use",
+      "notes": "Per-action authorization"
+     },
+     {
+      "event": "invalidate_apikeys",
+      "stage": "revoke",
+      "notes": "Needs security_config_change"
+     }
+    ],
+    "correlation_keys": [
+     "apikey.id",
+     "user.name",
+     "user.realm",
+     "origin.address",
+     "request.id"
+    ],
+    "anomaly_cues": [
+     "Keys without expiry created by admins",
+     "authentication.type API_KEY from new origin.address",
+     "Bulk _search or scroll by API key"
+    ],
+    "containment": {
+     "steps": "DELETE /_security/api_key with ids, or by username/realm_name to kill all of a user's keys.",
+     "kills_existing": "yes",
+     "notes": "Invalidated keys fail authentication."
+    },
+    "sample_query": "event.action:authentication_success and authentication.type:API_KEY and apikey.id:<id>",
+    "unknown": [],
+    "evidence_refs": [
+     "fc-68c78025",
+     "fc-2f88b4d7",
+     "fc-985046f7"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /_security/_authenticate",
+      "reveals": "Identity, roles, api_key info",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "authentication_success",
+      "log_notes": "If audit logging enabled"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /_security/api_key",
+      "reveals": "Own keys, or all keys with read_security/manage_api_key",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "access_granted",
+      "log_notes": null
+     },
+     {
+      "stage": "collection",
+      "call": "GET /_search",
+      "reveals": "Documents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "access_granted",
+      "log_notes": "Audit log, subscription-gated"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-2f88b4d7",
+     "fc-985046f7",
+     "fc-2c4ceef9"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "elastic-3",
+   "name": "Cross-cluster API key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Created on the remote cluster and stored in the local cluster keystore; authenticates only on the remote cluster interface (port 9443), not REST.",
+    "evidence_refs": [
+     "fc-2c4ceef9",
+     "fc-813d5a01"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Cluster-to-cluster credential.",
+    "evidence_refs": [
+     "fc-2c4ceef9"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Remote cluster filters (ECH) and xpack.security.remote_cluster.filter.* (self-managed); deployment IP filters.",
+    "evidence_refs": [
+     "fc-c2207027"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Never expires by default",
+    "evidence_refs": [
+     "fc-2c4ceef9"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Optional expiration",
+    "summary": "Replace key in local keystore to rotate.",
+    "evidence_refs": [
+     "fc-813d5a01"
+    ]
+   },
+   "administration": {
+    "summary": "Needs manage_security and Enterprise license; access limited exactly to the access property.",
+    "conditions": "Enterprise license",
+    "evidence_refs": [
+     "fc-e084e481",
+     "fc-2c4ceef9"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /_security/api_key returns all API keys regardless of ownership for read_security/manage_api_key holders.",
+     "evidence_refs": [
+      "fc-38430e33"
+     ]
+    }
+   },
+   "how": {
+    "disable": {
+     "ui": "Kibana > Roles management page > Create role / edit role: withhold manage_security cluster privilege",
+     "api": "PUT /_security/role/{name}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-4debb07c",
+      "fc-97df89c9",
+      "fc-b87e9ee1"
+     ]
+    },
+    "usage": {
+     "ui": "Enable audit logging on the remote (fulfilling) cluster (Manage user settings > xpack.security.audit.enabled: true); filter apikey.id",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-33c04691",
+      "fc-2f88b4d7"
+     ]
+    },
+    "reads": {
+     "ui": "Remote cluster audit log: filter access_granted and apikey.id",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-2f88b4d7",
+      "fc-309fcee8"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Encoded API key added to the local cluster keystore."
+    },
+    "log_sources": [
+     {
+      "name": "Elasticsearch audit log (remote cluster)",
+      "notes": "Same gating as above."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "apikey.id",
+      "log": "Elasticsearch audit log",
+      "notes": null
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "create_apikey",
+      "stage": "create",
+      "notes": "Needs security_config_change"
+     },
+     {
+      "event": "invalidate_apikeys",
+      "stage": "revoke",
+      "notes": null
+     }
+    ],
+    "correlation_keys": [
+     "apikey.id",
+     "origin.address"
+    ],
+    "anomaly_cues": [
+     "Cross-cluster key with broad index patterns",
+     "Unknown remote cluster connecting"
+    ],
+    "containment": {
+     "steps": "Invalidate via DELETE /_security/api_key on the remote cluster.",
+     "kills_existing": "yes",
+     "notes": null
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-68c78025",
+     "fc-2f88b4d7"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /<index>/_search (cross-cluster search into the remote cluster)",
+      "reveals": "Documents in remote indices the key grants search access to",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "access_granted",
+      "log_notes": "Elasticsearch audit log (access_granted is in the default include list once auditing is enabled); needs a qualifying subscription. Key identified by apikey.id."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-813d5a01",
+     "fc-89efc68a",
+     "fc-2f88b4d7",
+     "fc-985046f7",
+     "fc-c307f244"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "elastic-4",
+   "name": "Service account token",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer token for a service account (e.g. elastic/fleet-server, elastic/kibana) with fixed privileges.",
+    "evidence_refs": [
+     "fc-80c316d8"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Service-only credential, not usable by people.",
+    "evidence_refs": [
+     "fc-80c316d8"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Only via deployment IP filters / HTTP filters; not per token.",
+    "evidence_refs": [
+     "fc-c2207027"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Never expires",
+    "evidence_refs": [
+     "fc-80c316d8"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "None",
+    "summary": "Create new token and delete old one.",
+    "evidence_refs": [
+     "fc-80c316d8"
+    ]
+   },
+   "administration": {
+    "summary": "manage_service_account for built-in accounts; manage_security for user-managed accounts. Built-in accounts are always enabled.",
+    "conditions": "User-managed service accounts appear in current API reference with an enabled flag.",
+    "evidence_refs": [
+     "fc-80c316d8",
+     "fc-2c4ceef9"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Service accounts are for external services, not individual users.",
+     "evidence_refs": [
+      "fc-80c316d8"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Get service accounts API, then get service account credentials API per account (includes file-backed tokens).",
+     "evidence_refs": [
+      "fc-80c316d8"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Enable audit logging (xpack.security.audit.enabled: true); filter authentication.token.name",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-33c04691",
+      "fc-2f88b4d7",
+      "fc-309fcee8"
+     ]
+    },
+    "reads": {
+     "ui": "Audit log: filter access_granted and authentication.token.name",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-2f88b4d7"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Bearer token; secret part at least 22 chars."
+    },
+    "log_sources": [
+     {
+      "name": "Elasticsearch audit log",
+      "notes": "Same gating."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "authentication.token.name",
+      "log": "Elasticsearch audit log",
+      "notes": null
+     },
+     {
+      "field": "authentication.token.type",
+      "log": "Elasticsearch audit log",
+      "notes": null
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "create_service_token",
+      "stage": "create",
+      "notes": "Needs security_config_change"
+     },
+     {
+      "event": "delete_service_token",
+      "stage": "revoke",
+      "notes": "Needs security_config_change"
+     }
+    ],
+    "correlation_keys": [
+     "user.name (e.g. elastic/fleet-server)",
+     "authentication.token.name",
+     "origin.address"
+    ],
+    "anomaly_cues": [
+     "Service token used from outside Fleet/Kibana hosts",
+     "New token names"
+    ],
+    "containment": {
+     "steps": "Delete the token via API; file-backed tokens need the service_tokens file edited.",
+     "kills_existing": "yes",
+     "notes": "Index-backed token cache clears automatically when the security index changes (for example, a token delete); file-backed cache clears on file change. No derived tokens."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-80c316d8",
+     "fc-2c4ceef9",
+     "fc-2f88b4d7",
+     "fc-b936b3a6"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /_security/_authenticate",
+      "reveals": "Service account and token name",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "authentication_success",
+      "log_notes": null
+     },
+     {
+      "stage": "collection",
+      "call": "GET /<index>/_search",
+      "reveals": "Documents in indices covered by the service account's fixed privileges",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "access_granted",
+      "log_notes": "Elasticsearch audit log (access_granted is in the default include list once auditing is enabled); needs a qualifying subscription. Token identified by authentication.token.name."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-80c316d8",
+     "fc-2f88b4d7",
+     "fc-89efc68a",
+     "fc-985046f7",
+     "fc-c307f244"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

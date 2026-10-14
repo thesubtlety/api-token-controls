@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "API Token Controls v2",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "as_of",
+    "providers",
+    "auth_paths",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "title",
+          "retrieved_at"
+        ]
+      }
+    },
+    "providers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "controls",
+          "no_control"
+        ],
+        "properties": {
+          "controls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "effect",
+                "applies_to",
+                "what",
+                "setting",
+                "default",
+                "evidence_refs"
+              ],
+              "properties": {
+                "effect": {
+                  "enum": [
+                    "revoke",
+                    "disable",
+                    "require_approval",
+                    "limit_scope",
+                    "limit_resources",
+                    "limit_network",
+                    "limit_lifetime",
+                    "require_sso",
+                    "require_rotation",
+                    "other"
+                  ]
+                },
+                "applies_to": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "plan": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "default": {
+                  "enum": [
+                    "on",
+                    "off",
+                    "varies",
+                    "unknown"
+                  ]
+                },
+                "evidence_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "no_control": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "path_id",
+                "what",
+                "kind",
+                "evidence_refs"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "disable",
+                    "network",
+                    "expiry",
+                    "kill",
+                    "other"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "auth_paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "provider_id",
+          "name",
+          "family",
+          "principal",
+          "lifecycle",
+          "ip_restriction",
+          "lifetime",
+          "renewal",
+          "identity",
+          "incident_response",
+          "post_use"
+        ],
+        "properties": {
+          "family": {
+            "enum": [
+              "oauth",
+              "api_key",
+              "pat",
+              "jwt",
+              "federation",
+              "basic",
+              "job_token",
+              "hmac",
+              "webhook",
+              "ssh_key",
+              "certificate"
+            ]
+          },
+          "principal": {
+            "enum": [
+              "user",
+              "service",
+              "user_or_service"
+            ]
+          },
+          "lifecycle": {
+            "enum": [
+              "current",
+              "legacy"
+            ]
+          },
+          "federation": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "enum": [
+                  "supported",
+                  "limited",
+                  "not_verified",
+                  "not_applicable",
+                  "not_supported"
+                ]
+              }
+            }
+          },
+          "ip_restriction": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "enum": [
+                  "supported",
+                  "conditional",
+                  "excluded",
+                  "unknown",
+                  "not_supported"
+                ]
+              },
+              "enforcement_stage": {
+                "enum": [
+                  "api_request",
+                  "token_issuance",
+                  "login_only",
+                  "mixed",
+                  "unknown"
+                ]
+              }
+            }
+          },
+          "lifetime": {
+            "type": "object",
+            "properties": {
+              "basis": {
+                "enum": [
+                  "absolute",
+                  "inactivity",
+                  "none",
+                  "policy",
+                  "unknown",
+                  "job"
+                ]
+              },
+              "default_seconds": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "maximum_seconds": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          },
+          "identity": {
+            "type": "object",
+            "required": [
+              "sso",
+              "offboard",
+              "inventory"
+            ],
+            "properties": {
+              "sso": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "yes",
+                      "no",
+                      "partial",
+                      "unknown"
+                    ]
+                  }
+                }
+              },
+              "offboard": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "yes",
+                      "no",
+                      "partial",
+                      "not_applicable",
+                      "unknown"
+                    ]
+                  }
+                }
+              },
+              "inventory": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "enum": [
+                      "yes",
+                      "no",
+                      "partial",
+                      "unknown"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "incident_response": {
+            "type": "object",
+            "required": [
+              "log_sources",
+              "credential_id_fields",
+              "lifecycle_events",
+              "containment",
+              "evidence_refs"
+            ],
+            "properties": {
+              "containment": {
+                "type": "object",
+                "properties": {
+                  "kills_existing": {
+                    "enum": [
+                      "yes",
+                      "no",
+                      "partial",
+                      "unknown"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "post_use": {
+            "type": "object",
+            "required": [
+              "calls",
+              "evidence_refs"
+            ],
+            "properties": {
+              "calls": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "stage",
+                    "call",
+                    "logged"
+                  ],
+                  "properties": {
+                    "stage": {
+                      "enum": [
+                        "recon",
+                        "discovery",
+                        "enumeration",
+                        "collection"
+                      ]
+                    },
+                    "logged": {
+                      "enum": [
+                        "yes",
+                        "no",
+                        "plan",
+                        "unknown"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

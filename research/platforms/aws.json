@@ -1,0 +1,2504 @@
+{
+ "id": "aws",
+ "name": "AWS",
+ "scope_notes": "Covers Amazon Web Services (IAM, STS, IAM Identity Center, IAM Roles Anywhere, Amazon Bedrock). All features are available in every AWS account; SCPs and centralized root access require AWS Organizations, and Control Tower controls require AWS Control Tower.",
+ "controls": [
+  {
+   "name": "Deactivate / delete access key (UpdateAccessKey, DeleteAccessKey)",
+   "effect": "revoke",
+   "applies_to": [
+    "aws-1",
+    "aws-2"
+   ],
+   "what": "Setting a key Inactive or deleting it stops all further use of that key.",
+   "setting": "IAM console > Users > Security credentials > Actions > Deactivate/Delete; API UpdateAccessKey / DeleteAccessKey",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-128b9c71"
+   ]
+  },
+  {
+   "name": "Service control policy (SCP)",
+   "effect": "disable",
+   "applies_to": [
+    "aws-1",
+    "aws-7"
+   ],
+   "what": "An SCP can deny actions such as iam:CreateAccessKey or iam:CreateServiceSpecificCredential for all IAM users and roles in member accounts.",
+   "setting": "AWS Organizations > Policies > Service control policies",
+   "plan": "AWS Organizations (all features)",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-081441e9"
+   ]
+  },
+  {
+   "name": "AWS-GR_RESTRICT_ROOT_USER_ACCESS_KEYS",
+   "effect": "disable",
+   "applies_to": [
+    "aws-2"
+   ],
+   "what": "Control Tower preventive control (SCP) that denies iam:CreateAccessKey for the root principal.",
+   "setting": "AWS Control Tower > Controls",
+   "plan": "AWS Control Tower",
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-1d5dee53"
+   ]
+  },
+  {
+   "name": "Root access management (Root credentials management)",
+   "effect": "revoke",
+   "applies_to": [
+    "aws-2"
+   ],
+   "what": "Lets the management account or delegated admin delete member-account root passwords, access keys and certificates; new accounts get no root credentials.",
+   "setting": "IAM console > Root access management > Enable",
+   "plan": "AWS Organizations",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-3684e253"
+   ]
+  },
+  {
+   "name": "aws:SourceIp deny policy",
+   "effect": "limit_network",
+   "applies_to": [
+    "aws-1",
+    "aws-2",
+    "aws-3",
+    "aws-4",
+    "aws-5",
+    "aws-6",
+    "aws-7",
+    "aws-8"
+   ],
+   "what": "Identity policy or SCP that denies any request from outside listed CIDR ranges.",
+   "setting": "IAM policy / SCP with NotIpAddress aws:SourceIp",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-bf544ac3",
+    "fc-ae269843"
+   ]
+  },
+  {
+   "name": "Time-bound policy (aws:CurrentTime)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "aws-1"
+   ],
+   "what": "Inline deny policy that blocks all actions after a set date, giving long-term keys an effective expiry.",
+   "setting": "IAM > Users > Permissions > Create inline policy",
+   "plan": null,
+   "default": "off",
+   "level": "user",
+   "evidence_refs": [
+    "fc-2cbd2f32"
+   ]
+  },
+  {
+   "name": "Maximum session duration",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "aws-3",
+    "aws-4"
+   ],
+   "what": "Caps role session length at 1-12 hours (default 1 hour).",
+   "setting": "IAM > Roles > Edit > Maximum session duration; UpdateRole",
+   "plan": null,
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-f8572ed3"
+   ]
+  },
+  {
+   "name": "Revoke active sessions (AWSRevokeOlderSessions)",
+   "effect": "revoke",
+   "applies_to": [
+    "aws-3",
+    "aws-4",
+    "aws-6"
+   ],
+   "what": "Attaches a deny-all policy for sessions issued before now, invalidating existing temporary credentials for the role.",
+   "setting": "IAM > Roles > role > Revoke sessions tab",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-12bba687"
+   ]
+  },
+  {
+   "name": "aws:TokenIssueTime deny policy",
+   "effect": "revoke",
+   "applies_to": [
+    "aws-3",
+    "aws-4",
+    "aws-6",
+    "aws-8"
+   ],
+   "what": "Deny policy that blocks temporary credentials issued before a chosen time; does not affect long-term keys.",
+   "setting": "IAM policy with DateLessThan aws:TokenIssueTime",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-12bba687"
+   ]
+  },
+  {
+   "name": "Permission set session duration",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "aws-5"
+   ],
+   "what": "Sets how long Identity Center role credentials last (1-12 h, default 1 h).",
+   "setting": "IAM Identity Center > Permission sets > Session duration",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-25d38830"
+   ]
+  },
+  {
+   "name": "Deny policy for Identity Center user (SCP with user ID)",
+   "effect": "revoke",
+   "applies_to": [
+    "aws-5"
+   ],
+   "what": "Pre-staged SCP deny that, once the user ID is added, blocks all actions from the user's active role sessions.",
+   "setting": "AWS Organizations SCP",
+   "plan": "AWS Organizations",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-123babcb",
+    "fc-03b338d6"
+   ]
+  },
+  {
+   "name": "Import CRL (ImportCrl)",
+   "effect": "revoke",
+   "applies_to": [
+    "aws-6"
+   ],
+   "what": "Imports a CA revocation list so revoked certificates can no longer create sessions.",
+   "setting": "API ImportCrl / CLI import-crl",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-5fb688a0"
+   ]
+  },
+  {
+   "name": "iam:ServiceSpecificCredentialAgeDays",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "aws-7"
+   ],
+   "what": "Policy condition that caps the expiration of new long-term Bedrock keys.",
+   "setting": "IAM policy on iam:CreateServiceSpecificCredential",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-136748fa"
+   ]
+  },
+  {
+   "name": "bedrock:CallWithBearerToken deny",
+   "effect": "disable",
+   "applies_to": [
+    "aws-7",
+    "aws-8"
+   ],
+   "what": "Denying this action blocks use of Bedrock API keys; bedrock:bearerTokenType targets SHORT_TERM or LONG_TERM.",
+   "setting": "IAM policy / SCP",
+   "plan": null,
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-136748fa"
+   ]
+  },
+  {
+   "name": "Deactivate / Reset / Delete long-term API key",
+   "effect": "revoke",
+   "applies_to": [
+    "aws-7"
+   ],
+   "what": "Disables, rotates or removes a long-term Bedrock key.",
+   "setting": "Bedrock console > API keys > Actions; UpdateServiceSpecificCredential / ResetServiceSpecificCredential / DeleteServiceSpecificCredential",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-136748fa"
+   ]
+  },
+  {
+   "name": "IAM Access Analyzer unused access",
+   "effect": "other",
+   "applies_to": [
+    "aws-1"
+   ],
+   "what": "Generates findings for IAM user access keys unused within a set window.",
+   "setting": "IAM Access Analyzer > Create unused access analyzer",
+   "plan": "Paid feature (pricing not verified)",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-8c352022"
+   ]
+  },
+  {
+   "name": "Role trust policy",
+   "effect": "disable",
+   "applies_to": [
+    "aws-3",
+    "aws-4"
+   ],
+   "what": "The trust policy decides which principals can assume a role; removing a principal stops new sessions for it.",
+   "setting": "IAM console > Roles > Trust relationships / aws iam update-assume-role-policy",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-8307f06f"
+   ]
+  },
+  {
+   "name": "MFA condition in role trust policy (aws:MultiFactorAuthPresent)",
+   "effect": "require_sso",
+   "applies_to": [
+    "aws-3"
+   ],
+   "what": "A trust policy can require that the caller authenticated with MFA before assuming the role.",
+   "setting": "Role trust policy Condition aws:MultiFactorAuthPresent",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-56f0ccfa"
+   ]
+  },
+  {
+   "name": "Delete IAM identity provider",
+   "effect": "revoke",
+   "applies_to": [
+    "aws-4"
+   ],
+   "what": "Deleting the IAM OIDC or SAML identity provider removes the trust used for federated role sessions.",
+   "setting": "IAM console > Identity providers > Delete",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-7376f47d"
+   ]
+  },
+  {
+   "name": "Disable user access (IAM Identity Center)",
+   "effect": "revoke",
+   "applies_to": [
+    "aws-5"
+   ],
+   "what": "Disabling or deleting an Identity Center user blocks new portal sign-in and new IAM role sessions.",
+   "setting": "IAM Identity Center console > Users",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-d7f8d081"
+   ]
+  },
+  {
+   "name": "DisableTrustAnchor",
+   "effect": "disable",
+   "applies_to": [
+    "aws-6"
+   ],
+   "what": "A disabled trust anchor makes temporary credential requests that specify it unauthorized.",
+   "setting": "POST /trustanchor/{trustAnchorId}/disable",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-9321c566"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "aws-1",
+   "what": "No built-in expiry for IAM user access keys.",
+   "kind": "expiry",
+   "evidence_refs": [
+    "fc-a9f9573f"
+   ]
+  },
+  {
+   "path_id": "aws-2",
+   "what": "IAM policies cannot restrict the root user's permissions.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-e737228d"
+   ]
+  },
+  {
+   "path_id": "aws-3",
+   "what": "Sessions of service-linked roles cannot be revoked.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-12bba687"
+   ]
+  },
+  {
+   "path_id": "aws-6",
+   "what": "No live OCSP or CRL distribution point checks; revocation needs a manual CRL import.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-5fb688a0"
+   ]
+  },
+  {
+   "path_id": "aws-1",
+   "what": "sts:GetCallerIdentity cannot be denied, so any valid key can confirm its identity.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-3ae233ca"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Whether long-term Bedrock API keys can be set to never expire, and their maximum lifetime.",
+  "Token format/prefix for Bedrock API keys (not documented on fetched pages).",
+  "Which CloudTrail field identifies the specific Bedrock API key on a request (key value is not logged).",
+  "Default session duration for IAM Roles Anywhere when durationSeconds is omitted.",
+  "Exact CloudTrail eventName strings for CreateAccessKey/UpdateAccessKey/DeleteAccessKey were not shown on fetched pages (they match the IAM API action names, which CloudTrail logs)."
+ ],
+ "credentials": [
+  {
+   "id": "aws-1",
+   "name": "IAM user access keys",
+   "family": "hmac",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Access key ID (AKIA...) plus secret access key used to SigV4-sign AWS API and CLI requests. Up to two keys per IAM user.",
+    "evidence_refs": [
+     "fc-405c7e5c",
+     "fc-a9f9573f"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Keys belong to IAM users, not to an external IdP. AWS recommends federation with temporary credentials for humans and roles for workloads; no doc states whether IdP sign-in policy applies to these keys (it is not part of the signing flow).",
+    "evidence_refs": [
+     "fc-028a3561"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Not a setting: an identity policy or SCP that denies requests when aws:SourceIp is outside allowed ranges. It is evaluated on every signed API request. aws:SourceIp is absent for calls through VPC endpoints (use aws:VpcSourceIp) and SCPs do not cover the management account.",
+    "evidence_refs": [
+     "fc-bf544ac3",
+     "fc-ae269843",
+     "fc-081441e9"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "conditional",
+    "summary": "Never expire; a time-bound deny policy (aws:CurrentTime) can cut them off",
+    "evidence_refs": [
+     "fc-a9f9573f",
+     "fc-2cbd2f32"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "Same key pair is reused until deactivated or deleted; rotation is manual (create second key, switch, deactivate, delete).",
+    "evidence_refs": [
+     "fc-a9f9573f",
+     "fc-128b9c71"
+    ]
+   },
+   "administration": {
+    "summary": "Admins with IAM permissions create, deactivate and delete keys; SCPs/IAM policies can deny iam:CreateAccessKey and restrict what the user can call.",
+    "conditions": "SCPs need AWS Organizations and do not apply to the management account.",
+    "evidence_refs": [
+     "fc-128b9c71",
+     "fc-081441e9"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "AWS says IAM user access keys cannot be used with MFA-protected API access, and they are not issued through an IdP.",
+     "evidence_refs": [
+      "fc-56f0ccfa"
+     ]
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Access keys belong to the IAM user; deleting the IAM user deletes its keys. IAM users are not tied to IdP/SCIM deprovisioning.",
+     "evidence_refs": [
+      "fc-12d20ce6"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "The IAM credential report lists every user in the account with access key status.",
+     "evidence_refs": [
+      "fc-23db6390"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "IAM console > Credential report > Download Report",
+     "api": "GenerateCredentialReport, then GetCredentialReport",
+     "cli": "aws iam generate-credential-report; aws iam get-credential-report",
+     "evidence_refs": [
+      "fc-23db6390"
+     ]
+    },
+    "network": {
+     "ui": "IAM console > Users (or Roles) > name > Permissions tab > edit policy > JSON: Deny * with NotIpAddress aws:SourceIp; or AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account",
+     "api": null,
+     "cli": "aws iam put-user-policy (inline deny) or aws organizations create-policy + attach-policy",
+     "evidence_refs": [
+      "fc-bf544ac3",
+      "fc-14f20066",
+      "fc-72343915",
+      "fc-b9b7e785"
+     ]
+    },
+    "reads": {
+     "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+     "api": null,
+     "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+     "evidence_refs": [
+      "fc-bcd7adf9",
+      "fc-0b07a9e0"
+     ]
+    },
+    "kill": {
+     "ui": "IAM console > Users > user > Security credentials > Access keys > Actions > Deactivate, then Delete; add an inline deny policy on the user to cut off temporary credentials already minted",
+     "api": "UpdateAccessKey (Status=Inactive), DeleteAccessKey",
+     "cli": "aws iam update-access-key --status Inactive; aws iam delete-access-key; aws iam put-user-policy",
+     "evidence_refs": [
+      "fc-4ce033de",
+      "fc-e737228d",
+      "fc-14f20066"
+     ]
+    },
+    "offboard": {
+     "ui": "IAM console > Users > select user > Delete (deactivate active access keys first)",
+     "api": null,
+     "cli": "aws iam delete-user (after removing keys, policies, groups)",
+     "evidence_refs": [
+      "fc-12d20ce6"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "AKIA",
+     "notes": "Access key ID AKIA...; 40-char secret not logged."
+    },
+    "log_sources": [
+     {
+      "name": "AWS CloudTrail event history",
+      "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+     },
+     {
+      "name": "CloudTrail trail / event data store",
+      "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+     },
+     {
+      "name": "IAM credential report / GetAccessKeyLastUsed",
+      "notes": "Last-used date, service, Region; first use per 15 min only."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userIdentity.accessKeyId",
+      "log": "CloudTrail",
+      "notes": "Key ID used to sign the request; may be empty for security reasons."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "CreateAccessKey",
+      "stage": "create",
+      "notes": "IAM API action; CloudTrail logs all IAM calls."
+     },
+     {
+      "event": "UpdateAccessKey",
+      "stage": "revoke",
+      "notes": "Status Inactive."
+     },
+     {
+      "event": "DeleteAccessKey",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "userIdentity.accessKeyId",
+     "userIdentity.arn",
+     "sourceIPAddress",
+     "userAgent"
+    ],
+    "anomaly_cues": [
+     "GetCallerIdentity from a new IP or user agent",
+     "GuardDuty UnauthorizedAccess:IAMUser/InstanceCredentialExfiltration.OutsideAWS",
+     "Key used after long idle period (credential report)"
+    ],
+    "containment": {
+     "steps": "UpdateAccessKey Status=Inactive, then DeleteAccessKey. Also attach aws:TokenIssueTime deny to the user to block STS sessions the key may have minted.",
+     "kills_existing": "partial",
+     "notes": "Deactivation stops the key immediately, but temporary credentials already obtained with it (GetSessionToken/AssumeRole) stay valid until expiry unless permissions are also changed."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-a9f9573f",
+     "fc-128b9c71",
+     "fc-7df0d702",
+     "fc-024655eb",
+     "fc-cfcea12e",
+     "fc-bcd7adf9",
+     "fc-23db6390",
+     "fc-20863948",
+     "fc-e737228d",
+     "fc-d34f092b"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST sts:GetCallerIdentity",
+      "reveals": "Account, ARN, user/role ID",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetCallerIdentity",
+      "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GetAccountAuthorizationDetails",
+      "reveals": "All IAM users, groups, roles, policies",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetAccountAuthorizationDetails",
+      "log_notes": "IAM management event."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET / (s3:ListBuckets)",
+      "reveals": "All buckets owned by the account",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": "ListBuckets",
+      "log_notes": "Management/data classification not verified on fetched pages."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{Key} (s3:GetObject)",
+      "reveals": "Object contents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "GetObject",
+      "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-024655eb",
+     "fc-bcd7adf9",
+     "fc-3ae233ca",
+     "fc-e422ae4f",
+     "fc-0ec1c9ec",
+     "fc-a8e9c769"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "AWS User API Key Created",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_iam_user_key_created.yml",
+     "detects": "An IAM user access key was created by a different principal than the key owner."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS IAM Backdoor Users Keys",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_iam_backdoor_users_keys.yml",
+     "detects": "CreateAccessKey where the caller is not the user receiving the key."
+    },
+    {
+     "source": "Panther",
+     "title": "New IAM Credentials Updated",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_update_credentials.yml",
+     "detects": "Successful creation of access keys, users, or login profiles, or password changes."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS IAM S3Browser User or AccessKey Creation",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_iam_s3browser_user_or_accesskey_creation.yml",
+     "detects": "IAM user or access key creation from the S3 Browser user agent."
+    },
+    {
+     "source": "Panther",
+     "title": "AWS IAM Access Key Compromise Detection",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_key_compromised.yml",
+     "detects": "AWS attached an exposed-credential quarantine policy to a user whose access key was found leaked."
+    },
+    {
+     "source": "Panther",
+     "title": "AWS Compromised IAM Key Quarantine",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_iam_compromised_key_quarantine.yml",
+     "detects": "The AWSCompromisedKeyQuarantineV2 managed policy was attached to a user, group, or role."
+    },
+    {
+     "source": "Panther",
+     "title": "AWS.CloudTrail.UserAccessKeyAuth",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_cloudtrail_useraccesskeyauth.yml",
+     "detects": "Any successful API call made with a long-term IAM user access key (key ID starting with AKIA)."
+    },
+    {
+     "source": "Panther",
+     "title": "AWS STS GetSessionToken by IAM User",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_sts_getsessiontoken_misuse.yml",
+     "detects": "An IAM user called GetSessionToken to turn long-term keys into temporary credentials."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS STS GetSessionToken Misuse",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_sts_getsessiontoken_misuse.yml",
+     "detects": "GetSessionToken called by an IAM user."
+    },
+    {
+     "source": "Panther",
+     "title": "AWS STS GetCallerIdentity via TruffleHog",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_sts_getcalleridentity_trufflehog.yml",
+     "detects": "GetCallerIdentity with a TruffleHog user agent, used to check whether leaked access keys still work."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS STS GetCallerIdentity Enumeration Via TruffleHog",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_sts_getcalleridentity_trufflehog.yml",
+     "detects": "GetCallerIdentity with a TruffleHog user agent."
+    },
+    {
+     "source": "Sigma",
+     "title": "PUA - AWS TruffleHog Execution",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_cloudtrail_pua_trufflehog.yml",
+     "detects": "Any CloudTrail event with the TruffleHog user agent."
+    },
+    {
+     "source": "Panther",
+     "title": "Detect Reconnaissance from IAM Users",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_iam_user_recon_denied.yml",
+     "detects": "An IAM user hit AccessDenied on List/Describe/Get calls in common services, a sign of a stolen key being used for recon."
+    },
+    {
+     "source": "Panther",
+     "title": "AWS Console GetSigninToken Potential Abuse",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_console_getsignintoken.yml",
+     "detects": "GetSigninToken from a non-SSO user agent, used to turn CLI credentials into a console session."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS Console GetSigninToken Potential Abuse",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_console_getsignintoken.yml",
+     "detects": "GetSigninToken from a user agent other than the console federation endpoint."
+    }
+   ]
+  },
+  {
+   "id": "aws-2",
+   "name": "Root user access keys",
+   "family": "hmac",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Access key pair for the AWS account root user; signs API calls with full, unrestrictable account access.",
+    "evidence_refs": [
+     "fc-405c7e5c",
+     "fc-4c37fa68",
+     "fc-e737228d"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Root keys are tied to the account root user, not to any IdP. Docs do not discuss IdP policy for them.",
+    "evidence_refs": [
+     "fc-4c37fa68"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Only via an SCP on member accounts with aws:SourceIp. IAM identity policies cannot be attached to the root user, and SCPs do not affect the management account.",
+    "evidence_refs": [
+     "fc-bf544ac3",
+     "fc-081441e9",
+     "fc-e737228d"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "Long-term, no expiry",
+    "evidence_refs": [
+     "fc-405c7e5c",
+     "fc-a9f9573f"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "none",
+    "summary": "Reused until deleted; up to two keys.",
+    "evidence_refs": [
+     "fc-405c7e5c"
+    ]
+   },
+   "administration": {
+    "summary": "Only the root user can create its keys. With centralized root access (AWS Organizations), the management account or delegated admin can delete member-account root keys, and new accounts start without root credentials. Control Tower provides an SCP denying root iam:CreateAccessKey.",
+    "conditions": "Requires AWS Organizations; centralized root access must be enabled.",
+    "evidence_refs": [
+     "fc-1d5dee53",
+     "fc-3684e253"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "AWS says root user access keys cannot be used with MFA-protected API access.",
+     "evidence_refs": [
+      "fc-56f0ccfa"
+     ]
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "The IAM credential report includes the root user and access key status for each account.",
+     "evidence_refs": [
+      "fc-23db6390"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "IAM console > Credential report > Download Report",
+     "api": "GenerateCredentialReport, then GetCredentialReport",
+     "cli": "aws iam generate-credential-report; aws iam get-credential-report",
+     "evidence_refs": [
+      "fc-23db6390"
+     ]
+    },
+    "network": {
+     "ui": "AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account (member accounts only)",
+     "api": null,
+     "cli": "aws organizations create-policy --type SERVICE_CONTROL_POLICY; aws organizations attach-policy",
+     "evidence_refs": [
+      "fc-bf544ac3",
+      "fc-72343915",
+      "fc-b9b7e785"
+     ]
+    },
+    "reads": {
+     "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+     "api": null,
+     "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+     "evidence_refs": [
+      "fc-bcd7adf9",
+      "fc-0b07a9e0"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "AKIA",
+     "notes": "Same AKIA format as IAM user keys."
+    },
+    "log_sources": [
+     {
+      "name": "AWS CloudTrail event history",
+      "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+     },
+     {
+      "name": "CloudTrail trail / event data store",
+      "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userIdentity.accessKeyId",
+      "log": "CloudTrail",
+      "notes": "Key ID used to sign the request; may be empty for security reasons."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "CreateAccessKey",
+      "stage": "create",
+      "notes": "Root-only; console or API."
+     },
+     {
+      "event": "DeleteAccessKey",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "userIdentity.type Root",
+     "userIdentity.accessKeyId",
+     "sourceIPAddress"
+    ],
+    "anomaly_cues": [
+     "Any root key use",
+     "Root key creation in a member account"
+    ],
+    "containment": {
+     "steps": "Delete the key as root, or from the management account via centralized root access management.",
+     "kills_existing": "yes",
+     "notes": "Root permissions cannot be scoped down by IAM policy, so deletion is the only fix."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether temporary credentials created by root via GetSessionToken survive key deletion."
+    ],
+    "evidence_refs": [
+     "fc-a9f9573f",
+     "fc-024655eb",
+     "fc-3684e253",
+     "fc-e737228d"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST sts:GetCallerIdentity",
+      "reveals": "Account, ARN, user/role ID",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetCallerIdentity",
+      "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GetAccountAuthorizationDetails",
+      "reveals": "All IAM users, groups, roles, policies",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetAccountAuthorizationDetails",
+      "log_notes": "IAM management event."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET / (s3:ListBuckets)",
+      "reveals": "All buckets owned by the account",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": "ListBuckets",
+      "log_notes": "Management/data classification not verified on fetched pages."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{Key} (s3:GetObject)",
+      "reveals": "Object contents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "GetObject",
+      "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-024655eb",
+     "fc-bcd7adf9",
+     "fc-3ae233ca",
+     "fc-e422ae4f",
+     "fc-0ec1c9ec",
+     "fc-a8e9c769"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Root Account Access Key Created",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_root_access_key_created.yml",
+     "detects": "An access key was created for the root user."
+    },
+    {
+     "source": "Panther",
+     "title": "AWS STS GetCallerIdentity via TruffleHog",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_sts_getcalleridentity_trufflehog.yml",
+     "detects": "GetCallerIdentity with a TruffleHog user agent, used to check whether leaked access keys still work."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS STS GetCallerIdentity Enumeration Via TruffleHog",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_sts_getcalleridentity_trufflehog.yml",
+     "detects": "GetCallerIdentity with a TruffleHog user agent."
+    },
+    {
+     "source": "Sigma",
+     "title": "PUA - AWS TruffleHog Execution",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_cloudtrail_pua_trufflehog.yml",
+     "detects": "Any CloudTrail event with the TruffleHog user agent."
+    },
+    {
+     "source": "Panther",
+     "title": "Root Account Activity",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_root_activity.yml",
+     "detects": "Write actions by the root user (console or root access key), excluding service-invoked events."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS Root Credentials",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_root_account_usage.yml",
+     "detects": "Any root user activity that is not an AWS service event."
+    }
+   ]
+  },
+  {
+   "id": "aws-3",
+   "name": "IAM role temporary credentials (AWS STS AssumeRole)",
+   "family": "hmac",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "STS returns temporary credentials (ASIA... key ID, secret, session token) for a role. Caller must already hold AWS credentials and be trusted by the role trust policy.",
+    "evidence_refs": [
+     "fc-a9f9573f",
+     "fc-e737228d"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Role assumption from existing AWS credentials; external IdP federation is covered in aws-4 and aws-5.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Not a setting: an identity policy or SCP that denies requests when aws:SourceIp is outside allowed ranges. It is evaluated on every signed API request. aws:SourceIp is absent for calls through VPC endpoints (use aws:VpcSourceIp) and SCPs do not cover the management account.",
+    "evidence_refs": [
+     "fc-bf544ac3",
+     "fc-ae269843",
+     "fc-081441e9"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 43200,
+    "configurable": "yes",
+    "summary": "15 min to role max (1-12 h, default 1 h); role chaining capped at 1 h",
+    "evidence_refs": [
+     "fc-7de43c0b",
+     "fc-f8572ed3"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "absolute session expiry",
+    "summary": "Call AssumeRole again for new credentials.",
+    "evidence_refs": [
+     "fc-e737228d"
+    ]
+   },
+   "administration": {
+    "summary": "Role trust policy controls who can assume; max session duration set per role; active sessions revoked with Revoke active sessions (AWSRevokeOlderSessions) or aws:TokenIssueTime deny.",
+    "conditions": "Service-linked role sessions cannot be revoked.",
+    "evidence_refs": [
+     "fc-f8572ed3",
+     "fc-12bba687"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Not tied to the IdP, but a role's trust policy can require MFA before the role can be assumed.",
+     "evidence_refs": [
+      "fc-56f0ccfa"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Role sessions belong to a role, not a user; already-issued sessions stay valid until they expire unless permissions are removed.",
+     "evidence_refs": [
+      "fc-e737228d"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "Role trust policy: add Condition Bool aws:MultiFactorAuthPresent = true on sts:AssumeRole",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-56f0ccfa"
+     ]
+    },
+    "network": {
+     "ui": "Role identity policy with Deny * / NotIpAddress aws:SourceIp, or AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account",
+     "api": null,
+     "cli": "aws iam put-role-policy (inline deny) or aws organizations attach-policy",
+     "evidence_refs": [
+      "fc-bf544ac3",
+      "fc-14f20066",
+      "fc-72343915",
+      "fc-b9b7e785"
+     ]
+    },
+    "reads": {
+     "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+     "api": null,
+     "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+     "evidence_refs": [
+      "fc-bcd7adf9",
+      "fc-0b07a9e0"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ASIA",
+     "notes": "Temporary key ID ASIA... plus session token."
+    },
+    "log_sources": [
+     {
+      "name": "AWS CloudTrail event history",
+      "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+     },
+     {
+      "name": "CloudTrail trail / event data store",
+      "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userIdentity.accessKeyId",
+      "log": "CloudTrail",
+      "notes": "Key ID used to sign the request; may be empty for security reasons."
+     },
+     {
+      "field": "userIdentity.sessionContext.sessionIssuer.arn",
+      "log": "CloudTrail",
+      "notes": "Role that issued the session."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "AssumeRole",
+      "stage": "create",
+      "notes": "Logged in caller and role accounts; denied cross-account assumptions not logged in target account."
+     }
+    ],
+    "correlation_keys": [
+     "userIdentity.accessKeyId (ASIA)",
+     "responseElements.credentials.accessKeyId in AssumeRole event",
+     "sourceIdentity",
+     "roleSessionName"
+    ],
+    "anomaly_cues": [
+     "AssumeRole from unexpected principal",
+     "Role chaining across accounts"
+    ],
+    "containment": {
+     "steps": "IAM > Roles > Revoke active sessions (AWSRevokeOlderSessions) or deny aws:TokenIssueTime before now; fix trust policy.",
+     "kills_existing": "yes",
+     "notes": "Applies to all sessions of the role, not just one; ~30 s propagation; not possible for service-linked roles."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-024655eb",
+     "fc-12bba687"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST sts:GetCallerIdentity",
+      "reveals": "Account, ARN, user/role ID",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetCallerIdentity",
+      "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GetAccountAuthorizationDetails",
+      "reveals": "All IAM users, groups, roles, policies",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetAccountAuthorizationDetails",
+      "log_notes": "IAM management event."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET / (s3:ListBuckets)",
+      "reveals": "All buckets owned by the account",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": "ListBuckets",
+      "log_notes": "Management/data classification not verified on fetched pages."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{Key} (s3:GetObject)",
+      "reveals": "Object contents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "GetObject",
+      "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-024655eb",
+     "fc-bcd7adf9",
+     "fc-3ae233ca",
+     "fc-e422ae4f",
+     "fc-0ec1c9ec",
+     "fc-a8e9c769"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "AWS Console GetSigninToken Potential Abuse",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_console_getsignintoken.yml",
+     "detects": "GetSigninToken from a non-SSO user agent, used to turn CLI credentials into a console session."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS Console GetSigninToken Potential Abuse",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_console_getsignintoken.yml",
+     "detects": "GetSigninToken from a user agent other than the console federation endpoint."
+    },
+    {
+     "source": "Panther",
+     "title": "AWS IMDS Credential Usage Outside Expected Services",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_imds_credential_exfiltration.yml",
+     "detects": "EC2 instance role credentials used from a public IP outside expected AWS services, indicating stolen IMDS credentials."
+    },
+    {
+     "source": "Sigma",
+     "title": "Malicious Usage Of IMDS Credentials Outside Of AWS Infrastructure",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_cloudtrail_imds_malicious_usage.yml",
+     "detects": "EC2 instance role session credentials used outside AWS infrastructure."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS STS AssumeRole Misuse",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_sts_assumerole_misuse.yml",
+     "detects": "Activity by an assumed-role session whose issuer is a role (role temporary credentials in use)."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS ECS Task Definition That Queries The Credential Endpoint",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_ecs_task_definition_cred_endpoint_query.yml",
+     "detects": "ECS task definitions whose command reads the container credentials endpoint ($AWS_CONTAINER_CREDENTIALS_RELATIVE_URI)."
+    },
+    {
+     "source": "Panther",
+     "title": "IAM Assume Role Blocklist Ignored",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_iam_assume_role_blocklist_ignored.yml",
+     "detects": "An IAM user or federated user assumed a role on a blocklist (disabled by default)."
+    },
+    {
+     "source": "Panther",
+     "title": "RoleAssumes by Multiple Useragents",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/aws_queries/anomalous_role_assume_query.yml",
+     "detects": "Saved query: AssumeRole calls for one role and principal from more than one user agent in a day."
+    },
+    {
+     "source": "Panther",
+     "title": "AWS Potentially Stolen Service Role",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/queries/aws_queries/aws_potentially_compromised_service_role.yml",
+     "detects": "Scheduled rule: a role assumed by an AWS service and also by a user within 24 hours."
+    }
+   ]
+  },
+  {
+   "id": "aws-4",
+   "name": "OIDC / SAML federation to IAM roles (AssumeRoleWithWebIdentity, AssumeRoleWithSAML)",
+   "family": "federation",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "An external IdP token (OIDC JWT, e.g. GitHub Actions, or SAML assertion) is exchanged with STS for temporary role credentials. The exchange needs no AWS credentials.",
+    "evidence_refs": [
+     "fc-9083e011",
+     "fc-99b47578",
+     "fc-4b0dbe7f"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "Credentials are issued only after the IdP authenticates the workload or user; IdP policy applies at token issuance, not to already-issued AWS credentials.",
+    "evidence_refs": [
+     "fc-99b47578",
+     "fc-4b0dbe7f"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Not a setting: an identity policy or SCP that denies requests when aws:SourceIp is outside allowed ranges. It is evaluated on every signed API request. aws:SourceIp is absent for calls through VPC endpoints (use aws:VpcSourceIp) and SCPs do not cover the management account.",
+    "evidence_refs": [
+     "fc-bf544ac3",
+     "fc-ae269843",
+     "fc-081441e9"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 43200,
+    "configurable": "yes",
+    "summary": "Default 1 h, up to role max (12 h)",
+    "evidence_refs": [
+     "fc-9083e011",
+     "fc-f8572ed3"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "absolute session expiry",
+    "summary": "Get a fresh IdP token and call the STS exchange again.",
+    "evidence_refs": [
+     "fc-99b47578"
+    ]
+   },
+   "administration": {
+    "summary": "Admins create the IAM OIDC/SAML identity provider and role trust policy conditions; revoke active sessions per role.",
+    "conditions": "Session revocation applies per role, not per external identity.",
+    "evidence_refs": [
+     "fc-12bba687",
+     "fc-99b47578"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "Credentials are issued only after the external IdP authenticates the user and returns a SAML assertion or OIDC token.",
+     "evidence_refs": [
+      "fc-4b0dbe7f"
+     ]
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Disabling the user at the IdP stops new assertions, but temporary credentials already issued stay valid until they expire.",
+     "evidence_refs": [
+      "fc-e737228d"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "IAM console > Identity providers > Add provider > SAML or OpenID Connect; role trust policy names that provider",
+     "api": null,
+     "cli": "aws iam create-saml-provider; aws iam create-open-id-connect-provider",
+     "evidence_refs": [
+      "fc-b1d2ea76",
+      "fc-7376f47d"
+     ]
+    },
+    "network": {
+     "ui": "Role identity policy with Deny * / NotIpAddress aws:SourceIp, or AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account",
+     "api": null,
+     "cli": "aws iam put-role-policy (inline deny) or aws organizations attach-policy",
+     "evidence_refs": [
+      "fc-bf544ac3",
+      "fc-14f20066",
+      "fc-72343915",
+      "fc-b9b7e785"
+     ]
+    },
+    "reads": {
+     "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+     "api": null,
+     "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+     "evidence_refs": [
+      "fc-bcd7adf9",
+      "fc-0b07a9e0"
+     ]
+    },
+    "kill": {
+     "ui": "IAM console > Roles > role > Revoke sessions tab > Revoke active sessions (attaches AWSRevokeOlderSessions)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-12bba687"
+     ]
+    },
+    "offboard": {
+     "ui": "Disable the user in the IdP; then IAM console > Roles > role > Revoke sessions > Revoke active sessions to end issued credentials",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-12bba687"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ASIA",
+     "notes": "Temporary credentials."
+    },
+    "log_sources": [
+     {
+      "name": "AWS CloudTrail event history",
+      "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+     },
+     {
+      "name": "CloudTrail trail / event data store",
+      "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userIdentity.accessKeyId",
+      "log": "CloudTrail",
+      "notes": "Key ID used to sign the request; may be empty for security reasons."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "AssumeRoleWithWebIdentity",
+      "stage": "create",
+      "notes": "Includes IdP-provided info."
+     },
+     {
+      "event": "AssumeRoleWithSAML",
+      "stage": "create",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "userIdentity (WebIdentityUser/SAMLUser)",
+     "responseElements.credentials.accessKeyId",
+     "sourceIdentity"
+    ],
+    "anomaly_cues": [
+     "Unexpected OIDC subject or repo in exchange",
+     "Exchange from unknown IP"
+    ],
+    "containment": {
+     "steps": "Revoke active sessions on the role; tighten trust policy conditions (aud/sub); remove or disable at the IdP.",
+     "kills_existing": "yes",
+     "notes": "Role-wide revocation."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-12bba687",
+     "fc-024655eb"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST sts:GetCallerIdentity",
+      "reveals": "Account, ARN, user/role ID",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetCallerIdentity",
+      "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GetAccountAuthorizationDetails",
+      "reveals": "All IAM users, groups, roles, policies",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetAccountAuthorizationDetails",
+      "log_notes": "IAM management event."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET / (s3:ListBuckets)",
+      "reveals": "All buckets owned by the account",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": "ListBuckets",
+      "log_notes": "Management/data classification not verified on fetched pages."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{Key} (s3:GetObject)",
+      "reveals": "Object contents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "GetObject",
+      "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-024655eb",
+     "fc-bcd7adf9",
+     "fc-3ae233ca",
+     "fc-e422ae4f",
+     "fc-0ec1c9ec",
+     "fc-a8e9c769"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "AWS SAML Activity",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/aws_cloudtrail_rules/aws_saml_activity.yml",
+     "detects": "Creation, update, or deletion of an IAM SAML provider."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS Suspicious SAML Activity",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_susp_saml_activity.yml",
+     "detects": "UpdateSAMLProvider or AssumeRoleWithSAML calls."
+    },
+    {
+     "source": "Sigma",
+     "title": "AWS SAML Provider Deletion Activity",
+     "url": "https://github.com/SigmaHQ/sigma/blob/master/rules/cloud/aws/cloudtrail/aws_delete_saml_provider.yml",
+     "detects": "Successful deletion of an IAM SAML provider."
+    },
+    {
+     "source": "Elastic",
+     "title": "AWS AssumeRoleWithWebIdentity from Kubernetes SA and External ASN",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/initial_access_assume_role_with_web_identity_kubernetes_sa_from_external_asn.toml",
+     "detects": "AssumeRoleWithWebIdentity by a Kubernetes service account from a non-AWS network."
+    },
+    {
+     "source": "Elastic",
+     "title": "AWS Lateral Movement from Kubernetes SA via AssumeRoleWithWebIdentity",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/lateral_movement_k8_assumed_web_identity_session_with_multi_phase_api_use.toml",
+     "detects": "A Kubernetes service account role session from AssumeRoleWithWebIdentity followed by recon, credential access, and persistence API calls."
+    }
+   ]
+  },
+  {
+   "id": "aws-5",
+   "name": "IAM Identity Center credentials for AWS CLI/SDK",
+   "family": "federation",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "User signs in to the AWS access portal (device code flow via aws configure sso); the CLI calls GetRoleCredentials to get short-term STS credentials for a permission set role, refreshing them while the portal session is active.",
+    "evidence_refs": [
+     "fc-5b8a2195",
+     "fc-52d5fa8b"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "Credentials come from the Identity Center session, which follows the configured identity source. Disabling the user blocks new sessions, but existing IAM role sessions continue until their permission-set duration ends (max 12 h).",
+    "evidence_refs": [
+     "fc-d7f8d081"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Not a setting: an identity policy or SCP that denies requests when aws:SourceIp is outside allowed ranges. It is evaluated on every signed API request. aws:SourceIp is absent for calls through VPC endpoints (use aws:VpcSourceIp) and SCPs do not cover the management account.",
+    "evidence_refs": [
+     "fc-bf544ac3",
+     "fc-ae269843",
+     "fc-081441e9"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 43200,
+    "configurable": "yes",
+    "summary": "Role creds 1-12 h (default 1 h); portal session up to 90 days",
+    "evidence_refs": [
+     "fc-25d38830",
+     "fc-d7f8d081"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "Access portal session (up to 90 days)",
+    "summary": "CLI refreshes role credentials automatically while the portal session lasts.",
+    "evidence_refs": [
+     "fc-5b8a2195",
+     "fc-d7f8d081"
+    ]
+   },
+   "administration": {
+    "summary": "Admins set permission-set session duration and assignments. To cut live access, pre-stage an SCP deny keyed to the Identity Center user ID, then remove assignments.",
+    "conditions": "IAM revoke-sessions cannot be used on roles created from permission sets.",
+    "evidence_refs": [
+     "fc-25d38830",
+     "fc-123babcb",
+     "fc-03b338d6"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "yes",
+     "details": "CLI/SDK role credentials are obtained from the user's Identity Center sign-in session, which uses the org's identity source.",
+     "evidence_refs": [
+      "fc-d7f8d081"
+     ]
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Deleting or disabling the user blocks new sessions immediately, but existing IAM role sessions continue for up to 12 hours.",
+     "evidence_refs": [
+      "fc-d7f8d081"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "sso": {
+     "ui": "IAM Identity Center console > Settings > Authentication tab > Multi-factor authentication > Configure (external IdP: set MFA in the IdP)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-9b0edcd9"
+     ]
+    },
+    "network": {
+     "ui": "AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account (roles created by permission sets cannot be edited in IAM)",
+     "api": null,
+     "cli": "aws organizations attach-policy",
+     "evidence_refs": [
+      "fc-bf544ac3",
+      "fc-72343915",
+      "fc-b9b7e785",
+      "fc-12bba687"
+     ]
+    },
+    "reads": {
+     "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+     "api": null,
+     "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+     "evidence_refs": [
+      "fc-bcd7adf9",
+      "fc-0b07a9e0"
+     ]
+    },
+    "kill": {
+     "ui": "Add user ID to the pre-staged SCP Deny; IAM Identity Center > AWS accounts > account > Assigned users and groups > Remove access; Users > user > Disable user access; keep the deny for 12 h",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-03b338d6",
+      "fc-462065cd"
+     ]
+    },
+    "offboard": {
+     "ui": "IAM Identity Center console > Users > user > General information > Disable user access (or delete user)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-03b338d6",
+      "fc-b4eac9a3"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ASIA",
+     "notes": "Role credentials are standard STS temporary credentials."
+    },
+    "log_sources": [
+     {
+      "name": "AWS CloudTrail event history",
+      "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+     },
+     {
+      "name": "CloudTrail trail / event data store",
+      "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userIdentity.onBehalfOf.userId",
+      "log": "CloudTrail",
+      "notes": "Identity Center user ID for user-initiated events."
+     },
+     {
+      "field": "userIdentity.credentialId",
+      "log": "CloudTrail",
+      "notes": "Identity Center credential identifier."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "GetRoleCredentials",
+      "stage": "create",
+      "notes": "Portal API call that returns STS credentials (logging not verified on fetched pages)."
+     }
+    ],
+    "correlation_keys": [
+     "onBehalfOf.userId",
+     "credentialId",
+     "role session name"
+    ],
+    "anomaly_cues": [
+     "Role sessions after user is disabled"
+    ],
+    "containment": {
+     "steps": "Add user ID to pre-staged SCP deny, remove assignments, disable user.",
+     "kills_existing": "partial",
+     "notes": "Disabling the user alone leaves existing role sessions working up to 12 h."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact CloudTrail eventName for portal GetRoleCredentials."
+    ],
+    "evidence_refs": [
+     "fc-d7f8d081",
+     "fc-123babcb",
+     "fc-52d5fa8b",
+     "fc-d34f092b",
+     "fc-03b338d6"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST sts:GetCallerIdentity",
+      "reveals": "Account, ARN, user/role ID",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetCallerIdentity",
+      "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GetAccountAuthorizationDetails",
+      "reveals": "All IAM users, groups, roles, policies",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetAccountAuthorizationDetails",
+      "log_notes": "IAM management event."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET / (s3:ListBuckets)",
+      "reveals": "All buckets owned by the account",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": "ListBuckets",
+      "log_notes": "Management/data classification not verified on fetched pages."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{Key} (s3:GetObject)",
+      "reveals": "Object contents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "GetObject",
+      "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-024655eb",
+     "fc-bcd7adf9",
+     "fc-3ae233ca",
+     "fc-e422ae4f",
+     "fc-0ec1c9ec",
+     "fc-a8e9c769"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "aws-6",
+   "name": "IAM Roles Anywhere (X.509 certificate to role session)",
+   "family": "certificate",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Workloads outside AWS sign a CreateSession request with a private key and X.509 certificate from a registered trust anchor CA and receive temporary role credentials.",
+    "evidence_refs": [
+     "fc-26fc1ee4",
+     "fc-f1209bcc"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "Trust is delegated to the customer PKI (trust anchor).",
+    "evidence_refs": [
+     "fc-26fc1ee4"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Not a setting: an identity policy or SCP that denies requests when aws:SourceIp is outside allowed ranges. It is evaluated on every signed API request. aws:SourceIp is absent for calls through VPC endpoints (use aws:VpcSourceIp) and SCPs do not cover the management account.",
+    "evidence_refs": [
+     "fc-bf544ac3",
+     "fc-ae269843",
+     "fc-081441e9"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 43200,
+    "configurable": "yes",
+    "summary": "Session 15 min-12 h",
+    "evidence_refs": [
+     "fc-f1209bcc"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "certificate validity and session duration",
+    "summary": "Call CreateSession again with the certificate.",
+    "evidence_refs": [
+     "fc-f1209bcc"
+    ]
+   },
+   "administration": {
+    "summary": "Admins manage trust anchors and profiles; certificate revocation only through imported CRLs (API/CLI).",
+    "conditions": "No OCSP or CDP callbacks.",
+    "evidence_refs": [
+     "fc-5fb688a0"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Credentials are bound to an X.509 certificate and a trust anchor, not to a user.",
+     "evidence_refs": [
+      "fc-9321c566"
+     ]
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "network": {
+     "ui": "Role identity policy with Deny * / NotIpAddress aws:SourceIp, or AWS Organizations console > Policies > Service control policies > Create policy (Deny * with NotIpAddress aws:SourceIp) > attach to OU/account",
+     "api": null,
+     "cli": "aws iam put-role-policy (inline deny) or aws organizations attach-policy",
+     "evidence_refs": [
+      "fc-bf544ac3",
+      "fc-14f20066",
+      "fc-72343915",
+      "fc-b9b7e785"
+     ]
+    },
+    "expiry": {
+     "ui": null,
+     "api": "PATCH /profile/{profileId} with durationSeconds (900-43200)",
+     "cli": "aws rolesanywhere update-profile --profile-id <id> --duration-seconds <n>",
+     "evidence_refs": [
+      "fc-f4463dcc",
+      "fc-59942ecf",
+      "fc-b2312cf1"
+     ]
+    },
+    "reads": {
+     "ui": "CloudTrail console > Trails > trail > Data events > Edit > enable S3 data events; then filter trail logs on eventName=GetObject (not in Event history)",
+     "api": null,
+     "cli": "aws cloudtrail put-event-selectors --trail-name <trail> --advanced-event-selectors (resources.type=AWS::S3::Object)",
+     "evidence_refs": [
+      "fc-bcd7adf9",
+      "fc-0b07a9e0"
+     ]
+    },
+    "kill": {
+     "ui": "IAM console > Roles > role > Revoke sessions > Revoke active sessions (CRL import is API/CLI only)",
+     "api": "POST /crls (ImportCrl); POST /trustanchor/{trustAnchorId}/disable",
+     "cli": "aws rolesanywhere import-crl",
+     "evidence_refs": [
+      "fc-5fb688a0",
+      "fc-137fb716",
+      "fc-9321c566",
+      "fc-12bba687"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "ASIA",
+     "notes": "Session credentials are STS-style temporary credentials."
+    },
+    "log_sources": [
+     {
+      "name": "AWS CloudTrail event history",
+      "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+     },
+     {
+      "name": "CloudTrail trail / event data store",
+      "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userIdentity role session name",
+      "log": "CloudTrail",
+      "notes": "Hex-encoded certificate serial number."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "CreateSession",
+      "stage": "create",
+      "notes": "Logged with additionalEventData on signing."
+     }
+    ],
+    "correlation_keys": [
+     "certificate serial (role session name)",
+     "trust anchor ARN"
+    ],
+    "anomaly_cues": [
+     "Sessions from unexpected certificate serials"
+    ],
+    "containment": {
+     "steps": "Import CRL listing the certificate; revoke active sessions on the role; disable trust anchor/profile.",
+     "kills_existing": "partial",
+     "notes": "CRL blocks new sessions; existing sessions need role session revocation."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-5fb688a0",
+     "fc-698526d8",
+     "fc-12bba687"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "POST sts:GetCallerIdentity",
+      "reveals": "Account, ARN, user/role ID",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetCallerIdentity",
+      "log_notes": "All STS calls logged as management events; cannot be denied by policy."
+     },
+     {
+      "stage": "enumeration",
+      "call": "GetAccountAuthorizationDetails",
+      "reveals": "All IAM users, groups, roles, policies",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "GetAccountAuthorizationDetails",
+      "log_notes": "IAM management event."
+     },
+     {
+      "stage": "discovery",
+      "call": "GET / (s3:ListBuckets)",
+      "reveals": "All buckets owned by the account",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": "ListBuckets",
+      "log_notes": "Management/data classification not verified on fetched pages."
+     },
+     {
+      "stage": "collection",
+      "call": "GET /{Key} (s3:GetObject)",
+      "reveals": "Object contents",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "GetObject",
+      "log_notes": "S3 object-level data event; only logged if data events are enabled on a trail (extra cost)."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-024655eb",
+     "fc-bcd7adf9",
+     "fc-3ae233ca",
+     "fc-e422ae4f",
+     "fc-0ec1c9ec",
+     "fc-a8e9c769"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Elastic",
+     "title": "AWS IAM Roles Anywhere Trust Anchor Created with External CA",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/persistence_iam_roles_anywhere_trusted_anchor_created_with_external_ca.toml",
+     "detects": "An IAM Roles Anywhere trust anchor was created with a CA that is not AWS Private CA."
+    },
+    {
+     "source": "Elastic",
+     "title": "AWS IAM Roles Anywhere Profile Creation",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/persistence_iam_roles_anywhere_profile_created.toml",
+     "detects": "An IAM Roles Anywhere profile was created."
+    }
+   ]
+  },
+  {
+   "id": "aws-7",
+   "name": "Amazon Bedrock API keys (long-term)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer token for Amazon Bedrock created as an IAM service-specific credential on a dedicated IAM user; sent in the Authorization header. Limited to Bedrock and Bedrock Runtime actions and the Region where generated.",
+    "evidence_refs": [
+     "fc-136748fa",
+     "fc-1ac80bf9"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Backed by an IAM user, not an IdP identity. Docs do not discuss IdP policy.",
+    "evidence_refs": [
+     "fc-136748fa"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "aws:SourceIp deny policies on the backing IAM user apply per request (docs do not show a Bedrock-key-specific example).",
+    "evidence_refs": [
+     "fc-bf544ac3"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Until a chosen expiration date; capped by iam:ServiceSpecificCredentialAgeDays policy",
+    "evidence_refs": [
+     "fc-136748fa"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "configured expiration date",
+    "summary": "Reused until expiry; Reset key issues a new value.",
+    "evidence_refs": [
+     "fc-136748fa"
+    ]
+   },
+   "administration": {
+    "summary": "Deny iam:CreateServiceSpecificCredential or cap age; deny bedrock:CallWithBearerToken (optionally by bearerTokenType LONG_TERM) to block use; deactivate, reset or delete keys.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-136748fa"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "A long-term Bedrock key is attached to its own dedicated IAM user, not to a person.",
+     "evidence_refs": [
+      "fc-136748fa"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Bedrock console > API keys > Long-term API keys lists keys with their status.",
+     "evidence_refs": [
+      "fc-bc49c401"
+     ]
+    }
+   },
+   "how": {
+    "network": {
+     "ui": "IAM console > Users (or Roles) > name > Permissions tab > edit policy > JSON: Deny * with NotIpAddress aws:SourceIp on the IAM user that backs the key",
+     "api": null,
+     "cli": "aws iam put-user-policy",
+     "evidence_refs": [
+      "fc-136748fa",
+      "fc-bf544ac3",
+      "fc-14f20066"
+     ]
+    },
+    "expiry": {
+     "ui": "Bedrock console > API keys > Long-term API keys > Generate long-term API keys > API key expiration; cap with iam:ServiceSpecificCredentialAgeDays on iam:CreateServiceSpecificCredential",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-87a2ad21",
+      "fc-5c5350ad"
+     ]
+    },
+    "reads": {
+     "ui": "CloudTrail console > Event history > Event name filter = Converse",
+     "api": "CloudTrail LookupEvents (AttributeKey=EventName, AttributeValue=Converse)",
+     "cli": "aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=Converse",
+     "evidence_refs": [
+      "fc-86ae1d55",
+      "fc-0b07a9e0",
+      "fc-8d68f1b2"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Prefix not documented on fetched pages."
+    },
+    "log_sources": [
+     {
+      "name": "AWS CloudTrail event history",
+      "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+     },
+     {
+      "name": "CloudTrail trail / event data store",
+      "notes": "Needed for retention beyond 90 days; data events off by default and cost extra."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userIdentity (backing IAM user)",
+      "log": "CloudTrail",
+      "notes": "Key value not logged; key ID field not verified."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "CreateServiceSpecificCredential",
+      "stage": "create",
+      "notes": "IAM API action."
+     },
+     {
+      "event": "UpdateServiceSpecificCredential",
+      "stage": "revoke",
+      "notes": "Status=Inactive."
+     },
+     {
+      "event": "DeleteServiceSpecificCredential",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "backing IAM user ARN",
+     "sourceIPAddress"
+    ],
+    "anomaly_cues": [
+     "InvokeModel/Converse volume spike from the key's IAM user"
+    ],
+    "containment": {
+     "steps": "Deactivate, reset or delete the key; or deny bedrock:CallWithBearerToken.",
+     "kills_existing": "unknown",
+     "notes": "Docs do not state propagation timing."
+    },
+    "sample_query": null,
+    "unknown": [
+     "How a specific key appears in CloudTrail."
+    ],
+    "evidence_refs": [
+     "fc-024655eb",
+     "fc-136748fa"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "GET /foundation-models (ListFoundationModels)",
+      "reveals": "Available models",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": "ListFoundationModels",
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /model/{modelId}/converse",
+      "reveals": "Model inference at account cost",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "Converse",
+      "log_notes": "Logged as management event; key value not logged."
+     }
+    ],
+    "unknown": [
+     "No whoami call documented for Bedrock API keys."
+    ],
+    "evidence_refs": [
+     "fc-136748fa",
+     "fc-86ae1d55",
+     "fc-17157fd7",
+     "fc-1ac80bf9"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Elastic",
+     "title": "AWS IAM Credentials Added to a Bedrock API Key Phantom User",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/privilege_escalation_bedrock_phantom_user_credentials_added.toml",
+     "detects": "Access keys or console passwords added to the BedrockAPIKey-* IAM user that backs a long-term Bedrock API key."
+    },
+    {
+     "source": "Elastic",
+     "title": "AWS Bedrock API Key Phantom User Activity Outside Bedrock",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/privilege_escalation_bedrock_phantom_user_activity_outside_bedrock.toml",
+     "detects": "A BedrockAPIKey-* IAM user making API calls to services other than Bedrock."
+    },
+    {
+     "source": "Elastic",
+     "title": "AWS Bedrock API Key Used for Destructive or Anti-Recovery Action",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/impact_bedrock_api_key_destructive_action.toml",
+     "detects": "Bedrock API calls made with a bearer API key (callWithBearerToken=true) that delete guardrails, models, or logging configuration."
+    }
+   ]
+  },
+  {
+   "id": "aws-8",
+   "name": "Amazon Bedrock API keys (short-term)",
+   "family": "api_key",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer token generated client-side from an existing IAM session (console or token-generator library); inherits that principal's permissions and works only in its Region.",
+    "evidence_refs": [
+     "fc-136748fa",
+     "fc-710c716d"
+    ]
+   },
+   "federation": {
+    "status": "limited",
+    "details": "Lifetime is capped by the session used to generate it, so it follows whatever federated session produced it.",
+    "evidence_refs": [
+     "fc-136748fa"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Same IAM policy conditions as the generating principal.",
+    "evidence_refs": [
+     "fc-bf544ac3",
+     "fc-136748fa"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 43200,
+    "configurable": "conditional",
+    "summary": "Up to 12 h or the generating session, whichever is shorter",
+    "evidence_refs": [
+     "fc-136748fa"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "generating session expiry",
+    "summary": "Generate a new token from valid AWS credentials.",
+    "evidence_refs": [
+     "fc-136748fa"
+    ]
+   },
+   "administration": {
+    "summary": "Deny bedrock:CallWithBearerToken (bearerTokenType SHORT_TERM) to block; contain by invalidating the generating session.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-136748fa"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "The key inherits the generating session, so it is subject to SSO/MFA only when that session was.",
+     "evidence_refs": [
+      "fc-136748fa"
+     ]
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "The key inherits the expiration of the session that generated it, so it keeps working until that session ends (max 12 hours).",
+     "evidence_refs": [
+      "fc-bc49c401",
+      "fc-136748fa"
+     ]
+    },
+    "inventory": {
+     "status": "no",
+     "details": "AWS says the Bedrock console does not list short-term keys after they are generated.",
+     "evidence_refs": [
+      "fc-bc49c401"
+     ]
+    }
+   },
+   "how": {
+    "disable": {
+     "ui": "IAM policy or SCP: Deny bedrock:CallWithBearerToken (and bedrock-mantle:CallWithBearerToken) with condition bedrock:bearerTokenType = SHORT_TERM",
+     "api": null,
+     "cli": "aws iam put-user-policy / put-role-policy, or aws organizations attach-policy",
+     "evidence_refs": [
+      "fc-5c5350ad",
+      "fc-14f20066",
+      "fc-b9b7e785"
+     ]
+    },
+    "sso": {
+     "ui": "Enforce MFA on the generating principal: IAM policy condition aws:MultiFactorAuthPresent, or IAM Identity Center > Settings > Authentication > Multi-factor authentication",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-136748fa",
+      "fc-56f0ccfa",
+      "fc-9b0edcd9"
+     ]
+    },
+    "network": {
+     "ui": "Add Deny * / NotIpAddress aws:SourceIp to the generating user or role policy, or an SCP",
+     "api": null,
+     "cli": "aws iam put-user-policy / put-role-policy",
+     "evidence_refs": [
+      "fc-136748fa",
+      "fc-bf544ac3",
+      "fc-14f20066"
+     ]
+    },
+    "expiry": {
+     "ui": "Bedrock console > API keys > Short-term API keys > Generate short-term API keys (expires with the console session, max 12 h)",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-87a2ad21",
+      "fc-136748fa"
+     ]
+    },
+    "reads": {
+     "ui": "CloudTrail console > Event history > Event name filter = Converse",
+     "api": "CloudTrail LookupEvents (AttributeKey=EventName, AttributeValue=Converse)",
+     "cli": "aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=Converse",
+     "evidence_refs": [
+      "fc-86ae1d55",
+      "fc-0b07a9e0",
+      "fc-8d68f1b2"
+     ]
+    },
+    "kill": {
+     "ui": "IAM console > Roles > generating role > Revoke sessions > Revoke active sessions; or deny bedrock:CallWithBearerToken on the principal",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-bc49c401",
+      "fc-12bba687",
+      "fc-5c5350ad"
+     ]
+    },
+    "offboard": {
+     "ui": "Revoke the generating session: IAM console > Roles > role > Revoke sessions > Revoke active sessions",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-bc49c401",
+      "fc-12bba687"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Prefix not documented on fetched pages."
+    },
+    "log_sources": [
+     {
+      "name": "AWS CloudTrail event history",
+      "notes": "On by default; 90 days of management events per Region; free. Data events (e.g. S3 GetObject) not included."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "userIdentity of generating principal",
+      "log": "CloudTrail",
+      "notes": "Key value not logged."
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "InvokeModel / Converse",
+      "stage": "use",
+      "notes": "Logged as management events."
+     }
+    ],
+    "correlation_keys": [
+     "generating principal ARN"
+    ],
+    "anomaly_cues": [
+     "Bedrock calls from a principal that normally does not use Bedrock"
+    ],
+    "containment": {
+     "steps": "Invalidate the generating session (revoke role sessions) or deny bedrock:CallWithBearerToken.",
+     "kills_existing": "partial",
+     "notes": "Short-term keys expire with the session (max 12 h)."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-136748fa",
+     "fc-86ae1d55"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "GET /foundation-models (ListFoundationModels)",
+      "reveals": "Available models",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": "ListFoundationModels",
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "POST /model/{modelId}/converse",
+      "reveals": "Model inference at account cost",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "Converse",
+      "log_notes": "Logged as management event; key value not logged."
+     }
+    ],
+    "unknown": [
+     "No whoami call documented for Bedrock API keys."
+    ],
+    "evidence_refs": [
+     "fc-136748fa",
+     "fc-86ae1d55",
+     "fc-17157fd7",
+     "fc-1ac80bf9"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Elastic",
+     "title": "AWS Bedrock API Key Used for Destructive or Anti-Recovery Action",
+     "url": "https://github.com/elastic/detection-rules/blob/main/rules/integrations/aws/impact_bedrock_api_key_destructive_action.toml",
+     "detects": "Bedrock API calls made with a bearer API key (callWithBearerToken=true) that delete guardrails, models, or logging configuration."
+    }
+   ]
+  }
+ ]
+}

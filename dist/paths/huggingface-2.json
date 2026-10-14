@@ -1,0 +1,370 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "scope_notes": "Covers Hugging Face Hub (Team / Enterprise / Enterprise Plus). Hosted Hub; token management needs Team or Enterprise, org revoke and service accounts need Enterprise, IP ranges need Enterprise Plus. Inference Endpoints use the same user access tokens.",
+      "controls": [
+        {
+          "name": "Token Policy: Require administrator approval",
+          "effect": "require_approval",
+          "applies_to": [
+            "huggingface-1",
+            "huggingface-2"
+          ],
+          "what": "Fine-grained tokens need admin approval for org resources; read/write tokens are blocked.",
+          "setting": "Organization settings > Tokens Management > Token Policy",
+          "plan": "Team or Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-97bec736"
+          ]
+        },
+        {
+          "name": "Token Policy: Only access via fine-grained tokens",
+          "effect": "disable",
+          "applies_to": [
+            "huggingface-2"
+          ],
+          "what": "Read/write tokens get 403 on org resources.",
+          "setting": "Organization settings > Tokens Management > Token Policy",
+          "plan": "Team or Enterprise",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-ad2e83b2",
+            "fc-97bec736"
+          ]
+        },
+        {
+          "name": "Revoke token (org)",
+          "effect": "revoke",
+          "applies_to": [
+            "huggingface-1",
+            "huggingface-2"
+          ],
+          "what": "Permanently removes a member token's access to the org only.",
+          "setting": "Token detail page or POST /api/organizations/{name}/settings/tokens/{tokenId}/revoke",
+          "plan": "Enterprise",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-97bec736",
+            "fc-5fdecf58"
+          ]
+        },
+        {
+          "name": "Revoke leaked token everywhere",
+          "effect": "revoke",
+          "applies_to": [
+            "huggingface-1",
+            "huggingface-2",
+            "huggingface-3"
+          ],
+          "what": "Anyone can submit a raw token value; matching tokens are invalidated everywhere immediately.",
+          "setting": "POST /api/credentials/revoke",
+          "plan": null,
+          "default": "unknown",
+          "level": "account",
+          "evidence_refs": [
+            "fc-ad2e83b2"
+          ]
+        },
+        {
+          "name": "Restrict organization access to your IP ranges only",
+          "effect": "limit_network",
+          "applies_to": [
+            "huggingface-1",
+            "huggingface-2",
+            "huggingface-3"
+          ],
+          "what": "Org resources reachable only from listed CIDRs, including via tokens.",
+          "setting": "Organization settings > Network Security (or PATCH /api/organizations/{name}/settings/network-security)",
+          "plan": "Enterprise Plus",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-772a90c6"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Admin-enforced expiry for user access tokens or service account tokens (no setting found; PATs are valid until revoked).",
+        "Whether access tokens require or bypass an SSO session under Basic or Managed SSO.",
+        "Org-level allowlist or block for third-party OAuth apps.",
+        "Org-level control over who can configure Trusted Publishers on org repos.",
+        "Exact audit event name for OAuth Token Exchange issuance (docs say exchanges are logged).",
+        "Whether IP ranges apply to OAuth, Token Exchange and Trusted Publisher tokens."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "huggingface-2",
+      "provider_id": "huggingface",
+      "name": "User access token (read / write)",
+      "family": "pat",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Unscoped hf_ token with read or write role across everything the user can read or write, including org repos per membership role.",
+        "evidence_refs": [
+          "fc-ad2e83b2"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Basic SSO prompts members when accessing org resources; docs do not say whether access tokens require an SSO session.",
+        "evidence_refs": [
+          "fc-497f8174"
+        ]
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Enterprise Plus 'Restrict organization access to your IP ranges only' applies to access tokens for org resources only.",
+        "evidence_refs": [
+          "fc-772a90c6"
+        ]
+      },
+      "lifetime": {
+        "basis": "none",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Valid until revoked",
+        "evidence_refs": [
+          "fc-b439e6e1"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "No expiry",
+        "summary": "User refreshes or deletes in settings.",
+        "evidence_refs": [
+          "fc-ad2e83b2"
+        ]
+      },
+      "administration": {
+        "summary": "Org policy 'Only access via fine-grained tokens' or 'Require administrator approval' makes read/write tokens unauthorized for org resources (403).",
+        "conditions": "Team & Enterprise plans.",
+        "evidence_refs": [
+          "fc-ad2e83b2",
+          "fc-97bec736"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "yes",
+          "details": "Same as fine-grained tokens: org access follows membership, which SCIM deprovisioning revokes.",
+          "evidence_refs": [
+            "fc-ad2e83b2",
+            "fc-15476517"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Org settings token listing and GET /api/organizations/{org}/settings/tokens.",
+          "evidence_refs": [
+            "fc-97bec736"
+          ]
+        }
+      },
+      "how": {
+        "offboard": {
+          "ui": "Organization settings > Members > revoke membership; with SCIM, deprovision in the IdP",
+          "api": "SCIM: set user active=false or delete the user via SCIM",
+          "cli": null,
+          "evidence_refs": [
+            "fc-f5309a6f",
+            "fc-15476517"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "hf_",
+          "notes": ""
+        },
+        "log_sources": [
+          {
+            "name": "Organization Audit Logs (UI or GET /api/organizations/{org}/audit-log/export)",
+            "notes": "Team & Enterprise. Membership, settings, repo and token-approval events; anonymized IP. Retention not stated."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "token id",
+            "log": "Org token listing API",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "token id (24-char, org token settings)",
+          "username",
+          "anonymized IP/location"
+        ],
+        "anomaly_cues": [
+          "Token never rotated or unused for long periods in org token listing",
+          "Unexpected org.token_approval.authorization_request"
+        ],
+        "containment": {
+          "steps": "Enable fine-grained-only policy, revoke org access (Enterprise), or global revoke via POST /api/credentials/revoke.",
+          "kills_existing": "yes",
+          "notes": ""
+        },
+        "sample_query": null,
+        "unknown": [
+          "No audit events for read/write token creation or use"
+        ],
+        "evidence_refs": [
+          "fc-ad2e83b2",
+          "fc-e1e6add6"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /api/whoami-v2",
+            "reveals": "User, orgs and auth method of the token",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Not among the documented audit event types"
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /api/models/{namespace}/{repo}/tree/{rev}/{path}",
+            "reveals": "Files in a repo",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Not among documented audit event types"
+          },
+          {
+            "stage": "collection",
+            "call": "GET /{namespace}/{repo}/resolve/{rev}/{path}",
+            "reveals": "File contents (models, datasets)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": "Org audit log has no download events"
+          },
+          {
+            "stage": "discovery",
+            "call": "GET /api/organizations/{name}/members",
+            "reveals": "Org members",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "no",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-e1e6add6",
+          "fc-5fdecf58"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-15476517",
+      "title": "User Provisioning (SCIM)",
+      "url": "https://huggingface.co/docs/hub/enterprise-scim",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-497f8174",
+      "title": "Single Sign-On (SSO)",
+      "url": "https://huggingface.co/docs/hub/enterprise-sso",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5fdecf58",
+      "title": "Hub OpenAPI",
+      "url": "https://huggingface.co/.well-known/openapi.md",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-772a90c6",
+      "title": "Network Security",
+      "url": "https://huggingface.co/docs/hub/enterprise-network-security",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-97bec736",
+      "title": "Tokens Management",
+      "url": "https://huggingface.co/docs/hub/enterprise-tokens-management",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ad2e83b2",
+      "title": "User access tokens",
+      "url": "https://huggingface.co/docs/hub/security-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b439e6e1",
+      "title": "Trusted Publishers",
+      "url": "https://huggingface.co/docs/hub/trusted-publishers",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-e1e6add6",
+      "title": "Audit Logs",
+      "url": "https://huggingface.co/docs/hub/audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f5309a6f",
+      "title": "Managing organizations",
+      "url": "https://huggingface.co/docs/hub/organizations-managing",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

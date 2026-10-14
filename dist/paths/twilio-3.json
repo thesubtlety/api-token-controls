@@ -1,0 +1,260 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "twilio",
+      "name": "Twilio",
+      "scope_notes": "Twilio cloud APIs; PKCV needs Enterprise or Security Edition, OAuth apps are US1-only, and Monitor Events keeps 30 days (13 months with Administration, Security or Enterprise Edition).",
+      "controls": [
+        {
+          "name": "OAuth scopes",
+          "effect": "limit_scope",
+          "applies_to": [
+            "twilio-3",
+            "twilio-4"
+          ],
+          "what": "Tokens limited to selected APIs.",
+          "setting": "OAuth app > Scopes & permissions",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-4bb0e049"
+          ]
+        },
+        {
+          "name": "Token expiration time",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "twilio-3",
+            "twilio-4"
+          ],
+          "what": "Sets access token lifetime from 1 minute to 30 days.",
+          "setting": "OAuth app > Access settings > Token expiration time",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-886e972f"
+          ]
+        },
+        {
+          "name": "Rotate secret (grace period 0) / delete OAuth app",
+          "effect": "revoke",
+          "applies_to": [
+            "twilio-3",
+            "twilio-4"
+          ],
+          "what": "Invalidates old credentials and issued access tokens.",
+          "setting": "OAuth app > Credentials > Rotate secret; OAuth apps > Delete",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-886e972f",
+            "fc-bd163aa6"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "IP allowlisting for REST API credentials (Auth Token, API keys, OAuth).",
+        "Expiry settings for API keys and Auth Tokens.",
+        "Whether org SSO enforcement or SCIM deactivation affects any API credential.",
+        "Org-wide policy to block Main key or Auth Token use other than PKCV.",
+        "Whether Monitor Events records read (GET) API calls or token issuance.",
+        "Whether actor_sid identifies the API key SID (SK) or only the account."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "twilio-3",
+      "provider_id": "twilio",
+      "name": "Account-level OAuth app (Client Credentials)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Client ID and secret exchanged at POST https://oauth.twilio.com/v2/token for a scoped bearer access token.",
+        "evidence_refs": [
+          "fc-4bb0e049",
+          "fc-bd163aa6",
+          "fc-1c561844"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "App keeps working if the creating user is removed.",
+        "evidence_refs": [
+          "fc-886e972f"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "Not documented.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 2592000,
+        "configurable": "yes",
+        "summary": "Token 1 min to 30 days, default 1 h",
+        "evidence_refs": [
+          "fc-886e972f"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "Token expiration time",
+        "summary": "Request a new token with client credentials; rotate secret with 0-30 day grace.",
+        "evidence_refs": [
+          "fc-886e972f",
+          "fc-bd163aa6"
+        ]
+      },
+      "administration": {
+        "summary": "Owner, Administrator, Developer or Account API Access Admin roles manage apps; scopes limit APIs. US1 only.",
+        "conditions": "Works only for the account it was created in.",
+        "evidence_refs": [
+          "fc-4bb0e049",
+          "fc-886e972f"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Client Credentials apps authenticate as themselves, not on behalf of a user.",
+          "evidence_refs": [
+            "fc-4bb0e049"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Each account lists its apps under Settings > Account settings > OAuth applications; there is no cross-account view.",
+          "evidence_refs": [
+            "fc-bd163aa6"
+          ]
+        }
+      },
+      "how": {
+        "usage": {
+          "ui": "Monitor > Insights > Audit > Audit Events Log",
+          "api": "GET https://monitor.twilio.com/v1/Events?StartDate=...&EndDate=...; inspect source=api, actor_type, actor_sid",
+          "cli": "twilio api:monitor:v1:events:list --start-date <ISO> --end-date <ISO>",
+          "evidence_refs": [
+            "fc-9b1d5a4e",
+            "fc-f9986bc7"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Bearer access token from oauth.twilio.com."
+        },
+        "log_sources": [
+          {
+            "name": "Monitor Events",
+            "notes": "OAuth app event types not listed in docs."
+          }
+        ],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "client_id"
+        ],
+        "anomaly_cues": [
+          "Long token expiration (days)",
+          "Apps whose creator left"
+        ],
+        "containment": {
+          "steps": "Rotate secret with grace period 0, or delete the app.",
+          "kills_existing": "yes",
+          "notes": "Invalidates previous credentials and access tokens."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Event names for OAuth app create/rotate/delete"
+        ],
+        "evidence_refs": [
+          "fc-886e972f"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Not researched"
+        ],
+        "evidence_refs": []
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1c561844",
+      "title": "OAuth Token API",
+      "url": "https://www.twilio.com/docs/iam/oauth-apps/oauth-access-token",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4bb0e049",
+      "title": "OAuth apps",
+      "url": "https://www.twilio.com/docs/iam/oauth-apps/overview",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-886e972f",
+      "title": "OAuth apps FAQs",
+      "url": "https://www.twilio.com/docs/iam/oauth-apps/faqs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9b1d5a4e",
+      "title": "Monitor Events resource",
+      "url": "https://www.twilio.com/docs/usage/monitor-events",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bd163aa6",
+      "title": "Account-level OAuth apps",
+      "url": "https://www.twilio.com/docs/iam/oauth-apps/account-oauth-apps",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f9986bc7",
+      "title": "Analyze: Investigate",
+      "url": "https://www.twilio.com/docs/usage/fraud-response-guide/analyze",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

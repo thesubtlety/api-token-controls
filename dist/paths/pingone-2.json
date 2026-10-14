@@ -1,0 +1,416 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "pingone",
+      "name": "PingOne",
+      "scope_notes": "Covers PingOne (PingOne Platform / Management APIs). SaaS; covers PingOne platform Worker apps and gateway credentials; inbound traffic policies need a Cloudflare-based custom domain.",
+      "controls": [
+        {
+          "name": "Application enable/disable toggle",
+          "effect": "disable",
+          "applies_to": [
+            "pingone-1",
+            "pingone-2"
+          ],
+          "what": "Disables a Worker app so it cannot be used.",
+          "setting": "Applications > Applications > (app) > toggle; API: PUT application enabled=false",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8cac78c5"
+          ]
+        },
+        {
+          "name": "Refresh Token Duration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "pingone-2"
+          ],
+          "what": "Sets refresh token lifetime (default 30 days, 60 seconds to 1826 days).",
+          "setting": "Applications > (app) > Configuration > Refresh Token; refreshTokenDuration",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-8cac78c5",
+            "fc-d9163dfc"
+          ]
+        },
+        {
+          "name": "Inbound traffic policies",
+          "effect": "limit_network",
+          "applies_to": [
+            "pingone-1",
+            "pingone-2"
+          ],
+          "what": "Allow or block requests by CIDR and other verify rules, only on Cloudflare-based custom domains.",
+          "setting": "/v1/environments/{envID}/inboundTrafficPolicies",
+          "plan": "Requires Cloudflare-based custom domain",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-0a3517b2"
+          ]
+        },
+        {
+          "name": "Delete application",
+          "effect": "revoke",
+          "applies_to": [
+            "pingone-1",
+            "pingone-2"
+          ],
+          "what": "Removes the Worker app and its secret (logged as APPLICATION.DELETED).",
+          "setting": "DELETE /v1/environments/{envID}/applications/{appID}",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-d7a2894c"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "pingone-2",
+          "what": "Access tokens for the PingOne API resource cannot be revoked via /as/revoke.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-cd359d30"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Whether disabling the app or rotating the secret invalidates already-issued access tokens (role removal does take effect per call per S5)",
+        "Whether successful client_credentials token issuance produces an audit event",
+        "Whether Management API read calls (e.g., GET users) are audited",
+        "Whether inbound traffic policies apply to api.pingone.com",
+        "Admin-level policy to block Worker app creation or require approval",
+        "Gateway credential expiry and whether its creation/deletion has a distinct audit event",
+        "Maximum configurable access token lifetime for the PingOne API resource"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "pingone-2",
+      "provider_id": "pingone",
+      "name": "Worker application (user-based grant: authorization_code / implicit)",
+      "family": "oauth",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "An interactive Worker app signs in an admin user through PingOne and gets an access token that carries that user's admin role assignments. The token calls the Management APIs as the user.",
+        "evidence_refs": [
+          "fc-bb606f14",
+          "fc-d9163dfc"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "User-delegated token; user sign-in may itself be federated to an external IdP.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "Same as pingone-1: inbound traffic policies only on Cloudflare custom domains; coverage of Management API calls not documented.",
+        "evidence_refs": [
+          "fc-0a3517b2"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": 157766400,
+        "configurable": "conditional",
+        "summary": "Access token 60 min; refresh token 30 days default, up to 1826 days",
+        "evidence_refs": [
+          "fc-d9163dfc",
+          "fc-8cac78c5"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "refreshTokenDuration on the app (rolling duration also configurable)",
+        "summary": "If refresh tokens are enabled, new access tokens are minted without the user signing in again.",
+        "evidence_refs": [
+          "fc-d9163dfc",
+          "fc-8cac78c5"
+        ]
+      },
+      "administration": {
+        "summary": "Access is bounded by the user's own role assignments, re-checked on each API call. Admins can disable the app, remove the user's roles, or shorten refresh token duration.",
+        "conditions": "Refresh tokens for custom resources can be revoked at /as/revoke; PingOne API resource tokens cannot.",
+        "evidence_refs": [
+          "fc-dce1fcaf",
+          "fc-cd359d30",
+          "fc-8cac78c5",
+          "fc-bb606f14"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "yes",
+          "details": "The token is issued after the user signs in through the authentication policies assigned on the Worker app's Policies tab.",
+          "evidence_refs": [
+            "fc-dac5a2b3",
+            "fc-8cac78c5"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "GET /v1/environments/{envID}/applications lists the Worker apps, but not the user tokens issued through them.",
+          "evidence_refs": [
+            "fc-5b730360"
+          ]
+        }
+      },
+      "how": {
+        "sso": {
+          "ui": "Applications > Applications > [Worker app] > Policies > Pencil > select PingOne/DaVinci policies > Save",
+          "api": "POST /v1/environments/{envID}/applications/{appID}/signOnPolicyAssignments",
+          "cli": "pingcli pingone applications sop-assignments create --environment-id <env> --application-id <app> --priority 1 --sign-on-policy-id <sop>",
+          "evidence_refs": [
+            "fc-69dc4125",
+            "fc-78025ca8",
+            "fc-832ddec0"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "RS256 JWT access token; refresh token may be opaque."
+        },
+        "log_sources": [
+          {
+            "name": "PingOne Audit (Monitoring > Audit) and GET/POST /v1/environments/{envID}/activities",
+            "notes": "Configuration events kept 2 years, user events 90 days; queries max 14 days; Audit API rate 10/second."
+          },
+          {
+            "name": "Subscriptions (webhooks)",
+            "notes": "Streams audit events to HTTPS/TCP endpoints; events lost if target down >7 days."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "actors.user.id",
+            "log": "Audit activities",
+            "notes": "Admin user"
+          },
+          {
+            "field": "actors.client.id",
+            "log": "Audit activities",
+            "notes": "Interactive Worker app used"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "APPLICATION.CREATED",
+            "stage": "create",
+            "notes": ""
+          },
+          {
+            "event": "ROLE_ASSIGNMENT.DELETED",
+            "stage": "revoke",
+            "notes": "Removing the user's roles"
+          },
+          {
+            "event": "APPLICATION.DELETED",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "actors.client.id",
+          "actors.user.id",
+          "resources.id",
+          "source.ipAddress",
+          "source.userAgent",
+          "correlationId"
+        ],
+        "anomaly_cues": [
+          "Admin actions from an unusual client app or IP",
+          "Long-lived refresh token use after the user left"
+        ],
+        "containment": {
+          "steps": "Remove the user's admin roles, disable the app, or delete the user. Revoke refresh tokens at /as/revoke only applies to custom-resource tokens.",
+          "kills_existing": "partial",
+          "notes": "PingOne API access tokens cannot be revoked; roles are checked per call."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Sign-in event names for interactive worker apps were not checked"
+        ],
+        "evidence_refs": [
+          "fc-dce1fcaf",
+          "fc-cd359d30",
+          "fc-39890c13",
+          "fc-d7a2894c"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /v1/environments",
+            "reveals": "Environments the user can reach",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": "Configuration 600/minute",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "collection",
+            "call": "GET /v1/environments/{envID}/users",
+            "reveals": "All user records",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": "Directory Data Read Rate 100/second",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-d9163dfc",
+          "fc-61c4baa4",
+          "fc-a2298e01"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0a3517b2",
+      "title": "Inbound Traffic Policies",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/inbound-traffic/index.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-39890c13",
+      "title": "Audit Activities",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/audit-activities/index.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-5b730360",
+      "title": "Read All Applications | PingOne Platform APIs",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/applications/applications-1/read-all-applications.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-61c4baa4",
+      "title": "Read User or Users",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/users/users-1/read-all-users.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-69dc4125",
+      "title": "Applying authentication policies to an application",
+      "url": "https://docs.pingidentity.com/pingone/applications/p1_apply_auth_policy_to_applications.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-78025ca8",
+      "title": "Create SOP Assignment (PingOne Platform API)",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/applications/application-sign-on-policy-assignments/create-sop-assignment.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-832ddec0",
+      "title": "pingcli pingone applications sop-assignments create",
+      "url": "https://developer.pingidentity.com/pingcli/1.9/command_reference/pingcli_pingone_applications_sop-assignments_create.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-8cac78c5",
+      "title": "Editing an application - Worker",
+      "url": "https://docs.pingidentity.com/pingone/applications/p1_edit_application_worker.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a2298e01",
+      "title": "Base rate limits",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/rate-limiting/base-rate-limits.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-bb606f14",
+      "title": "Create Application (OIDC Protocol - Worker Interactive App)",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/applications/applications-1/create-application-oidc-protocol---worker-interactive-app.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cd359d30",
+      "title": "Token Revocation",
+      "url": "https://developer.pingidentity.com/pingone-api/auth/openid-connect-oauth-2/token/token-revocation.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d7a2894c",
+      "title": "Audit Reporting Events",
+      "url": "https://developer.pingidentity.com/pingone-api/platform/reference/audit-reporting-events.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-d9163dfc",
+      "title": "Access tokens and ID tokens",
+      "url": "https://developer.pingidentity.com/pingone-api/foundations/authentication-concepts/access-tokens-and-id-tokens/index.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dac5a2b3",
+      "title": "Worker applications",
+      "url": "https://developer.pingidentity.com/pingone-api/foundations/authentication-concepts/authorization-and-authentication-by-application-type/worker-applications.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-dce1fcaf",
+      "title": "Administrator permissions and role assignments",
+      "url": "https://developer.pingidentity.com/pingone-api/foundations/pingone-roles-scopes-and-permissions/administrator-permissions-and-role-assignments.html",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

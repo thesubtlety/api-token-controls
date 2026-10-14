@@ -1,0 +1,1486 @@
+{
+ "id": "cloudflare",
+ "name": "Cloudflare",
+ "scope_notes": "Covers Cloudflare (API, Zero Trust Access, R2). All plans have API tokens and 18-month Audit Logs v2; Logpush beyond 18 months is Enterprise; Access service tokens need Cloudflare Zero Trust; R2 credentials need R2.",
+ "controls": [
+  {
+   "name": "Client IP Address Filtering",
+   "effect": "limit_network",
+   "applies_to": [
+    "cloudflare-1",
+    "cloudflare-2"
+   ],
+   "what": "Token only works from listed CIDRs (verify endpoint excepted).",
+   "setting": "API token > Client IP Address Filtering; condition.request.ip",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-30d87826",
+    "fc-0165b637"
+   ]
+  },
+  {
+   "name": "TTL (not_before / expires_on)",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "cloudflare-1",
+    "cloudflare-2"
+   ],
+   "what": "Sets when a token starts and stops being valid.",
+   "setting": "API token > TTL",
+   "plan": null,
+   "default": "off",
+   "level": "app",
+   "evidence_refs": [
+    "fc-30d87826",
+    "fc-8d72ca7d",
+    "fc-0165b637"
+   ]
+  },
+  {
+   "name": "Token permissions and resources",
+   "effect": "limit_scope",
+   "applies_to": [
+    "cloudflare-1",
+    "cloudflare-2",
+    "cloudflare-6"
+   ],
+   "what": "Limits a token to chosen permission groups, accounts, zones or R2 buckets.",
+   "setting": "API token > Permissions / Resources",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-f816803c",
+    "fc-8d72ca7d",
+    "fc-54356738"
+   ]
+  },
+  {
+   "name": "API Token Provisioning capability",
+   "effect": "require_approval",
+   "applies_to": [
+    "cloudflare-2"
+   ],
+   "what": "Only members with this capability or Super Administrator can create account tokens.",
+   "setting": "Manage Account > Members roles",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-8d72ca7d"
+   ]
+  },
+  {
+   "name": "Delete / roll API token",
+   "effect": "revoke",
+   "applies_to": [
+    "cloudflare-1",
+    "cloudflare-2",
+    "cloudflare-6"
+   ],
+   "what": "Deleting or rolling invalidates the token secret.",
+   "setting": "DELETE /user/tokens/{token_id}; DELETE /accounts/{account_id}/tokens/{token_id}; PUT /user/tokens/{token_id}/value",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-2543f505",
+    "fc-1cffa3ce",
+    "fc-389be483",
+    "fc-7df6eed0"
+   ]
+  },
+  {
+   "name": "Remove member from account",
+   "effect": "revoke",
+   "applies_to": [
+    "cloudflare-1"
+   ],
+   "what": "User tokens become inactive when the user is removed.",
+   "setting": "Manage Account > Members",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-54356738"
+   ]
+  },
+  {
+   "name": "Leaked token detection (GitHub Secret Scanning)",
+   "effect": "revoke",
+   "applies_to": [
+    "cloudflare-1",
+    "cloudflare-2",
+    "cloudflare-3"
+   ],
+   "what": "Tokens leaked in public GitHub repos are auto-revoked; private-repo leaks only notify.",
+   "setting": "Automatic",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-56457d26"
+   ]
+  },
+  {
+   "name": "Change Global API Key",
+   "effect": "revoke",
+   "applies_to": [
+    "cloudflare-3"
+   ],
+   "what": "Replaces the user's Global API Key.",
+   "setting": "My Profile > API Tokens > API Keys > Change",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-04794e45"
+   ]
+  },
+  {
+   "name": "Change Origin CA key",
+   "effect": "revoke",
+   "applies_to": [
+    "cloudflare-4"
+   ],
+   "what": "Immediately invalidates all previously shown Origin CA key values.",
+   "setting": "User Profile > API Tokens > API Keys > Origin CA Key > Change",
+   "plan": null,
+   "default": "unknown",
+   "level": "user",
+   "evidence_refs": [
+    "fc-064610e8"
+   ]
+  },
+  {
+   "name": "Service Token Duration",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "cloudflare-5"
+   ],
+   "what": "Sets the service token's expiration date.",
+   "setting": "Zero Trust > Access controls > Service credentials > Service Tokens",
+   "plan": "Cloudflare Zero Trust",
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-ca617cf4"
+   ]
+  },
+  {
+   "name": "Automatically clean up inactive service tokens",
+   "effect": "disable",
+   "applies_to": [
+    "cloudflare-5"
+   ],
+   "what": "Disables or deletes tokens unused for 30-365 days.",
+   "setting": "Zero Trust > Access controls > Access settings > Manage service tokens",
+   "plan": "Cloudflare Zero Trust",
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-ca617cf4"
+   ]
+  },
+  {
+   "name": "Strict service token authentication",
+   "effect": "other",
+   "applies_to": [
+    "cloudflare-5"
+   ],
+   "what": "Only Service Auth policies authorize token requests, no session cookie is issued, and failures are logged.",
+   "setting": "Zero Trust > Access controls > Access settings; strict_service_token_auth",
+   "plan": "Cloudflare Zero Trust",
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-ca617cf4"
+   ]
+  },
+  {
+   "name": "Disable / delete service token",
+   "effect": "revoke",
+   "applies_to": [
+    "cloudflare-5"
+   ],
+   "what": "Disable stops authentication; delete revokes for good.",
+   "setting": "Service Tokens > Disable token / Delete; DELETE .../access/service_tokens/{id}",
+   "plan": "Cloudflare Zero Trust",
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-ca617cf4",
+    "fc-9ae6115b"
+   ]
+  },
+  {
+   "name": "Rotate service token secret",
+   "effect": "require_rotation",
+   "applies_to": [
+    "cloudflare-5"
+   ],
+   "what": "Issues a new secret with an optional grace period for the old one.",
+   "setting": "Service Tokens > Rotate secret",
+   "plan": "Cloudflare Zero Trust",
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-ca617cf4"
+   ]
+  },
+  {
+   "name": "Enable API Access / API Access (member-level)",
+   "effect": "disable",
+   "applies_to": [
+    "cloudflare-1",
+    "cloudflare-3"
+   ],
+   "what": "Enterprise Super Administrators can turn off API access for the whole account or for specific members; member settings override the account setting.",
+   "setting": "Members page > Enable API Access; per member: API Access",
+   "plan": "Enterprise",
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-a5a16d07"
+   ]
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "cloudflare-3",
+   "what": "No IP restriction or expiry for the Global API Key.",
+   "kind": "network",
+   "evidence_refs": [
+    "fc-04794e45"
+   ]
+  },
+  {
+   "path_id": "cloudflare-3",
+   "what": "Global API Key cannot be limited to specific resources or permissions.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-04794e45"
+   ]
+  },
+  {
+   "path_id": "cloudflare-1",
+   "what": "IP filter does not apply to the Verify Token endpoint.",
+   "kind": "network",
+   "evidence_refs": [
+    "fc-30d87826"
+   ]
+  },
+  {
+   "path_id": "cloudflare-4",
+   "what": "Changing the Origin CA key is not recorded in Audit Logs.",
+   "kind": "other",
+   "evidence_refs": [
+    "fc-064610e8"
+   ]
+  },
+  {
+   "path_id": "cloudflare-5",
+   "what": "Revoking existing Access sessions does not stop a valid service token; only deletion does.",
+   "kind": "kill",
+   "evidence_refs": [
+    "fc-ca617cf4"
+   ]
+  }
+ ],
+ "controls_unknown": [
+  "Any account-level setting to block members from creating user API tokens or using the Global API Key.",
+  "Any account-wide policy forcing token expiry or IP filters.",
+  "Whether Super Administrators can list or revoke other members' user API tokens.",
+  "Whether dashboard SSO or Access policies are checked on API token / Global API Key requests (no explicit statement).",
+  "Exact Audit Logs v2 action names for token create/delete/roll.",
+  "Whether Origin CA keys still authenticate after the 2026-09-30 removal date.",
+  "IP restrictions for Access service tokens and for R2 S3 requests.",
+  "Cloudflare OAuth tokens (actor context 'oauth', e.g. Wrangler) were not researched."
+ ],
+ "credentials": [
+  {
+   "id": "cloudflare-1",
+   "name": "User API tokens",
+   "family": "pat",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer token (cfut_ prefix) created under My Profile > API Tokens. Acts for one user with a subset of that user's permissions, scoped per account/zone/permission group.",
+    "evidence_refs": [
+     "fc-f816803c"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Dashboard SSO is a login control. Docs tell admins to keep an API token to disable SSO if the IdP locks them out, which implies tokens are not checked against the IdP; no doc states this outright.",
+    "evidence_refs": [
+     "fc-41e5245a"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Per-token Client IP Address Filtering on API requests; off by default; not applied to the Verify Token endpoint.",
+    "evidence_refs": [
+     "fc-30d87826"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Never expires by default; optional not_before/expires_on TTL",
+    "evidence_refs": [
+     "fc-30d87826",
+     "fc-0165b637"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Valid until deleted, rolled or TTL end",
+    "summary": "Roll generates a new secret with the same permissions and invalidates the old one.",
+    "evidence_refs": [
+     "fc-2543f505",
+     "fc-7df6eed0"
+    ]
+   },
+   "administration": {
+    "summary": "Any member can create tokens up to their own permissions. Tokens go inactive when the user is removed from the account. No documented account-level setting to block or approve user tokens.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-54356738",
+     "fc-f816803c"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "User tokens inherit the user's permissions; docs warn a user token breaks when the user's policies are revoked. R2 docs say user tokens go inactive when the user is removed.",
+     "evidence_refs": [
+      "fc-5f85031a",
+      "fc-54356738"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "GET /user/tokens lists only tokens the caller created; admins see other users' token use only via audit log actor.token_id.",
+     "evidence_refs": [
+      "fc-524509ba",
+      "fc-e9870043"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Manage Account > Audit Logs > remove the 'Action type is not view' filter (or set Action type = view)",
+     "api": "GET /accounts/{account_id}/logs/audit?action_type=view&actor_token_id={token_id}&since=...&before=...",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e9870043",
+      "fc-19960253"
+     ]
+    },
+    "offboard": {
+     "ui": "Manage Account > Members > expand member > Revoke > Yes, revoke access",
+     "api": "DELETE /accounts/{account_id}/members/{member_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-db6610b5",
+      "fc-54356738"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "cfut_",
+     "notes": "cfut_ + 40 chars + checksum; pre-2026 tokens are 40-char unprefixed."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs v2",
+      "notes": "All plans; 18 months; API GET /accounts/{account_id}/logs/audit; dashboard hides view actions by default and queries 90 days."
+     },
+     {
+      "name": "Logpush audit_logs_v2 dataset",
+      "notes": "Enterprise needed beyond 18 months."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.token_id",
+      "log": "Audit Logs v2",
+      "notes": "When actor.context is api_token or oauth"
+     },
+     {
+      "field": "actor.token_name",
+      "log": "Audit Logs v2",
+      "notes": ""
+     },
+     {
+      "field": "actor.context",
+      "log": "Audit Logs v2",
+      "notes": "api_token / api_key / origin_ca_key / dash / oauth"
+     },
+     {
+      "field": "ActorTokenDetails",
+      "log": "Logpush audit_logs_v2",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "unknown",
+      "stage": "create",
+      "notes": "Token create is a /user action; exact action name not documented"
+     },
+     {
+      "event": "unknown",
+      "stage": "revoke",
+      "notes": "Delete/roll exact action names not documented"
+     }
+    ],
+    "correlation_keys": [
+     "actor.token_id",
+     "actor.ip_address",
+     "raw.cf_ray_id",
+     "actor.email"
+    ],
+    "anomaly_cues": [
+     "view actions from a token on many zones",
+     "token used from new IP",
+     "token minting tokens (API Tokens Write)",
+     "GitHub leak notification email"
+    ],
+    "containment": {
+     "steps": "Delete or roll the token (DELETE /user/tokens/{token_id}); remove the user from the account if needed.",
+     "kills_existing": "unknown",
+     "notes": "Roll invalidates the previous token; propagation time not stated."
+    },
+    "sample_query": "GET /accounts/{account_id}/logs/audit?since=...&before=...&actor_token_id=TOKEN_ID",
+    "unknown": [
+     "Exact create/delete action strings"
+    ],
+    "evidence_refs": [
+     "fc-f816803c",
+     "fc-56457d26",
+     "fc-e9870043",
+     "fc-19960253",
+     "fc-c7b8253d",
+     "fc-2543f505",
+     "fc-1cffa3ce",
+     "fc-0165b637"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /user/tokens/verify",
+      "reveals": "Token id, status, expiry",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "IP filter not applied to this endpoint"
+     },
+     {
+      "stage": "discovery",
+      "call": "GET /accounts",
+      "reveals": "Accounts reachable",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "v2 logs view actions on /accounts endpoints, with some exclusions"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /zones",
+      "reveals": "All zones",
+      "bulk": true,
+      "scope": "Zone Read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "v2 logs view actions on /zones endpoints, with some exclusions"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /zones/{zone_id}/dns_records/export",
+      "reveals": "Full BIND zone file",
+      "bulk": true,
+      "scope": "DNS Read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Possibly a view action; not confirmed per endpoint"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /accounts/{account_id}/logs/audit",
+      "reveals": "Audit trail",
+      "bulk": true,
+      "scope": "Account Settings Read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /accounts/{account_id}/members",
+      "reveals": "All account members",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Audit Logs v2 records view actions on /accounts endpoints (action type view, hidden in dashboard by default; available via API/Logpush). actor.context api_token and actor.token_id identify the token."
+     }
+    ],
+    "unknown": [
+     "Per-endpoint audit coverage of GET calls"
+    ],
+    "evidence_refs": [
+     "fc-54ac141f",
+     "fc-f816803c",
+     "fc-30d87826",
+     "fc-11ffa0c5",
+     "fc-20d2a9be",
+     "fc-7caad4a8",
+     "fc-19960253",
+     "fc-e9870043",
+     "fc-06b63f43"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "cloudflare-2",
+   "name": "Account API tokens",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer token (cfat_ prefix) owned by the account, not a user; acts as a service principal with its own permissions.",
+    "evidence_refs": [
+     "fc-8d72ca7d"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Not tied to a user, so dashboard SSO does not apply.",
+    "evidence_refs": [
+     "fc-8d72ca7d",
+     "fc-41e5245a"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Client IP filter (request.ip condition) available via API; dashboard flow documents only optional expiry.",
+    "evidence_refs": [
+     "fc-0165b637",
+     "fc-30d87826",
+     "fc-8d72ca7d"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Valid until revoked or optional expiration date",
+    "evidence_refs": [
+     "fc-8d72ca7d",
+     "fc-54356738"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Valid until deleted or expiry",
+    "summary": "Roll or recreate; survives member removal.",
+    "evidence_refs": [
+     "fc-8d72ca7d",
+     "fc-54356738"
+    ]
+   },
+   "administration": {
+    "summary": "Only members with API Token Provisioning or Super Administrator can create; Super Admins see and manage all account tokens; permissions capped at the creator's own.",
+    "conditions": "Some products do not support account tokens yet.",
+    "evidence_refs": [
+     "fc-8d72ca7d"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Cloudflare tells admins to keep an Account API token as a way to call the API and disable SSO if locked out, so these tokens work outside dashboard SSO.",
+     "evidence_refs": [
+      "fc-41e5245a"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Account API tokens are owned by the account and keep working after the creating user leaves.",
+     "evidence_refs": [
+      "fc-8d72ca7d"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Super Administrators see all account API tokens on Manage account > Account API tokens; API: GET /accounts/{account_id}/tokens.",
+     "evidence_refs": [
+      "fc-8d72ca7d",
+      "fc-3810b4ce"
+     ]
+    }
+   },
+   "how": {
+    "usage": {
+     "ui": "Manage Account > Audit Logs > filter on token",
+     "api": "GET /accounts/{account_id}/logs/audit?actor_token_id={token_id} (or actor_token_name=...; actor_type=account)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e9870043",
+      "fc-19960253"
+     ]
+    },
+    "reads": {
+     "ui": "Manage Account > Audit Logs > set Action type = view",
+     "api": "GET /accounts/{account_id}/logs/audit?action_type=view&actor_token_id={token_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e9870043",
+      "fc-19960253"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "cfat_",
+     "notes": "cfat_ + 40 chars + checksum."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs v2",
+      "notes": "18 months; also Logpush."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.token_id",
+      "log": "Audit Logs v2",
+      "notes": ""
+     },
+     {
+      "field": "actor.token_name",
+      "log": "Audit Logs v2",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "unknown",
+      "stage": "create",
+      "notes": "Account token metadata includes creator attribution"
+     }
+    ],
+    "correlation_keys": [
+     "actor.token_id",
+     "actor.ip_address",
+     "raw.cf_ray_id"
+    ],
+    "anomaly_cues": [
+     "Account token created by non-admin with provisioning capability",
+     "Use from new IP"
+    ],
+    "containment": {
+     "steps": "DELETE /accounts/{account_id}/tokens/{token_id} or roll.",
+     "kills_existing": "unknown",
+     "notes": "Token survives member removal; must be deleted."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact create/delete action strings"
+    ],
+    "evidence_refs": [
+     "fc-8d72ca7d",
+     "fc-e9870043",
+     "fc-19960253",
+     "fc-389be483"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /accounts/{account_id}/tokens/verify",
+      "reveals": "Token status",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /accounts/{account_id}/members",
+      "reveals": "All account members",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Logged as a view action in Audit Logs v2 with actor_type \"account\" and actor.token_id."
+     }
+    ],
+    "unknown": [
+     "Other calls as cloudflare-1 within granted permissions"
+    ],
+    "evidence_refs": [
+     "fc-e12445b0",
+     "fc-06b63f43",
+     "fc-e9870043"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "cloudflare-3",
+   "name": "Global API Key (legacy)",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "One key per user (cfk_ prefix for new/rolled keys), sent with X-Auth-Email and X-Auth-Key headers; has every permission the user has on every resource.",
+    "evidence_refs": [
+     "fc-04794e45",
+     "fc-4da187c1"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "No doc ties Global API Key use to dashboard SSO.",
+    "evidence_refs": [
+     "fc-41e5245a"
+    ]
+   },
+   "ip_restriction": {
+    "status": "not_supported",
+    "enforcement_stage": "unknown",
+    "boundary": "Docs list lack of IP and time limits as a Global API key limitation.",
+    "evidence_refs": [
+     "fc-04794e45"
+    ]
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "No expiry option",
+    "evidence_refs": [
+     "fc-04794e45"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Valid until changed",
+    "summary": "Change (roll) the key under My Profile > API Tokens > API Keys.",
+    "evidence_refs": [
+     "fc-04794e45"
+    ]
+   },
+   "administration": {
+    "summary": "Available once the account email is verified. No documented admin setting to disable Global API Keys for members.",
+    "conditions": null,
+    "evidence_refs": [
+     "fc-04794e45"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "The key has exactly the user's permissions, so removing the member's account access removes the key's access to that account.",
+     "evidence_refs": [
+      "fc-04794e45"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "No admin list of Global API Keys found; key use shows in audit logs with actor.context api_key.",
+     "evidence_refs": [
+      "fc-e9870043"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": null,
+     "api": "GET /accounts/{account_id}/logs/audit?actor_context=api_key (lists users whose Global API Key was used; no key list exists)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e9870043",
+      "fc-19960253"
+     ]
+    },
+    "usage": {
+     "ui": "Manage Account > Audit Logs",
+     "api": "GET /accounts/{account_id}/logs/audit?actor_context=api_key&actor_email={email}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e9870043",
+      "fc-19960253"
+     ]
+    },
+    "reads": {
+     "ui": "Manage Account > Audit Logs > set Action type = view",
+     "api": "GET /accounts/{account_id}/logs/audit?action_type=view&actor_context=api_key",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e9870043",
+      "fc-19960253"
+     ]
+    },
+    "offboard": {
+     "ui": "Manage Account > Members > expand member > Revoke > Yes, revoke access",
+     "api": "DELETE /accounts/{account_id}/members/{member_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-db6610b5",
+      "fc-04794e45"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "cfk_",
+     "notes": "New/rolled keys cfk_; older keys 37-45 char lowercase hex."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs v2",
+      "notes": "actor.context = api_key"
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.context",
+      "log": "Audit Logs v2",
+      "notes": "api_key; no token_id (field only set for api_token/oauth)"
+     },
+     {
+      "field": "actor.email",
+      "log": "Audit Logs v2",
+      "notes": "Owning user"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "unknown",
+      "stage": "revoke",
+      "notes": "Key change event name not documented"
+     }
+    ],
+    "correlation_keys": [
+     "actor.email",
+     "actor.ip_address",
+     "actor.context"
+    ],
+    "anomaly_cues": [
+     "Any api_key context activity if you have migrated to tokens"
+    ],
+    "containment": {
+     "steps": "Change the Global API Key in My Profile > API Tokens.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether key change is audit logged"
+    ],
+    "evidence_refs": [
+     "fc-04794e45",
+     "fc-19960253"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /user",
+      "reveals": "Email, name, account memberships",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "/user endpoints are in v2 coverage"
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /zones",
+      "reveals": "All zones of the user",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "actor.context api_key"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /accounts/{account_id}/members",
+      "reveals": "All account members",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "Logged as a view action in Audit Logs v2; actor.context is api_key with the user's actor.email/id (no per-key ID)."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-4da187c1",
+     "fc-20d2a9be",
+     "fc-e9870043",
+     "fc-19960253",
+     "fc-06b63f43"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "cloudflare-4",
+   "name": "Origin CA key (Service Key, deprecated)",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "legacy",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Key starting v1.0- sent in X-AUTH-USER-SERVICE-KEY for the Origin CA certificates API and Keyless SSL. Scheduled for removal on 2026-09-30.",
+    "evidence_refs": [
+     "fc-064610e8",
+     "fc-0d500e59"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "No doc ties it to SSO.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No IP option documented.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Valid until Change; service ends 2026-09-30 per deprecation notice",
+    "evidence_refs": [
+     "fc-064610e8",
+     "fc-0d500e59"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Valid until Change",
+    "summary": "Each view shows a different value; all are valid until Change.",
+    "evidence_refs": [
+     "fc-064610e8"
+    ]
+   },
+   "administration": {
+    "summary": "Reaches every account the user can access. Changing the key is not audit logged.",
+    "conditions": "Verify whether keys still work after 2026-09-30.",
+    "evidence_refs": [
+     "fc-064610e8"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "The key reaches every account the user can access, so removing the user's membership removes that account from its reach.",
+     "evidence_refs": [
+      "fc-064610e8"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "No admin list of Origin CA keys found; use shows in audit logs with actor.context origin_ca_key.",
+     "evidence_refs": [
+      "fc-e9870043"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": null,
+     "api": "GET /accounts/{account_id}/logs/audit?actor_context=origin_ca_key (shows users whose key was used; no key list exists)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e9870043",
+      "fc-19960253"
+     ]
+    },
+    "usage": {
+     "ui": "Manage Account > Audit Logs",
+     "api": "GET /accounts/{account_id}/logs/audit?actor_context=origin_ca_key",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e9870043",
+      "fc-19960253"
+     ]
+    },
+    "kill": {
+     "ui": "User Profile > API Tokens > API Keys > Origin CA Key > Change",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-064610e8"
+     ]
+    },
+    "offboard": {
+     "ui": "Manage Account > Members > expand member > Revoke > Yes, revoke access (removes that account from the key's reach)",
+     "api": "DELETE /accounts/{account_id}/members/{member_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-db6610b5",
+      "fc-064610e8"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "v1.0-",
+     "notes": "Each view returns a different valid value."
+    },
+    "log_sources": [
+     {
+      "name": "Audit Logs v2",
+      "notes": "actor.context = origin_ca_key for actions; key changes not logged."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.context",
+      "log": "Audit Logs v2",
+      "notes": "origin_ca_key"
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "actor.email",
+     "actor.ip_address"
+    ],
+    "anomaly_cues": [
+     "Any origin_ca_key activity after the deprecation date"
+    ],
+    "containment": {
+     "steps": "Click Change on the Origin CA key; move integrations to an API token with SSL and Certificates Edit.",
+     "kills_existing": "yes",
+     "notes": "Change immediately invalidates all prior values."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Post-EOL behavior"
+    ],
+    "evidence_refs": [
+     "fc-064610e8",
+     "fc-19960253"
+    ]
+   },
+   "post_use": {
+    "calls": [],
+    "unknown": [
+     "Origin CA certificate API calls not researched"
+    ],
+    "evidence_refs": [
+     "fc-064610e8"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "cloudflare-5",
+   "name": "Access service tokens",
+   "family": "basic",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Client ID + Client Secret (cfast_ prefix for new secrets) sent as CF-Access-Client-Id/CF-Access-Client-Secret headers to reach apps protected by Cloudflare Access.",
+    "evidence_refs": [
+     "fc-ca617cf4"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Service Auth policies authorize the token without an IdP login.",
+    "evidence_refs": [
+     "fc-ca617cf4"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Add an IP ranges Require rule to the Service Auth policy of each Access application; IP ranges are checked at login and continuously. Not a property of the token itself.",
+    "evidence_refs": [
+     "fc-1014319f"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Duration chosen at creation; optional auto-disable/delete after 30-365 days of inactivity",
+    "evidence_refs": [
+     "fc-ca617cf4"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Duration from creation; Refresh adds one year",
+    "summary": "Refresh or edit duration; rotate secret with a 1 hour to 30 day grace period.",
+    "evidence_refs": [
+     "fc-ca617cf4"
+    ]
+   },
+   "administration": {
+    "summary": "Admins can disable, delete, rotate and auto-clean tokens; strict service token mode (forced on for orgs created on/after 2026-10-05) stops cookie issuance and logs failures.",
+    "conditions": "Needs Cloudflare Zero Trust (Access).",
+    "evidence_refs": [
+     "fc-ca617cf4"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "no",
+     "details": "Service tokens are used with Service Auth policies, which do not require an IdP login.",
+     "evidence_refs": [
+      "fc-1014319f"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Service tokens are account-level credentials for automated systems, not tied to a user.",
+     "evidence_refs": [
+      "fc-1014319f"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Zero Trust > Access controls > Service credentials > Service Tokens; API: GET /{accounts_or_zones}/{account_or_zone_id}/access/service_tokens.",
+     "evidence_refs": [
+      "fc-ca617cf4",
+      "fc-af54983d"
+     ]
+    }
+   },
+   "how": {
+    "network": {
+     "ui": "Zero Trust > Access controls > Policies > (Service Auth policy) > add Require rule, selector 'IP ranges'",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-4c0532a0",
+      "fc-1014319f"
+     ]
+    },
+    "usage": {
+     "ui": null,
+     "api": "POST /client/v4/graphql, dataset accessLoginRequestsAdaptiveGroups, filter on serviceTokenId",
+     "cli": null,
+     "evidence_refs": [
+      "fc-6a19ee1e",
+      "fc-a51ddee6"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "Enterprise HTTP request logs via Logpush (filter ClientRequestHost/ClientRequestURI for the app)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-6a19ee1e"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "cfast_",
+     "notes": "Secret cfast_ + 40 chars + 8-char checksum (since 2026-08-26); Client ID ends .access; older secrets are 64-char hex."
+    },
+    "log_sources": [
+     {
+      "name": "Access authentication logs",
+      "notes": "Failed requests for recognized tokens logged in strict mode."
+     },
+     {
+      "name": "Audit Logs v2",
+      "notes": "Admin changes to service tokens (create/rotate/delete) via API."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "service token name / Client ID",
+      "log": "Access authentication logs",
+      "notes": "Docs say the name identifies events in logs; exact field name not given"
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "Client ID",
+     "token name"
+    ],
+    "anomaly_cues": [
+     "Failed auth with expired/disabled token",
+     "Token used on apps it is not authorized for"
+    ],
+    "containment": {
+     "steps": "Delete the service token (DELETE .../access/service_tokens/{id}); disabling also stops the old secret during a rotation grace period.",
+     "kills_existing": "yes",
+     "notes": "Revoking Access sessions alone is not enough."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Exact Access log field names"
+    ],
+    "evidence_refs": [
+     "fc-ca617cf4",
+     "fc-9ae6115b"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "HTTP request to an Access-protected application path (customer app)",
+      "reveals": "Whatever the protected application returns",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": null,
+      "log_notes": "Per-request logs need Enterprise HTTP request logs/Logpush; Access authentication logs record only the authentication, not app actions."
+     }
+    ],
+    "unknown": [
+     "Calls depend on the protected application"
+    ],
+    "evidence_refs": [
+     "fc-ca617cf4",
+     "fc-6a19ee1e"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "cloudflare-6",
+   "name": "R2 S3 API credentials (Access Key ID / Secret Access Key)",
+   "family": "hmac",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "S3 SigV4 credentials derived from a user or account API token: Access Key ID = token id, Secret = SHA-256 of token value. Temporary credentials can be minted from them.",
+    "evidence_refs": [
+     "fc-54356738",
+     "fc-7d028d5f"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Same as the parent API token.",
+    "evidence_refs": [
+     "fc-54356738"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Whether the parent token's IP filter applies to S3 requests is not stated.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "none",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Follows the parent token; account tokens valid until revoked or expiry",
+    "evidence_refs": [
+     "fc-54356738"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "Parent token lifetime",
+    "summary": "Recreate or roll the parent token.",
+    "evidence_refs": [
+     "fc-54356738"
+    ]
+   },
+   "administration": {
+    "summary": "Permissions can be limited to object read/write on specific buckets. Revoking the parent token kills derived temporary credentials immediately.",
+    "conditions": "Needs R2.",
+    "evidence_refs": [
+     "fc-54356738",
+     "fc-7d028d5f"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "R2 user API tokens go inactive when the user is removed from the account; account API tokens are not tied to a user.",
+     "evidence_refs": [
+      "fc-54356738"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "R2 credentials are API tokens: account tokens are listable by Super Administrators (GET /accounts/{account_id}/tokens); user tokens only by their owner.",
+     "evidence_refs": [
+      "fc-8d72ca7d",
+      "fc-3810b4ce",
+      "fc-524509ba"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "R2 > bucket > Settings > Data Access Logs > View logs in Workers Observability; filter action = GetObject and actor.accessKeyId = {key id}",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-773e702f"
+     ]
+    },
+    "offboard": {
+     "ui": "Manage Account > Members > expand member > Revoke (user R2 tokens go inactive; account R2 tokens are unaffected)",
+     "api": "DELETE /accounts/{account_id}/members/{member_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-db6610b5",
+      "fc-54356738"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Access Key ID is the parent API token id; secret is SHA-256 of token value."
+    },
+    "log_sources": [
+     {
+      "name": "R2 Data Access Logs",
+      "notes": "Opt-in per bucket; 7-day retention; best effort; excludes status >=400."
+     },
+     {
+      "name": "Audit Logs",
+      "notes": "Bucket config only; no GetObject/PutObject."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.accessKeyId",
+      "log": "R2 Data Access Logs",
+      "notes": "Maps to API token id"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "GetObject",
+      "stage": "use",
+      "notes": "Data Access Logs"
+     },
+     {
+      "event": "ListObjectsV2",
+      "stage": "use",
+      "notes": "Data Access Logs"
+     }
+    ],
+    "correlation_keys": [
+     "actor.accessKeyId",
+     "requestMetadata.ip",
+     "actor.token_id (audit logs)"
+    ],
+    "anomaly_cues": [
+     "Bulk ListObjectsV2/GetObject from new IP",
+     "Large response.bytes totals"
+    ],
+    "containment": {
+     "steps": "Delete or roll the parent API token.",
+     "kills_existing": "yes",
+     "notes": "Derived temporary credentials stop immediately."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Jurisdictional buckets lack Data Access Logs"
+    ],
+    "evidence_refs": [
+     "fc-54356738",
+     "fc-fd5ff965",
+     "fc-773e702f",
+     "fc-7d028d5f"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "S3 ListObjectsV2 / GetObject on https://<ACCOUNT_ID>.r2.cloudflarestorage.com",
+      "reveals": "Object listings and data",
+      "bulk": true,
+      "scope": "Object Read",
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "GetObject",
+      "log_notes": "Only if Data Access Logs enabled on the bucket; best effort"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-54356738",
+     "fc-fd5ff965",
+     "fc-773e702f"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

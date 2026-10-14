@@ -1,0 +1,353 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "adp",
+      "name": "ADP",
+      "scope_notes": "Covers ADP Workforce Now / ADP API Central / ADP Marketplace APIs. API Central is a paid add-on for client-built integrations; Marketplace data connectors are partner apps; most ADP developer guides are public PDFs, while developers.adp.com is a JS app and admin/audit docs were not publicly readable.",
+      "controls": [
+        {
+          "name": "Credential reset (API Central)",
+          "effect": "revoke",
+          "applies_to": [
+            "adp-1"
+          ],
+          "what": "Reset the project's client credentials at any time.",
+          "setting": "API Central portal > project > credentials",
+          "plan": "ADP API Central",
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-36262c8b"
+          ]
+        },
+        {
+          "name": "Team Access Management",
+          "effect": "limit_scope",
+          "applies_to": [
+            "adp-1"
+          ],
+          "what": "Roles control who can view API credentials and manage certificates; admins can revoke portal access.",
+          "setting": "API Central portal > Members",
+          "plan": "ADP API Central",
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-36262c8b"
+          ]
+        },
+        {
+          "name": "Project APIs / use case (API discovery tool)",
+          "effect": "limit_scope",
+          "applies_to": [
+            "adp-1"
+          ],
+          "what": "A project's credentials reach only the APIs added to that project.",
+          "setting": "API Central portal > project > add APIs",
+          "plan": "ADP API Central",
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-36262c8b"
+          ]
+        },
+        {
+          "name": "Mutual TLS certificate",
+          "effect": "other",
+          "applies_to": [
+            "adp-1",
+            "adp-2",
+            "adp-3"
+          ],
+          "what": "Every token and API request must present the registered X.509 certificate, so a leaked secret alone is not enough.",
+          "setting": "API Central / Self Service portal > Certificate",
+          "plan": null,
+          "default": "on",
+          "level": "app",
+          "evidence_refs": [
+            "fc-42cb32e2",
+            "fc-ed03d59a",
+            "fc-10679140"
+          ]
+        },
+        {
+          "name": "Shorter access token lifetime at registration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "adp-1",
+            "adp-2",
+            "adp-3"
+          ],
+          "what": "A shorter token expiry can be requested during application registration.",
+          "setting": "Request to ADP during registration",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-42cb32e2"
+          ]
+        },
+        {
+          "name": "Project users role (API Central Members page)",
+          "effect": "disable",
+          "applies_to": [
+            "adp-1"
+          ],
+          "what": "Only members assigned the Project users role can create projects and access API credentials; withholding the role blocks credential creation.",
+          "setting": "API Central > Members > assign roles",
+          "plan": "API Central add-on",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-36262c8b"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether a customer-configurable IP allowlist exists for API Central credentials (docs only say tokens 'may be' tied to an IP).",
+        "Whether credential reset or consent denial revokes already-issued access tokens immediately.",
+        "What audit/log records exist for credential creation, reset, token issuance and API calls, and how clients access them.",
+        "Whether API Central certificates can be revoked by the client before expiry.",
+        "Whether consumer-application-subscription-credentials.read returns the same or new secrets after re-consent."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "adp-1",
+      "provider_id": "adp",
+      "name": "API Central project client credentials (client ID/secret + mutual TLS certificate)",
+      "family": "oauth",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Starting an API Central project generates a client ID and secret. The app posts them with grant_type=client_credentials to accounts.adp.com over mTLS using its ADP-signed certificate, then calls api.adp.com with the bearer token and the same certificate.",
+        "evidence_refs": [
+          "fc-36262c8b",
+          "fc-42cb32e2",
+          "fc-ed03d59a"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "No user sign-in is involved; docs do not discuss SSO or conditional access for API calls.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "ADP may tie tokens to the computing environment (e.g. IP) used at authorization; this is ADP-side, not a customer-configurable allowlist.",
+        "evidence_refs": [
+          "fc-9d8b8098"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "conditional",
+        "summary": "Access token 60 min; secret static until reset; certificate 2 years",
+        "evidence_refs": [
+          "fc-42cb32e2",
+          "fc-36262c8b"
+        ]
+      },
+      "renewal": {
+        "mechanism": "new_token",
+        "expiry_basis": "access token 60 min; certificate expiry",
+        "summary": "App requests a new token with the secret and certificate; certificate renewed via new CSR.",
+        "evidence_refs": [
+          "fc-42cb32e2"
+        ]
+      },
+      "administration": {
+        "summary": "API Central portal: projects, credential reset, certificate management, Team Access Management roles (Project, Certificate, Member users).",
+        "conditions": "Requires API Central subscription.",
+        "evidence_refs": [
+          "fc-36262c8b"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "API Central projects are data connectors; the API actor is a client agent that is not authenticated as a user, so user SSO/MFA does not apply.",
+          "evidence_refs": [
+            "fc-decba556",
+            "fc-114e5462"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "The API actor is a pre-assigned system (non-human) user, not the person who created the project.",
+          "evidence_refs": [
+            "fc-decba556",
+            "fc-114e5462"
+          ]
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "API Central Projects page shows project cards; docs describe it as the projects you create, not an org-wide credential list.",
+          "evidence_refs": [
+            "fc-decba556"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": "API Central > Certificate > Certificate management card shows expiration date; shorter token lifetime only by request at registration",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-98d7d627",
+            "fc-57f343e3"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Access token is an opaque UUID-like string (example 27b16f3c-...); expires_in 3600."
+        },
+        "log_sources": [],
+        "credential_id_fields": [],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "client_id",
+          "certificate common name"
+        ],
+        "anomaly_cues": [
+          "New certificate requested/uploaded in API Central",
+          "New team member with Project user role",
+          "High-volume /hr/v2/workers pagination"
+        ],
+        "containment": {
+          "steps": "Reset project credentials in API Central; replace the certificate; remove portal members.",
+          "kills_existing": "unknown",
+          "notes": "Tokens last up to 60 minutes."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Any customer-visible API or audit log"
+        ],
+        "evidence_refs": [
+          "fc-42cb32e2",
+          "fc-36262c8b"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST https://accounts.adp.com/auth/oauth/v2/token (grant_type=client_credentials, mTLS)",
+            "reveals": "Valid token and expires_in",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": null
+          },
+          {
+            "stage": "collection",
+            "call": "GET /hr/v2/workers?$top=&$skip=",
+            "reveals": "All workers in the org (paged)",
+            "bulk": true,
+            "scope": "Project API set",
+            "rate_limit": "10 calls/s with burst (EU ESI)",
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "No customer-facing API log documented."
+          }
+        ],
+        "unknown": [
+          "No documented whoami endpoint"
+        ],
+        "evidence_refs": [
+          "fc-42cb32e2"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-10679140",
+      "title": "Marketplace Integrations for Benefit Carriers - Chapter 5",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/protected/Marketplace_Integrations_for_Benefit_Carriers_chapter_5",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-114e5462",
+      "title": "Application Types (ADP Developer Resources)",
+      "url": "https://developers.adp.com/api/services/elasticsearch/general/_doc/application-types",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-36262c8b",
+      "title": "ADP API Central for ADP Workforce Now - Features",
+      "url": "https://apps.adp.com/en-US/apps/410612/adp-api-central-for-adp-workforce-now-and-adp-workforce-now-next-generation/features",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-42cb32e2",
+      "title": "ADP Marketplace ESI - Getting started (modified Jun 17, 2026)",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/ADP_Marketplace_ESI_-_Getting_started",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-57f343e3",
+      "title": "Access Tokens",
+      "url": "https://developers.adp.com/getting-started/key-concepts/access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-98d7d627",
+      "title": "API Central Quick Start Guide, Ch. 4: How to manage Certificates in API-Central (PDF, modified Sep 28, 2026)",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/API_Central_Quick_Start_Guide_chapter_4",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9d8b8098",
+      "title": "Access Tokens (ADP Developer Resources)",
+      "url": "https://developers.adp.com/api/services/elasticsearch/general/_doc/access-tokens",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-decba556",
+      "title": "API Central Quick Start Guide (International)",
+      "url": "https://developers.adp.com/api/services/elasticsearch/guides/_doc/api-central-quick-start-guide-international",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ed03d59a",
+      "title": "ADP Marketplace Partner Development Learning Guide - Chapter 2",
+      "url": "https://marketplace-cdn.adp.com/dev-portal/pdf/ADP_Marketplace_Partner_Development_Learning_Guide_chapter_2",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

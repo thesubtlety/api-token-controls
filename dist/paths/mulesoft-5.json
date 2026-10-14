@@ -1,0 +1,301 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "mulesoft",
+      "name": "MuleSoft Anypoint",
+      "scope_notes": "Covers MuleSoft Anypoint Platform. Anypoint Platform control plane (US/EU/Gov); IP allowlist only US/EU commercial; audit export needs Anypoint Integration Advanced or Titanium.",
+      "controls": [
+        {
+          "name": "Revoke API contract",
+          "effect": "revoke",
+          "applies_to": [
+            "mulesoft-5"
+          ],
+          "what": "Blocks a client application from calling the API instance.",
+          "setting": "API Manager > API instance > Contracts > Revoke",
+          "plan": null,
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-f2687271"
+          ]
+        },
+        {
+          "name": "Contract approval",
+          "effect": "require_approval",
+          "applies_to": [
+            "mulesoft-5"
+          ],
+          "what": "Instance owner approves access requests before credentials work against the API.",
+          "setting": "Exchange Request access / API Manager",
+          "plan": null,
+          "default": "varies",
+          "level": "app",
+          "evidence_refs": [
+            "fc-f5ab3f95"
+          ]
+        },
+        {
+          "name": "IP Allowlist policy",
+          "effect": "limit_network",
+          "applies_to": [
+            "mulesoft-5"
+          ],
+          "what": "Gateway policy that only lets listed IPs or ranges call a managed API instance.",
+          "setting": "API Manager > API instance > Policies > IP Allowlist",
+          "plan": null,
+          "default": "off",
+          "level": "app",
+          "evidence_refs": [
+            "fc-edee1e03"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether IP allowlist applies to connected app token requests or API calls with an issued token",
+        "Whether deleting a client-credentials app or rotating its secret invalidates unexpired access tokens",
+        "Whether a client-credentials app's tokens can be revoked without deleting it (Revoke Authorization is documented for user authorizations)",
+        "Exact UI setting name for disabling connected apps org-wide",
+        "Whether read/GET API calls are audit logged",
+        "Environment client secret rotation procedure (help.salesforce.com KB 001115221 did not render)",
+        "Bearer token format/prefix",
+        "Whether IdP conditional access applies to connected app tokens (not stated)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "mulesoft-5",
+      "provider_id": "mulesoft",
+      "name": "API client application credentials (client ID / secret for API instances)",
+      "family": "api_key",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Client applications registered in Exchange get a client ID and optional secret to call customer APIs protected by a client ID enforcement policy. These authenticate to customer APIs, not to Anypoint Platform APIs.",
+        "evidence_refs": [
+          "fc-f5ab3f95"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Static credentials; external client providers (e.g. Entra ID, PingFederate) can be used instead.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "api_request",
+        "boundary": "Only if the API owner applies the IP Allowlist policy to the API instance; applies to calls to that API, not platform-wide.",
+        "evidence_refs": [
+          "fc-edee1e03"
+        ]
+      },
+      "lifetime": {
+        "basis": "unknown",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "No expiry documented",
+        "evidence_refs": []
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "not documented",
+        "summary": "Secret reusable; reset is an audited action.",
+        "evidence_refs": [
+          "fc-b98a9125"
+        ]
+      },
+      "administration": {
+        "summary": "API instance owner approves access requests (contracts) and can revoke, restore, or delete contracts in API Manager.",
+        "conditions": "Root org Organization Administrator for revoke/delete.",
+        "evidence_refs": [
+          "fc-f5ab3f95",
+          "fc-f2687271"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "API Manager > API instance > Contracts lists contracts per instance; not all clients appear in the UI, and GET /accounts/api/organizations/{orgId}/clients is documented for the org-wide client count.",
+          "evidence_refs": [
+            "fc-b742ca5f",
+            "fc-cc88c5be"
+          ]
+        }
+      },
+      "how": {
+        "disable": {
+          "ui": "API Manager > (API instance) > SLA tiers: set tier to manual approval; then API Manager > API Administration > (instance) > Contracts > Approve / Reject",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-0ba05477",
+            "fc-6cdae195"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Not documented."
+        },
+        "log_sources": [
+          {
+            "name": "Anypoint Platform audit log (Access Management > Audit Log, Audit Log Query API)",
+            "notes": "Default retention 1 year (6 years for orgs before 2023-07-10), configurable 30-2190 days; export via Telemetry Exporter needs Anypoint Integration Advanced or Titanium."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "App ID",
+            "log": "audit log Application entries",
+            "notes": ""
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Create application",
+            "stage": "create",
+            "notes": "Logged at root org"
+          },
+          {
+            "event": "Reset client secret",
+            "stage": "rotate",
+            "notes": "Action Edit - reset client secret"
+          },
+          {
+            "event": "Approve application",
+            "stage": "other",
+            "notes": "Action Edit - contract approval"
+          },
+          {
+            "event": "Revoke application",
+            "stage": "revoke",
+            "notes": "Action Edit - contract revoke"
+          },
+          {
+            "event": "Delete application",
+            "stage": "revoke",
+            "notes": ""
+          }
+        ],
+        "correlation_keys": [
+          "App ID",
+          "API version ID"
+        ],
+        "anomaly_cues": [
+          "Contract requests or tier changes for sensitive API instances"
+        ],
+        "containment": {
+          "steps": "Revoke the contract in API Manager, then reset secret or delete the app.",
+          "kills_existing": "unknown",
+          "notes": "Revoke blocks the client app from the API."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Gateway-side request logging depends on customer runtime"
+        ],
+        "evidence_refs": [
+          "fc-b98a9125",
+          "fc-f2687271"
+        ]
+      },
+      "post_use": {
+        "calls": [],
+        "unknown": [
+          "Calls depend on the customer's own APIs"
+        ],
+        "evidence_refs": [
+          "fc-f5ab3f95"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0ba05477",
+      "title": "Reviewing SLA Tiers Concepts",
+      "url": "https://docs.mulesoft.com/api-manager/latest/defining-sla-tiers",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6cdae195",
+      "title": "Approve or Reject Access Requests",
+      "url": "https://docs.mulesoft.com/api-manager/latest/manage-client-apps-latest-task",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b742ca5f",
+      "title": "Manage Client Applications",
+      "url": "https://docs.mulesoft.com/exchange/about-my-applications",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b98a9125",
+      "title": "Audit Logging in Anypoint Platform",
+      "url": "https://docs.mulesoft.com/access-management/audit-logging",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cc88c5be",
+      "title": "Troubleshooting Anypoint Platform Access",
+      "url": "https://docs.mulesoft.com/access-management/troubleshooting-anypoint-platform-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-edee1e03",
+      "title": "IP Allowlist Policy",
+      "url": "https://docs.mulesoft.com/mule-gateway/policies-included-ip-allowlist",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f2687271",
+      "title": "Revoke and Delete API Contracts",
+      "url": "https://docs.mulesoft.com/api-manager/latest/remove-client-app-latest-task",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f5ab3f95",
+      "title": "Requesting Access",
+      "url": "https://docs.mulesoft.com/exchange/to-request-access",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

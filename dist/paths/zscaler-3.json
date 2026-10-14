@@ -1,0 +1,313 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "zscaler",
+      "name": "Zscaler",
+      "scope_notes": "Covers Zscaler (ZIA, ZPA, OneAPI via Authentication Service / ZIdentity). SaaS; OneAPI needs services linked to Authentication Service; legacy ZIA API needs an API subscription; Workflow Automation, Client Connector and ZDX API keys not covered.",
+      "controls": [
+        {
+          "name": "Delete / regenerate / edit Cloud Service API Key",
+          "effect": "revoke",
+          "applies_to": [
+            "zscaler-3"
+          ],
+          "what": "Any of these immediately invalidates the old key.",
+          "setting": "Administration > API > Internet & SaaS API > Cloud Service API Key",
+          "plan": "API subscription",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-669097ac",
+            "fc-771beedb"
+          ]
+        },
+        {
+          "name": "Admin role functional scope",
+          "effect": "limit_scope",
+          "applies_to": [
+            "zscaler-3",
+            "zscaler-6"
+          ],
+          "what": "Key access is given only to admins with functional scope for API services.",
+          "setting": "ZIA admin roles",
+          "plan": "API subscription",
+          "default": "varies",
+          "level": "user",
+          "evidence_refs": [
+            "fc-669097ac",
+            "fc-9551bdd1"
+          ]
+        },
+        {
+          "name": "Delete the API key",
+          "effect": "revoke",
+          "applies_to": [
+            "zscaler-3"
+          ],
+          "what": "Deleting the organization's only Cloud Service API key stops all legacy ZIA API requests until a new key is added.",
+          "setting": "Administration > API > Internet & SaaS API > Cloud Service API Key > Delete",
+          "plan": "API subscription",
+          "default": "unknown",
+          "level": "org",
+          "evidence_refs": [
+            "fc-669097ac"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "zscaler-3",
+          "what": "Admins provisioned through a third-party IdP cannot use the legacy ZIA API, so this path needs a password admin hosted in Authentication Service outside IdP SSO.",
+          "kind": "other",
+          "evidence_refs": [
+            "fc-9551bdd1"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Source-IP restriction for OneAPI clients, ZPA keys or legacy ZIA sessions (Admin Sign-On Policy and ZIA restricted admin access pages do not state API coverage)",
+        "Whether the Authentication Service Admin Sign-On Policy or MFA applies to legacy ZIA API password logins",
+        "Whether deleting/disabling a ZPA API key or ZIA authorization server ends already-issued bearer tokens",
+        "Whether API client create/delete and token revoke appear as named actions in Authentication Service audit logs (documented actions are generic Create/Update/Delete)",
+        "Whether read-only (GET) API calls are recorded in any audit log",
+        "Expiry of JWT key pairs (zscaler-2) and Sandbox tokens",
+        "OneAPI rate limits (only legacy limits fetched)"
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "zscaler-3",
+      "provider_id": "zscaler",
+      "name": "Cloud Service API Key with ZIA admin credentials (legacy ZIA API)",
+      "family": "basic",
+      "principal": "user",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Legacy ZIA API: POST /api/v1/authenticatedSession with admin username, password, an obfuscated 12-character org API key and timestamp; returns a JSESSIONID cookie.",
+        "evidence_refs": [
+          "fc-669097ac",
+          "fc-9551bdd1"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Password-based; in Authentication Service tenants, users provisioned via third-party IdPs cannot authenticate to the APIs.",
+        "evidence_refs": [
+          "fc-9551bdd1"
+        ]
+      },
+      "ip_restriction": {
+        "status": "unknown",
+        "enforcement_stage": "unknown",
+        "boundary": "No IP restriction for API sessions is documented on the API pages fetched.",
+        "evidence_refs": []
+      },
+      "lifetime": {
+        "basis": "inactivity",
+        "default_seconds": 300,
+        "maximum_seconds": null,
+        "configurable": "not_verified",
+        "summary": "Org key never expires; session cookie expires in 5 minutes by default",
+        "evidence_refs": [
+          "fc-9551bdd1",
+          "fc-771beedb"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "JSESSIONID 5-minute default expiry",
+        "summary": "Re-POST /authenticatedSession with the same key and password.",
+        "evidence_refs": [
+          "fc-9551bdd1"
+        ]
+      },
+      "administration": {
+        "summary": "One key per org, provisioned by Zscaler with an API subscription. Admins with the needed role can edit, regenerate or delete it; access is also limited by the admin's role.",
+        "conditions": "Requires API subscription; Zscaler may disable the key for abuse.",
+        "evidence_refs": [
+          "fc-669097ac",
+          "fc-771beedb",
+          "fc-9551bdd1"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "API login uses a username and password for an admin hosted on Authentication Service; IdP-provisioned admins cannot use the API, so IdP SSO is not in the path.",
+          "evidence_refs": [
+            "fc-9551bdd1"
+          ]
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "One key per organization, shown on the Cloud Service API Key page.",
+          "evidence_refs": [
+            "fc-669097ac"
+          ]
+        }
+      },
+      "how": {},
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "12-character alphanumeric org key, sent obfuscated with a timestamp; session is a JSESSIONID cookie."
+        },
+        "log_sources": [
+          {
+            "name": "ZIA audit logs",
+            "notes": "Data Explorer > Audit Logs > Internet & SaaS; records Admin UI and API actions; 6-month retention; NSS admin audit feed."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "Admin ID",
+            "log": "ZIA audit logs",
+            "notes": "Admin login used with the key"
+          },
+          {
+            "field": "Client IP",
+            "log": "ZIA audit logs",
+            "notes": "Source IP"
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "Sign In",
+            "stage": "use",
+            "notes": "ZIA audit action"
+          },
+          {
+            "event": "Sign Out",
+            "stage": "use",
+            "notes": "ZIA audit action"
+          },
+          {
+            "event": "Cloud Service API Key",
+            "stage": "create",
+            "notes": "Audit sub-category for key changes"
+          }
+        ],
+        "correlation_keys": [
+          "Admin ID",
+          "Client IP",
+          "Interface=API"
+        ],
+        "anomaly_cues": [
+          "Sign In with Interface API from an unexpected IP",
+          "Key regenerate/edit by an unexpected admin"
+        ],
+        "containment": {
+          "steps": "Regenerate, edit or delete the Cloud Service API Key; reset or remove the admin account used.",
+          "kills_existing": "yes",
+          "notes": "Docs: deleting the key ensures no further API requests are possible; old key invalidated immediately."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether an existing JSESSIONID survives key deletion for its remaining minutes"
+        ],
+        "evidence_refs": [
+          "fc-669097ac",
+          "fc-771beedb",
+          "fc-3af5385d"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "POST /api/v1/authenticatedSession",
+            "reveals": "Session cookie",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "yes",
+            "log_event": "Sign In",
+            "log_notes": "ZIA audit Sign In action; Interface API"
+          },
+          {
+            "stage": "recon",
+            "call": "GET /api/v1/status",
+            "reveals": "Activation status",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": "Audit logs record actions; GETs not confirmed"
+          },
+          {
+            "stage": "collection",
+            "call": "POST /api/v1/urlLookup",
+            "reveals": "URL categories (up to 100 URLs per request)",
+            "bulk": true,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [
+          "Whether GET calls are audited"
+        ],
+        "evidence_refs": [
+          "fc-9551bdd1",
+          "fc-3af5385d"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-3af5385d",
+      "title": "About Audit Logs (Internet & SaaS)",
+      "url": "https://help.zscaler.com/zia/about-audit-logs",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-669097ac",
+      "title": "About Cloud Service API Key",
+      "url": "https://help.zscaler.com/zia/about-cloud-service-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-771beedb",
+      "title": "Managing Cloud Service API Key",
+      "url": "https://help.zscaler.com/zia/managing-cloud-service-api-key",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9551bdd1",
+      "title": "Getting Started (ZIA API)",
+      "url": "https://help.zscaler.com/legacy-apis/getting-started-zia-api",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

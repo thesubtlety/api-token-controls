@@ -1,0 +1,1388 @@
+{
+ "id": "anthropic",
+ "name": "Anthropic API",
+ "scope_notes": "Covers Anthropic Claude API (Claude Console / Claude Platform). Claude Console organizations on platform.claude.com; Claude Enterprise (claude.ai) compliance keys and App Attest device tokens are noted but not catalogued as paths.",
+ "controls": [
+  {
+   "name": "Maximum expiration policy",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "anthropic-1",
+    "anthropic-2",
+    "anthropic-3",
+    "anthropic-4"
+   ],
+   "what": "Console limits key expiration to the policy maximum and removes Never.",
+   "setting": "Organization policy (UI path not stated)",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-e8692afd"
+   ]
+  },
+  {
+   "name": "Disable / Re-enable API key",
+   "effect": "disable",
+   "applies_to": [
+    "anthropic-1",
+    "anthropic-2",
+    "anthropic-3"
+   ],
+   "what": "Reversibly sets the key to inactive.",
+   "setting": "Console Settings > API keys, or POST /v1/organizations/api_keys/{api_key_id} status=inactive",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-e8692afd",
+    "fc-79fbfd09"
+   ]
+  },
+  {
+   "name": "Delete API key (archive)",
+   "effect": "revoke",
+   "applies_to": [
+    "anthropic-1",
+    "anthropic-2",
+    "anthropic-3"
+   ],
+   "what": "Permanently archives the key.",
+   "setting": "Console Settings > API keys, or Update API Key status=archived",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-e8692afd",
+    "fc-79fbfd09"
+   ]
+  },
+  {
+   "name": "Workspace-scoped keys",
+   "effect": "limit_resources",
+   "applies_to": [
+    "anthropic-1",
+    "anthropic-2",
+    "anthropic-3"
+   ],
+   "what": "A key created for one workspace only works there and cannot reach the Admin API.",
+   "setting": "Key creation",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-e8692afd"
+   ]
+  },
+  {
+   "name": "Archive workspace",
+   "effect": "revoke",
+   "applies_to": [
+    "anthropic-1",
+    "anthropic-2",
+    "anthropic-3"
+   ],
+   "what": "Archives every key created for the workspace within seconds.",
+   "setting": "Console Settings > Workspaces or Admin API",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-0e386a59"
+   ]
+  },
+  {
+   "name": "Remove user / archive service account",
+   "effect": "revoke",
+   "applies_to": [
+    "anthropic-1",
+    "anthropic-2",
+    "anthropic-5"
+   ],
+   "what": "Personal keys stop on user removal; service account keys stop on account archive.",
+   "setting": "Console or Admin API",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-6484f42c",
+    "fc-834a1ca7"
+   ]
+  },
+  {
+   "name": "Member API key creation setting",
+   "effect": "disable",
+   "applies_to": [
+    "anthropic-1"
+   ],
+   "what": "Org setting that allows members to create new API keys (changes logged as api_key_creation_enabled).",
+   "setting": "Org setting; UI path not stated",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-b0efd6b0"
+   ]
+  },
+  {
+   "name": "Archive federation rule / issuer",
+   "effect": "revoke",
+   "applies_to": [
+    "anthropic-5"
+   ],
+   "what": "Archived rules reject token exchange.",
+   "setting": "Console or POST /v1/organizations/federation_rules/{id}/archive (org:admin token)",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-e2562915",
+    "fc-834a1ca7",
+    "fc-6484f42c"
+   ]
+  },
+  {
+   "name": "Federation rule token_lifetime_seconds",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "anthropic-5"
+   ],
+   "what": "Sets minted token lifetime 60-86400 s.",
+   "setting": "Federation rule",
+   "plan": null,
+   "default": "on",
+   "level": "app",
+   "evidence_refs": [
+    "fc-e2562915"
+   ]
+  },
+  {
+   "name": "Compliance API (Activity Feed)",
+   "effect": "other",
+   "applies_to": [
+    "anthropic-1",
+    "anthropic-2",
+    "anthropic-3",
+    "anthropic-4",
+    "anthropic-5",
+    "anthropic-6"
+   ],
+   "what": "Must be on for key and federation activity to be recorded.",
+   "setting": "Claude Console > Settings > Security > Compliance API",
+   "plan": "Eligible organizations (self-service) or via account team",
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-0e07061e"
+   ]
+  }
+ ],
+ "no_control": [],
+ "controls_unknown": [
+  "Customer IP allowlisting for Claude API requests (not found in docs).",
+  "Whether keys or OAuth tokens are subject to SSO / IdP conditional access.",
+  "Whether disabling a key or archiving a rule ends already-minted WIF tokens immediately.",
+  "Lifetime and admin revocation of ant CLI OAuth tokens.",
+  "Console UI path for the maximum expiration policy and the member API key creation setting.",
+  "Whether Messages API calls generate Activity Feed events (feed excludes prompt/response text)."
+ ],
+ "credentials": [
+  {
+   "id": "anthropic-1",
+   "name": "Personal API key",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Static sk-ant-api... secret linked to a user; every request acts as that user with their roles. Scoped to one workspace or all workspaces the user can use.",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Fetched docs do not say whether API keys are subject to SSO or IdP conditional access.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No customer IP allowlist for Claude API requests found in fetched docs; the IP addresses page only lists Anthropic's own ranges.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Chosen at creation (3h/1d/7d/30d/custom/Never); org max expiration policy can remove Never",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_at set at creation",
+    "summary": "Expired keys cannot be reactivated; create a new key.",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "administration": {
+    "summary": "Created in Console by users with key-creation rights (e.g. Workspace Developer). Admins can list, rename, deactivate or archive via Admin API, but not create. Stops working when the user is removed.",
+    "conditions": "An org-wide (unscoped) personal key also works on the Admin API with the user's permissions.",
+    "evidence_refs": [
+     "fc-e8692afd",
+     "fc-6484f42c",
+     "fc-0e386a59"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Personal keys are archived and stop working when the user is removed from the organization.",
+     "evidence_refs": [
+      "fc-e8692afd"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admins can list all keys with GET /v1/organizations/api_keys (List API Keys); each entry shows the principal, so personal keys are identifiable.",
+     "evidence_refs": [
+      "fc-6484f42c"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Console > API keys (platform.claude.com/settings/keys): expiration chosen at Create key; table shows each key's expiration",
+     "api": "GET /v1/organizations/api_keys (expires_at)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e8692afd",
+      "fc-3d0393bf"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "GET /v1/compliance/activities?activity_types[]=platform_file_content_downloaded; match actor.api_key_id client-side (actor_ids[] accepts only user_ IDs)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-0f28eb08",
+      "fc-b0efd6b0"
+     ]
+    },
+    "offboard": {
+     "ui": null,
+     "api": "DELETE /v1/organizations/users/{user_id} (400 if SCIM manages membership; remove in IdP instead)",
+     "cli": "ant organization:users remove --user-id <user_id>",
+     "evidence_refs": [
+      "fc-b7a4924d",
+      "fc-bc98711b",
+      "fc-e8692afd"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "sk-ant-api",
+     "notes": "Docs show sk-ant-api03- for Claude API keys"
+    },
+    "log_sources": [
+     {
+      "name": "Compliance API Activity Feed (GET /v1/compliance/activities)",
+      "notes": "Must be enabled; 6-year retention; not retroactive. Admin API keys can read it."
+     },
+     {
+      "name": "Usage and Cost API",
+      "notes": "Aggregated usage filterable by API key."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.api_key_id",
+      "log": "Activity Feed (api_actor)",
+      "notes": "Customer-issued API key"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "platform_api_key_created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "platform_api_key_updated",
+      "stage": "update",
+      "notes": "Includes status changes"
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key_id",
+     "actor.ip_address",
+     "actor.user_agent",
+     "workspace id"
+    ],
+    "anomaly_cues": [
+     "New platform_api_key_created outside change window",
+     "platform_file_content_downloaded bursts",
+     "Key used from unfamiliar ip_address"
+    ],
+    "containment": {
+     "steps": "Disable (reversible) or delete (archive) the key; or remove the user from the org.",
+     "kills_existing": "unknown",
+     "notes": "Docs say the key stops working but give no timing."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Per-request inference events"
+    ],
+    "evidence_refs": [
+     "fc-e8692afd",
+     "fc-6484f42c",
+     "fc-0f28eb08",
+     "fc-1e02b955",
+     "fc-b0efd6b0",
+     "fc-cf8d82d9"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Key is valid; available models",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+      "reveals": "Files uploaded to the workspace",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "platform_file_content_downloaded",
+      "log_notes": "Requires Compliance API enabled"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /v1/organizations/me",
+      "reveals": "Organization of the credential",
+      "bulk": false,
+      "scope": "org:admin (for OAuth)",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-03a98433",
+     "fc-b0efd6b0",
+     "fc-6484f42c",
+     "fc-e8692afd"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "anthropic-2",
+   "name": "Service account API key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Static key linked to a service account (svac_...). Requests act as the service account; works in one workspace or every workspace the account belongs to.",
+    "evidence_refs": [
+     "fc-e8692afd",
+     "fc-ac0c2877"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key; same service account can use WIF instead (anthropic-5).",
+    "evidence_refs": [
+     "fc-ac0c2877"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No customer IP allowlist for Claude API requests found in fetched docs; the IP addresses page only lists Anthropic's own ranges.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Chosen at creation (3h/1d/7d/30d/custom/Never); org max expiration policy can remove Never",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_at set at creation",
+    "summary": "Create a new key; expired keys cannot be reactivated.",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "administration": {
+    "summary": "Admins create service accounts; keys stop working when the service account is archived and survive the creator's removal.",
+    "conditions": "Unscoped service account keys can call the Admin API with the account's permissions.",
+    "evidence_refs": [
+     "fc-e8692afd",
+     "fc-6484f42c"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "The key belongs to a service account; it keeps working when the user who created it is removed and stops only when the service account is archived.",
+     "evidence_refs": [
+      "fc-6484f42c"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /v1/organizations/api_keys (List API Keys) returns service account keys with principal type service_account_actor.",
+     "evidence_refs": [
+      "fc-6484f42c"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Console > API keys (platform.claude.com/settings/keys): expiration chosen at Create key; table shows each key's expiration",
+     "api": "GET /v1/organizations/api_keys (expires_at)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e8692afd",
+      "fc-3d0393bf"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "GET /v1/compliance/activities?activity_types[]=platform_file_content_downloaded; match actor.api_key_id client-side (actor_ids[] accepts only user_ IDs)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-0f28eb08",
+      "fc-b0efd6b0"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "sk-ant-api",
+     "notes": ""
+    },
+    "log_sources": [
+     {
+      "name": "Compliance API Activity Feed (GET /v1/compliance/activities)",
+      "notes": "Must be enabled; 6-year retention; not retroactive. Admin API keys can read it."
+     },
+     {
+      "name": "Usage and Cost API",
+      "notes": "Aggregated usage filterable by API key."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.api_key_id",
+      "log": "Activity Feed (api_actor)",
+      "notes": "Customer-issued API key"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "platform_api_key_created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "platform_api_key_updated",
+      "stage": "update",
+      "notes": "Includes status changes"
+     },
+     {
+      "event": "platform_service_account_archived",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key_id",
+     "actor.ip_address",
+     "actor.user_agent",
+     "workspace id"
+    ],
+    "anomaly_cues": [
+     "New platform_api_key_created outside change window",
+     "platform_file_content_downloaded bursts",
+     "Key used from unfamiliar ip_address"
+    ],
+    "containment": {
+     "steps": "Disable/delete the key or archive the service account.",
+     "kills_existing": "unknown",
+     "notes": ""
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-e8692afd",
+     "fc-6484f42c",
+     "fc-0f28eb08",
+     "fc-b0efd6b0"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Key is valid; available models",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+      "reveals": "Files uploaded to the workspace",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "platform_file_content_downloaded",
+      "log_notes": "Requires Compliance API enabled"
+     },
+     {
+      "stage": "recon",
+      "call": "GET /v1/organizations/me",
+      "reveals": "Organization of the credential",
+      "bulk": false,
+      "scope": "org:admin (for OAuth)",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-03a98433",
+     "fc-b0efd6b0",
+     "fc-6484f42c"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "anthropic-3",
+   "name": "Workspace API key (legacy)",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Key owned by a workspace rather than a person. Works only in that workspace.",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Fetched docs do not say whether API keys are subject to SSO or IdP conditional access.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No customer IP allowlist for Claude API requests found in fetched docs; the IP addresses page only lists Anthropic's own ranges.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Chosen at creation (3h/1d/7d/30d/custom/Never); org max expiration policy can remove Never",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_at set at creation",
+    "summary": "Docs recommend replacing with personal/service account keys or WIF.",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "administration": {
+    "summary": "Continues to work after its creator leaves; ends only on expiry, disable/delete, or workspace archive.",
+    "conditions": "Workspace keys do not work on the Admin API.",
+    "evidence_refs": [
+     "fc-e8692afd",
+     "fc-6484f42c",
+     "fc-0e386a59"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Workspace keys have no owner and keep working after their creator is removed.",
+     "evidence_refs": [
+      "fc-6484f42c"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /v1/organizations/api_keys (List API Keys) returns workspace keys (principal is null).",
+     "evidence_refs": [
+      "fc-6484f42c"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Console > API keys (platform.claude.com/settings/keys): expiration chosen at Create key; table shows each key's expiration",
+     "api": "GET /v1/organizations/api_keys (expires_at)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e8692afd",
+      "fc-3d0393bf"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "GET /v1/compliance/activities?activity_types[]=platform_file_content_downloaded; match actor.api_key_id client-side (actor_ids[] accepts only user_ IDs)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-0f28eb08",
+      "fc-b0efd6b0"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "sk-ant-api",
+     "notes": ""
+    },
+    "log_sources": [
+     {
+      "name": "Compliance API Activity Feed (GET /v1/compliance/activities)",
+      "notes": "Must be enabled; 6-year retention; not retroactive. Admin API keys can read it."
+     },
+     {
+      "name": "Usage and Cost API",
+      "notes": "Aggregated usage filterable by API key."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.api_key_id",
+      "log": "Activity Feed (api_actor)",
+      "notes": "Customer-issued API key"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "platform_api_key_created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "platform_api_key_updated",
+      "stage": "update",
+      "notes": "Includes status changes"
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key_id",
+     "actor.ip_address",
+     "actor.user_agent",
+     "workspace id"
+    ],
+    "anomaly_cues": [
+     "New platform_api_key_created outside change window",
+     "platform_file_content_downloaded bursts",
+     "Key used from unfamiliar ip_address"
+    ],
+    "containment": {
+     "steps": "Disable/delete the key or archive its workspace.",
+     "kills_existing": "yes",
+     "notes": "Workspace archive archives keys within seconds."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-e8692afd",
+     "fc-0f28eb08",
+     "fc-0e386a59"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Key is valid; available models",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+      "reveals": "Files uploaded to the workspace",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "platform_file_content_downloaded",
+      "log_notes": "Requires Compliance API enabled"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-03a98433",
+     "fc-b0efd6b0"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "anthropic-4",
+   "name": "Admin API key",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "sk-ant-admin... key sent in x-api-key for the Admin, Usage and Cost, Rate Limits APIs and the Compliance Activity Feed.",
+    "evidence_refs": [
+     "fc-6484f42c",
+     "fc-ba4d5856"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Fetched docs do not say whether API keys are subject to SSO or IdP conditional access.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No customer IP allowlist for Claude API requests found in fetched docs; the IP addresses page only lists Anthropic's own ranges.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Same expiration choice as API keys at creation",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_at set at creation",
+    "summary": "Create a new admin key.",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "administration": {
+    "summary": "Only members with the admin role can provision one, in Console > Settings > Admin keys. Use is logged as admin_api_key_actor.",
+    "conditions": "Claude Enterprise (claude.ai) uses separate scoped keys; out of scope here.",
+    "evidence_refs": [
+     "fc-6484f42c",
+     "fc-0f28eb08"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin API keys are listed on the Admin keys page (platform.claude.com/settings/admin-keys) in the Claude Console. No API list endpoint for admin keys was found.",
+     "evidence_refs": [
+      "fc-0e07061e"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": "Console > Admin keys (platform.claude.com/settings/admin-keys) > Create admin key > choose key expiration",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-ba4d5856",
+      "fc-e8692afd"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "GET /v1/compliance/activities?activity_types[]=org_users_listed; match actor.type=admin_api_key_actor and actor.admin_api_key_id",
+     "cli": null,
+     "evidence_refs": [
+      "fc-0f28eb08",
+      "fc-b0efd6b0"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": "sk-ant-admin01-",
+     "notes": ""
+    },
+    "log_sources": [
+     {
+      "name": "Compliance API Activity Feed (GET /v1/compliance/activities)",
+      "notes": "Must be enabled; 6-year retention; not retroactive. Admin API keys can read it."
+     },
+     {
+      "name": "Usage and Cost API",
+      "notes": "Aggregated usage filterable by API key."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.admin_api_key_id",
+      "log": "Activity Feed (admin_api_key_actor)",
+      "notes": ""
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "admin_api_key_created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "admin_api_key_updated",
+      "stage": "update",
+      "notes": "Rename or activate/deactivate"
+     },
+     {
+      "event": "admin_api_key_deleted",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key_id",
+     "actor.ip_address",
+     "actor.user_agent",
+     "workspace id"
+    ],
+    "anomaly_cues": [
+     "New platform_api_key_created outside change window",
+     "platform_file_content_downloaded bursts",
+     "Key used from unfamiliar ip_address"
+    ],
+    "containment": {
+     "steps": "Deactivate or delete the admin key in Console > Settings > Admin keys.",
+     "kills_existing": "yes",
+     "notes": "Deleting an Admin API key takes effect on the next request, with no grace period."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-6484f42c",
+     "fc-0f28eb08",
+     "fc-b0efd6b0",
+     "fc-0e07061e"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/organizations/me",
+      "reveals": "Organization of the credential",
+      "bulk": false,
+      "scope": "org:admin (for OAuth)",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/organizations/api_keys",
+      "reveals": "All keys, principals, status, expiry",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/organizations/users",
+      "reveals": "all organization members",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "org_users_listed",
+      "log_notes": "Activity Feed has an org_users_listed event with an admin_api_key_actor type (admin_api_key_id); docs do not explicitly tie the event to this endpoint. Recording starts only once the Compliance API is enabled."
+     }
+    ],
+    "unknown": [
+     "Whether Admin API reads are logged"
+    ],
+    "evidence_refs": [
+     "fc-6484f42c",
+     "fc-b258a526",
+     "fc-b0efd6b0",
+     "fc-0f28eb08"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Anthropic Admin API Key Created",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/anthropic_rules/anthropic_admin_api_key_created.yml",
+     "detects": "An Anthropic Admin API key was created."
+    },
+    {
+     "source": "Panther",
+     "title": "Anthropic Admin API Key Deleted",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/anthropic_rules/anthropic_admin_api_key_deleted.yml",
+     "detects": "An Anthropic Admin API key was deleted."
+    }
+   ]
+  },
+  {
+   "id": "anthropic-5",
+   "name": "Workload Identity Federation access token",
+   "family": "federation",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Workload exchanges an IdP JWT at POST /v1/oauth/token for a short-lived token acting as a service account, per a federation rule.",
+    "evidence_refs": [
+     "fc-e8692afd",
+     "fc-ac0c2877"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "AWS, Google Cloud, Azure and standards-compliant OIDC issuers (GitHub Actions, Kubernetes, SPIFFE, Entra ID, Okta).",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No customer IP allowlist for Claude API requests found in fetched docs; the IP addresses page only lists Anthropic's own ranges.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 3600,
+    "maximum_seconds": 86400,
+    "configurable": "yes",
+    "summary": "Rule token_lifetime_seconds 60-86400, capped by 2x remaining IdP JWT lifetime",
+    "evidence_refs": [
+     "fc-ac0c2877",
+     "fc-e2562915"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "Re-exchange IdP JWT",
+    "summary": "SDK re-exchanges automatically before expiry.",
+    "evidence_refs": [
+     "fc-e8692afd"
+    ]
+   },
+   "administration": {
+    "summary": "Issuers, rules and service accounts are managed in Console or via Admin API endpoints that accept only an org:admin OAuth token. Archiving a rule blocks new exchanges.",
+    "conditions": "Issuer sets maximum accepted IdP token lifetime (1h default).",
+    "evidence_refs": [
+     "fc-6484f42c",
+     "fc-e2562915",
+     "fc-834a1ca7"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "partial",
+     "details": "Token issuance depends on a JWT from your own IdP, so IdP controls such as conditional access apply at exchange time; org SSO/MFA does not apply to the minted token.",
+     "evidence_refs": [
+      "fc-ac0c2877"
+     ]
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Tokens act as a service account, not a user.",
+     "evidence_refs": [
+      "fc-6484f42c"
+     ]
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "Admins can list service accounts, federation issuers and federation rules via the Admin API list endpoints, but not individual minted tokens.",
+     "evidence_refs": [
+      "fc-834a1ca7"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": "Console > Workload identity (platform.claude.com/settings/workload-identity-federation)",
+     "api": "GET /v1/organizations/service_accounts; GET /v1/organizations/federation_issuers; GET /v1/organizations/federation_rules",
+     "cli": "ant organization:service-accounts list; ant organization:federation:issuers list; ant organization:federation:rules list --issuer-id <fdis_id>",
+     "evidence_refs": [
+      "fc-834a1ca7",
+      "fc-ac0c2877"
+     ]
+    },
+    "sso": {
+     "ui": "Console > Workload identity > rule match conditions (subject_prefix, audience, claims, CEL condition); conditional access is set in your IdP",
+     "api": null,
+     "cli": null,
+     "evidence_refs": [
+      "fc-ac0c2877"
+     ]
+    },
+    "expiry": {
+     "ui": "Console > Workload identity > Connect workload (wizard sets token_lifetime_seconds, default 600)",
+     "api": "POST /v1/organizations/federation_rules/{rule_id} with token_lifetime_seconds (60-86400)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-e2562915",
+      "fc-834a1ca7",
+      "fc-ac0c2877"
+     ]
+    },
+    "reads": {
+     "ui": null,
+     "api": "GET /v1/compliance/activities?activity_types[]=platform_file_content_downloaded; match actor.api_key_id client-side (actor_ids[] accepts only user_ IDs)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-0f28eb08",
+      "fc-b0efd6b0"
+     ]
+    },
+    "kill": {
+     "ui": null,
+     "api": "POST /v1/organizations/federation_rules/{rule_id}/archive (also /federation_issuers/{id}/archive, /service_accounts/{id}/archive)",
+     "cli": "ant organization:federation:rules archive --federation-rule-id <fdrl_id>",
+     "evidence_refs": [
+      "fc-834a1ca7"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Short-lived access token; format not documented"
+    },
+    "log_sources": [
+     {
+      "name": "Compliance API Activity Feed (GET /v1/compliance/activities)",
+      "notes": "Must be enabled; 6-year retention; not retroactive. Admin API keys can read it."
+     },
+     {
+      "name": "Usage and Cost API",
+      "notes": "Aggregated usage filterable by API key."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "service account id (svac_...)",
+      "log": "Activity Feed",
+      "notes": "Actor attribution for WIF calls not verified"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "platform_federated_authentication",
+      "stage": "use",
+      "notes": "Token exchange attempt"
+     },
+     {
+      "event": "platform_federation_rule_archived",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key_id",
+     "actor.ip_address",
+     "actor.user_agent",
+     "workspace id"
+    ],
+    "anomaly_cues": [
+     "New platform_api_key_created outside change window",
+     "platform_file_content_downloaded bursts",
+     "Key used from unfamiliar ip_address"
+    ],
+    "containment": {
+     "steps": "Archive the federation rule (then issuer/service account).",
+     "kills_existing": "partial",
+     "notes": "Archiving a federation rule stops new exchanges immediately, but tokens already minted stay valid until they expire (default 3600s, max 86400s)."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Effect on live tokens"
+    ],
+    "evidence_refs": [
+     "fc-e2562915",
+     "fc-834a1ca7",
+     "fc-b0efd6b0",
+     "fc-6bd38093"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Key is valid; available models",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+      "reveals": "Files uploaded to the workspace",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": "platform_file_content_downloaded",
+      "log_notes": "Requires Compliance API enabled"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-03a98433",
+     "fc-b0efd6b0"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "anthropic-6",
+   "name": "OAuth bearer token (ant CLI login, incl. org:admin)",
+   "family": "oauth",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Browser login via ant auth login issues a workspace-scoped token; with --scope org:admin it has organization-wide admin access.",
+    "evidence_refs": [
+     "fc-c689619c"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "Browser login presumably follows Console sign-in, but docs fetched do not describe SSO enforcement.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "No customer IP allowlist for Claude API requests found in fetched docs; the IP addresses page only lists Anthropic's own ranges.",
+    "evidence_refs": []
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Interactive tokens are short-lived (exact value not stated)",
+    "evidence_refs": [
+     "fc-6484f42c"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "Not stated",
+    "summary": "Re-export from CLI profile to refresh; mechanism details not documented.",
+    "evidence_refs": [
+     "fc-6484f42c"
+    ]
+   },
+   "administration": {
+    "summary": "org:admin limited to admin, owner, primary owner roles. Required for service account and federation endpoints.",
+    "conditions": "Admin-side revocation of issued CLI tokens not documented.",
+    "evidence_refs": [
+     "fc-6484f42c",
+     "fc-c689619c"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": null,
+     "api": "GET /v1/compliance/activities?activity_types[]=org_users_listed (actor type for OAuth tokens not documented)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-0f28eb08",
+      "fc-b0efd6b0"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": ""
+    },
+    "log_sources": [
+     {
+      "name": "Compliance API Activity Feed (GET /v1/compliance/activities)",
+      "notes": "Must be enabled; 6-year retention; not retroactive. Admin API keys can read it."
+     },
+     {
+      "name": "Usage and Cost API",
+      "notes": "Aggregated usage filterable by API key."
+     }
+    ],
+    "credential_id_fields": [],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "actor.api_key_id",
+     "actor.ip_address",
+     "actor.user_agent",
+     "workspace id"
+    ],
+    "anomaly_cues": [
+     "New platform_api_key_created outside change window",
+     "platform_file_content_downloaded bursts",
+     "Key used from unfamiliar ip_address"
+    ],
+    "containment": {
+     "steps": "Remove the user's admin role or remove the user; locally run ant auth logout.",
+     "kills_existing": "unknown",
+     "notes": "No admin revocation of CLI tokens documented."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Logging of OAuth token issuance"
+    ],
+    "evidence_refs": [
+     "fc-6484f42c",
+     "fc-c689619c"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/organizations/me",
+      "reveals": "Organization of the credential",
+      "bulk": false,
+      "scope": "org:admin (for OAuth)",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/organizations/api_keys",
+      "reveals": "All keys, principals, status, expiry",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/organizations/users",
+      "reveals": "all organization members (org:admin token has organization-wide access)",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "org_users_listed",
+      "log_notes": "Event exists in the Activity Feed; docs do not say which actor type an interactive OAuth token produces. Requires the Compliance API to be enabled."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-6484f42c",
+     "fc-c689619c",
+     "fc-b258a526",
+     "fc-b0efd6b0",
+     "fc-0f28eb08"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

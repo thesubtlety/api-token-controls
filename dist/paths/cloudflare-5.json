@@ -1,0 +1,350 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "scope_notes": "Covers Cloudflare (API, Zero Trust Access, R2). All plans have API tokens and 18-month Audit Logs v2; Logpush beyond 18 months is Enterprise; Access service tokens need Cloudflare Zero Trust; R2 credentials need R2.",
+      "controls": [
+        {
+          "name": "Service Token Duration",
+          "effect": "limit_lifetime",
+          "applies_to": [
+            "cloudflare-5"
+          ],
+          "what": "Sets the service token's expiration date.",
+          "setting": "Zero Trust > Access controls > Service credentials > Service Tokens",
+          "plan": "Cloudflare Zero Trust",
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-ca617cf4"
+          ]
+        },
+        {
+          "name": "Automatically clean up inactive service tokens",
+          "effect": "disable",
+          "applies_to": [
+            "cloudflare-5"
+          ],
+          "what": "Disables or deletes tokens unused for 30-365 days.",
+          "setting": "Zero Trust > Access controls > Access settings > Manage service tokens",
+          "plan": "Cloudflare Zero Trust",
+          "default": "off",
+          "level": "account",
+          "evidence_refs": [
+            "fc-ca617cf4"
+          ]
+        },
+        {
+          "name": "Strict service token authentication",
+          "effect": "other",
+          "applies_to": [
+            "cloudflare-5"
+          ],
+          "what": "Only Service Auth policies authorize token requests, no session cookie is issued, and failures are logged.",
+          "setting": "Zero Trust > Access controls > Access settings; strict_service_token_auth",
+          "plan": "Cloudflare Zero Trust",
+          "default": "varies",
+          "level": "account",
+          "evidence_refs": [
+            "fc-ca617cf4"
+          ]
+        },
+        {
+          "name": "Disable / delete service token",
+          "effect": "revoke",
+          "applies_to": [
+            "cloudflare-5"
+          ],
+          "what": "Disable stops authentication; delete revokes for good.",
+          "setting": "Service Tokens > Disable token / Delete; DELETE .../access/service_tokens/{id}",
+          "plan": "Cloudflare Zero Trust",
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-ca617cf4",
+            "fc-9ae6115b"
+          ]
+        },
+        {
+          "name": "Rotate service token secret",
+          "effect": "require_rotation",
+          "applies_to": [
+            "cloudflare-5"
+          ],
+          "what": "Issues a new secret with an optional grace period for the old one.",
+          "setting": "Service Tokens > Rotate secret",
+          "plan": "Cloudflare Zero Trust",
+          "default": "unknown",
+          "level": "app",
+          "evidence_refs": [
+            "fc-ca617cf4"
+          ]
+        }
+      ],
+      "no_control": [
+        {
+          "path_id": "cloudflare-5",
+          "what": "Revoking existing Access sessions does not stop a valid service token; only deletion does.",
+          "kind": "kill",
+          "evidence_refs": [
+            "fc-ca617cf4"
+          ]
+        }
+      ],
+      "controls_unknown": [
+        "Any account-level setting to block members from creating user API tokens or using the Global API Key.",
+        "Any account-wide policy forcing token expiry or IP filters.",
+        "Whether Super Administrators can list or revoke other members' user API tokens.",
+        "Whether dashboard SSO or Access policies are checked on API token / Global API Key requests (no explicit statement).",
+        "Exact Audit Logs v2 action names for token create/delete/roll.",
+        "Whether Origin CA keys still authenticate after the 2026-09-30 removal date.",
+        "IP restrictions for Access service tokens and for R2 S3 requests.",
+        "Cloudflare OAuth tokens (actor context 'oauth', e.g. Wrangler) were not researched."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "cloudflare-5",
+      "provider_id": "cloudflare",
+      "name": "Access service tokens",
+      "family": "basic",
+      "principal": "service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Client ID + Client Secret (cfast_ prefix for new secrets) sent as CF-Access-Client-Id/CF-Access-Client-Secret headers to reach apps protected by Cloudflare Access.",
+        "evidence_refs": [
+          "fc-ca617cf4"
+        ]
+      },
+      "federation": {
+        "status": "not_applicable",
+        "details": "Service Auth policies authorize the token without an IdP login.",
+        "evidence_refs": [
+          "fc-ca617cf4"
+        ]
+      },
+      "ip_restriction": {
+        "status": "supported",
+        "enforcement_stage": "api_request",
+        "boundary": "Add an IP ranges Require rule to the Service Auth policy of each Access application; IP ranges are checked at login and continuously. Not a property of the token itself.",
+        "evidence_refs": [
+          "fc-1014319f"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": null,
+        "maximum_seconds": null,
+        "configurable": "yes",
+        "summary": "Duration chosen at creation; optional auto-disable/delete after 30-365 days of inactivity",
+        "evidence_refs": [
+          "fc-ca617cf4"
+        ]
+      },
+      "renewal": {
+        "mechanism": "credential_reuse",
+        "expiry_basis": "Duration from creation; Refresh adds one year",
+        "summary": "Refresh or edit duration; rotate secret with a 1 hour to 30 day grace period.",
+        "evidence_refs": [
+          "fc-ca617cf4"
+        ]
+      },
+      "administration": {
+        "summary": "Admins can disable, delete, rotate and auto-clean tokens; strict service token mode (forced on for orgs created on/after 2026-10-05) stops cookie issuance and logs failures.",
+        "conditions": "Needs Cloudflare Zero Trust (Access).",
+        "evidence_refs": [
+          "fc-ca617cf4"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "no",
+          "details": "Service tokens are used with Service Auth policies, which do not require an IdP login.",
+          "evidence_refs": [
+            "fc-1014319f"
+          ]
+        },
+        "offboard": {
+          "status": "not_applicable",
+          "details": "Service tokens are account-level credentials for automated systems, not tied to a user.",
+          "evidence_refs": [
+            "fc-1014319f"
+          ]
+        },
+        "inventory": {
+          "status": "yes",
+          "details": "Zero Trust > Access controls > Service credentials > Service Tokens; API: GET /{accounts_or_zones}/{account_or_zone_id}/access/service_tokens.",
+          "evidence_refs": [
+            "fc-ca617cf4",
+            "fc-af54983d"
+          ]
+        }
+      },
+      "how": {
+        "network": {
+          "ui": "Zero Trust > Access controls > Policies > (Service Auth policy) > add Require rule, selector 'IP ranges'",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-4c0532a0",
+            "fc-1014319f"
+          ]
+        },
+        "usage": {
+          "ui": null,
+          "api": "POST /client/v4/graphql, dataset accessLoginRequestsAdaptiveGroups, filter on serviceTokenId",
+          "cli": null,
+          "evidence_refs": [
+            "fc-6a19ee1e",
+            "fc-a51ddee6"
+          ]
+        },
+        "reads": {
+          "ui": null,
+          "api": "Enterprise HTTP request logs via Logpush (filter ClientRequestHost/ClientRequestURI for the app)",
+          "cli": null,
+          "evidence_refs": [
+            "fc-6a19ee1e"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": "cfast_",
+          "notes": "Secret cfast_ + 40 chars + 8-char checksum (since 2026-08-26); Client ID ends .access; older secrets are 64-char hex."
+        },
+        "log_sources": [
+          {
+            "name": "Access authentication logs",
+            "notes": "Failed requests for recognized tokens logged in strict mode."
+          },
+          {
+            "name": "Audit Logs v2",
+            "notes": "Admin changes to service tokens (create/rotate/delete) via API."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "service token name / Client ID",
+            "log": "Access authentication logs",
+            "notes": "Docs say the name identifies events in logs; exact field name not given"
+          }
+        ],
+        "lifecycle_events": [],
+        "correlation_keys": [
+          "Client ID",
+          "token name"
+        ],
+        "anomaly_cues": [
+          "Failed auth with expired/disabled token",
+          "Token used on apps it is not authorized for"
+        ],
+        "containment": {
+          "steps": "Delete the service token (DELETE .../access/service_tokens/{id}); disabling also stops the old secret during a rotation grace period.",
+          "kills_existing": "yes",
+          "notes": "Revoking Access sessions alone is not enough."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Exact Access log field names"
+        ],
+        "evidence_refs": [
+          "fc-ca617cf4",
+          "fc-9ae6115b"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "collection",
+            "call": "HTTP request to an Access-protected application path (customer app)",
+            "reveals": "Whatever the protected application returns",
+            "bulk": false,
+            "scope": null,
+            "rate_limit": null,
+            "logged": "plan",
+            "log_event": null,
+            "log_notes": "Per-request logs need Enterprise HTTP request logs/Logpush; Access authentication logs record only the authentication, not app actions."
+          }
+        ],
+        "unknown": [
+          "Calls depend on the protected application"
+        ],
+        "evidence_refs": [
+          "fc-ca617cf4",
+          "fc-6a19ee1e"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-1014319f",
+      "title": "Access policies",
+      "url": "https://developers.cloudflare.com/cloudflare-one/access-controls/policies/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4c0532a0",
+      "title": "Manage Access policies",
+      "url": "https://developers.cloudflare.com/cloudflare-one/access-controls/policies/policy-management/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6a19ee1e",
+      "title": "Access authentication logs",
+      "url": "https://developers.cloudflare.com/cloudflare-one/insights/logs/dashboard-logs/access-authentication-logs/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-9ae6115b",
+      "title": "Delete a service token",
+      "url": "https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/service_tokens/methods/delete/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a51ddee6",
+      "title": "Querying Access login events with GraphQL",
+      "url": "https://developers.cloudflare.com/analytics/graphql-api/tutorials/querying-access-login-events/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-af54983d",
+      "title": "List service tokens",
+      "url": "https://developers.cloudflare.com/api/resources/zero_trust/subresources/access/subresources/service_tokens/methods/list/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-ca617cf4",
+      "title": "Service tokens",
+      "url": "https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}

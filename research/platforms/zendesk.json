@@ -1,0 +1,635 @@
+{
+ "id": "zendesk",
+ "name": "Zendesk Support",
+ "scope_notes": "Check IP entitlement and OAuth client creation date/type. API-token retirement applies to Support/Ticketing, Help Center and Voice; other Zendesk products differ.",
+ "controls": [
+  {
+   "name": "Allow API token access",
+   "effect": "disable",
+   "applies_to": [
+    "zendesk-2"
+   ],
+   "what": "Turning it off makes all API tokens stop working until re-enabled.",
+   "setting": "Admin Center > Apps and integrations > APIs > API configuration",
+   "plan": "All Suites Team+ / Support Team+",
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-8c2465b8"
+   ],
+   "quote": "When you turn off token access, your tokens stop working. You’ll need to turn token access back on to reactivate them."
+  },
+  {
+   "name": "Deactivate / delete API token",
+   "effect": "revoke",
+   "applies_to": [
+    "zendesk-2"
+   ],
+   "what": "Deactivating a token makes calls with it fail immediately; deleting is permanent.",
+   "setting": "Admin Center > Apps and integrations > APIs > API tokens",
+   "plan": "All Suites Team+ / Support Team+",
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-6f6edc20"
+   ],
+   "quote": "As soon as you deactivate a token, API calls using that token begin failing."
+  },
+  {
+   "name": "IP restrictions",
+   "effect": "limit_network",
+   "applies_to": [
+    "zendesk-1",
+    "zendesk-2"
+   ],
+   "what": "Blocks API calls, sign-ins and page access from outside allowed IPs; customers (not agents/admins) can be exempted.",
+   "setting": "Admin Center > Account > Security > Advanced",
+   "plan": "All Suites Team+ / Support Team+",
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "turn11search37"
+   ],
+   "quote": "This means that any attempt to make API calls, sign in, or access pages in any Zendesk product will fail from outside your allowed IP addresses."
+  },
+  {
+   "name": "OAuth client Scopes (allowed scopes)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "zendesk-1"
+   ],
+   "what": "Caps the scopes a client may request; empty means all scopes; only affects new tokens.",
+   "setting": "Admin Center > Apps and integrations > APIs > OAuth clients > client > Scopes",
+   "plan": "All Suites Team+ / Support Team+",
+   "default": "off",
+   "level": "account",
+   "evidence_refs": [
+    "fc-8a534018"
+   ],
+   "quote": "Scopes - Select the scopes this client can request. Leave this field empty to allow all scopes."
+  },
+  {
+   "name": "OAuth client Expire tokens",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "zendesk-1"
+   ],
+   "what": "Assigns a default expiration to all tokens from the client, including existing ones; permanent once on; preset for clients created after Apr 30 2026.",
+   "setting": "Admin Center > Apps and integrations > APIs > OAuth clients > client > Expire tokens",
+   "plan": "All Suites Team+ / Support Team+",
+   "default": "varies",
+   "level": "account",
+   "evidence_refs": [
+    "fc-8a534018"
+   ],
+   "quote": "Expire tokens : When enabled, all tokens issued by this OAuth client will be assigned a default expiration date, including existing tokens that don't already have one."
+  },
+  {
+   "name": "View and delete OAuth tokens",
+   "effect": "revoke",
+   "applies_to": [
+    "zendesk-1"
+   ],
+   "what": "Admins can list a client's tokens, view their scopes, and delete (revoke) individual tokens.",
+   "setting": "Admin Center > Apps and integrations > APIs > OAuth clients > View tokens > Delete",
+   "plan": "All Suites Team+ / Support Team+",
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-90bc02cf"
+   ],
+   "quote": "If you suspect a token for an OAuth client is compromised, you should delete it."
+  },
+  {
+   "name": "Delete OAuth client",
+   "effect": "revoke",
+   "applies_to": [
+    "zendesk-1"
+   ],
+   "what": "Deleting a client deactivates every access token it issued; permanent.",
+   "setting": "Admin Center > Apps and integrations > APIs > OAuth clients > Delete",
+   "plan": "All Suites Team+ / Support Team+",
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-90bc02cf"
+   ],
+   "quote": "Deleting an OAuth client deactivates all the access tokens created with the client."
+  },
+  {
+   "name": "Manage APIs permission / user role",
+   "effect": "limit_scope",
+   "applies_to": [
+    "zendesk-1"
+   ],
+   "what": "Only admins or agents with Manage APIs can create tokens via API; token access follows the requester's current role.",
+   "setting": "Admin Center > People > Team > Roles (Manage APIs permission)",
+   "plan": null,
+   "default": "unknown",
+   "level": "account",
+   "evidence_refs": [
+    "fc-89300144"
+   ],
+   "quote": "Only admins or agents with the Manage APIs permission can make the request. If the requester's role later changes, the token's access permissions automatically changes to reflect the new role."
+  }
+ ],
+ "no_control": [
+  {
+   "path_id": "zendesk-1",
+   "what": "Narrowing a client's allowed scopes does not shrink existing tokens.",
+   "evidence_refs": [
+    "fc-8a534018"
+   ],
+   "quote": "Scope restrictions apply only to new access tokens generated through an authorization or client-credentials flow. Existing active tokens and refreshed tokens are not retroactively affected.",
+   "kind": "other"
+  },
+  {
+   "path_id": "zendesk-2",
+   "what": "API tokens cannot be tied to a user or scoped; any verified user can use any token.",
+   "evidence_refs": [
+    "fc-6f6edc20"
+   ],
+   "quote": "Each API token can be used by any verified user on the account and isn't associated with a specific user.",
+   "kind": "other"
+  },
+  {
+   "path_id": "zendesk-2",
+   "what": "From Apr 30 2027 admins cannot reactivate tokens at all (vendor retirement; new creation blocked from Oct 27 2026).",
+   "evidence_refs": [
+    "fc-19456fe1"
+   ],
+   "quote": "All remaining API tokens will be deactivated permanently. Admins cannot reactivate tokens, and the API token management pages will be removed from Admin Center.",
+   "kind": "other"
+  }
+ ],
+ "controls_unknown": [
+  "No account-wide switch to disable OAuth found; OAuth \"is managed separately\" from the API configuration page.",
+  "Whether admins can block or scope third-party global OAuth clients (marketplace apps) beyond deleting their tokens.",
+  "Whether requiring SSO affects API token or OAuth token use.",
+  "Plan requirement for the Manage APIs custom-role permission (custom roles are typically Enterprise) not confirmed."
+ ],
+ "credentials": [
+  {
+   "id": "zendesk-1",
+   "name": "OAuth",
+   "family": "oauth",
+   "principal": "user_or_service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth bearer: authorization code or client credentials. Legacy API tokens via Basic email/token are being retired; unavailable to accounts created from 28 July 2026.",
+    "evidence_refs": [
+     "turn27search3",
+     "turn27search11",
+     "turn4search15",
+     "turn31view0"
+    ]
+   },
+   "federation": {
+    "status": "not_supported",
+    "details": "SSO via SAML/OIDC/JWT does not by itself provide external identity exchange for the Support management API.",
+    "evidence_refs": [
+     "turn27search3",
+     "turn27search11",
+     "turn4search15",
+     "turn31view0",
+     "fc-268a5971"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Account IP restrictions cover API/mobile/web access. Customer bypass and unsupported-endpoint exceptions require review.",
+    "evidence_refs": [
+     "turn11search37",
+     "turn4search3",
+     "turn31view0"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": 1800,
+    "maximum_seconds": 172800,
+    "configurable": "yes",
+    "summary": "Default 30 min (5 min–48 h) for clients created on/after 2026-04-30; older clients may issue non-expiring tokens",
+    "evidence_refs": [
+     "turn27search3",
+     "turn27search11",
+     "turn4search15",
+     "turn31view0",
+     "fc-268a5971"
+    ]
+   },
+   "renewal": {
+    "mechanism": "refresh_token",
+    "expiry_basis": "absolute",
+    "summary": "Authorization code: single-use rotating refresh token, TTL 7–90 days (default 30 days). Client credentials: no refresh token; run the client credentials flow again. Existing local clients must adopt refresh tokens by 1 April 2027.",
+    "evidence_refs": [
+     "turn27search3",
+     "turn27search11",
+     "turn4search15",
+     "turn31view0",
+     "fc-f5fa5dfd",
+     "fc-268a5971"
+    ]
+   },
+   "administration": {
+    "summary": "OAuth scopes and user roles, API-token management, client/token revocation, SSO and IP policy.",
+    "conditions": "Check IP entitlement and OAuth client creation date/type. API-token retirement applies to Support/Ticketing, Help Center and Voice; other Zendesk products differ.",
+    "evidence_refs": [
+     "turn11search37",
+     "turn4search3",
+     "turn31view0"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "If the creating admin loses access, client_credentials tokens stop but authorization_code tokens keep working; nothing says what happens when the authorizing user is removed.",
+     "evidence_refs": [
+      "fc-e1ac499b"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin Center > Apps and integrations > APIs > OAuth clients > View tokens, and GET /api/v2/oauth/tokens?all=true for admins.",
+     "evidence_refs": [
+      "fc-16675a8b",
+      "fc-f4d88c8f"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Admin Center > Account > Logs > Access log > Filter: Category = Users, Summary = Show user; Authorization type = bearer",
+     "api": "GET /api/v2/access_logs?filter[start]=...&filter[end]=...&filter[user_id]=<id> (authorization_type field)",
+     "cli": null,
+     "evidence_refs": [
+      "fc-47761cca",
+      "fc-979be1bb",
+      "fc-564a645c"
+     ]
+    },
+    "offboard": {
+     "ui": "Admin Center > People > Team > Team members > agent > Manage in Support > User type = End user (then delete); revoke the user's OAuth tokens via API",
+     "api": "GET /api/v2/oauth/tokens?all=true; DELETE /api/v2/oauth/tokens/{oauth_token_id}; DELETE /api/v2/users/{user_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-ec6eb17c",
+      "fc-f4d88c8f",
+      "fc-848721c6"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Opaque bearer token (doc example 32 alphanumerics). Access token 30 min default (5 min-48 h); refresh token 30 days default (7-90 d) and rotates on use. Legacy clients without expires_in get non-expiring tokens."
+    },
+    "log_sources": [
+     {
+      "url": "https://developer.zendesk.com/api-reference/ticketing/account-configuration/access_logs/",
+      "title": "Zendesk Access Logs API",
+      "quote": "The access log is a 90-day record of events that captures what an agent or admin has accessed in your account without necessarily updating, creating, or deleting anything.",
+      "supports": "access log fields authorization_type, user_id, ip_address, client, url, method, status, timestamp, referer"
+     },
+     {
+      "name": "Zendesk Access Logs (/api/v2/access_logs)",
+      "notes": "ADPP add-on; 90 days; per-request user_id, IP, client, authorization_type ('bearer' for OAuth). No client_id field."
+     },
+     {
+      "name": "Zendesk Audit Logs (/api/v2/audit_logs)",
+      "notes": "Enterprise; kept indefinitely; config changes and logins with actor and IP."
+     },
+     {
+      "name": "OAuth Tokens API (/api/v2/oauth/tokens?all=true)",
+      "notes": "Inventory, not a log: per token client_id, user_id, created_at, expires_at, used_at, scopes; first 10 chars of token."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "authorization_type",
+      "log": "access log",
+      "notes": "'bearer' marks OAuth token use"
+     },
+     {
+      "field": "id",
+      "log": "OAuth Tokens API",
+      "notes": "Token record ID used for revocation"
+     },
+     {
+      "field": "client_id",
+      "log": "OAuth Tokens API",
+      "notes": "OAuth client that owns the token"
+     },
+     {
+      "field": "token",
+      "log": "OAuth Tokens API",
+      "notes": "First 10 characters only; match against a leaked token"
+     },
+     {
+      "field": "used_at",
+      "log": "OAuth Tokens API",
+      "notes": "Last time the token authenticated"
+     },
+     {
+      "field": "user_id",
+      "log": "OAuth Tokens API / access log",
+      "notes": "User the token acts as (client credentials: the client creator)"
+     }
+    ],
+    "lifecycle_events": [],
+    "correlation_keys": [
+     "user_id",
+     "ip_address",
+     "client",
+     "authorization_type",
+     "url",
+     "method",
+     "status",
+     "timestamp",
+     "client_id",
+     "actor_id"
+    ],
+    "anomaly_cues": [
+     "bearer requests for a user_id from a new IP or client string",
+     "Token used_at recent for a client or user expected to be idle",
+     "Client-credentials activity attributed to an admin who did not run it",
+     "Bulk export-style URLs (search, incremental exports) under bearer auth outside normal hours",
+     "New OAuth client created shortly before unusual bearer traffic"
+    ],
+    "containment": {
+     "steps": "DELETE /api/v2/oauth/tokens/{id} (or POST /api/v2/oauth/tokens/delete_many); for a leaked client secret, PUT /api/v2/oauth/clients/{id}/generate_secret or DELETE the client.",
+     "kills_existing": "yes",
+     "notes": "Revoking a token record ends that token. Effect of client deletion on existing tokens not documented. Non-expiring legacy tokens persist until revoked."
+    },
+    "sample_query": {
+     "language": "Zendesk Access Logs API filter parameters",
+     "query": "GET /api/v2/access_logs?filter[start]=2026-10-01T00:00:00Z&filter[end]=2026-10-12T00:00:00Z&filter[user_id]=123&filter[graphql]=true  -- keep rows where authorization_type == 'bearer'",
+     "purpose": "See every OAuth-authenticated request for one user, with IP and client."
+    },
+    "unknown": [
+     "Audit log source_type/action values for OAuth client and token create/revoke",
+     "client_id in access logs",
+     "Effect of deleting an OAuth client on live tokens",
+     "Token format/prefix"
+    ],
+    "evidence_refs": [
+     "fc-564a645c",
+     "fc-01809ba0",
+     "fc-f4d88c8f",
+     "fc-23521e6c",
+     "fc-f57416e3"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /api/v2/users/{user_id}",
+      "reveals": "user profile",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "plan",
+      "log_event": "Show user",
+      "log_notes": "Recorded in the access log only with the ADPP add-on, after it is turned on; 90-day window; shows actor and authorization type, not a token ID."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-47761cca",
+     "fc-848721c6"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "zendesk-2",
+   "name": "Legacy Support API token",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "legacy",
+   "reviewed_at": "2026-10-09",
+   "authentication": {
+    "summary": "OAuth bearer: authorization code or client credentials. Legacy API tokens via Basic email/token are being retired; unavailable to accounts created from 28 July 2026.",
+    "evidence_refs": [
+     "turn27search3",
+     "turn27search11",
+     "turn4search15",
+     "turn31view0"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "This path uses a local/static or platform-native credential. Evaluate a separate federation path where listed.",
+    "evidence_refs": [
+     "turn27search3",
+     "turn27search11",
+     "turn4search15",
+     "turn31view0"
+    ]
+   },
+   "ip_restriction": {
+    "status": "conditional",
+    "enforcement_stage": "api_request",
+    "boundary": "Account IP restrictions cover API/mobile/web access. Customer bypass and unsupported-endpoint exceptions require review.",
+    "evidence_refs": [
+     "turn11search37",
+     "turn4search3",
+     "turn31view0"
+    ]
+   },
+   "lifetime": {
+    "basis": "inactivity",
+    "default_seconds": 2592000,
+    "maximum_seconds": null,
+    "configurable": "no",
+    "summary": "30 days unused; retirement 2027-04-30",
+    "evidence_refs": [
+     "turn27search3",
+     "turn27search11",
+     "turn4search15",
+     "turn31view0"
+    ]
+   },
+   "renewal": {
+    "mechanism": "credential_reuse",
+    "expiry_basis": "inactivity",
+    "summary": "The static token is reused until it goes 30 days unused (deactivated, deleted after 60 more days) or is revoked. New creation stops 27 October 2026; all tokens stop working 30 April 2027. Accounts created on/after 28 July 2026 cannot use them.",
+    "evidence_refs": [
+     "turn27search3",
+     "turn27search11",
+     "turn4search15",
+     "turn31view0"
+    ]
+   },
+   "administration": {
+    "summary": "OAuth scopes and user roles, API-token management, client/token revocation, SSO and IP policy.",
+    "conditions": "Check IP entitlement and OAuth client creation date/type. API-token retirement applies to Support/Ticketing, Help Center and Voice; other Zendesk products differ.",
+    "evidence_refs": [
+     "turn11search37",
+     "turn4search3",
+     "turn31view0"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "An API token is account-level and can act as any user, so it is not tied to one user's account.",
+     "evidence_refs": [
+      "turn31view0"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin Center > Apps and integrations > APIs > API tokens lists all tokens.",
+     "evidence_refs": [
+      "fc-6eb6c85e"
+     ]
+    }
+   },
+   "how": {
+    "reads": {
+     "ui": "Admin Center > Account > Logs > Access log > Filter: Category = Users, Summary = Show user; Authorization type = basic",
+     "api": "GET /api/v2/access_logs?filter[start]=...&filter[end]=...&filter[user_id]=<id>",
+     "cli": null,
+     "evidence_refs": [
+      "fc-47761cca",
+      "fc-979be1bb",
+      "fc-564a645c"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Sent as Basic auth '{email_address}/token:{api_token}'. Not tied to a user: any verified user's email works. No expiry; auto-deactivates after 30 days unused (from 2026-07-28). Creation blocked from 2026-10-27; all tokens stop 2027-04-30."
+    },
+    "log_sources": [
+     {
+      "name": "Zendesk Audit Logs (/api/v2/audit_logs)",
+      "notes": "Enterprise; kept indefinitely. source_type 'apitoken' covers token create/deactivate/reactivate/delete. Admin Center token menu > View audit log."
+     },
+     {
+      "name": "Zendesk Access Logs (/api/v2/access_logs)",
+      "notes": "ADPP add-on; 90 days; authorization_type 'basic' on token requests; user_id is the email used, not the token."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "source_id",
+      "log": "audit log",
+      "notes": "API token ID when source_type is 'apitoken'"
+     },
+     {
+      "field": "source_label",
+      "log": "audit log",
+      "notes": "Label of the audited token (likely description)"
+     },
+     {
+      "field": "authorization_type",
+      "log": "access log",
+      "notes": "'basic' for email/token auth (also used by other basic auth)"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "source_type=apitoken action=create",
+      "stage": "create",
+      "notes": "Audit log record for a new token"
+     },
+     {
+      "event": "source_type=apitoken action=update",
+      "stage": "change",
+      "notes": "Likely deactivate/reactivate/description edit; mapping not confirmed"
+     },
+     {
+      "event": "source_type=apitoken action=destroy",
+      "stage": "revoke",
+      "notes": "Token deleted"
+     }
+    ],
+    "correlation_keys": [
+     "actor_id",
+     "actor_name",
+     "ip_address",
+     "source_id",
+     "source_type",
+     "created_at",
+     "user_id",
+     "authorization_type",
+     "client"
+    ],
+    "anomaly_cues": [
+     "Basic-auth requests with a user_id that never used the integration (token works with any verified user's email)",
+     "New API token created after 2026-10-27 attempt or creation spike before that cutoff",
+     "Token reactivated shortly after auto-deactivation, then used from a new IP",
+     "Basic-auth traffic from new IP/client strings for a service integration",
+     "Token creation by an admin from an unusual IP in audit log"
+    ],
+    "containment": {
+     "steps": "Admin Center > Apps and integrations > APIs > API tokens: Deactivate (immediate), then Delete. Consider turning off API token access and migrating to OAuth.",
+     "kills_existing": "yes",
+     "notes": "Docs: 'As soon as you deactivate a token, API calls using that token begin failing.' Deactivated tokens can be reactivated until deleted."
+    },
+    "sample_query": {
+     "language": "Zendesk Audit Logs API filter parameters",
+     "query": "GET /api/v2/audit_logs?filter[source_type]=apitoken&filter[created_at]=2026-07-01T00:00:00Z&filter[created_at]=2026-10-12T00:00:00Z",
+     "purpose": "List all API token lifecycle changes with actor and IP."
+    },
+    "unknown": [
+     "Exact audit action values for deactivate/reactivate",
+     "change_description text for apitoken events",
+     "Any per-token identifier in access logs",
+     "Token format/prefix"
+    ],
+    "evidence_refs": [
+     "fc-01809ba0",
+     "fc-564a645c",
+     "fc-6eb6c85e",
+     "fc-4827ce0a"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "collection",
+      "call": "GET /api/v2/users/{user_id}",
+      "reveals": "user profile",
+      "bulk": false,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "yes",
+      "log_event": null,
+      "log_notes": "API token usage report (from API tokens page, last 7 days) lists each request with truncated token ID, method and URL; the ADPP access log also records 'Show user'."
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-848721c6",
+     "turn31view0",
+     "fc-47761cca"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "Zendesk API Token Created",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/zendesk_rules/zendesk_new_api_token.yml",
+     "detects": "A Zendesk API token was created or deleted."
+    }
+   ]
+  }
+ ]
+}

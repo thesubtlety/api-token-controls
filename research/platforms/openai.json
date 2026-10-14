@@ -1,0 +1,1106 @@
+{
+ "id": "openai",
+ "name": "OpenAI API",
+ "scope_notes": "OpenAI API Platform organizations and projects (platform.openai.com); ChatGPT workspace and Codex credentials out of scope except where shared WIF docs mention them.",
+ "controls": [
+  {
+   "name": "API Key Governance",
+   "effect": "disable",
+   "applies_to": [
+    "openai-1",
+    "openai-2"
+   ],
+   "what": "Allow only service-account keys, only user-owned project keys, or disable all new API key creation at org or project level.",
+   "setting": "Platform settings > API Key Governance",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-cda4b87e"
+   ]
+  },
+  {
+   "name": "Maximum API key lifetime",
+   "effect": "limit_lifetime",
+   "applies_to": [
+    "openai-1",
+    "openai-2"
+   ],
+   "what": "New keys must expire within the configured limit; project limit cannot exceed org limit.",
+   "setting": "Platform settings (organization/general)",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-cda4b87e"
+   ]
+  },
+  {
+   "name": "IP allowlist",
+   "effect": "limit_network",
+   "applies_to": [
+    "openai-1",
+    "openai-2",
+    "openai-4"
+   ],
+   "what": "Reject API requests from IPs outside up to 50 addresses/CIDRs; org or project level.",
+   "setting": "Settings > Security > IP allowlist",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-4f6c0e89"
+   ]
+  },
+  {
+   "name": "Project API Keys permission (RBAC)",
+   "effect": "other",
+   "applies_to": [
+    "openai-1"
+   ],
+   "what": "Custom-role-eligible permission that lets a user manage their own API keys; assign roles without it to limit who can create keys.",
+   "setting": "Organization/Project settings > Roles",
+   "plan": null,
+   "default": "on",
+   "level": "org",
+   "evidence_refs": [
+    "fc-aabf5d67"
+   ]
+  },
+  {
+   "name": "API key permissions (scopes)",
+   "effect": "limit_scope",
+   "applies_to": [
+    "openai-1",
+    "openai-2"
+   ],
+   "what": "Key permissions are intersected with the owner's project role.",
+   "setting": "Key create/edit",
+   "plan": null,
+   "default": "varies",
+   "level": "app",
+   "evidence_refs": [
+    "fc-aabf5d67",
+    "fc-637c5e12"
+   ]
+  },
+  {
+   "name": "Delete project API key",
+   "effect": "revoke",
+   "applies_to": [
+    "openai-1",
+    "openai-2"
+   ],
+   "what": "Admin deletes a project key; takes effect within a few seconds.",
+   "setting": "DELETE /v1/organization/projects/{project_id}/api_keys/{api_key_id}",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-a8249c0b",
+    "fc-a738cffa"
+   ]
+  },
+  {
+   "name": "Delete project service account",
+   "effect": "revoke",
+   "applies_to": [
+    "openai-2",
+    "openai-4"
+   ],
+   "what": "Removes the service account identity.",
+   "setting": "DELETE /v1/organization/projects/{project_id}/service_accounts/{service_account_id}",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-8c63700e"
+   ]
+  },
+  {
+   "name": "Delete admin API key",
+   "effect": "revoke",
+   "applies_to": [
+    "openai-3"
+   ],
+   "what": "Deletes an admin key.",
+   "setting": "DELETE /v1/organization/admin_api_keys/{key_id}",
+   "plan": null,
+   "default": "unknown",
+   "level": "org",
+   "evidence_refs": [
+    "fc-32167ce0"
+   ]
+  },
+  {
+   "name": "Workload Identity Provider and service account mappings",
+   "effect": "limit_scope",
+   "applies_to": [
+    "openai-4"
+   ],
+   "what": "Only tokens matching exactly one enabled mapping are exchanged; mapping permissions narrow access.",
+   "setting": "Organization Settings > Security > Workload Identity Provider",
+   "plan": null,
+   "default": "off",
+   "level": "org",
+   "evidence_refs": [
+    "fc-118be2d3"
+   ]
+  },
+  {
+   "name": "Disable a workload identity service account mapping",
+   "effect": "disable",
+   "applies_to": [
+    "openai-4"
+   ],
+   "what": "A disabled mapping makes token exchange fail for that service account, which stops new access tokens from being issued.",
+   "setting": "Workload Identity Provider > service account mapping (disabled state)",
+   "plan": null,
+   "default": "unknown",
+   "level": "app",
+   "evidence_refs": [
+    "fc-6c2bdef9"
+   ]
+  }
+ ],
+ "no_control": [],
+ "controls_unknown": [
+  "Whether API keys are subject to SSO or IdP conditional access (no statement found).",
+  "Whether the IP allowlist covers Administration API calls made with admin keys.",
+  "Whether audit logging must be activated and its retention period (help center pages blocked to fetch).",
+  "Whether inference/data-read API calls (e.g. GET /v1/files) appear in the audit log; it is described as user actions and configuration changes.",
+  "Whether deleting a service account or WIF mapping invalidates already-issued WIF tokens before expiry.",
+  "Lifetime, listing and admin revocation of legacy user API keys.",
+  "API key secret prefix format (not stated in fetched docs)."
+ ],
+ "credentials": [
+  {
+   "id": "openai-1",
+   "name": "Project API key (user-owned)",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Static secret created in a project and sent as a bearer token. It acts for its owning user; its scopes are checked against the user's project role.",
+    "evidence_refs": [
+     "fc-a738cffa",
+     "fc-aabf5d67"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "OpenAI docs fetched do not say whether API keys are subject to SSO or IdP conditional access.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Org or project IP allowlist applies to API requests made with the key. Does not cover dashboard sign-in. Changes take up to 15 minutes.",
+    "evidence_refs": [
+     "fc-4f6c0e89"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional expiry per key; admins can cap max lifetime per org/project",
+    "evidence_refs": [
+     "fc-cda4b87e",
+     "fc-a8249c0b"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_at set at creation, or null",
+    "summary": "Create a replacement key and revoke the old one; full value shown only once.",
+    "evidence_refs": [
+     "fc-637c5e12",
+     "fc-cda4b87e"
+    ]
+   },
+   "administration": {
+    "summary": "Admins can list, update and delete project keys via the Administration API, restrict who can create keys through roles, and block user-owned key creation via API Key Governance.",
+    "conditions": "Governance only affects new keys. If the owner loses project access the key reports owner_project_access inactive.",
+    "evidence_refs": [
+     "fc-cda4b87e",
+     "fc-aabf5d67",
+     "fc-a8249c0b"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "yes",
+     "details": "Requests with a user-owned project key also require the owning user to hold a project role with the same permissions, so removing the user removes the key's effective access; the key record stays listed as owner access 'inactive' until deleted, and role changes take up to 30 minutes to propagate.",
+     "evidence_refs": [
+      "fc-aabf5d67",
+      "fc-89be87f8"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "Admin API GET /v1/organization/projects/{project_id}/api_keys lists keys per project (owner_project_access=any includes keys whose owner lost access); iterate over projects.",
+     "evidence_refs": [
+      "fc-89be87f8"
+     ]
+    }
+   },
+   "how": {
+    "offboard": {
+     "ui": "API Platform settings > People > Members > Remove > Confirm removal; project only: project Members page",
+     "api": "DELETE /organization/users/{user_id}; DELETE /organization/projects/{project_id}/users/{user_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-6a206783",
+      "fc-fce47a96",
+      "fc-56b9f937"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented; only redacted_value is returned after creation."
+    },
+    "log_sources": [
+     {
+      "name": "Audit logs (GET /v1/organization/audit_logs)",
+      "notes": "User actions and configuration changes; actor is session or api_key with key tracking id. Read with an admin key. Activation and retention not verified."
+     },
+     {
+      "name": "Usage API (GET /v1/organization/usage/*)",
+      "notes": "Aggregated usage groupable by api_key_id; not per-request. Old pre-Dec-2023 keys may be untracked."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.api_key.id",
+      "log": "Audit logs",
+      "notes": "Tracking id of the API key used"
+     },
+     {
+      "field": "api_key_id",
+      "log": "Usage API",
+      "notes": "When group_by=api_key_id"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "api_key.created",
+      "stage": "create",
+      "notes": "data.scopes lists allowed scopes"
+     },
+     {
+      "event": "api_key.updated",
+      "stage": "update",
+      "notes": ""
+     },
+     {
+      "event": "api_key.deleted",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "tenant.project_api_key.created",
+      "stage": "create",
+      "notes": "Tenant-level variant; semantics not described"
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key.id (tracking id)",
+     "actor.api_key.service_account.id",
+     "actor.session.ip_address",
+     "project_id"
+    ],
+    "anomaly_cues": [
+     "Key used from IP that triggers ip_not_authorized",
+     "api_key.created by unexpected user or outside change window",
+     "Usage spike grouped by api_key_id"
+    ],
+    "containment": {
+     "steps": "Delete the key in the dashboard or DELETE /v1/organization/projects/{project_id}/api_keys/{api_key_id}.",
+     "kills_existing": "yes",
+     "notes": "Revocations take effect within a few seconds."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether individual inference requests are logged anywhere customer-visible"
+    ],
+    "evidence_refs": [
+     "fc-a738cffa",
+     "fc-a8249c0b",
+     "fc-fdef42f5",
+     "fc-924489d8",
+     "fc-fdd1f387"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Key is valid; models visible to the project",
+      "bulk": false,
+      "scope": "api.model.read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit log covers config changes; inference/read calls not stated"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+      "reveals": "Uploaded files (fine-tuning, batch, assistants data)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Not listed as an audit event"
+     }
+    ],
+    "unknown": [
+     "Per-request access logs for customers"
+    ],
+    "evidence_refs": [
+     "fc-aabf5d67",
+     "fc-126e5cb0",
+     "fc-85c173d1",
+     "fc-fdef42f5"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "OpenAI Anomalous API Key Activity",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/openai_rules/openai_api_key_anomalous_activity.yml",
+     "detects": "An OpenAI API key was created or updated with elevated scopes (all, admin, models:write, organization:write, api_keys:write)."
+    }
+   ]
+  },
+  {
+   "id": "openai-2",
+   "name": "Service account API key",
+   "family": "api_key",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Bearer key for a project-owned non-human service account. Key scopes can narrow but not exceed the service account's project role.",
+    "evidence_refs": [
+     "fc-8c63700e",
+     "fc-637c5e12"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Static key; the same service account can instead use workload identity federation (openai-4).",
+    "evidence_refs": [
+     "fc-118be2d3"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Same org/project allowlist as other API keys; applies at API request time.",
+    "evidence_refs": [
+     "fc-4f6c0e89"
+    ]
+   },
+   "lifetime": {
+    "basis": "policy",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "expires_at optional; org/project max lifetime policy applies to new keys",
+    "evidence_refs": [
+     "fc-cda4b87e",
+     "fc-8c63700e"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_at or none",
+    "summary": "Create a new key via the admin endpoint and delete the old one; value shown once.",
+    "evidence_refs": [
+     "fc-8c63700e",
+     "fc-637c5e12"
+    ]
+   },
+   "administration": {
+    "summary": "Created and deleted by project owners/admins through the dashboard or Administration API. API Key Governance can restrict creation to service-account keys only or disable creation.",
+    "conditions": "Deleting the service account removes it; existing keys unaffected by governance changes.",
+    "evidence_refs": [
+     "fc-cda4b87e",
+     "fc-8c63700e"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "not_applicable",
+     "details": "Key is owned by a project service account, not a user.",
+     "evidence_refs": [
+      "fc-89be87f8"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /v1/organization/projects/{project_id}/service_accounts lists service accounts and GET /v1/organization/projects/{project_id}/api_keys lists keys including service-account-owned ones.",
+     "evidence_refs": [
+      "fc-3ca0b24f",
+      "fc-89be87f8"
+     ]
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Audit logs (GET /v1/organization/audit_logs)",
+      "notes": "User actions and configuration changes; actor is session or api_key with key tracking id. Read with an admin key. Activation and retention not verified."
+     },
+     {
+      "name": "Usage API (GET /v1/organization/usage/*)",
+      "notes": "Aggregated usage groupable by api_key_id; not per-request. Old pre-Dec-2023 keys may be untracked."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.api_key.id",
+      "log": "Audit logs",
+      "notes": "Tracking id of the API key used"
+     },
+     {
+      "field": "api_key_id",
+      "log": "Usage API",
+      "notes": "When group_by=api_key_id"
+     },
+     {
+      "field": "actor.api_key.service_account.id",
+      "log": "Audit logs",
+      "notes": "Service account behind the key"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "service_account.created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "api_key.created",
+      "stage": "create",
+      "notes": ""
+     },
+     {
+      "event": "api_key.deleted",
+      "stage": "revoke",
+      "notes": ""
+     },
+     {
+      "event": "service_account.deleted",
+      "stage": "revoke",
+      "notes": ""
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key.id (tracking id)",
+     "actor.api_key.service_account.id",
+     "actor.session.ip_address",
+     "project_id"
+    ],
+    "anomaly_cues": [
+     "Key used from IP that triggers ip_not_authorized",
+     "api_key.created by unexpected user or outside change window",
+     "Usage spike grouped by api_key_id"
+    ],
+    "containment": {
+     "steps": "Delete the key, or delete the service account.",
+     "kills_existing": "yes",
+     "notes": "Key revocation takes effect within a few seconds; service account deletion effect on live keys assumed but not stated."
+    },
+    "sample_query": null,
+    "unknown": [],
+    "evidence_refs": [
+     "fc-a738cffa",
+     "fc-a8249c0b",
+     "fc-8c63700e",
+     "fc-fdef42f5",
+     "fc-924489d8"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Key is valid; models visible to the project",
+      "bulk": false,
+      "scope": "api.model.read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit log covers config changes; inference/read calls not stated"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+      "reveals": "Uploaded files (fine-tuning, batch, assistants data)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Not listed as an audit event"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-126e5cb0",
+     "fc-85c173d1",
+     "fc-fdef42f5"
+    ]
+   },
+   "detections": [
+    {
+     "source": "Panther",
+     "title": "OpenAI Anomalous API Key Activity",
+     "url": "https://github.com/panther-labs/panther-analysis/blob/develop/rules/openai_rules/openai_api_key_anomalous_activity.yml",
+     "detects": "An OpenAI API key was created or updated with elevated scopes (all, admin, models:write, organization:write, api_keys:write)."
+    }
+   ]
+  },
+  {
+   "id": "openai-3",
+   "name": "Admin API key",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Organization-level key used only for Administration API endpoints (users, projects, keys, audit logs). Owned by an org owner.",
+    "evidence_refs": [
+     "fc-430bc6a7",
+     "fc-32167ce0"
+    ]
+   },
+   "federation": {
+    "status": "not_applicable",
+    "details": "Workload identity tokens cannot call Admin API endpoints; an admin key is required.",
+    "evidence_refs": [
+     "fc-6c2bdef9"
+    ]
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "IP allowlist covers API requests; docs do not say explicitly whether Administration API calls with admin keys are included.",
+    "evidence_refs": [
+     "fc-4f6c0e89"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "yes",
+    "summary": "Optional expires_in_seconds at creation; no expiry if omitted",
+    "evidence_refs": [
+     "fc-f165f4db"
+    ]
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "expires_at or none",
+    "summary": "Create a new admin key and delete the old one.",
+    "evidence_refs": [
+     "fc-32167ce0"
+    ]
+   },
+   "administration": {
+    "summary": "Only roles with Organization Admin permission (org owner) manage admin keys. Create/list/delete via dashboard or /organization/admin_api_keys.",
+    "conditions": "Whether the max-lifetime policy applies to admin keys is not stated.",
+    "evidence_refs": [
+     "fc-32167ce0",
+     "fc-aabf5d67"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "partial",
+     "details": "Help center says demoting an owner can invalidate their admin API keys; it does not say what happens when the owner is removed entirely, and 'can' is not a guarantee.",
+     "evidence_refs": [
+      "fc-936de95e"
+     ]
+    },
+    "inventory": {
+     "status": "yes",
+     "details": "GET /v1/organization/admin_api_keys lists organization admin API keys.",
+     "evidence_refs": [
+      "fc-017197b0"
+     ]
+    }
+   },
+   "how": {
+    "expiry": {
+     "ui": null,
+     "api": "POST /organization/admin_api_keys with expires_in_seconds (max 31536000); check expires_at via GET /organization/admin_api_keys/{key_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-f165f4db",
+      "fc-18fbf244"
+     ]
+    },
+    "offboard": {
+     "ui": "API Platform settings > People > Members > Roles (demote owner) or Remove",
+     "api": "DELETE /organization/users/{user_id}",
+     "cli": null,
+     "evidence_refs": [
+      "fc-6a206783",
+      "fc-fce47a96"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Audit logs (GET /v1/organization/audit_logs)",
+      "notes": "User actions and configuration changes; actor is session or api_key with key tracking id. Read with an admin key. Activation and retention not verified."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.api_key.id",
+      "log": "Audit logs",
+      "notes": "Tracking id"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "tenant.admin_api_key.created",
+      "stage": "create",
+      "notes": "Also .updated and .deleted"
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key.id (tracking id)",
+     "actor.api_key.service_account.id",
+     "actor.session.ip_address",
+     "project_id"
+    ],
+    "anomaly_cues": [
+     "Key used from IP that triggers ip_not_authorized",
+     "api_key.created by unexpected user or outside change window",
+     "Usage spike grouped by api_key_id"
+    ],
+    "containment": {
+     "steps": "Delete via dashboard admin-keys page or DELETE /v1/organization/admin_api_keys/{key_id}.",
+     "kills_existing": "yes",
+     "notes": "Docs state API key revocation takes effect within a few seconds; the statement is for API keys in general, not admin keys specifically. Keys are per-request bearer secrets with no derived tokens."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Whether admin key reads (list users, list audit logs) are themselves logged"
+    ],
+    "evidence_refs": [
+     "fc-32167ce0",
+     "fc-fdef42f5",
+     "fc-a738cffa"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "discovery",
+      "call": "GET /v1/organization/users",
+      "reveals": "All org users and roles",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/organization/audit_logs",
+      "reveals": "Org activity history, key ids, IPs",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     },
+     {
+      "stage": "enumeration",
+      "call": "GET /v1/organization/projects/{project_id}/api_keys",
+      "reveals": "Keys, owners, last_used_at",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": ""
+     }
+    ],
+    "unknown": [
+     "Whether admin-key read calls are logged"
+    ],
+    "evidence_refs": [
+     "fc-c1f4a29f",
+     "fc-fdef42f5",
+     "fc-a8249c0b"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "openai-4",
+   "name": "Workload identity federation access token",
+   "family": "federation",
+   "principal": "service",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Workload exchanges an OIDC JWT, SPIFFE JWT-SVID or X.509 client cert at the token endpoint for a short-lived token mapped to a project service account.",
+    "evidence_refs": [
+     "fc-118be2d3"
+    ]
+   },
+   "federation": {
+    "status": "supported",
+    "details": "OIDC providers (AWS, Azure, GCP, Kubernetes, GitHub Actions, OCI, SPIFFE) and X.509 via mTLS; mappings select the service account.",
+    "evidence_refs": [
+     "fc-118be2d3"
+    ]
+   },
+   "ip_restriction": {
+    "status": "supported",
+    "enforcement_stage": "api_request",
+    "boundary": "Minted tokens are subject to the same IP allowlist checks as normal API requests.",
+    "evidence_refs": [
+     "fc-6c2bdef9",
+     "fc-4f6c0e89"
+    ]
+   },
+   "lifetime": {
+    "basis": "absolute",
+    "default_seconds": null,
+    "maximum_seconds": 3600,
+    "configurable": "conditional",
+    "summary": "At most 1 hour; never outlives the subject token or certificate",
+    "evidence_refs": [
+     "fc-6c2bdef9"
+    ]
+   },
+   "renewal": {
+    "mechanism": "external_identity",
+    "expiry_basis": "expires_at from exchange",
+    "summary": "No refresh token; repeat the exchange with a fresh external token.",
+    "evidence_refs": [
+     "fc-6c2bdef9"
+    ]
+   },
+   "administration": {
+    "summary": "Admins with permission configure Workload Identity Providers and service account mappings in Organization Settings > Security. Remove unused providers and mappings to cut off exchange.",
+    "conditions": "Cannot call Admin API endpoints.",
+    "evidence_refs": [
+     "fc-118be2d3",
+     "fc-6c2bdef9"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "partial",
+     "details": "No endpoint lists issued tokens; issuance appears in the audit log as tenant.workload_identity.access_token.issued.",
+     "evidence_refs": [
+      "fc-924489d8"
+     ]
+    }
+   },
+   "how": {
+    "inventory": {
+     "ui": null,
+     "api": "GET /organization/audit_logs?event_types[]=tenant.workload_identity.access_token.issued",
+     "cli": null,
+     "evidence_refs": [
+      "fc-924489d8",
+      "fc-18fbf244"
+     ]
+    },
+    "expiry": {
+     "ui": null,
+     "api": "POST https://auth.openai.com/oauth/token response fields expires_in, expires_at",
+     "cli": null,
+     "evidence_refs": [
+      "fc-6c2bdef9"
+     ]
+    }
+   },
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "JWT-style access token; prefix not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Audit logs (GET /v1/organization/audit_logs)",
+      "notes": "User actions and configuration changes; actor is session or api_key with key tracking id. Read with an admin key. Activation and retention not verified."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.api_key.service_account.id",
+      "log": "Audit logs",
+      "notes": "Mapped service account (assumed attribution; not verified)"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "workload_identity_provider.created",
+      "stage": "create",
+      "notes": "Also workload_identity_provider_mapping.created/updated/deleted"
+     },
+     {
+      "event": "tenant.workload_identity.access_token.issued",
+      "stage": "use",
+      "notes": "Token issuance"
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key.id (tracking id)",
+     "actor.api_key.service_account.id",
+     "actor.session.ip_address",
+     "project_id"
+    ],
+    "anomaly_cues": [
+     "Key used from IP that triggers ip_not_authorized",
+     "api_key.created by unexpected user or outside change window",
+     "Usage spike grouped by api_key_id"
+    ],
+    "containment": {
+     "steps": "Disable or delete the service account mapping or provider; delete the service account.",
+     "kills_existing": "unknown",
+     "notes": "Tokens expire within an hour; immediate invalidation of issued tokens not stated."
+    },
+    "sample_query": null,
+    "unknown": [
+     "How WIF-token API calls are attributed in audit logs"
+    ],
+    "evidence_refs": [
+     "fc-fdef42f5",
+     "fc-6c2bdef9",
+     "fc-118be2d3"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Key is valid; models visible to the project",
+      "bulk": false,
+      "scope": "api.model.read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit log covers config changes; inference/read calls not stated"
+     },
+     {
+      "stage": "collection",
+      "call": "GET /v1/files then GET /v1/files/{file_id}/content",
+      "reveals": "Uploaded files (fine-tuning, batch, assistants data)",
+      "bulk": true,
+      "scope": null,
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Not listed as an audit event"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-126e5cb0",
+     "fc-85c173d1",
+     "fc-6c2bdef9"
+    ]
+   },
+   "detections": []
+  },
+  {
+   "id": "openai-5",
+   "name": "Legacy user API key",
+   "family": "api_key",
+   "principal": "user",
+   "lifecycle": "current",
+   "reviewed_at": "2026-10-12",
+   "authentication": {
+    "summary": "Older user-level key that can reach projects; callers select organization and project with OpenAI-Organization / OpenAI-Project headers.",
+    "evidence_refs": [
+     "fc-a738cffa"
+    ]
+   },
+   "federation": {
+    "status": "not_verified",
+    "details": "OpenAI docs fetched do not say whether API keys are subject to SSO or IdP conditional access.",
+    "evidence_refs": []
+   },
+   "ip_restriction": {
+    "status": "unknown",
+    "enforcement_stage": "unknown",
+    "boundary": "Allowlist applies to API requests for the organization or project associated with the key; legacy keys not addressed specifically.",
+    "evidence_refs": [
+     "fc-4f6c0e89"
+    ]
+   },
+   "lifetime": {
+    "basis": "unknown",
+    "default_seconds": null,
+    "maximum_seconds": null,
+    "configurable": "not_verified",
+    "summary": "Not documented",
+    "evidence_refs": []
+   },
+   "renewal": {
+    "mechanism": "new_token",
+    "expiry_basis": "unknown",
+    "summary": "Replace with a project or service account key.",
+    "evidence_refs": []
+   },
+   "administration": {
+    "summary": "Fetched docs only mention legacy user keys in the authentication header guidance. Keys made before Dec 20, 2023 may lack usage tracking.",
+    "conditions": "Admin listing/revocation path for legacy keys not documented in fetched pages.",
+    "evidence_refs": [
+     "fc-a738cffa",
+     "fc-cda4b87e"
+    ]
+   },
+   "identity": {
+    "sso": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "offboard": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    },
+    "inventory": {
+     "status": "unknown",
+     "details": "",
+     "evidence_refs": []
+    }
+   },
+   "how": {},
+   "incident_response": {
+    "token_format": {
+     "prefix": null,
+     "notes": "Not documented."
+    },
+    "log_sources": [
+     {
+      "name": "Audit logs (GET /v1/organization/audit_logs)",
+      "notes": "User actions and configuration changes; actor is session or api_key with key tracking id. Read with an admin key. Activation and retention not verified."
+     }
+    ],
+    "credential_id_fields": [
+     {
+      "field": "actor.api_key.id",
+      "log": "Audit logs",
+      "notes": "type user"
+     }
+    ],
+    "lifecycle_events": [
+     {
+      "event": "api_key.deleted",
+      "stage": "revoke",
+      "notes": "Assumed to apply; not verified for legacy keys"
+     }
+    ],
+    "correlation_keys": [
+     "actor.api_key.id (tracking id)",
+     "actor.api_key.service_account.id",
+     "actor.session.ip_address",
+     "project_id"
+    ],
+    "anomaly_cues": [
+     "Key used from IP that triggers ip_not_authorized",
+     "api_key.created by unexpected user or outside change window",
+     "Usage spike grouped by api_key_id"
+    ],
+    "containment": {
+     "steps": "Delete the key from the API keys page.",
+     "kills_existing": "yes",
+     "notes": "General API key statement: revocations take effect within a few seconds; legacy keys not named specifically."
+    },
+    "sample_query": null,
+    "unknown": [
+     "Admin visibility of legacy keys"
+    ],
+    "evidence_refs": [
+     "fc-a738cffa",
+     "fc-cda4b87e",
+     "fc-fdef42f5"
+    ]
+   },
+   "post_use": {
+    "calls": [
+     {
+      "stage": "recon",
+      "call": "GET /v1/models",
+      "reveals": "Key is valid; models visible to the project",
+      "bulk": false,
+      "scope": "api.model.read",
+      "rate_limit": null,
+      "logged": "unknown",
+      "log_event": null,
+      "log_notes": "Audit log covers config changes; inference/read calls not stated"
+     }
+    ],
+    "unknown": [],
+    "evidence_refs": [
+     "fc-126e5cb0",
+     "fc-a738cffa"
+    ]
+   },
+   "detections": []
+  }
+ ]
+}

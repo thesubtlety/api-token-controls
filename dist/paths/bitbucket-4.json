@@ -1,0 +1,298 @@
+{
+  "schema_version": "2.0.0",
+  "title": "API Token Controls",
+  "as_of": "2026-10-09",
+  "updated": "2026-10-14",
+  "scope": "Admin controls, logging and revocation for API credentials on SaaS platforms. Sourced from vendor documentation; not an audit of any tenant.",
+  "definitions": {
+    "supported": "Documented for this credential.",
+    "conditional": "Documented, with plan, policy or endpoint conditions.",
+    "excluded": "The named control explicitly does not cover this credential.",
+    "not_supported": "Vendor documentation states this credential lacks the control.",
+    "unknown": "No source found either way. Not a negative finding.",
+    "not_verified": "No source found either way. Not a negative finding.",
+    "not_applicable": "Does not apply to this credential.",
+    "limited": "Documented for a narrower case only."
+  },
+  "providers": [
+    {
+      "id": "bitbucket",
+      "name": "Bitbucket Cloud",
+      "scope_notes": "Bitbucket Cloud SaaS; workspace/project access tokens and IP allowlisting need Premium, org-level audit log needs Atlassian Guard; API tokens are Atlassian-account tokens shared with Jira/Confluence.",
+      "controls": [
+        {
+          "name": "Delete OAuth consumer",
+          "effect": "revoke",
+          "applies_to": [
+            "bitbucket-4"
+          ],
+          "what": "Deleting the consumer removes all tokens issued to it.",
+          "setting": "Workspace settings > OAuth consumers > Delete",
+          "plan": null,
+          "default": "varies",
+          "level": "org",
+          "evidence_refs": [
+            "fc-f13daf16"
+          ]
+        },
+        {
+          "name": "Restrict access to certain IP addresses",
+          "effect": "limit_network",
+          "applies_to": [
+            "bitbucket-1",
+            "bitbucket-3",
+            "bitbucket-4",
+            "bitbucket-5"
+          ],
+          "what": "Only allowlisted IPs can view private content or clone/push/pull private repos.",
+          "setting": "Workspace settings > Access controls > Restrict access to certain IP addresses",
+          "plan": "Premium",
+          "default": "off",
+          "level": "org",
+          "evidence_refs": [
+            "fc-b50f7c86"
+          ]
+        }
+      ],
+      "no_control": [],
+      "controls_unknown": [
+        "Whether the workspace IP allowlist is enforced on REST API calls (docs only mention viewing content and Git clone/push/pull).",
+        "Whether API tokens or OAuth tokens are checked against IdP SSO or conditional access at use time.",
+        "Whether the workspace audit log records access token creation, rotation or revocation (no such events listed).",
+        "Lifetime of the Pipelines OIDC token.",
+        "OAuth access token lifetime: developer docs say 1 hour, support docs say 2 hours.",
+        "Any admin approval workflow for users authorizing third-party OAuth consumers."
+      ]
+    }
+  ],
+  "auth_paths": [
+    {
+      "id": "bitbucket-4",
+      "provider_id": "bitbucket",
+      "name": "OAuth consumers (OAuth 2.0)",
+      "family": "oauth",
+      "principal": "user_or_service",
+      "lifecycle": "current",
+      "reviewed_at": "2026-10-12",
+      "authentication": {
+        "summary": "Workspace-registered consumer (key + secret). Authorization code grant acts as the authorizing user; client credentials grant acts as the consumer owner. Access tokens are Bearer tokens to api.bitbucket.org and can clone via x-token-auth.",
+        "evidence_refs": [
+          "fc-a3d66d5b",
+          "fc-f13daf16"
+        ]
+      },
+      "federation": {
+        "status": "not_verified",
+        "details": "Docs do not say whether IdP session policies are re-checked on refresh.",
+        "evidence_refs": []
+      },
+      "ip_restriction": {
+        "status": "conditional",
+        "enforcement_stage": "unknown",
+        "boundary": "Premium private-content allowlist; API enforcement not documented.",
+        "evidence_refs": [
+          "fc-b50f7c86"
+        ]
+      },
+      "lifetime": {
+        "basis": "absolute",
+        "default_seconds": 3600,
+        "maximum_seconds": null,
+        "configurable": "no",
+        "summary": "Access token 1h (support docs say 2h); refresh token expires after 3 months unused",
+        "evidence_refs": [
+          "fc-a3d66d5b",
+          "fc-f13daf16"
+        ]
+      },
+      "renewal": {
+        "mechanism": "refresh_token",
+        "expiry_basis": "refresh token rotates on use; 3-month inactivity expiry",
+        "summary": "Refresh without user interaction; client credentials can mint new tokens with the secret.",
+        "evidence_refs": [
+          "fc-a3d66d5b"
+        ]
+      },
+      "administration": {
+        "summary": "Workspace admins create and delete consumers in Workspace settings > OAuth consumers; deleting removes all its tokens. Scopes are fixed on the consumer.",
+        "conditions": "No documented admin approval flow for user authorizations of third-party consumers.",
+        "evidence_refs": [
+          "fc-f13daf16"
+        ]
+      },
+      "identity": {
+        "sso": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "offboard": {
+          "status": "unknown",
+          "details": "",
+          "evidence_refs": []
+        },
+        "inventory": {
+          "status": "partial",
+          "details": "Workspace settings > OAuth consumers lists consumers created in that workspace; no list of issued tokens or user authorizations.",
+          "evidence_refs": [
+            "fc-f13daf16"
+          ]
+        }
+      },
+      "how": {
+        "expiry": {
+          "ui": null,
+          "api": "Access token lifetime fixed at 1 hour; renew with POST https://bitbucket.org/site/oauth2/access_token grant_type=refresh_token",
+          "cli": null,
+          "evidence_refs": [
+            "fc-0c2d8aac"
+          ]
+        },
+        "usage": {
+          "ui": "Workspace settings > Security: Audit log; filter events 'User account access granted to an application' / 'revoked'",
+          "api": null,
+          "cli": null,
+          "evidence_refs": [
+            "fc-4e80eaad"
+          ]
+        }
+      },
+      "incident_response": {
+        "token_format": {
+          "prefix": null,
+          "notes": "Bearer access token; refresh token."
+        },
+        "log_sources": [
+          {
+            "name": "Bitbucket workspace audit log",
+            "notes": "30 days; user authorization of applications."
+          }
+        ],
+        "credential_id_fields": [
+          {
+            "field": "application (consumer) name",
+            "log": "workspace audit log",
+            "notes": "Field names not documented."
+          }
+        ],
+        "lifecycle_events": [
+          {
+            "event": "User account access granted to an application",
+            "stage": "create",
+            "notes": "User category."
+          },
+          {
+            "event": "User account access to an application revoked",
+            "stage": "revoke",
+            "notes": "User category."
+          }
+        ],
+        "correlation_keys": [
+          "consumer key",
+          "user account"
+        ],
+        "anomaly_cues": [
+          "New consumer with broad scopes",
+          "Client credentials consumer owned by an admin"
+        ],
+        "containment": {
+          "steps": "Delete the consumer in Workspace settings > OAuth consumers (kills all its tokens); or rotate secret.",
+          "kills_existing": "yes",
+          "notes": "Deletion removes all existing tokens linked to the consumer."
+        },
+        "sample_query": null,
+        "unknown": [
+          "Whether consumer creation/deletion is audited"
+        ],
+        "evidence_refs": [
+          "fc-4e80eaad",
+          "fc-f13daf16"
+        ]
+      },
+      "post_use": {
+        "calls": [
+          {
+            "stage": "recon",
+            "call": "GET /2.0/user",
+            "reveals": "authorizing user or consumer owner",
+            "bulk": false,
+            "scope": "account",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          },
+          {
+            "stage": "enumeration",
+            "call": "GET /2.0/repositories/{workspace}",
+            "reveals": "repositories",
+            "bulk": true,
+            "scope": "repository",
+            "rate_limit": null,
+            "logged": "unknown",
+            "log_event": null,
+            "log_notes": ""
+          }
+        ],
+        "unknown": [],
+        "evidence_refs": [
+          "fc-6327d20e",
+          "fc-cb0c2b12",
+          "fc-a3d66d5b"
+        ]
+      },
+      "detections": []
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fc-0c2d8aac",
+      "title": "Bitbucket Cloud REST API: OAuth 2.0 refresh tokens",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/intro/#oauth-2-0",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-4e80eaad",
+      "title": "Bitbucket Cloud audit log events",
+      "url": "https://support.atlassian.com/bitbucket-cloud/kb/bitbucket-cloud-audit-log-events/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-6327d20e",
+      "title": "Bitbucket REST API - Users",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/api-group-users/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-a3d66d5b",
+      "title": "The Bitbucket Cloud REST API",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/intro/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-b50f7c86",
+      "title": "Control access to private content in a workspace",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/control-access-to-private-content-in-a-workspace/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-cb0c2b12",
+      "title": "Bitbucket REST API - Repositories",
+      "url": "https://developer.atlassian.com/cloud/bitbucket/rest/api-group-repositories/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    },
+    {
+      "id": "fc-f13daf16",
+      "title": "Use OAuth on Bitbucket Cloud",
+      "url": "https://support.atlassian.com/bitbucket-cloud/docs/use-oauth-on-bitbucket-cloud/",
+      "retrieved_at": "2026-10-14",
+      "type": "vendor_documentation"
+    }
+  ]
+}
